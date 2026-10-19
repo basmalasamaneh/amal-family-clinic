@@ -1,3 +1,5 @@
 - [Database runtime identity](database-runtime-boundary.md) — authenticate as the restricted login; administrator plus SET ROLE can be escaped with RESET ROLE.
 - [Seed data preservation](seed-preservation.md) — the user requires all six workbook tables to remain unchanged after import.
 - [Workbook time and matching](timezone-and-import.md) — Asia/Hebron source times; all 24 calendar-export rows require identity review.
+- [Demo scenario isolation](demo-scenario-isolation.md) — Lite onboarding and cross-clinic Clinical sharing require separate, explicit scenario preparation.
+- [Deployment guard environment](deployment-guard-environment.md) — REPLIT_ENVIRONMENT can say production inside a development task workspace.

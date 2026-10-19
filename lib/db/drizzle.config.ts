@@ -6,7 +6,10 @@ if (!process.env.DATABASE_URL) {
 }
 
 export default defineConfig({
-  schema: path.join(__dirname, "./src/schema/index.ts"),
+  // Introspection/generation only. Apply tracked SQL via operational:migrate;
+  // push cannot reproduce deferred constraints, audit triggers or privileges.
+  schema: path.join(__dirname, "./src/schema/operational-*.ts"),
+  schemaFilter: ["operational"],
   dialect: "postgresql",
   dbCredentials: {
     url: process.env.DATABASE_URL,

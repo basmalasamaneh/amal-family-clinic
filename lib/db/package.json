@@ -9,8 +9,8 @@
     "./runtime-connection": "./src/runtime-connection.ts"
   },
   "scripts": {
-    "push": "drizzle-kit push --config ./drizzle.config.ts",
-    "push-force": "drizzle-kit push --force --config ./drizzle.config.ts"
+    "push": "node -e \"console.error('Schema push is disabled: use pnpm --filter @workspace/scripts operational:migrate'); process.exit(1)\"",
+    "push-force": "node -e \"console.error('Schema push is disabled: use pnpm --filter @workspace/scripts operational:migrate'); process.exit(1)\""
   },
   "dependencies": {
     "drizzle-orm": "catalog:",

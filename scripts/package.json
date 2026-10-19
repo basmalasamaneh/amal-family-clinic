@@ -8,6 +8,11 @@
     "seed:import": "tsx ./src/seed-import.ts",
     "seed:verify": "tsx ./src/seed-verify.ts",
     "baseline": "tsx ./src/baseline.ts",
+    "operational:migrate": "tsx ./src/operational-migrate.ts",
+    "demo:populate": "tsx ./src/demo-populate.ts",
+    "demo:reset": "tsx ./src/demo-reset.ts",
+    "demo:recipes": "tsx ./src/demo-recipes.ts",
+    "operational:test": "tsx ./src/operational-test.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "devDependencies": {
@@ -17,6 +22,7 @@
   },
   "dependencies": {
     "@workspace/db": "workspace:*",
+    "bcryptjs": "^3.0.3",
     "date-fns": "^3.6.0",
     "date-fns-tz": "^3.2.0",
     "pg": "^8.23.0"
