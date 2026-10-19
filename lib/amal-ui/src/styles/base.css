@@ -1,0 +1,30 @@
+html {
+  font-family: var(--amal-font-sans);
+  font-size: 100%;
+  line-height: var(--amal-leading);
+  background: var(--amal-bg);
+  color: var(--amal-text);
+  -webkit-text-size-adjust: 100%;
+}
+body {
+  margin: 0;
+  font-size: var(--amal-text-body);
+  background: var(--amal-bg);
+  color: var(--amal-text);
+}
+.amal-reception { font-size: var(--amal-text-reception); }
+:where(button, input, textarea, select) { font: inherit; }
+:where(a, button, input, textarea, select, [tabindex]):focus-visible {
+  outline: 3px solid var(--amal-focus-ring);
+  outline-offset: 2px;
+}
+.amal-sr-only {
+  position: absolute; inline-size: 1px; block-size: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important; animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important; scroll-behavior: auto !important;
+  }
+}

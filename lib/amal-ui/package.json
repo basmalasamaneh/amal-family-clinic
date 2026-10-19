@@ -1,0 +1,28 @@
+{
+  "name": "@workspace/amal-ui",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./styles.css": "./src/styles/index.css",
+    "./tokens.json": "./tokens.json",
+    "./assets/*": "./assets/*"
+  },
+  "scripts": {
+    "tokens": "node scripts/build-tokens.mjs",
+    "contrast": "node scripts/contrast-report.mjs"
+  },
+  "dependencies": {
+    "@fontsource/ibm-plex-sans-arabic": "^5.3.0",
+    "i18next": "^26.4.7",
+    "lucide-react": "catalog:",
+    "react-i18next": "^17.0.21"
+  },
+  "peerDependencies": {
+    "react": ">=18"
+  },
+  "devDependencies": {
+    "@types/react": "catalog:"
+  }
+}

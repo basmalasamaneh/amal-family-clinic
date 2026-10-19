@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "Amal Network · شبكة أمل"
+description = "Amal Family Clinic Group bilingual design system and UI kit with Arabic/RTL, English/LTR, light and dark themes, accessible reusable components and supplied brand assets."
+version = "1.0.0"
+id = "artifacts/amal-network"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 24421
+
+[services.development]
+run = "pnpm --filter @workspace/amal-network run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/amal-network", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/amal-network/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "24421"
+BASE_PATH = "/"

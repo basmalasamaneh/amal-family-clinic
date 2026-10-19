@@ -1,0 +1,16 @@
+{
+  "brand": { "logoLabel": "شعار مجموعة عيادات أمل العائلية", "markLabel": "رمز أمل" },
+  "language": { "groupLabel": "لغة الواجهة", "ar": "العربية", "en": "English" },
+  "theme": { "groupLabel": "مظهر الواجهة", "light": "فاتح", "dark": "داكن" },
+  "button": { "loading": "جارٍ التنفيذ…" },
+  "field": { "required": "مطلوب", "optional": "اختياري" },
+  "toast": { "region": "الإشعارات", "close": "إغلاق الإشعار" },
+  "status": {
+    "booked": "محجوز",
+    "completed": "مكتمل",
+    "noshow": "لم يحضر",
+    "conflict": "تعارض",
+    "sync": "بانتظار المزامنة",
+    "cancelled": "ملغى"
+  }
+}

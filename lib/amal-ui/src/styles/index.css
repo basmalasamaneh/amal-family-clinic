@@ -1,0 +1,8 @@
+/* Amal UI — single stylesheet entry. Import once: `import '@workspace/amal-ui/styles.css'`. */
+@import '@fontsource/ibm-plex-sans-arabic/400.css';
+@import '@fontsource/ibm-plex-sans-arabic/500.css';
+@import '@fontsource/ibm-plex-sans-arabic/600.css';
+@import '@fontsource/ibm-plex-sans-arabic/700.css';
+@import './tokens.css';
+@import './base.css';
+@import './components.css';

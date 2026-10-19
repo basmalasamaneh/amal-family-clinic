@@ -1,0 +1,16 @@
+{
+  "brand": { "logoLabel": "Amal Family Clinic Group logo", "markLabel": "Amal mark" },
+  "language": { "groupLabel": "Interface language", "ar": "العربية", "en": "English" },
+  "theme": { "groupLabel": "Interface theme", "light": "Light", "dark": "Dark" },
+  "button": { "loading": "Working…" },
+  "field": { "required": "required", "optional": "optional" },
+  "toast": { "region": "Notifications", "close": "Dismiss notification" },
+  "status": {
+    "booked": "Booked",
+    "completed": "Completed",
+    "noshow": "No-show",
+    "conflict": "Conflict",
+    "sync": "Waiting to sync",
+    "cancelled": "Cancelled"
+  }
+}

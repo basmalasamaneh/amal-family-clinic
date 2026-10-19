@@ -43,3 +43,14 @@ _Populate as you build — sharp edges, "always run X before Y" rules._
 ## Pointers
 
 - See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details
+
+## Amal UI foundation
+
+- `artifacts/amal-network` serves `/ui-kit`; `/` redirects there. This is a frontend-only component showcase, not the booking application.
+- `lib/amal-ui` owns shared tokens, localized components, preferences, fonts, and brand assets. Import reusable UI from `@workspace/amal-ui`.
+- `pnpm run typecheck:libs` builds shared declarations before the frontend typecheck.
+- `pnpm --filter @workspace/amal-network run typecheck` checks the showcase.
+- `pnpm --filter @workspace/amal-ui contrast` verifies defined foreground/background pairs; `tokens` regenerates CSS from the token source.
+- The existing UI-kit browser suite covers both languages and themes; its presence does not imply it was run during every implementation session.
+- Preserve source brand colors; use semantic text variants for contrast. Gold is restricted to logos and illustrations.
+- This UI kit does not read or modify any seed table.

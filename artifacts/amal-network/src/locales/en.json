@@ -1,0 +1,80 @@
+{
+  "app": { "name": "Amal Network", "skip": "Skip to content", "kitTitle": "UI kit" },
+  "kit": {
+    "eyebrow": "Design foundation · v0.1",
+    "title": "One calm language for connected care",
+    "lede": "Tokens and primitives shared by every Amal Network screen. Arabic first, readable at the reception desk, steady in light and dark.",
+    "demoNotice": "Everything on this page is a local demonstration. Nothing is saved and no clinical data is read.",
+    "toc": "On this page",
+    "sections": {
+      "palette": "Palette", "type": "Typography", "buttons": "Buttons", "inputs": "Inputs",
+      "status": "Status badges", "cards": "Cards", "toasts": "Toasts", "empty": "Empty states"
+    },
+    "palette": {
+      "intro": "Raw brand values are preserved exactly. Text always uses a measured pairing of at least 4.5:1.",
+      "raw": "Brand palette — {{theme}}",
+      "semantic": "Semantic state colours",
+      "goldNote": "Gold is reserved for the logo and empty-state illustrations. It is never a status or action colour.",
+      "sample": "Aa"
+    },
+    "type": {
+      "intro": "IBM Plex Sans Arabic for both scripts. Line height 1.6.",
+      "sampleAr": "موعد المراجعة القادم",
+      "sampleEn": "Next follow-up visit",
+      "body": "Body · 16 px",
+      "bodySample": "Each clinic keeps its own day; the network keeps the chart together so the next doctor starts informed.",
+      "reception": "Reception · 18 px",
+      "receptionSample": "Please confirm the phone number before printing the visit slip."
+    },
+    "buttons": {
+      "intro": "Four variants, three sizes. Hover, pressed, focus, loading and disabled states all keep readable text.",
+      "primary": "Primary action", "secondary": "Secondary", "ghost": "Ghost", "danger": "Remove",
+      "disabled": "Unavailable", "small": "Small", "large": "Large reception button",
+      "loadingDemo": "Run a 2-second demo", "loadingDone": "Demo finished",
+      "iconAdd": "Add example item"
+    },
+    "inputs": {
+      "intro": "Labels are always visible. Errors are announced and never rely on colour alone.",
+      "formTitle": "Example contact form",
+      "formDesc": "Validates locally only.",
+      "name": "Full name", "namePh": "e.g. Layla Haddad",
+      "phone": "Mobile number", "phoneHint": "Digits only, 10 numbers starting with 05.", "phonePh": "05XXXXXXXX",
+      "note": "Note", "notePh": "Anything the team should know",
+      "disabledLabel": "Clinic code", "disabledValue": "Locked in this demo",
+      "errName": "Enter at least two characters.", "errPhone": "Use 10 digits starting with 05.",
+      "submit": "Check form", "reset": "Reset",
+      "valid": "Form looks good", "validDesc": "Validation passed. Nothing was saved."
+    },
+    "status": {
+      "intro": "Six appointment states. Each pairs an icon, a semantic colour and a localized label.",
+      "large": "Large size", "inline": "In context",
+      "rowTime": "09:30", "rowLabel": "Example visit"
+    },
+    "cards": {
+      "intro": "Cards group related content on surface; radius 12 px. Dialogs use 16 px, controls 8 px.",
+      "a": { "title": "Today at a glance", "desc": "Generic example card", "stat": "14", "statLabel": "example visits", "action": "Show toast" },
+      "b": { "title": "Reception note", "desc": "Muted tone for secondary content", "body": "Keep the waiting area informed when a doctor is running late." },
+      "c": { "title": "Radii", "control": "Control 8", "card": "Card 12", "dialog": "Dialog 16" }
+    },
+    "toasts": {
+      "intro": "Polite announcements by default; warnings and errors interrupt. Hover or focus pauses auto-dismiss.",
+      "info": "Info toast", "success": "Success toast", "warning": "Warning toast", "danger": "Error toast",
+      "infoT": "Reminder", "infoD": "This is an example notification.",
+      "successT": "Example saved locally", "successD": "Demonstration only — nothing left this page.",
+      "warningT": "Connection is slow", "warningD": "Example message for degraded network.",
+      "dangerT": "Something went wrong", "dangerD": "Example error with a retry action.",
+      "retry": "Try again", "retried": "Retried"
+    },
+    "empty": {
+      "intro": "Every empty state explains why and offers the next step.",
+      "title": "No example items yet",
+      "desc": "Items you add here live only in this page and disappear on refresh.",
+      "add": "Add example item", "learn": "Show a tip",
+      "tipT": "Tip", "tipD": "Empty states always offer a next step.",
+      "listTitle": "Example items", "item": "Example item {{n}}", "remove": "Remove {{name}}", "clear": "Clear all",
+      "cleared": "List cleared"
+    },
+    "footer": "Amal Family Clinic Group · design foundation"
+  },
+  "notFound": { "title": "Page not found", "desc": "This address does not exist yet.", "back": "Open the UI kit" }
+}
