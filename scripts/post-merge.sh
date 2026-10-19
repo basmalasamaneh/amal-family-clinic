@@ -9,3 +9,4 @@ pnpm --filter @workspace/scripts seed:verify
 # Additive operational migration only. Synthetic demo accounts are opt-in;
 # never populate or reset them automatically during merge/deployment.
 pnpm --filter @workspace/scripts operational:migrate
+pnpm --filter @workspace/api-server auth:migrate

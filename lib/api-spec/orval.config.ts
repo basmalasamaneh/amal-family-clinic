@@ -61,6 +61,13 @@ export default defineConfig({
           // zod dependency, so orval >= 8.23 falls back to Zod 4 syntax while
           // the catalog installs zod 3. Pin to match the catalog.
           version: 3,
+          strict: {
+            body: true,
+            response: true,
+            query: true,
+            param: true,
+            header: true,
+          },
           coerce: {
             query: ['boolean', 'number', 'string'],
             param: ['boolean', 'number', 'string'],

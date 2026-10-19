@@ -1,0 +1,44 @@
+# Real authentication operations and security policy
+
+This module implements auth only. It never falls back to mock routes and does not implement consent, network visibility, imports, patient services, or patient-level authorization. See `auth-contract-shapes.md` for exact request/identity/error shapes.
+
+## Setup and deployment
+
+Prerequisite: accepted operational migration and fixtures from P1-01 must already exist. Do not use this module to rebuild them. Run `pnpm --filter @workspace/api-server auth:migrate` with the administrative `DATABASE_URL` to install **only** `0002_auth.sql`. Runtime imports the existing `@workspace/db` restricted `amal_app` connection; it never uses the administrative connection or `SET ROLE`. `SESSION_SECRET` must remain stable for restricted DB credentials. Authentication tables store session/device SHA-256 digests, not bearer credentials. Password and PIN checks use bcrypt against operational users. Existing seed/demo device IDs are NOT enrolled credentials.
+
+Set `AUTH_ALLOWED_ORIGINS` to comma-separated **exact** origins, e.g. `http://localhost:5173` in local development or `https://your-app.example` in production. There is deliberately no permissive development default. All mutations require an allowed Origin, including login and PIN login (login-CSRF protection). Non-browser integrations must send the same explicit Origin and use the cookie/CSRF protocol. CORS allows credentials only for listed origins. Production requires HTTPS origins and secure requests; set `AUTH_PROXY_HOPS` to the actual trusted proxy hop count only when the deployment edge cannot be bypassed. Default zero ignores spoofed forwarded addresses. Production cookies are Secure; all session/device cookies are HttpOnly, SameSite=Strict, Path=/.
+
+Canonical YAML is served by the API at `/docs/openapi.yaml`; shared proxy routing is configured separately by the owning agent. APIs remain under `/api`. JSON requests are limited to 32KB and Zod-strict, errors are always `{code,messageKey,params}`, including malformed JSON and unexpected exceptions. Security headers include CSP frame denial, nosniff, no-referrer, no-store and production HSTS. Raw errors, request bodies, cookies, PIN/password values and bearer tokens are never intentionally logged or included in audit data. Request logging serializes only method, query-free path, request ID and response status.
+
+## Browser provisioning and login
+
+1. On the physical reception browser, sign in as an authorized administrator using `POST /api/auth/login`.
+2. Capture the returned `csrfToken`; use it as `X-CSRF-Token` for authenticated mutations.
+3. `POST /api/auth/devices` with `{clinicId,label}`. Labels must be translation-key-shaped identifiers such as `device.frontDesk`; render their translations in future UI. Global admins may enroll any existing clinic; clinic-scoped admins only their own. The server installs a random 256-bit credential in a persistent HttpOnly cookie, returning only safe device metadata. No copyable secret or device credential is returned in JSON.
+4. Log the administrator out. This revokes their session, not the device cookie.
+5. The receptionist submits email and exactly four ASCII PIN digits to `POST /api/auth/pin`. Leading zeroes are preserved. Device trust comes solely from the cookie digest; neither submitted clinic IDs nor public device IDs confer authority. Account must be reception role in that device's clinic.
+6. An administrator can `DELETE /api/auth/devices/{id}` to revoke device trust and all attached sessions immediately. Lost cookies require new administrator provisioning; no self-registration or recovery endpoint exists.
+
+Password login is limited to doctors and administrators. Receptionists must always authenticate by PIN on a registered same-clinic device, even when they possess a valid password. Authentication rejects every device-less receptionist session, including legacy or preexisting rows. PIN re-entry requires the session's trusted device. Users cannot choose roles, clinic, expiry or doctor context in requests.
+
+## Sessions, PIN locks and throttles
+
+- Every authentication rotates a cryptographically random 256-bit opaque session cookie and revokes the prior supplied session transactionally. Session state persists in PostgreSQL across process restarts. Logout immediately records revocation.
+- Doctors: 30 minutes idle. Administrators: **30 minutes idle**, a conservative explicit policy choice. `/me` and other authenticated requests update idle activity. No administrator clinical bypass.
+- Front desk: eight-hour absolute lifetime, regardless of idle activity. PIN re-entry rotates the session but preserves its original absolute expiry.
+- PIN freshness is five minutes. Future front-desk consent recording/withdrawal, import commits, merges and sensitive exports must install `authenticate`, `csrf`, a role/scope guard, and `requireFreshPin`. These business services do not yet exist and their enforcement is **not** claimed by this task.
+- PIN attempts lock the account-wide row with `SELECT ... FOR UPDATE`, bcrypt-verify inside the transaction, atomically count failures and commit failures before returning errors. Fifth failure locks for 15 minutes by default (`AUTH_PIN_LOCK_MINUTES`, integer/range policy 1–1440 minutes). Even correct PINs fail during lockout. Expired locks recover automatically; a successful attempt resets the count. No public/admin unlock shortcut is provided.
+- Independent PostgreSQL 15-minute fixed-window buckets: 100 attempts/IP, 20/account email, 30/trusted device. Device/account/IP budgets cannot be reset by selector changes, browser cookie clearing or process restart. PIN and password authentication share the account/IP budget. Invalid devices still consume account/IP budget. PIN re-entry uses the same counters and lock. Fixed-window boundary bursts are an accepted documented limitation; production edge volumetric controls remain recommended.
+- Minimal security events are inserted into append-only operational audit log with action and authorized actor/clinic only; details are empty objects. No PIN/password/hash/token/device credential payload is recorded.
+
+## Reusable authorization
+
+`requireRoles` returns 401 without authentication and 403 for disallowed/unknown roles. Wire roles map database administrator→admin, receptionist→front-desk, doctor→doctor. `enforceScope`/`requireScope` deny unknown roles and cross-clinic access; doctors can additionally be constrained to their own doctor ID. Resolve scope from trusted resource records, not a client claim. Global admin scope is permitted only for administrative operations; `clinical=true` categorically excludes admin and front desk. Clinical consent checks and Basic/Clinical projections remain future services, not implemented shortcuts.
+
+`GET /me` returns safe identity, server-controlled clinic/doctor IDs, locale/theme, UTC expiry, device and PIN freshness plus the non-authenticating CSRF token. `error.*` keys have Arabic and English dictionaries in `src/lib/auth-errors.ts`; source/business data stays untranslated. Consumers must use the keys rather than displaying raw errors.
+
+## Verification and boundaries
+
+Run `pnpm --filter @workspace/api-server auth:test` and `typecheck`. Integration tests require the existing operational schema and at least two clinics plus a demo doctor. They start an isolated ephemeral HTTP listener, exercise the restricted runtime pool, and create explicitly `@auth-test.example` synthetic accounts only in operational tables. Append-only audit references prevent deleting these actors; teardown replaces their passwords with unknown random bcrypt hashes, removes PINs, deletes their sessions/lock rows and revokes their test devices. Tests must run against a development/test database, not production. They do not reset demo fixtures or mutate any of the six seed tables.
+
+Coverage includes all roles, role/default denial, clinic/doctor restrictions, admin clinical denial, leading-zero PINs, forged/missing/revoked devices, concurrent fifth-attempt lock, correct-PIN lock rejection, recovery, durable state in fresh OS processes, rotations, immediate logout, idle/absolute expiration, CSRF/origin/strict-input errors, safe identity/cookies, throttling dimensions and translation-key parity. API instants use UTC ISO strings; no source/date conversion is introduced here, so Asia/Hebron presentation remains the frontend's responsibility. No browser UI exists.
