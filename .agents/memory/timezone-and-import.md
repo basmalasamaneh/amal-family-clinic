@@ -4,11 +4,11 @@ description: User clarification of timestamp conversion and mandatory calendar-e
 ---
 
 ## Workbook times
-Treat all naive workbook timestamps (appointments.scheduled_at, visit dates, and calendar_app_export start/end) as Asia/Hebron local time. Convert to UTC when copying into operational tables and display in Asia/Hebron. Use date-fns-tz for DST handling, never hand-written offsets.
+Treat naive workbook timestamps as Asia/Hebron local time. Timestamp seed storage is a reversible UTC interpretation, not a source correction; retain the unchanged workbook for provenance. Date-only birth and visit fields remain dates. Use date-fns-tz for DST handling, never hand-written offsets.
 
 **Why:** The user confirmed the source times are local to Asia/Hebron.
 
-**How to apply:** Preserve seed values; apply timezone conversion in the operational copy process.
+**How to apply:** Verify timestamp round trips to original local values. Future operational copies must not apply a second local-to-UTC conversion to seed instants.
 
 ## Calendar import matching
 Require review for every calendar-export row. Name-only matches provide a suggested patient and a “Needs review” badge, never an automatic link. The receptionist must confirm by checking phone or date of birth. Unmatched rows offer “Create new patient” with phone required.

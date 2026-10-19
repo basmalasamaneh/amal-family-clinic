@@ -1,2 +1,3 @@
 - [Seed data preservation](seed-preservation.md) — the user requires all six workbook tables to remain unchanged after import.
 - [Workbook time and matching](timezone-and-import.md) — Asia/Hebron source times; all 24 calendar-export rows require identity review.
+- [Database runtime identity](database-runtime-boundary.md) — authenticate as the restricted login; administrator plus SET ROLE can be escaped with RESET ROLE.

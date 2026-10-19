@@ -1,0 +1,8 @@
+[project]
+name = "repl-nix-workspace"
+version = "0.1.0"
+description = "Strict XLSX provenance reader for immutable Amal workbook seeds"
+requires-python = ">=3.13"
+dependencies = [
+    "openpyxl>=3.1.5",
+]

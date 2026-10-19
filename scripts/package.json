@@ -5,10 +5,20 @@
   "type": "module",
   "scripts": {
     "hello": "tsx ./src/hello.ts",
+    "seed:import": "tsx ./src/seed-import.ts",
+    "seed:verify": "tsx ./src/seed-verify.ts",
+    "baseline": "tsx ./src/baseline.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "devDependencies": {
     "@types/node": "catalog:",
+    "@types/pg": "^8.23.1",
     "tsx": "catalog:"
+  },
+  "dependencies": {
+    "@workspace/db": "workspace:*",
+    "date-fns": "^3.6.0",
+    "date-fns-tz": "^3.2.0",
+    "pg": "^8.23.0"
   }
 }
