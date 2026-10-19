@@ -45,7 +45,7 @@ export function AmalMark({ size = 40, className }: { size?: number; className?: 
   );
 }
 
-/** Horizontal lockup on a theme-safe white island (dark theme). */
+/** Horizontal lockup with theme-aware lettering and unchanged badge artwork. */
 export function AmalLogo({ className }: { className?: string }) {
   const { t } = useTranslation(AMAL_UI_NS);
   const uid = `amal${useId().replace(/:/g, '')}`;
@@ -55,8 +55,8 @@ export function AmalLogo({ className }: { className?: string }) {
         <Defs uid={uid} />
         <svg x="0" y="0" width="160" height="160" viewBox="0 0 512 512"><MarkArt uid={uid} /></svg>
         <g fontFamily="'IBM Plex Sans Arabic','Segoe UI',Tahoma,Arial,sans-serif" aria-hidden="true">
-          <text x="190" y="78" fontSize="52" fontWeight="700" fill="#0B2545">Amal Family Clinic</text>
-          <text x="191" y="118" fontSize="26" fontWeight="500" fill="#0E7C86">Group · Three clinics, one chart</text>
+          <text x="190" y="78" fontSize="52" fontWeight="700" fill="var(--amal-navy, #0B2545)">Amal Family Clinic</text>
+          <text x="191" y="118" fontSize="26" fontWeight="500" fill="var(--amal-primary, #0E7C86)">Group · Three clinics, one chart</text>
         </g>
       </svg>
     </span>

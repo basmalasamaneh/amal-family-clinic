@@ -11,6 +11,6 @@ Source of truth: task P2-00 specification + supplied SVGs (`docs/references/logo
 | Toast | src/components/Toast.tsx | info, success, warning, danger; action; dismiss; auto-dismiss with pause |
 | EmptyState | src/components/EmptyState.tsx | with illustration + actions |
 | LanguageSwitch / ThemeSwitch | src/components/PreferenceControls.tsx | ar/en, light/dark |
-| Logo | src/components/Logo.tsx | mark, horizontal (light; dark on white island) |
+| Logo | src/components/Logo.tsx | mark, horizontal with theme-aware lettering and transparent background |
 
 Out of scope (later tasks): dialogs, drawers, search, tables, sync queue, charts, consent, app shell.

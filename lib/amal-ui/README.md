@@ -54,7 +54,7 @@ IBM Plex Sans Arabic is self-hosted via `@fontsource/ibm-plex-sans-arabic` (400â
 | `StatusBadge`, `APPOINTMENT_STATUSES` | Six states: icon + colour + localized label. |
 | `EmptyState`, `EmptyIllustration` | Always pass `actions`. |
 | `ToastProvider`, `useToast` | `show({title, description, tone, action, duration})`; polite region, `role="alert"` for warning/danger, pauses on hover/focus. |
-| `AmalLogo`, `AmalMark` | Inline renderings of the canonical SVGs so the wordmark uses the loaded font; localized `aria-label`; white island in dark theme. |
+| `AmalLogo`, `AmalMark` | Inline renderings of the canonical SVGs so the wordmark uses the loaded font; localized `aria-label`; theme-aware lettering on a transparent background. |
 
 ## Assets
 

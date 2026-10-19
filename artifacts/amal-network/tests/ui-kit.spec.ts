@@ -18,6 +18,9 @@ for (const locale of ['ar', 'en']) for (const theme of ['light', 'dark']) {
     await page.evaluate(() => document.fonts.ready);
     expect(await page.evaluate(() => document.fonts.check('16px "IBM Plex Sans Arabic"', 'شبكة Amal'))).toBeTruthy();
     expect(await page.locator('.amal-logo text').first().evaluate((el) => getComputedStyle(el).fontFamily)).toContain('IBM Plex Sans Arabic');
+    await expect(page.getByTestId('img-logo')).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
+    await expect(page.locator('.amal-logo text').first()).toHaveCSS('fill', theme === 'dark' ? 'rgb(230, 238, 243)' : 'rgb(11, 37, 69)');
+    await expect(page.locator('.amal-logo text').nth(1)).toHaveCSS('fill', theme === 'dark' ? 'rgb(60, 196, 207)' : 'rgb(14, 124, 134)');
     expect((await page.request.get('/amal-logo-mark.svg')).ok()).toBeTruthy();
     for (const [i, state] of states.entries()) {
       const badge = page.getByTestId(`status-${state}`).first();
