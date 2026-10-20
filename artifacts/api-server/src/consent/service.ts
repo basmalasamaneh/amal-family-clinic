@@ -144,7 +144,7 @@ interface LookupRow extends VisitSource {
   patient_id: number; patient_name: string; visit_id: number; source_mode: string;
   own_patient: boolean; consent_level: "none" | "basic" | "clinical"; consent_withdrawn_at: Date | null;
 }
-export interface NetworkPatient { id: number; name: string; identityVerified: false; visits: NetworkVisit[] }
+export interface NetworkPatient { id: number; name: string; identityVerified: false; effectiveConsentLevel: "none" | "basic" | "clinical"; visits: NetworkVisit[] }
 export async function lookupNetwork(auth: Auth, query: unknown, correlationId = randomUUID()) {
   const input = lookupSchema.parse(query);
   return transaction(false, async client => {
@@ -218,7 +218,7 @@ export async function lookupNetwork(auth: Auth, query: unknown, correlationId = 
       if (!visibility) continue;
       let entry = patients.get(row.patient_id);
       if (!entry) {
-        entry = { patient: { id: row.patient_id, name: row.patient_name, identityVerified: false, visits: [] }, disclosures: [] };
+        entry = { patient: { id: row.patient_id, name: row.patient_name, identityVerified: false, effectiveConsentLevel: consent, visits: [] }, disclosures: [] };
         patients.set(row.patient_id, entry);
       }
       // Legacy dates have no recorded time: use documented local start-of-day.

@@ -5,6 +5,7 @@
  * Amal Network Section 12. Authentication, appointments and clinic-local patient CRUD/search are implemented; other domain services remain contracts/mocks. UTC ISO instants, required date-only DOB, Asia/Hebron display. Local patient endpoints return demographics only to doctors/front-desk, never clinical history or admin patient access. Separate network services require consent and exclude Lite clinics. Lists use opaque cursor plus limit (1–100, default 25); null nextCursor ends pagination.
  * OpenAPI spec version: 0.2.0
  */
+import type { NetworkPatientEffectiveConsentLevel } from './networkPatientEffectiveConsentLevel';
 import type { NetworkVisit } from './networkVisit';
 
 /**
@@ -15,6 +16,8 @@ export interface NetworkPatient {
   id: number;
   name: string;
   identityVerified: false;
+  /** Latest effective server consent; withdrawn or absent grants are none. Independent of local clinical authority and per-visit visibility. Returned only for already-permitted candidates. */
+  effectiveConsentLevel: NetworkPatientEffectiveConsentLevel;
   /**
      * Newest 100 visible visits at most, ordered by visit date then internal visit ID descending; older visits are omitted without totals.
      * @maxItems 100

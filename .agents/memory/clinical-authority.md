@@ -20,3 +20,9 @@ Consent reads and transitions coordinate through database transaction locks, not
 **Why:** Withdrawal must apply to the next request across instances, while an earlier authorized read must finish its durable disclosure audit before a competing withdrawal commits.
 
 **How to apply:** Any future sync/import/consent writer or protected clinical reader must participate in the same ordering discipline. Never select an older active grant after the newest record is withdrawn.
+
+Patient-card revalidation deliberately reuses audited lookup rather than joining demographic reads with raw visit data.
+
+**Why:** An otherwise convenient detail view must not create a second, unaudited authorization path. Local Clinical visibility and network sharing consent are independent, so a badge cannot infer consent from the richest disclosed visit.
+
+**How to apply:** Keep that distinction when extending consent displays or adding a future patient-detail contract; any replacement detail projection needs equivalent filtering, withdrawal ordering and disclosure audits.

@@ -634,6 +634,7 @@ export const LookupNetworkResponse = zod.object({
   "id": zod.number().int().min(1),
   "name": zod.string(),
   "identityVerified": zod.literal(false),
+  "effectiveConsentLevel": zod.enum(['none', 'basic', 'clinical']).describe('Latest effective server consent; withdrawn or absent grants are none. Independent of local clinical authority and per-visit visibility. Returned only for already-permitted candidates.'),
   "visits": zod.array(zod.object({
   "clinicId": zod.number().int().min(1),
   "doctorId": zod.number().int().min(1),

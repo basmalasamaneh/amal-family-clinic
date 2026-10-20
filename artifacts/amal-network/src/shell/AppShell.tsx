@@ -21,6 +21,9 @@ import { WalkInButton, WalkInProvider, useWalkIn } from '@/reception/WalkIn';
 import { WalkInHandoff } from '@/reception/WalkInHandoff';
 import { requestWalkIn, useWalkInAvailable } from '@/reception/walkin-bus';
 import { withCarry } from '@/calendar/carry';
+import { NetworkSearchPage } from '@/network/NetworkSearchPage';
+import { PatientCardPage } from '@/network/PatientCardPage';
+import { clearSelection as clearNetworkSelection } from '@/network/model';
 import { isKnownRole, landingFor, resolve, routesFor, type Resolution, type ShellRoute } from './routes';
 
 const BOTTOM_SLOTS = 4;
@@ -30,6 +33,7 @@ interface Props { identity: ShellIdentity; fixture: boolean; onRefresh: () => Pr
 export function AppShell({ identity, fixture, onRefresh, onLogout }: Props) {
   return <CancellationProvider key={identity.id} clinicNames={Object.fromEntries(identity.clinics.map((c) => [c.id, c.name]))}><AppShellContent identity={identity} fixture={fixture} onRefresh={onRefresh} onLogout={async () => {
     window.dispatchEvent(new Event('amal:discard-cancellations'));
+    clearNetworkSelection();
     await onLogout();
   }} /></CancellationProvider>;
 }
@@ -38,6 +42,8 @@ function AppShellContent({ identity, fixture, onRefresh, onLogout }: Props) {
   const { t } = useTranslation();
   const [location] = useLocation();
   const role = isKnownRole(identity.role) ? identity.role : null;
+  // Expiry/unmount must also clear transient selections, not just explicit logout.
+  useEffect(() => () => clearNetworkSelection(), [identity.id, role]);
   const items = useMemo(() => routesFor(role), [role]);
   const res = resolve(location, role);
 
@@ -91,9 +97,9 @@ function AppShellContent({ identity, fixture, onRefresh, onLogout }: Props) {
         )}
         <header className="shell-top">
           <div className="shell-top__brand"><AmalLogo /></div>
-          <ClinicSwitcher clinics={clinics} state={identity.clinicsState} value={clinicId} onChange={(id) => { void localCache.setContext(null); setClinicId(id); }} onRetry={onRefresh} />
+          <ClinicSwitcher clinics={clinics} state={identity.clinicsState} value={clinicId} onChange={(id) => { void localCache.setContext(null); clearNetworkSelection(); setClinicId(id); }} onRetry={onRefresh} />
           <WalkInButton />
-          <GlobalSearch key={clinicId ?? 'none'} />
+          {!(res.kind === 'page' && (res.route.id === 'networkSearch' || res.route.id === 'patientCard')) && <GlobalSearch key={clinicId ?? 'none'} />}
           <div className="shell-top__end">
             <ConnectionPill />
             <div className="shell-top__prefs"><LanguageSwitch /><ThemeSwitch /></div>
@@ -103,7 +109,7 @@ function AppShellContent({ identity, fixture, onRefresh, onLogout }: Props) {
         </header>
 
         <main id="main" tabIndex={-1} className="shell-main" key={clinicId ?? 'none'}>
-          <PageContent res={res} title={title} clinic={clinic} fixture={fixture} landing={landingFor(role)} />
+          <PageContent res={res} title={title} clinic={clinic} fixture={fixture} landing={landingFor(role)} scope={`${identity.id}:${role ?? 'none'}:${clinic?.id ?? 'none'}`} />
         </main>
       </div>
 
@@ -370,13 +376,15 @@ function HelpMenu({ onReplay, canReplay }: { onReplay: () => void; canReplay: bo
   );
 }
 
-function PageContent({ res, title, clinic, fixture, landing }: { res: Resolution; title: string; clinic: ShellClinic | null; fixture: boolean; landing: string | null }) {
+function PageContent({ res, title, clinic, fixture, landing, scope }: { res: Resolution; title: string; clinic: ShellClinic | null; fixture: boolean; landing: string | null; scope: string }) {
   const { t } = useTranslation();
   const { locale, digitPreference } = useAmalPreferences();
   const [now] = useState(() => new Date().toISOString());
 
   if (res.kind === 'page' && (res.route.id === 'today' || res.route.id === 'week')) return <CalendarPage view={res.route.id === 'today' ? 'day' : 'week'} clinic={clinic} fixture={fixture} title={title} />;
   if (res.kind === 'page' && res.route.id === 'patientLookup') return <PatientsPage clinic={clinic} fixture={fixture} title={title} />;
+  if (res.kind === 'page' && res.route.id === 'networkSearch') return <NetworkSearchPage clinic={clinic} title={title} scope={scope} />;
+  if (res.kind === 'page' && res.route.id === 'patientCard') return <PatientCardPage clinic={clinic} title={title} scope={scope} />;
   if (res.kind === 'page' && res.route.id === 'newBooking') return <BookingHandoff clinic={clinic} fixture={fixture} title={title} />;
   if (res.kind === 'page') {
     const Icon = res.route.icon;

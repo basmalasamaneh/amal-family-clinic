@@ -15,7 +15,9 @@
     "test:auth": "playwright test auth.spec.ts",
     "test:calendar:unit": "tsx --test tests/calendar.unit.test.ts",
     "test:booking:unit": "tsx --test tests/booking.unit.test.ts",
-    "test:reception:unit": "tsx --test tests/reception.unit.test.ts"
+    "test:reception:unit": "tsx --test tests/reception.unit.test.ts",
+    "test:network:unit": "tsx --test tests/network.unit.test.ts",
+    "test:network": "playwright test --config playwright.network.config.ts"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.14.0",

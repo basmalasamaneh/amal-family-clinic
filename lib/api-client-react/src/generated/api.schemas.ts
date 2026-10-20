@@ -549,6 +549,18 @@ export interface NetworkVisit {
 }
 
 /**
+ * Latest effective server consent; withdrawn or absent grants are none. Independent of local clinical authority and per-visit visibility. Returned only for already-permitted candidates.
+ */
+export type NetworkPatientEffectiveConsentLevel = typeof NetworkPatientEffectiveConsentLevel[keyof typeof NetworkPatientEffectiveConsentLevel];
+
+
+export const NetworkPatientEffectiveConsentLevel = {
+  none: 'none',
+  basic: 'basic',
+  clinical: 'clinical',
+} as const;
+
+/**
  * A name-match candidate, never verified identity. Same-name patients remain separate. No phone, DOB, hidden counts or hidden-source metadata.
  */
 export interface NetworkPatient {
@@ -556,6 +568,8 @@ export interface NetworkPatient {
   id: number;
   name: string;
   identityVerified: false;
+  /** Latest effective server consent; withdrawn or absent grants are none. Independent of local clinical authority and per-visit visibility. Returned only for already-permitted candidates. */
+  effectiveConsentLevel: NetworkPatientEffectiveConsentLevel;
   /**
      * Newest 100 visible visits at most, ordered by visit date then internal visit ID descending; older visits are omitted without totals.
      * @maxItems 100

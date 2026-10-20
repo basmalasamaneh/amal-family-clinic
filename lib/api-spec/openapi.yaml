@@ -1128,11 +1128,12 @@
       "NetworkPatient": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["id", "name", "identityVerified", "visits"],
+        "required": ["id", "name", "identityVerified", "effectiveConsentLevel", "visits"],
         "properties": {
           "id": { "type": "integer", "minimum": 1 },
           "name": { "type": "string" },
           "identityVerified": { "type": "boolean", "enum": [false] },
+          "effectiveConsentLevel": { "type": "string", "enum": ["none", "basic", "clinical"], "description": "Latest effective server consent; withdrawn or absent grants are none. Independent of local clinical authority and per-visit visibility. Returned only for already-permitted candidates." },
           "visits": { "type": "array", "maxItems": 100, "description": "Newest 100 visible visits at most, ordered by visit date then internal visit ID descending; older visits are omitted without totals.", "items": { "$ref": "#/components/schemas/NetworkVisit" } }
         },
         "description": "A name-match candidate, never verified identity. Same-name patients remain separate. No phone, DOB, hidden counts or hidden-source metadata."

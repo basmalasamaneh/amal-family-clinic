@@ -22,7 +22,7 @@ type NetworkVisit = {
   clinicId: number; doctorId: number; clinicName: string; doctorName: string;
   seenAt: string; visibility: string; complaint?: string; keyAlerts?: unknown[];
 };
-type NetworkPatient = { id: number; name: string; identityVerified: false; visits: NetworkVisit[] };
+type NetworkPatient = { id: number; name: string; identityVerified: false; effectiveConsentLevel: string; visits: NetworkVisit[] };
 const users: number[] = [];
 let localDoctor: Actor, otherDoctor: Actor, remoteDoctor: Actor, liteDoctor: Actor;
 let desk: Actor, secondDesk: Actor, remoteDesk: Actor, liteDesk: Actor, manager: Actor;
@@ -139,7 +139,8 @@ async function networkPatient(p: Patient, a = remoteDoctor): Promise<NetworkPati
   return r.data.items.find((item: NetworkPatient) => item.id === p.id);
 }
 function basicOnly(p: NetworkPatient) {
-  assert.deepEqual(Object.keys(p).sort(), ["id", "identityVerified", "name", "visits"]);
+  assert.deepEqual(Object.keys(p).sort(), ["effectiveConsentLevel", "id", "identityVerified", "name", "visits"]);
+  assert.equal(p.effectiveConsentLevel, "basic");
   assert.equal(p.identityVerified, false);
   assert(p.visits.length > 0);
   for (const v of p.visits) {
@@ -325,6 +326,7 @@ test("consent: role × scope × level, transactional history and network disclos
     await visit(p, otherDoctor);
     const own = await networkPatient(p, localDoctor);
     assert(own);
+    assert.equal(own.effectiveConsentLevel, "none", "local clinical authority is not network consent");
     assert.equal(own.visits.length, 2);
     assert(own.visits.every(v => v.clinicId === localDoctor.clinic && v.visibility === "clinical"));
     assert(own.visits.some(v => v.complaint === local.note));
@@ -340,6 +342,7 @@ test("consent: role × scope × level, transactional history and network disclos
     await record(p, "basic");
     const downgraded = await networkPatient(p, localDoctor);
     assert(downgraded);
+    assert.equal(downgraded.effectiveConsentLevel, "basic", "badge follows current consent despite local clinical visits");
     const cross = downgraded.visits.find(v => v.clinicId === remoteDoctor.clinic)!;
     assert.equal(cross.visibility, "basic");
     assert.equal(cross.complaint, undefined);

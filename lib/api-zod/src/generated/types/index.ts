@@ -106,6 +106,7 @@ export * from './networkHealth';
 export * from './networkHealthClinicsItem';
 export * from './networkHealthClinicsItemStatus';
 export * from './networkPatient';
+export * from './networkPatientEffectiveConsentLevel';
 export * from './networkPatientPage';
 export * from './networkVisit';
 export * from './networkVisitVisibility';
