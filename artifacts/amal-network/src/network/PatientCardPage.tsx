@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Link } from 'wouter';
 import { ArrowLeft, Building2, FileText, IdCard, Lock, RotateCcw, ShieldAlert, ShieldX, Stethoscope, UserRound } from 'lucide-react';
 import { useAmalPreferences } from '@workspace/amal-ui';
-import { lookupNetwork, type NetworkPatient, type NetworkVisit } from '@workspace/api-client-react';
+import { getDoctorPatient, lookupNetwork, type NetworkPatient, type NetworkVisit } from '@workspace/api-client-react';
 import type { ShellClinic } from '@/shell/identity';
 import { demoPath } from '@/shell/identity';
 import { ConsentBadge, KeyAlertChip, NoAlerts } from './indicators';
@@ -13,6 +13,7 @@ import {
   getSelection, isAbortError, orderVisits, relativeLabel, visitAlerts, visitNote, type Failure,
 } from './model';
 import './i18n';
+import '@/doctor/i18n';
 import './network.css';
 
 type State =
@@ -41,7 +42,8 @@ export function PatientCardPage({ clinic, title, scope }: { clinic: ShellClinic 
     if (!sel) { setState({ kind: 'none' }); return; }
     const ac = new AbortController(); ctl.current = ac;
     setState({ kind: 'loading' });
-    findPatient(lookupNetwork, sel.q, sel.id, ac.signal).then(
+    const req = sel.q ? findPatient(lookupNetwork, sel.q, sel.id, ac.signal) : getDoctorPatient(sel.id, { signal: ac.signal, cache: 'no-store' });
+    req.then(
       (p) => {
         if (id !== seq.current) return;
         if (!p) { setState({ kind: 'gone' }); return; }
@@ -74,7 +76,10 @@ export function PatientCardPage({ clinic, title, scope }: { clinic: ShellClinic 
     if (state.kind === 'ok' && !focused.current) { focused.current = true; nameRef.current?.focus(); }
   }, [state]);
 
-  const back = <Link href={demoPath('/doctor/network-search')} className="net-back" data-testid="link-network-back"><ArrowLeft size={18} aria-hidden="true" className="shell-dir-icon" />{t('net.card.back')}</Link>;
+  const fromDay = getSelection(scope)?.q === undefined && state.kind !== 'none';
+  const back = fromDay
+    ? <Link href={demoPath('/doctor/my-day')} className="net-back" data-testid="link-myday-back"><ArrowLeft size={18} aria-hidden="true" className="shell-dir-icon" />{t('doc.day.backToDay')}</Link>
+    : <Link href={demoPath('/doctor/network-search')} className="net-back" data-testid="link-network-back"><ArrowLeft size={18} aria-hidden="true" className="shell-dir-icon" />{t('net.card.back')}</Link>;
 
   return (
     <section className="net" data-testid="page-patientCard" aria-busy={state.kind === 'loading'}>

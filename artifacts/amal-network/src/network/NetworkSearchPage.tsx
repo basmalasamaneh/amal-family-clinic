@@ -62,7 +62,7 @@ export function NetworkSearchPage({ clinic, title, scope }: { clinic: ShellClini
   }, []);
 
   // Restore after returning from the card: revalidate, never redisplay old data.
-  useEffect(() => { if (prior) run(prior.q); return () => { ctl.current?.abort(); seq.current++; }; }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (prior?.q) run(prior.q); return () => { ctl.current?.abort(); seq.current++; }; }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Debounced typing; Enter / button runs immediately.
   const typed = useRef(false);

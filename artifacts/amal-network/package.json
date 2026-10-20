@@ -17,7 +17,9 @@
     "test:booking:unit": "tsx --test tests/booking.unit.test.ts",
     "test:reception:unit": "tsx --test tests/reception.unit.test.ts",
     "test:network:unit": "tsx --test tests/network.unit.test.ts",
-    "test:network": "playwright test --config playwright.network.config.ts"
+    "test:network": "playwright test --config playwright.network.config.ts",
+    "test:doctor:unit": "tsx --test tests/doctor.unit.test.ts",
+    "test:doctor": "playwright test --config playwright.doctor.config.ts"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.14.0",

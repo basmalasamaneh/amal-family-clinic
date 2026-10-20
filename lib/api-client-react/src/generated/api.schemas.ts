@@ -561,7 +561,7 @@ export const NetworkPatientEffectiveConsentLevel = {
 } as const;
 
 /**
- * A name-match candidate, never verified identity. Same-name patients remain separate. No phone, DOB, hidden counts or hidden-source metadata.
+ * Authorized patient projection, not verified identity. Network search candidates and exact-ID own patients share policy; same-name patients remain separate. Own patients may have no visits. No phone, DOB, hidden counts or hidden-source metadata.
  */
 export interface NetworkPatient {
   /** @minimum 1 */
@@ -575,6 +575,84 @@ export interface NetworkPatient {
      * @maxItems 100
      */
   visits: NetworkVisit[];
+}
+
+export type DoctorDayItemsItem = {
+  /** @minimum 1 */
+  id: number;
+  startsAt: string;
+  status: string;
+  patient: NetworkPatient;
+};
+
+export interface DoctorDay {
+  day: string;
+  items: DoctorDayItemsItem[];
+  /** @nullable */
+  nextCursor: string | null;
+}
+
+export type DoctorPrivacyClinic = {
+  /** @minimum 1 */
+  id: number;
+  name: string;
+};
+
+export type DoctorPrivacyMode = typeof DoctorPrivacyMode[keyof typeof DoctorPrivacyMode];
+
+
+export const DoctorPrivacyMode = {
+  full: 'full',
+  lite: 'lite',
+  trial: 'trial',
+  unknown: 'unknown',
+} as const;
+
+export type DoctorPrivacyEffectiveSharing = typeof DoctorPrivacyEffectiveSharing[keyof typeof DoctorPrivacyEffectiveSharing];
+
+
+export const DoctorPrivacyEffectiveSharing = {
+  consent: 'consent',
+  'local-only': 'local-only',
+} as const;
+
+export interface DoctorPrivacy {
+  clinic: DoctorPrivacyClinic;
+  mode: DoctorPrivacyMode;
+  effectiveSharing: DoctorPrivacyEffectiveSharing;
+  /** The current persisted model has Full/Lite only; Trial state is unavailable and never inferred. */
+  trialStateAvailable: false;
+}
+
+export type DoctorAuditPageItemsItemPatient = {
+  /** @minimum 1 */
+  id: number;
+  name: string;
+};
+
+export type DoctorAuditPageItemsItemAction = typeof DoctorAuditPageItemsItemAction[keyof typeof DoctorAuditPageItemsItemAction];
+
+
+export const DoctorAuditPageItemsItemAction = {
+  'patient-view': 'patient-view',
+} as const;
+
+export type DoctorAuditPageItemsItem = {
+  /** @minimum 1 */
+  id: number;
+  at: string;
+  patient: DoctorAuditPageItemsItemPatient;
+  /** @nullable */
+  viewerName: string | null;
+  /** @nullable */
+  viewerClinicName: string | null;
+  action: DoctorAuditPageItemsItemAction;
+};
+
+export interface DoctorAuditPage {
+  items: DoctorAuditPageItemsItem[];
+  /** @nullable */
+  nextCursor: string | null;
 }
 
 export interface NetworkPatientPage {
@@ -1301,11 +1379,24 @@ export const GetKpisRange = {
   month: 'month',
 } as const;
 
-export type ListAuditParams = {
+export type GetDoctorDayParams = {
+/**
+ * @minLength 1
+ * @maxLength 512
+ */
+cursor?: string;
+/**
+ * @minimum 1
+ * @maximum 100
+ */
+limit?: number;
+};
+
+export type ListDoctorAuditParams = {
 /**
  * @minimum 1
  */
-patientId: number;
+patientId?: number;
 cursor?: string;
 /**
  * @minimum 1

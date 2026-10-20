@@ -151,6 +151,11 @@ function basicOnly(p: NetworkPatient) {
 
 before(async () => {
   await admin.connect();
+  for (const table of ["clinics", "doctors", "patients", "appointments", "patient_visit_history",
+    "users", "auth_sessions", "patient_clinic_access", "patient_doctor_access", "patient_consents", "visit_alerts", "audit_log"]) {
+    assert((await admin.query("SELECT to_regclass($1) AS relation", [`operational.${table}`])).rows[0].relation,
+      `Missing prerequisite operational.${table}; run the completed upstream migrations, not seed mutations`);
+  }
   seedFingerprint = await snapshot();
   await admin.query("BEGIN");
   try {
@@ -179,6 +184,189 @@ after(async () => {
     await admin.end();
     await pool.end();
   }
+});
+
+test("doctor reads: exact patient scope, My Day, privacy and source-clinic audit", async t => {
+  const { dayInterval } = await import("../src/doctor/service");
+  await t.test("Hebron half-open days include both DST boundaries and local midnight rollover", () => {
+    const hours = new Set<number>();
+    for (let i = 0; i < 365; i++) {
+      const now = new Date(Date.UTC(2025, 0, 1 + i, 12));
+      const interval = dayInterval(now);
+      hours.add((interval.end.getTime() - interval.start.getTime()) / 3600000);
+      assert.equal(dayInterval(interval.start).day, interval.day);
+      assert.equal(dayInterval(new Date(interval.end.getTime() - 1)).day, interval.day);
+      assert.notEqual(dayInterval(interval.end).day, interval.day);
+    }
+    assert(hours.has(23), "spring day is 23h");
+    assert(hours.has(25), "autumn day is 25h");
+  });
+  await t.test("strict doctor identity, roles and forged query context", async () => {
+    for (const path of ["/doctor/day", "/doctor/privacy", "/doctor/patients/1", "/audit"]) {
+      assert.equal((await request(null, path)).status, 401);
+      for (const a of [desk, manager]) assert.equal((await request(a, path)).status, 403);
+      const forged = await request(localDoctor, `${path}?clinicId=${remoteDoctor.clinic}`);
+      assert.equal(forged.status, 400);
+      assert.equal(forged.cacheControl, "private, no-store");
+    }
+    for (const suffix of ["limit=0", "limit=101", "limit=1.1", "cursor=garbage", "limit=2&limit=3"]) {
+      for (const path of ["/doctor/day", "/audit"]) assert.equal((await request(localDoctor, `${path}?${suffix}`)).status, 400);
+    }
+    for (const id of ["abc", "0", "-1", "2147483648", "1&patientId=2"]) {
+      assert.equal((await request(localDoctor, `/audit?patientId=${id}`)).status, 400);
+    }
+    const { requireDoctor } = await import("../src/consent/service");
+    const client = await pool.connect();
+    try {
+      for (const doctorId of [otherDoctor.doctorId, remoteDoctor.doctorId, null]) {
+        await assert.rejects(requireDoctor(client, {
+          role: "doctor", clinicId: localDoctor.clinic, doctorId, id: localDoctor.id,
+        } as import("../src/lib/auth").Auth), (error: { status?: number }) => error.status === 403);
+      }
+    } finally {
+      client.release();
+    }
+  });
+  await t.test("stable ID includes assigned patients without visits, never name or appointment authority", async () => {
+    const p = await patient(), twin = await patient(desk, p.name);
+    await trustedDoctor(p);
+    const result = await request(localDoctor, `/doctor/patients/${p.id}`);
+    assert.equal(result.status, 200, JSON.stringify(result.data));
+    assert.deepEqual(result.data, { id: p.id, name: p.name, identityVerified: false, effectiveConsentLevel: "none", visits: [] });
+    assert.equal((await request(localDoctor, `/doctor/patients/${twin.id}`)).status, 404);
+    for (const a of [otherDoctor, remoteDoctor]) assert.equal((await request(a, `/doctor/patients/${p.id}`)).status, 404);
+    const { start, end, day } = dayInterval();
+    const booking = async (patientId: number, at: Date, doctor = localDoctor) =>
+      (await admin.query(`INSERT INTO operational.appointments(clinic_id,doctor_id,patient_id,scheduled_at,booking_method,status)
+        VALUES($1,$2,$3,$4,'phone','booked') RETURNING appointment_id`,
+      [doctor.clinic, doctor.doctorId, patientId, at])).rows[0].appointment_id;
+    const first = await booking(p.id, start);
+    const second = await booking(p.id, new Date(start.getTime() + 3600000));
+    await booking(p.id, end);
+    await booking(p.id, new Date(start.getTime() - 3600000));
+    await booking(twin.id, new Date(start.getTime() + 7200000));
+    await booking(p.id, new Date(start.getTime() + 10800000), otherDoctor);
+    assert.equal((await request(localDoctor, `/doctor/patients/${twin.id}`)).status, 404, "mutable bookings do not grant access");
+    const page = await request(localDoctor, "/doctor/day?limit=1");
+    assert.equal(page.status, 200, JSON.stringify(page.data));
+    assert.equal(page.data.day, day);
+    assert.equal(page.data.items[0].id, first);
+    assert.equal(page.data.items[0].startsAt, start.toISOString());
+    assert.equal(page.data.items[0].patient.id, p.id);
+    assert(page.data.nextCursor);
+    const next = await request(localDoctor, `/doctor/day?limit=1&cursor=${page.data.nextCursor}`);
+    assert.equal(next.status, 200, JSON.stringify(next.data));
+    assert.deepEqual(next.data.items.map((r: { id: number }) => r.id), [second]);
+    assert.equal(next.data.nextCursor, null);
+    assert.equal((await request(otherDoctor, `/doctor/day?cursor=${page.data.nextCursor}`)).status, 400);
+    assert.deepEqual((await request(otherDoctor, "/doctor/day")).data.items, []);
+    assert.equal(page.cacheControl, "private, no-store");
+  });
+  await t.test("shared exact-ID projection keeps local data, gates network consent/modes and audits disclosures", async () => {
+    const p = await patient();
+    await trustedDoctor(p);
+    const own = await visit(p), remote = await visit(p, remoteDoctor);
+    const get = () => request(localDoctor, `/doctor/patients/${p.id}`);
+    assert.deepEqual((await get()).data.visits.map((v: NetworkVisit) => v.clinicId), [localDoctor.clinic]);
+    await record(p, "basic");
+    let result = await get();
+    const basic = result.data.visits.find((v: NetworkVisit) => v.clinicId === remoteDoctor.clinic);
+    assert.equal(basic.visibility, "basic");
+    for (const key of ["complaint", "keyAlerts", "alerts"]) assert.equal(key in basic, false);
+    const clinical = await record(p);
+    result = await get();
+    assert.equal(result.data.visits.find((v: NetworkVisit) => v.clinicId === remoteDoctor.clinic).complaint, remote.note);
+    const disclosures = (await admin.query(`SELECT detail FROM operational.audit_log
+      WHERE user_id=$1 AND patient_id=$2 AND action='network.lookup'`, [localDoctor.id, p.id])).rows;
+    assert(disclosures.some(row => row.detail.sourceVisitId === remote.id && row.detail.projection === "clinical"));
+    const restore = async () => admin.query("UPDATE operational.clinics SET network_mode='full' WHERE clinic_id=ANY($1::integer[])", [[localDoctor.clinic, remoteDoctor.clinic]]);
+    try {
+      for (const clinicId of [localDoctor.clinic, remoteDoctor.clinic]) {
+        await admin.query("UPDATE operational.clinics SET network_mode='lite' WHERE clinic_id=$1", [clinicId]);
+        const lite = await get();
+        assert.deepEqual(lite.data.visits.map((v: NetworkVisit) => v.complaint), [own.note]);
+        await restore();
+      }
+    } finally { await restore(); }
+    assert.equal((await request(desk, `/consent/${clinical.id}/withdraw`, "POST", { clientOpId: randomUUID() })).status, 200);
+    const withdrawn = await get();
+    assert.equal(withdrawn.data.effectiveConsentLevel, "none");
+    assert.deepEqual(withdrawn.data.visits.map((v: NetworkVisit) => v.complaint), [own.note]);
+  });
+  await t.test("privacy is trusted Full/Lite read-only state, not invented Trial", async () => {
+    for (const [a, mode] of [[localDoctor, "full"], [liteDoctor, "lite"]] as const) {
+      const r = await request(a, "/doctor/privacy");
+      assert.equal(r.status, 200, JSON.stringify(r.data));
+      assert.equal(r.data.clinic.id, a.clinic);
+      assert(r.data.clinic.name);
+      assert.equal(r.data.mode, mode);
+      assert.equal(r.data.effectiveSharing, mode === "full" ? "consent" : "local-only");
+      assert.equal(r.data.trialStateAvailable, false);
+      assert.equal(r.cacheControl, "private, no-store");
+    }
+  });
+  await t.test("audit filters source/success/immutable scope before paging and redacts foreign or unknown actors", async () => {
+    const p = await patient(), unrelated = await patient();
+    await trustedDoctor(p);
+    const at = "2026-01-01T12:00:00.123456Z";
+    const event = async (patientId: number, source: number, actor: Actor | null, outcome = "disclosed", action = "network.lookup") =>
+      (await admin.query(`INSERT INTO operational.audit_log(user_id,clinic_id,action,patient_id,detail,at)
+        VALUES($1,$2,$3,$4,$5::jsonb,$6) RETURNING id`,
+      [actor?.id ?? null, actor?.clinic ?? null, action, patientId,
+        JSON.stringify({ outcome, sourceClinicId: source, privateNotes: "NEVER EXPOSE", email: "private@example.invalid" }), at])).rows[0].id;
+    const own = await event(p.id, localDoctor.clinic, localDoctor);
+    const foreign = await event(p.id, localDoctor.clinic, remoteDoctor);
+    const unknown = await event(p.id, localDoctor.clinic, null);
+    await event(unrelated.id, localDoctor.clinic, remoteDoctor);
+    await event(p.id, remoteDoctor.clinic, remoteDoctor);
+    await event(p.id, localDoctor.clinic, remoteDoctor, "denied");
+    await event(p.id, localDoctor.clinic, remoteDoctor, "no-result");
+    await event(p.id, localDoctor.clinic, remoteDoctor, "disclosed", "consent.record");
+    const collected: any[] = [];
+    let cursor: string | null = null;
+    do {
+      const r = await request(localDoctor, `/audit?patientId=${p.id}&limit=1${cursor ? `&cursor=${cursor}` : ""}`);
+      assert.equal(r.status, 200, JSON.stringify(r.data));
+      assert.equal(r.cacheControl, "private, no-store");
+      assert.equal(r.data.items.length, 1);
+      collected.push(...r.data.items);
+      cursor = r.data.nextCursor;
+      if (cursor) {
+        assert.equal((await request(otherDoctor, `/audit?patientId=${p.id}&cursor=${cursor}`)).status, 400);
+        assert.equal((await request(localDoctor, `/audit?patientId=${unrelated.id}&cursor=${cursor}`)).status, 400);
+      }
+    } while (cursor);
+    assert.deepEqual(collected.map(r => r.id), [unknown, foreign, own], "microsecond timestamp ties do not skip events");
+    for (const row of collected) {
+      assert.deepEqual(Object.keys(row).sort(), ["action", "at", "id", "patient", "viewerClinicName", "viewerName"]);
+      assert.deepEqual(row.patient, { id: p.id, name: p.name });
+      assert.equal(row.action, "patient-view");
+    }
+    for (const row of collected.slice(0, 2)) {
+      assert.equal(row.viewerName, null);
+      assert.equal(row.viewerClinicName, null);
+    }
+    assert(collected[2].viewerName);
+    assert(collected[2].viewerClinicName);
+    assert.deepEqual((await request(otherDoctor, `/audit?patientId=${p.id}`)).data, { items: [], nextCursor: null });
+    assert.deepEqual((await request(localDoctor, `/audit?patientId=${unrelated.id}`)).data, { items: [], nextCursor: null });
+    assert.equal(JSON.stringify(collected).includes("NEVER EXPOSE"), false);
+    assert.equal(JSON.stringify(collected).includes("@"), false);
+  });
+  await t.test("merged identities and doctor grants without source-clinic authority cannot enter audit or cards", async () => {
+    const target = await patient(), merged = await patient(), outside = await patient(remoteDesk);
+    await trustedDoctor(merged);
+    await admin.query("UPDATE operational.patients SET merged_into_id=$1 WHERE patient_id=$2", [target.id, merged.id]);
+    await admin.query(`INSERT INTO operational.patient_doctor_access(patient_id,clinic_id,doctor_id)
+      VALUES($1,$2,$3)`, [outside.id, localDoctor.clinic, localDoctor.doctorId]);
+    for (const p of [merged, outside]) {
+      await admin.query(`INSERT INTO operational.audit_log(user_id,clinic_id,action,patient_id,detail)
+        VALUES($1,$2,'network.lookup',$3,$4::jsonb)`, [remoteDoctor.id, remoteDoctor.clinic, p.id,
+        JSON.stringify({ outcome: "disclosed", sourceClinicId: localDoctor.clinic })]);
+      assert.equal((await request(localDoctor, `/doctor/patients/${p.id}`)).status, 404);
+      assert.deepEqual((await request(localDoctor, `/audit?patientId=${p.id}`)).data, { items: [], nextCursor: null });
+    }
+  });
 });
 
 test("consent: role × scope × level, transactional history and network disclosure", async t => {

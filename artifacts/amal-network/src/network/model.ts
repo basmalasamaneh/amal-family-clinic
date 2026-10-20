@@ -109,7 +109,8 @@ export const CONSENT_CHANGED_EVENT = 'amal:consent-changed';
 export const REVALIDATE_MS = 60_000;
 
 /* ---- Transient selection: module memory only, scoped to identity + clinic ---- */
-export interface Selection { scope: string; q: string; id: number }
+/** Search selections carry the audited query; My Day selections (no q) carry only the stable own-patient id. */
+export interface Selection { scope: string; id: number; q?: string }
 let selection: Selection | null = null;
 export function setSelection(s: Selection): void { selection = { ...s }; }
 export function getSelection(scope: string): Selection | null {

@@ -9,7 +9,7 @@ import type { NetworkPatientEffectiveConsentLevel } from './networkPatientEffect
 import type { NetworkVisit } from './networkVisit';
 
 /**
- * A name-match candidate, never verified identity. Same-name patients remain separate. No phone, DOB, hidden counts or hidden-source metadata.
+ * Authorized patient projection, not verified identity. Network search candidates and exact-ID own patients share policy; same-name patients remain separate. Own patients may have no visits. No phone, DOB, hidden counts or hidden-source metadata.
  */
 export interface NetworkPatient {
   /** @minimum 1 */

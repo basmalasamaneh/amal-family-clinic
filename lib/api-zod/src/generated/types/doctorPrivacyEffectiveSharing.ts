@@ -6,15 +6,10 @@
  * OpenAPI spec version: 0.2.0
  */
 
-export type ListAuditParams = {
-/**
- * @minimum 1
- */
-patientId: number;
-cursor?: string;
-/**
- * @minimum 1
- * @maximum 100
- */
-limit?: number;
-};
+export type DoctorPrivacyEffectiveSharing = typeof DoctorPrivacyEffectiveSharing[keyof typeof DoctorPrivacyEffectiveSharing];
+
+
+export const DoctorPrivacyEffectiveSharing = {
+  consent: 'consent',
+  'local-only': 'local-only',
+} as const;

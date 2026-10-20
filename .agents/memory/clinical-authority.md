@@ -26,3 +26,9 @@ Patient-card revalidation deliberately reuses audited lookup rather than joining
 **Why:** An otherwise convenient detail view must not create a second, unaudited authorization path. Local Clinical visibility and network sharing consent are independent, so a badge cannot infer consent from the richest disclosed visit.
 
 **How to apply:** Keep that distinction when extending consent displays or adding a future patient-detail contract; any replacement detail projection needs equivalent filtering, withdrawal ordering and disclosure audits.
+
+Protected pagination must revalidate previously displayed pages instead of appending fresh results to retained clinical payloads.
+
+**Why:** A successful later-page request after withdrawal can otherwise leave earlier-page notes or alerts visible even though the new response correctly applies the downgraded policy.
+
+**How to apply:** Clear protected results before paging and re-read a bounded set from the beginning, discarding obsolete requests. Never restore an earlier success after a failed refresh.

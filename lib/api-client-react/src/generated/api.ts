@@ -29,7 +29,6 @@ import type {
   AppointmentInput,
   AppointmentPage,
   AppointmentUpdate,
-  AuditEventPage,
   Clinic,
   ClinicInput,
   ClinicPage,
@@ -40,9 +39,13 @@ import type {
   ConsentState,
   Device,
   DeviceInput,
+  DoctorAuditPage,
+  DoctorDay,
   DoctorPage,
+  DoctorPrivacy,
   DuplicateCandidatePage,
   GetAppointmentAvailabilityParams,
+  GetDoctorDayParams,
   GetKpisParams,
   HealthStatus,
   Identity,
@@ -52,8 +55,8 @@ import type {
   ImportUploadInput,
   KpiResult,
   ListAppointmentsParams,
-  ListAuditParams,
   ListClinicsParams,
+  ListDoctorAuditParams,
   ListDoctorsParams,
   ListPatientDuplicatesParams,
   ListPatientsParams,
@@ -62,6 +65,7 @@ import type {
   MergeInput,
   MergeResult,
   NetworkHealth,
+  NetworkPatient,
   NetworkPatientPage,
   OperationInput,
   PasswordCredentials,
@@ -2592,7 +2596,248 @@ export function useGetKpis<TData = Awaited<ReturnType<typeof getKpis>>, TError =
 
 
 
-export const getListAuditUrl = (params: ListAuditParams,) => {
+export const getGetDoctorDayUrl = (params?: GetDoctorDayParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/doctor/day?${stringifiedParams}` : `/api/doctor/day`
+}
+
+/**
+ * Doctor-only immutable own-patient assignments in the authorized clinic. Server Asia/Hebron today, half-open UTC interval, ordered by time then appointment ID. Shared consent policy, lock and disclosure audits; private no-store. Cursor bound to actor, clinic, doctor and current day. Unknown query keys rejected.
+ * @summary Doctor My Day
+ */
+export const getDoctorDay = async (params?: GetDoctorDayParams, options?: Parameters<typeof customFetch>[1]): Promise<DoctorDay> => {
+
+  return customFetch<DoctorDay>(getGetDoctorDayUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetDoctorDayQueryKey = (params?: GetDoctorDayParams,) => {
+    return [
+    `/api/doctor/day`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetDoctorDayQueryOptions = <TData = Awaited<ReturnType<typeof getDoctorDay>>, TError = ErrorType<void>>(params?: GetDoctorDayParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getDoctorDay>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetDoctorDayQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getDoctorDay>>> = ({ signal }) => getDoctorDay(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getDoctorDay>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetDoctorDayQueryResult = NonNullable<Awaited<ReturnType<typeof getDoctorDay>>>
+export type GetDoctorDayQueryError = ErrorType<void>
+
+
+/**
+ * @summary Doctor My Day
+ */
+
+export function useGetDoctorDay<TData = Awaited<ReturnType<typeof getDoctorDay>>, TError = ErrorType<void>>(
+ params?: GetDoctorDayParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getDoctorDay>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetDoctorDayQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetDoctorPatientUrl = (id: number,) => {
+
+
+
+
+  return `/api/doctor/patients/${id}`
+}
+
+/**
+ * Doctor-only exact immutable patient-doctor and clinic scope. Includes own patients without visits. Reuses NetworkPatient visibility, shared consent lock and network disclosure auditing. No name lookup. No query parameters. Private no-store.
+ * @summary Open own patient by stable ID
+ */
+export const getDoctorPatient = async (id: number, options?: Parameters<typeof customFetch>[1]): Promise<NetworkPatient> => {
+
+  return customFetch<NetworkPatient>(getGetDoctorPatientUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetDoctorPatientQueryKey = (id: number,) => {
+    return [
+    `/api/doctor/patients/${id}`
+    ] as const;
+    }
+
+
+export const getGetDoctorPatientQueryOptions = <TData = Awaited<ReturnType<typeof getDoctorPatient>>, TError = ErrorType<void>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getDoctorPatient>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetDoctorPatientQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getDoctorPatient>>> = ({ signal }) => getDoctorPatient(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getDoctorPatient>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetDoctorPatientQueryResult = NonNullable<Awaited<ReturnType<typeof getDoctorPatient>>>
+export type GetDoctorPatientQueryError = ErrorType<void>
+
+
+/**
+ * @summary Open own patient by stable ID
+ */
+
+export function useGetDoctorPatient<TData = Awaited<ReturnType<typeof getDoctorPatient>>, TError = ErrorType<void>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getDoctorPatient>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetDoctorPatientQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetDoctorPrivacyUrl = () => {
+
+
+
+
+  return `/api/doctor/privacy`
+}
+
+/**
+ * Doctor-only trusted clinic context. Full means consent-based sharing; Lite/unknown deny sharing. Current model does not represent Trial: trialStateAvailable is false and Trial is never inferred. Read-only, private no-store; no query parameters.
+ * @summary Read clinic sharing state
+ */
+export const getDoctorPrivacy = async ( options?: Parameters<typeof customFetch>[1]): Promise<DoctorPrivacy> => {
+
+  return customFetch<DoctorPrivacy>(getGetDoctorPrivacyUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetDoctorPrivacyQueryKey = () => {
+    return [
+    `/api/doctor/privacy`
+    ] as const;
+    }
+
+
+export const getGetDoctorPrivacyQueryOptions = <TData = Awaited<ReturnType<typeof getDoctorPrivacy>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getDoctorPrivacy>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetDoctorPrivacyQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getDoctorPrivacy>>> = ({ signal }) => getDoctorPrivacy({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getDoctorPrivacy>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetDoctorPrivacyQueryResult = NonNullable<Awaited<ReturnType<typeof getDoctorPrivacy>>>
+export type GetDoctorPrivacyQueryError = ErrorType<void>
+
+
+/**
+ * @summary Read clinic sharing state
+ */
+
+export function useGetDoctorPrivacy<TData = Awaited<ReturnType<typeof getDoctorPrivacy>>, TError = ErrorType<void>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getDoctorPrivacy>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetDoctorPrivacyQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getListDoctorAuditUrl = (params?: ListDoctorAuditParams,) => {
   const normalizedParams = new URLSearchParams();
 
   Object.entries(params || {}).forEach(([key, value]) => {
@@ -2608,12 +2853,12 @@ export const getListAuditUrl = (params: ListAuditParams,) => {
 }
 
 /**
- * Patient-scoped access metadata only; no clinical payloads. Admin receives organizational security metadata, never clinical history. Doctor/front-desk constrained to authorized clinic and patient context.
+ * Doctor-only own-patient/source-clinic successful network.lookup disclosures. Scope and outcome filtered before pagination; newest first with ID tie-break. Optional patientId narrows scope only. Viewer identity/clinic redacted to null unless a verified current same-clinic doctor; no raw detail or emails. Private no-store. Cursor bound to actor/clinic/doctor/patient filter; strict query validation.
  * @summary list audit
  */
-export const listAudit = async (params: ListAuditParams, options?: Parameters<typeof customFetch>[1]): Promise<AuditEventPage> => {
+export const listDoctorAudit = async (params?: ListDoctorAuditParams, options?: Parameters<typeof customFetch>[1]): Promise<DoctorAuditPage> => {
 
-  return customFetch<AuditEventPage>(getListAuditUrl(params),
+  return customFetch<DoctorAuditPage>(getListDoctorAuditUrl(params),
   {
     ...options,
     method: 'GET'
@@ -2626,45 +2871,45 @@ export const listAudit = async (params: ListAuditParams, options?: Parameters<ty
 
 
 
-export const getListAuditQueryKey = (params?: ListAuditParams,) => {
+export const getListDoctorAuditQueryKey = (params?: ListDoctorAuditParams,) => {
     return [
     `/api/audit`, ...(params ? [params] : [])
     ] as const;
     }
 
 
-export const getListAuditQueryOptions = <TData = Awaited<ReturnType<typeof listAudit>>, TError = ErrorType<ApiFailure>>(params: ListAuditParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAudit>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export const getListDoctorAuditQueryOptions = <TData = Awaited<ReturnType<typeof listDoctorAudit>>, TError = ErrorType<ApiFailure>>(params?: ListDoctorAuditParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listDoctorAudit>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getListAuditQueryKey(params);
+  const queryKey =  queryOptions?.queryKey ?? getListDoctorAuditQueryKey(params);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listAudit>>> = ({ signal }) => listAudit(params, { signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listDoctorAudit>>> = ({ signal }) => listDoctorAudit(params, { signal, ...requestOptions });
 
 
 
 
 
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listAudit>>, TError, TData> & { queryKey: QueryKey }
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listDoctorAudit>>, TError, TData> & { queryKey: QueryKey }
 }
 
-export type ListAuditQueryResult = NonNullable<Awaited<ReturnType<typeof listAudit>>>
-export type ListAuditQueryError = ErrorType<ApiFailure>
+export type ListDoctorAuditQueryResult = NonNullable<Awaited<ReturnType<typeof listDoctorAudit>>>
+export type ListDoctorAuditQueryError = ErrorType<ApiFailure>
 
 
 /**
  * @summary list audit
  */
 
-export function useListAudit<TData = Awaited<ReturnType<typeof listAudit>>, TError = ErrorType<ApiFailure>>(
- params: ListAuditParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAudit>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export function useListDoctorAudit<TData = Awaited<ReturnType<typeof listDoctorAudit>>, TError = ErrorType<ApiFailure>>(
+ params?: ListDoctorAuditParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listDoctorAudit>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
-  const queryOptions = getListAuditQueryOptions(params,options)
+  const queryOptions = getListDoctorAuditQueryOptions(params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

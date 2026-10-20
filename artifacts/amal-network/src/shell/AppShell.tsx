@@ -23,6 +23,8 @@ import { requestWalkIn, useWalkInAvailable } from '@/reception/walkin-bus';
 import { withCarry } from '@/calendar/carry';
 import { NetworkSearchPage } from '@/network/NetworkSearchPage';
 import { PatientCardPage } from '@/network/PatientCardPage';
+import { MyDayPage } from '@/doctor/MyDayPage';
+import { PrivacyPage } from '@/doctor/PrivacyPage';
 import { clearSelection as clearNetworkSelection } from '@/network/model';
 import { isKnownRole, landingFor, resolve, routesFor, type Resolution, type ShellRoute } from './routes';
 
@@ -385,6 +387,8 @@ function PageContent({ res, title, clinic, fixture, landing, scope }: { res: Res
   if (res.kind === 'page' && res.route.id === 'patientLookup') return <PatientsPage clinic={clinic} fixture={fixture} title={title} />;
   if (res.kind === 'page' && res.route.id === 'networkSearch') return <NetworkSearchPage clinic={clinic} title={title} scope={scope} />;
   if (res.kind === 'page' && res.route.id === 'patientCard') return <PatientCardPage clinic={clinic} title={title} scope={scope} />;
+  if (res.kind === 'page' && res.route.id === 'myDay') return <MyDayPage clinic={clinic} title={title} scope={scope} />;
+  if (res.kind === 'page' && res.route.id === 'privacy') return <PrivacyPage clinic={clinic} title={title} scope={scope} />;
   if (res.kind === 'page' && res.route.id === 'newBooking') return <BookingHandoff clinic={clinic} fixture={fixture} title={title} />;
   if (res.kind === 'page') {
     const Icon = res.route.icon;

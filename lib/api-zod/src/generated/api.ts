@@ -663,7 +663,7 @@ export const LookupNetworkResponse = zod.object({
   "crossClinicDisclaimerKey": zod.string().nullable()
 }).strict().describe('Unconfirmed source-note mention, not medical advice or a current medication list. Show original untranslated excerpt and disclaimers adjacent to every chip; never render legacy keyAlerts alone. Null rule/offset fields identify manual or legacy evidence.')).optional()
 }).strict().describe('Basic omits complaint and keyAlerts entirely. Clinical includes existing authorized notes/alerts. UTC instant; legacy date-only visits use Asia/Hebron start-of-day, not a claimed known visit time.')).max(lookupNetworkResponseItemsItemVisitsMax).describe('Newest 100 visible visits at most, ordered by visit date then internal visit ID descending; older visits are omitted without totals.')
-}).strict().describe('A name-match candidate, never verified identity. Same-name patients remain separate. No phone, DOB, hidden counts or hidden-source metadata.')),
+}).strict().describe('Authorized patient projection, not verified identity. Network search candidates and exact-ID own patients share policy; same-name patients remain separate. Own patients may have no visits. No phone, DOB, hidden counts or hidden-source metadata.')),
   "nextCursor": zod.string().nullable()
 }).strict()
 
@@ -1260,18 +1260,19 @@ export const GetKpisResponse = zod.object({
 
 
 /**
- * Patient-scoped access metadata only; no clinical payloads. Admin receives organizational security metadata, never clinical history. Doctor/front-desk constrained to authorized clinic and patient context.
- * @summary list audit
+ * Doctor-only immutable own-patient assignments in the authorized clinic. Server Asia/Hebron today, half-open UTC interval, ordered by time then appointment ID. Shared consent policy, lock and disclosure audits; private no-store. Cursor bound to actor, clinic, doctor and current day. Unknown query keys rejected.
+ * @summary Doctor My Day
  */
+export const getDoctorDayQueryCursorMax = 512;
 
-export const listAuditQueryLimitMax = 100;
+export const getDoctorDayQueryLimitDefault = 25;
+export const getDoctorDayQueryLimitMax = 100;
 
 
 
-export const ListAuditQueryParams = zod.object({
-  "patientId": zod.coerce.number().int().min(1),
-  "cursor": zod.coerce.string().optional(),
-  "limit": zod.coerce.number().int().min(1).max(listAuditQueryLimitMax).optional()
+export const GetDoctorDayQueryParams = zod.object({
+  "cursor": zod.coerce.string().min(1).max(getDoctorDayQueryCursorMax).optional(),
+  "limit": zod.coerce.number().int().min(1).max(getDoctorDayQueryLimitMax).default(getDoctorDayQueryLimitDefault)
 }).strict()
 
 
@@ -1279,14 +1280,165 @@ export const ListAuditQueryParams = zod.object({
 
 
 
-export const ListAuditResponse = zod.object({
+export const getDoctorDayResponseItemsItemPatientVisitsItemAlertsItemExcerptStartMin = 0;
+
+
+export const getDoctorDayResponseItemsItemPatientVisitsMax = 100;
+
+
+
+export const GetDoctorDayResponse = zod.object({
+  "day": zod.coerce.date(),
   "items": zod.array(zod.object({
   "id": zod.number().int().min(1),
-  "patientId": zod.number().int().min(1),
-  "actorRole": zod.enum(['doctor', 'front-desk', 'admin']),
-  "action": zod.enum(['network.lookup', 'consent.record', 'consent.withdraw', 'patient.view']),
-  "occurredAt": zod.coerce.date(),
-  "clinicId": zod.number().int().min(1)
+  "startsAt": zod.coerce.date(),
+  "status": zod.string(),
+  "patient": zod.object({
+  "id": zod.number().int().min(1),
+  "name": zod.string(),
+  "identityVerified": zod.literal(false),
+  "effectiveConsentLevel": zod.enum(['none', 'basic', 'clinical']).describe('Latest effective server consent; withdrawn or absent grants are none. Independent of local clinical authority and per-visit visibility. Returned only for already-permitted candidates.'),
+  "visits": zod.array(zod.object({
+  "clinicId": zod.number().int().min(1),
+  "doctorId": zod.number().int().min(1),
+  "clinicName": zod.string(),
+  "doctorName": zod.string(),
+  "seenAt": zod.coerce.date(),
+  "visibility": zod.enum(['basic', 'clinical']),
+  "complaint": zod.string().optional(),
+  "keyAlerts": zod.array(zod.string()).optional(),
+  "alerts": zod.array(zod.object({
+  "kind": zod.enum(['medication', 'allergy', 'condition']),
+  "labelKey": zod.string(),
+  "labelParams": zod.record(zod.string(), zod.string()),
+  "label": zod.string().describe('English compatibility label; localize using labelKey and labelParams.'),
+  "ruleId": zod.string().nullable(),
+  "dictionaryVersion": zod.string().nullable(),
+  "sourceNoteExcerpt": zod.string().min(1),
+  "excerptStart": zod.number().int().min(getDoctorDayResponseItemsItemPatientVisitsItemAlertsItemExcerptStartMin).nullable(),
+  "excerptEnd": zod.number().int().min(1).nullable(),
+  "sourceVisitId": zod.number().int(),
+  "patientId": zod.number().int(),
+  "sourceClinicId": zod.number().int(),
+  "sourceClinicName": zod.string(),
+  "sourceVisitDate": zod.coerce.date(),
+  "disclaimerKey": zod.string(),
+  "crossClinicDisclaimerKey": zod.string().nullable()
+}).strict().describe('Unconfirmed source-note mention, not medical advice or a current medication list. Show original untranslated excerpt and disclaimers adjacent to every chip; never render legacy keyAlerts alone. Null rule/offset fields identify manual or legacy evidence.')).optional()
+}).strict().describe('Basic omits complaint and keyAlerts entirely. Clinical includes existing authorized notes/alerts. UTC instant; legacy date-only visits use Asia/Hebron start-of-day, not a claimed known visit time.')).max(getDoctorDayResponseItemsItemPatientVisitsMax).describe('Newest 100 visible visits at most, ordered by visit date then internal visit ID descending; older visits are omitted without totals.')
+}).strict().describe('Authorized patient projection, not verified identity. Network search candidates and exact-ID own patients share policy; same-name patients remain separate. Own patients may have no visits. No phone, DOB, hidden counts or hidden-source metadata.')
+}).strict()),
+  "nextCursor": zod.string().nullable()
+}).strict()
+
+
+/**
+ * Doctor-only exact immutable patient-doctor and clinic scope. Includes own patients without visits. Reuses NetworkPatient visibility, shared consent lock and network disclosure auditing. No name lookup. No query parameters. Private no-store.
+ * @summary Open own patient by stable ID
+ */
+export const getDoctorPatientPathIdMax = 2147483647;
+
+
+
+export const GetDoctorPatientParams = zod.object({
+  "id": zod.coerce.number().int().min(1).max(getDoctorPatientPathIdMax)
+}).strict()
+
+
+
+
+
+export const getDoctorPatientResponseVisitsItemAlertsItemExcerptStartMin = 0;
+
+
+export const getDoctorPatientResponseVisitsMax = 100;
+
+
+
+export const GetDoctorPatientResponse = zod.object({
+  "id": zod.number().int().min(1),
+  "name": zod.string(),
+  "identityVerified": zod.literal(false),
+  "effectiveConsentLevel": zod.enum(['none', 'basic', 'clinical']).describe('Latest effective server consent; withdrawn or absent grants are none. Independent of local clinical authority and per-visit visibility. Returned only for already-permitted candidates.'),
+  "visits": zod.array(zod.object({
+  "clinicId": zod.number().int().min(1),
+  "doctorId": zod.number().int().min(1),
+  "clinicName": zod.string(),
+  "doctorName": zod.string(),
+  "seenAt": zod.coerce.date(),
+  "visibility": zod.enum(['basic', 'clinical']),
+  "complaint": zod.string().optional(),
+  "keyAlerts": zod.array(zod.string()).optional(),
+  "alerts": zod.array(zod.object({
+  "kind": zod.enum(['medication', 'allergy', 'condition']),
+  "labelKey": zod.string(),
+  "labelParams": zod.record(zod.string(), zod.string()),
+  "label": zod.string().describe('English compatibility label; localize using labelKey and labelParams.'),
+  "ruleId": zod.string().nullable(),
+  "dictionaryVersion": zod.string().nullable(),
+  "sourceNoteExcerpt": zod.string().min(1),
+  "excerptStart": zod.number().int().min(getDoctorPatientResponseVisitsItemAlertsItemExcerptStartMin).nullable(),
+  "excerptEnd": zod.number().int().min(1).nullable(),
+  "sourceVisitId": zod.number().int(),
+  "patientId": zod.number().int(),
+  "sourceClinicId": zod.number().int(),
+  "sourceClinicName": zod.string(),
+  "sourceVisitDate": zod.coerce.date(),
+  "disclaimerKey": zod.string(),
+  "crossClinicDisclaimerKey": zod.string().nullable()
+}).strict().describe('Unconfirmed source-note mention, not medical advice or a current medication list. Show original untranslated excerpt and disclaimers adjacent to every chip; never render legacy keyAlerts alone. Null rule/offset fields identify manual or legacy evidence.')).optional()
+}).strict().describe('Basic omits complaint and keyAlerts entirely. Clinical includes existing authorized notes/alerts. UTC instant; legacy date-only visits use Asia/Hebron start-of-day, not a claimed known visit time.')).max(getDoctorPatientResponseVisitsMax).describe('Newest 100 visible visits at most, ordered by visit date then internal visit ID descending; older visits are omitted without totals.')
+}).strict().describe('Authorized patient projection, not verified identity. Network search candidates and exact-ID own patients share policy; same-name patients remain separate. Own patients may have no visits. No phone, DOB, hidden counts or hidden-source metadata.')
+
+
+/**
+ * Doctor-only trusted clinic context. Full means consent-based sharing; Lite/unknown deny sharing. Current model does not represent Trial: trialStateAvailable is false and Trial is never inferred. Read-only, private no-store; no query parameters.
+ * @summary Read clinic sharing state
+ */
+
+
+
+export const GetDoctorPrivacyResponse = zod.object({
+  "clinic": zod.object({
+  "id": zod.number().int().min(1),
+  "name": zod.string()
+}).strict(),
+  "mode": zod.enum(['full', 'lite', 'trial', 'unknown']),
+  "effectiveSharing": zod.enum(['consent', 'local-only']),
+  "trialStateAvailable": zod.literal(false).describe('The current persisted model has Full/Lite only; Trial state is unavailable and never inferred.')
+}).strict()
+
+
+/**
+ * Doctor-only own-patient/source-clinic successful network.lookup disclosures. Scope and outcome filtered before pagination; newest first with ID tie-break. Optional patientId narrows scope only. Viewer identity/clinic redacted to null unless a verified current same-clinic doctor; no raw detail or emails. Private no-store. Cursor bound to actor/clinic/doctor/patient filter; strict query validation.
+ * @summary list audit
+ */
+
+export const listDoctorAuditQueryLimitMax = 100;
+
+
+
+export const ListDoctorAuditQueryParams = zod.object({
+  "patientId": zod.coerce.number().int().min(1).optional(),
+  "cursor": zod.coerce.string().optional(),
+  "limit": zod.coerce.number().int().min(1).max(listDoctorAuditQueryLimitMax).optional()
+}).strict()
+
+
+
+
+
+export const ListDoctorAuditResponse = zod.object({
+  "items": zod.array(zod.object({
+  "id": zod.number().int().min(1),
+  "at": zod.coerce.date(),
+  "patient": zod.object({
+  "id": zod.number().int().min(1),
+  "name": zod.string()
+}).strict(),
+  "viewerName": zod.string().nullable(),
+  "viewerClinicName": zod.string().nullable(),
+  "action": zod.enum(['patient-view'])
 }).strict()),
   "nextCursor": zod.string().nullable()
 }).strict()

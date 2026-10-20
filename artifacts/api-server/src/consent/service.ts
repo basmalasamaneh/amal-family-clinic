@@ -28,7 +28,7 @@ const lookupSchema = z.object({
 }).strict();
 const hash = (value: unknown) => createHash("sha256").update(JSON.stringify(value)).digest("hex");
 
-async function transaction<T>(exclusive: boolean, work: (client: PoolClient) => Promise<T>): Promise<T> {
+export async function transaction<T>(exclusive: boolean, work: (client: PoolClient) => Promise<T>): Promise<T> {
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
@@ -51,7 +51,7 @@ export async function appendAudit(client: Pick<PoolClient, "query">, auth: Auth 
 export async function auditDenied(auth: Auth | undefined, action: string, correlationId: string) {
   await appendAudit(pool, auth, action, null, { correlationId, outcome: "denied" });
 }
-async function requireDoctor(client: PoolClient, auth: Auth) {
+export async function requireDoctor(client: PoolClient, auth: Auth) {
   if (auth.role !== "doctor" || !auth.clinicId || !auth.doctorId) throw forbidden();
   const { rows: [doctor] } = await client.query(`SELECT c.network_mode FROM operational.doctors d
     JOIN operational.clinics c ON c.clinic_id=d.clinic_id
@@ -147,7 +147,15 @@ interface LookupRow extends VisitSource {
 export interface NetworkPatient { id: number; name: string; identityVerified: false; effectiveConsentLevel: "none" | "basic" | "clinical"; visits: NetworkVisit[] }
 export async function lookupNetwork(auth: Auth, query: unknown, correlationId = randomUUID()) {
   const input = lookupSchema.parse(query);
-  return transaction(false, async client => {
+  return transaction(false, client => projectNetworkPatients(client, auth, input, correlationId));
+}
+/** Caller holds the shared consent transaction lock. Exact IDs are internal,
+ * doctor-scoped selections, never a name-based patient-card resolution. */
+export async function projectNetworkPatients(
+  client: PoolClient, auth: Auth,
+  input: { q?: string; limit?: number; cursor?: string; patientIds?: number[] },
+  correlationId: string,
+) {
     const requesterMode = await requireDoctor(client, auth);
     const limit = input.limit ?? 25;
     // Cursor fingerprint binds scope and normalized query, but is never an audit field.
@@ -168,10 +176,11 @@ export async function lookupNetwork(auth: Auth, query: unknown, correlationId = 
       FROM operational.patients p
       LEFT JOIN LATERAL (SELECT level,withdrawn_at FROM operational.patient_consents
         WHERE patient_id=p.patient_id ORDER BY id DESC LIMIT 1) consent ON true
-      WHERE p.merged_into_id IS NULL AND p.patient_id>$3 AND strpos(p.name_normalized,$4)>0
+      WHERE p.merged_into_id IS NULL AND p.patient_id>$3
+        AND (CASE WHEN $7::integer[] IS NULL THEN strpos(p.name_normalized,$4)>0 ELSE p.patient_id=ANY($7) END)
     ), eligible AS (
       SELECT p.* FROM candidates p
-      WHERE EXISTS (
+      WHERE ($7::integer[] IS NOT NULL AND p.own_patient) OR ($7::integer[] IS NULL AND EXISTS (
         SELECT 1 FROM operational.patient_visit_history v
         JOIN operational.clinics c ON c.clinic_id=v.clinic_id
         WHERE v.patient_id=p.patient_id AND (
@@ -179,7 +188,7 @@ export async function lookupNetwork(auth: Auth, query: unknown, correlationId = 
           OR (v.clinic_id<>$1 AND c.network_mode='full' AND $5='full'
             AND p.consent_withdrawn_at IS NULL AND p.consent_level IN ('basic','clinical'))
         )
-      )
+      ))
       ORDER BY p.patient_id LIMIT $6
     )
     SELECT p.patient_id,p.patient_name,
@@ -196,7 +205,7 @@ export async function lookupNetwork(auth: Auth, query: unknown, correlationId = 
         'label_params',a.label_params,'excerpt_start',a.excerpt_start,'excerpt_end',a.excerpt_end) ORDER BY a.id)
         FROM operational.visit_alerts a WHERE a.visit_id=v.visit_id AND a.patient_id=p.patient_id),'[]'::jsonb) AS alerts
       FROM eligible p
-      JOIN LATERAL (
+      LEFT JOIN LATERAL (
         SELECT v.*,c.clinic_name,c.network_mode AS source_mode,d.doctor_name
         FROM operational.patient_visit_history v
         JOIN operational.clinics c ON c.clinic_id=v.clinic_id
@@ -209,11 +218,17 @@ export async function lookupNetwork(auth: Auth, query: unknown, correlationId = 
         ORDER BY v.visit_date DESC,v.visit_id DESC LIMIT 100
       ) v ON true
       ORDER BY p.patient_id,v.visit_date DESC,v.visit_id DESC`,
-    [auth.clinicId, auth.doctorId, after, input.q, requesterMode, limit + 1]);
+    [auth.clinicId, auth.doctorId, after, input.q ?? "", requesterMode, limit + 1, input.patientIds ?? null]);
     // Apply visibility before pagination, and never expose totals of hidden matches.
     const patients = new Map<number, { patient: NetworkPatient; disclosures: { row: LookupRow; visibility: "basic" | "clinical" }[] }>();
     for (const row of rows) {
       const consent = row.consent_withdrawn_at ? "none" : row.consent_level;
+      // Exact-ID own patients retain an identity projection even without visits.
+      if (input.patientIds && row.own_patient && !patients.has(row.patient_id)) {
+        patients.set(row.patient_id, { patient: { id: row.patient_id, name: row.patient_name,
+          identityVerified: false, effectiveConsentLevel: consent, visits: [] }, disclosures: [] });
+      }
+      if (row.visit_id == null) continue;
       const visibility = visitVisibility({ auth, sourceClinicId: row.clinic_id, sourceMode: row.source_mode, requesterMode, ownPatient: row.own_patient, consent });
       if (!visibility) continue;
       let entry = patients.get(row.patient_id);
@@ -241,5 +256,4 @@ export async function lookupNetwork(auth: Auth, query: unknown, correlationId = 
       items: page.map(entry => entry.patient),
       nextCursor: visible.length > limit ? Buffer.from(JSON.stringify({ after: page.at(-1)!.patient.id, fingerprint })).toString("base64url") : null,
     };
-  });
 }

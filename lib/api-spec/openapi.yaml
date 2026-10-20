@@ -1136,7 +1136,56 @@
           "effectiveConsentLevel": { "type": "string", "enum": ["none", "basic", "clinical"], "description": "Latest effective server consent; withdrawn or absent grants are none. Independent of local clinical authority and per-visit visibility. Returned only for already-permitted candidates." },
           "visits": { "type": "array", "maxItems": 100, "description": "Newest 100 visible visits at most, ordered by visit date then internal visit ID descending; older visits are omitted without totals.", "items": { "$ref": "#/components/schemas/NetworkVisit" } }
         },
-        "description": "A name-match candidate, never verified identity. Same-name patients remain separate. No phone, DOB, hidden counts or hidden-source metadata."
+        "description": "Authorized patient projection, not verified identity. Network search candidates and exact-ID own patients share policy; same-name patients remain separate. Own patients may have no visits. No phone, DOB, hidden counts or hidden-source metadata."
+      },
+      "DoctorDay": {
+        "type": "object", "additionalProperties": false,
+        "required": ["day", "items", "nextCursor"],
+        "properties": {
+          "day": { "type": "string", "format": "date" },
+          "items": { "type": "array", "items": {
+            "type": "object", "additionalProperties": false,
+            "required": ["id", "startsAt", "status", "patient"],
+            "properties": {
+              "id": { "type": "integer", "minimum": 1 },
+              "startsAt": { "type": "string", "format": "date-time" },
+              "status": { "type": "string" },
+              "patient": { "$ref": "#/components/schemas/NetworkPatient" }
+            }
+          }},
+          "nextCursor": { "type": ["string", "null"] }
+        }
+      },
+      "DoctorPrivacy": {
+        "type": "object", "additionalProperties": false,
+        "required": ["clinic", "mode", "effectiveSharing", "trialStateAvailable"],
+        "properties": {
+          "clinic": { "type": "object", "additionalProperties": false, "required": ["id", "name"],
+            "properties": { "id": { "type": "integer", "minimum": 1 }, "name": { "type": "string" } } },
+          "mode": { "type": "string", "enum": ["full", "lite", "trial", "unknown"] },
+          "effectiveSharing": { "type": "string", "enum": ["consent", "local-only"] },
+          "trialStateAvailable": { "type": "boolean", "enum": [false], "description": "The current persisted model has Full/Lite only; Trial state is unavailable and never inferred." }
+        }
+      },
+      "DoctorAuditPage": {
+        "type": "object", "additionalProperties": false,
+        "required": ["items", "nextCursor"],
+        "properties": {
+          "items": { "type": "array", "items": {
+            "type": "object", "additionalProperties": false,
+            "required": ["id", "at", "patient", "viewerName", "viewerClinicName", "action"],
+            "properties": {
+              "id": { "type": "integer", "minimum": 1 },
+              "at": { "type": "string", "format": "date-time" },
+              "patient": { "type": "object", "additionalProperties": false, "required": ["id", "name"],
+                "properties": { "id": { "type": "integer", "minimum": 1 }, "name": { "type": "string" } } },
+              "viewerName": { "type": ["string", "null"] },
+              "viewerClinicName": { "type": ["string", "null"] },
+              "action": { "type": "string", "enum": ["patient-view"] }
+            }
+          }},
+          "nextCursor": { "type": ["string", "null"] }
+        }
       },
       "NetworkPatientPage": {
         "type": "object",
@@ -8892,30 +8941,76 @@
         }
       }
     },
+    "/doctor/day": {
+      "get": {
+        "operationId": "getDoctorDay", "tags": ["doctor"], "summary": "Doctor My Day",
+        "description": "Doctor-only immutable own-patient assignments in the authorized clinic. Server Asia/Hebron today, half-open UTC interval, ordered by time then appointment ID. Shared consent policy, lock and disclosure audits; private no-store. Cursor bound to actor, clinic, doctor and current day. Unknown query keys rejected.",
+        "security": [{"sessionCookie": []}], "x-roles": ["doctor"], "x-implementation": "real",
+        "parameters": [
+          {"name": "cursor", "in": "query", "schema": {"type": "string", "minLength": 1, "maxLength": 512}},
+          {"name": "limit", "in": "query", "schema": {"type": "integer", "minimum": 1, "maximum": 100, "default": 25}}
+        ],
+        "responses": {
+          "200": {"description": "Today's authorized schedule", "headers": {"Cache-Control": {"schema": {"type": "string"}, "description": "private, no-store"}}, "content": {"application/json": {
+            "schema": {"$ref": "#/components/schemas/DoctorDay"},
+            "example": {"day": "2026-09-09", "items": [], "nextCursor": null}
+          }}},
+          "400": {"description": "Invalid pagination or unknown query fields"},
+          "401": {"description": "Session required"},
+          "403": {"description": "Valid doctor assignment required"}
+        }
+      }
+    },
+    "/doctor/patients/{id}": {
+      "get": {
+        "operationId": "getDoctorPatient", "tags": ["doctor"], "summary": "Open own patient by stable ID",
+        "description": "Doctor-only exact immutable patient-doctor and clinic scope. Includes own patients without visits. Reuses NetworkPatient visibility, shared consent lock and network disclosure auditing. No name lookup. No query parameters. Private no-store.",
+        "security": [{"sessionCookie": []}], "x-roles": ["doctor"], "x-implementation": "real",
+        "parameters": [{"name": "id", "in": "path", "required": true, "schema": {"type": "integer", "minimum": 1, "maximum": 2147483647}}],
+        "responses": {
+          "200": {"description": "Authorized patient", "headers": {"Cache-Control": {"schema": {"type": "string"}, "description": "private, no-store"}}, "content": {"application/json": {
+            "schema": {"$ref": "#/components/schemas/NetworkPatient"},
+            "example": {"id": 301, "name": "Synthetic patient", "identityVerified": false, "effectiveConsentLevel": "none", "visits": []}
+          }}},
+          "400": {"description": "Invalid patient ID or query fields"}, "401": {"description": "Session required"},
+          "403": {"description": "Valid doctor assignment required"}, "404": {"description": "Patient outside authorized own scope or not found"}
+        }
+      }
+    },
+    "/doctor/privacy": {
+      "get": {
+        "operationId": "getDoctorPrivacy", "tags": ["doctor"], "summary": "Read clinic sharing state",
+        "description": "Doctor-only trusted clinic context. Full means consent-based sharing; Lite/unknown deny sharing. Current model does not represent Trial: trialStateAvailable is false and Trial is never inferred. Read-only, private no-store; no query parameters.",
+        "security": [{"sessionCookie": []}], "x-roles": ["doctor"], "x-implementation": "real",
+        "responses": {
+          "200": {"description": "Current clinic privacy", "headers": {"Cache-Control": {"schema": {"type": "string"}, "description": "private, no-store"}}, "content": {"application/json": {
+            "schema": {"$ref": "#/components/schemas/DoctorPrivacy"},
+            "example": {"clinic": {"id": 101, "name": "Synthetic clinic"}, "mode": "full", "effectiveSharing": "consent", "trialStateAvailable": false}
+          }}},
+          "400": {"description": "Unknown query fields"}, "401": {"description": "Session required"}, "403": {"description": "Valid doctor assignment required"}
+        }
+      }
+    },
     "/audit": {
       "get": {
-        "operationId": "listAudit",
+        "operationId": "listDoctorAudit",
         "tags": [
           "audit"
         ],
         "summary": "list audit",
-        "description": "Patient-scoped access metadata only; no clinical payloads. Admin receives organizational security metadata, never clinical history. Doctor/front-desk constrained to authorized clinic and patient context.",
+        "description": "Doctor-only own-patient/source-clinic successful network.lookup disclosures. Scope and outcome filtered before pagination; newest first with ID tie-break. Optional patientId narrows scope only. Viewer identity/clinic redacted to null unless a verified current same-clinic doctor; no raw detail or emails. Private no-store. Cursor bound to actor/clinic/doctor/patient filter; strict query validation.",
         "security": [
           {
             "sessionCookie": []
           }
         ],
-        "x-roles": [
-          "admin",
-          "doctor",
-          "front-desk"
-        ],
-        "x-implementation": "contract-only",
+        "x-roles": ["doctor"],
+        "x-implementation": "real",
         "parameters": [
           {
             "name": "patientId",
             "in": "query",
-            "required": true,
+            "required": false,
             "schema": {
               "type": "integer",
               "minimum": 1
@@ -8945,21 +9040,22 @@
         ],
         "responses": {
           "200": {
-            "description": "AuditEventPage",
+            "description": "DoctorAuditPage",
+            "headers": {"Cache-Control": {"schema": {"type": "string"}, "description": "private, no-store"}},
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/AuditEventPage"
+                  "$ref": "#/components/schemas/DoctorAuditPage"
                 },
                 "example": {
                   "items": [
                     {
                       "id": 801,
-                      "patientId": 301,
-                      "actorRole": "doctor",
-                      "action": "network.lookup",
-                      "occurredAt": "2026-09-09T07:00:00Z",
-                      "clinicId": 101
+                      "patient": {"id": 301, "name": "Synthetic patient"},
+                      "viewerName": null,
+                      "viewerClinicName": null,
+                      "action": "patient-view",
+                      "at": "2026-09-09T07:00:00Z"
                     }
                   ],
                   "nextCursor": null
