@@ -60,6 +60,17 @@ try {
   await populate(client);
   await client.query("SET CONSTRAINTS ALL IMMEDIATE");
   await client.query("SET CONSTRAINTS ALL DEFERRED");
+  // Additive consent authority must be restored by the full reset/populate cycle.
+  const { rows: [consentInstalled] } = await client.query("SELECT to_regclass('operational.patient_doctor_access') IS NOT NULL AS ready");
+  if (consentInstalled.ready) {
+    for (const kind of ["clinic", "doctor"] as const) {
+      const columns = kind === "doctor" ? "patient_id,clinic_id,doctor_id" : "patient_id,clinic_id";
+      assert.equal((await client.query(`SELECT count(*) n FROM (
+        (SELECT ${columns} FROM public.appointments UNION SELECT ${columns} FROM public.patient_visit_history)
+        EXCEPT SELECT ${columns} FROM operational.patient_${kind}_access
+      ) missing`)).rows[0].n, "0", `Reset did not restore trusted ${kind} relationships`);
+    }
+  }
   assert.deepEqual(await operationalCounts(client), expectedCounts);
   for (const t of tables.filter(t => t.name !== "calendar_app_export")) {
     const columns = t.columns.map(c => c.name).join(",");

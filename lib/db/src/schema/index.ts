@@ -23,3 +23,4 @@ export * from "./operational-clinical";
 export * from "./operational-workflows";
 export * from "./operational-scheduling";
 export * from "./operational-patients";
+export * from "./operational-consent";

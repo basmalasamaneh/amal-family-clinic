@@ -64,10 +64,14 @@ export const operationalPatientConsents = operational.table("patient_consents", 
   given_at: instant("given_at").notNull().defaultNow(),
   withdrawn_at: instant("withdrawn_at"),
   recorded_by_user: integer("recorded_by_user").notNull().references(() => operationalUsers.id),
+  recorded_clinic_id: integer("recorded_clinic_id").references(() => operationalClinics.clinic_id),
+  evidence: text("evidence"),
 }, (t) => [
   check("consents_guardian_check", sql`(${t.given_by} = 'guardian' AND ${t.guardian_name} IS NOT NULL AND ${t.guardian_relation} IS NOT NULL AND length(btrim(${t.guardian_name})) > 0 AND length(btrim(${t.guardian_relation})) > 0) OR (${t.given_by} = 'patient' AND ${t.guardian_name} IS NULL AND ${t.guardian_relation} IS NULL)`),
   check("consents_times_check", sql`${t.withdrawn_at} IS NULL OR ${t.withdrawn_at} >= ${t.given_at}`),
   index("consents_patient_given_idx").on(t.patient_id, t.given_at),
+  index("consents_patient_latest_idx").on(t.patient_id, t.id.desc()),
+  check("patient_consents_evidence_check", sql`${t.evidence} IN ('signed','verbal')`),
 ]);
 
 export const operationalVisitAlerts = operational.table("visit_alerts", {
@@ -107,6 +111,7 @@ export const insertOperationalAppointmentSchema = createInsertSchema(operational
 export const insertOperationalPatientVisitHistorySchema = createInsertSchema(operationalPatientVisitHistory);
 export const insertOperationalPatientConsentSchema = createInsertSchema(operationalPatientConsents, {
   guardian_name: nonblank.nullable(), guardian_relation: nonblank.nullable(),
+  evidence: z.enum(["signed", "verbal"]).nullable(),
 }).refine(v => v.given_by === "guardian" ? v.guardian_name != null && v.guardian_relation != null : v.guardian_name == null && v.guardian_relation == null, { message: "Guardian consent requires guardian details; patient consent must omit them", path: ["guardian_name"] })
   .refine(v => !v.given_at || !v.withdrawn_at || v.withdrawn_at >= v.given_at, { message: "Withdrawal must follow consent", path: ["withdrawn_at"] });
 export const insertOperationalVisitAlertSchema = createInsertSchema(operationalVisitAlerts, { label: z.string().regex(/^[a-z][A-Za-z0-9_.-]*$/), source_note_excerpt: z.string().min(1) });

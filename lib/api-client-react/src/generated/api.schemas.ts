@@ -414,6 +414,25 @@ export const ConsentStatus = {
   withdrawn: 'withdrawn',
 } as const;
 
+export type ConsentGivenBy = typeof ConsentGivenBy[keyof typeof ConsentGivenBy];
+
+
+export const ConsentGivenBy = {
+  patient: 'patient',
+  guardian: 'guardian',
+} as const;
+
+/**
+ * @nullable
+ */
+export type ConsentEvidence = typeof ConsentEvidence[keyof typeof ConsentEvidence] | null;
+
+
+export const ConsentEvidence = {
+  signed: 'signed',
+  verbal: 'verbal',
+} as const;
+
 export type ConsentGuardian = {
   name: string;
   relationship: string;
@@ -427,7 +446,79 @@ export interface Consent {
   level: ConsentLevel;
   status: ConsentStatus;
   recordedAt: string;
+  /** @minimum 1 */
+  recordedByUserId?: number;
+  /** @nullable */
+  recordedClinicId?: number | null;
+  /** @nullable */
+  withdrawnAt?: string | null;
+  givenBy?: ConsentGivenBy;
+  /** @nullable */
+  evidence?: ConsentEvidence;
   guardian?: ConsentGuardian;
+}
+
+export type ConsentStateEffectiveLevel = typeof ConsentStateEffectiveLevel[keyof typeof ConsentStateEffectiveLevel];
+
+
+export const ConsentStateEffectiveLevel = {
+  none: 'none',
+  basic: 'basic',
+  clinical: 'clinical',
+} as const;
+
+/**
+ * Current is the latest transition even when withdrawn, never an older grant. History is ordered newest first. Legacy evidence/recording clinic may be null.
+ */
+export interface ConsentState {
+  current: Consent | null;
+  history: Consent[];
+  effectiveLevel: ConsentStateEffectiveLevel;
+}
+
+export type NetworkVisitVisibility = typeof NetworkVisitVisibility[keyof typeof NetworkVisitVisibility];
+
+
+export const NetworkVisitVisibility = {
+  basic: 'basic',
+  clinical: 'clinical',
+} as const;
+
+/**
+ * Basic omits complaint and keyAlerts entirely. Clinical includes existing authorized notes/alerts. UTC instant; legacy date-only visits use Asia/Hebron start-of-day, not a claimed known visit time.
+ */
+export interface NetworkVisit {
+  /** @minimum 1 */
+  clinicId: number;
+  /** @minimum 1 */
+  doctorId: number;
+  clinicName: string;
+  doctorName: string;
+  seenAt: string;
+  visibility: NetworkVisitVisibility;
+  complaint?: string;
+  keyAlerts?: string[];
+}
+
+/**
+ * A name-match candidate, never verified identity. Same-name patients remain separate. No phone, DOB, hidden counts or hidden-source metadata.
+ */
+export interface NetworkPatient {
+  /** @minimum 1 */
+  id: number;
+  name: string;
+  identityVerified: false;
+  /**
+     * Newest 100 visible visits at most, ordered by visit date then internal visit ID descending; older visits are omitted without totals.
+     * @maxItems 100
+     */
+  visits: NetworkVisit[];
+}
+
+export interface NetworkPatientPage {
+  items: NetworkPatient[];
+  /** @nullable */
+  nextCursor: string | null;
 }
 
 export interface OperationInput {
@@ -1105,6 +1196,7 @@ limit?: number;
 export type LookupNetworkParams = {
 /**
  * @minLength 2
+ * @maxLength 200
  */
 q: string;
 cursor?: string;

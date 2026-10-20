@@ -62,6 +62,24 @@ export async function populate(client: pg.Client) {
     await client.query(`ALTER SEQUENCE ${sequence} RESTART WITH ${next}`);
   }
   await populateFixtures(client, newDoctors);
+  // Optional consent-service authority metadata must survive the existing
+  // reset/populate lifecycle. Only immutable source identities establish links.
+  // This adds no seed writes or reset exception.
+  for (const kind of ["clinic", "doctor"] as const) {
+    const table = `patient_${kind}_access`;
+    const { rows: [present] } = await client.query("SELECT to_regclass($1) IS NOT NULL AS ready", [`operational.${table}`]);
+    if (!present.ready) continue;
+    const columns = kind === "doctor" ? "patient_id,clinic_id,doctor_id" : "patient_id,clinic_id";
+    await client.query(`INSERT INTO operational.${table} (${columns})
+      SELECT DISTINCT ${kind === "doctor" ? "s.patient_id,s.clinic_id,s.doctor_id" : "s.patient_id,s.clinic_id"}
+      FROM (
+        SELECT patient_id,clinic_id,doctor_id FROM public.appointments
+        UNION SELECT patient_id,clinic_id,doctor_id FROM public.patient_visit_history
+      ) s
+      JOIN operational.patients p ON p.patient_id=s.patient_id
+      JOIN operational.doctors d ON d.doctor_id=s.doctor_id AND d.clinic_id=s.clinic_id
+      ON CONFLICT DO NOTHING`);
+  }
   return operationalCounts(client);
 }
 

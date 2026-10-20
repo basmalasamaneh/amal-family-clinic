@@ -150,7 +150,7 @@ export function createDemoBuilders(input: ClinicContext, initialOptions: Builder
       level, given_by: guardian ? "guardian" : "patient",
       guardian_name: guardian ? "Synthetic Test Guardian" : null,
       guardian_relation: guardian ? "parent" : null, given_at: stamp(), withdrawn_at: null,
-      recorded_by_user: recorder.id,
+      recorded_by_user: recorder.id, recorded_clinic_id: recorder.clinic_id, evidence: "verbal",
     };
   }
 

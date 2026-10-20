@@ -8,7 +8,7 @@ import * as generated from "../../../lib/api-zod/src/generated/api.ts";
 
 function requestFor(route, headers={}) {
   let path=route.path;
-  for(const p of route.operation.parameters??[])if(p.in==="path")path=path.replaceAll(`{${p.name}}`,String(p.example));
+  for(const p of route.operation.parameters??[])if(p.in==="path")path=path.replaceAll(`{${p.name}}`,String(p.example??(p.name==="id"?301:undefined)));
   const search=new URLSearchParams();
   for(const p of route.operation.parameters??[])if(p.in==="query"&&p.required)search.set(p.name,String(p.example));
   if(search.size)path+=`?${search}`;
@@ -21,6 +21,9 @@ function assertResponse(route, response) {
   const schema=route.operation.responses[response.status]?.content?.["application/json"]?.schema;
   assert.ok(route.operation.responses[response.status],`${route.operation.operationId}: undocumented status ${response.status}`);
   if(schema)assertValid(schema,response.body,route.operation.operationId);
+  // Local PATCH/DELETE document error statuses without repeating the common
+  // envelope schema. Validate those errors too; only bodyless successes omit it.
+  else if(response.status>=400)assertValid({$ref:"#/components/schemas/ApiFailure"},response.body,route.operation.operationId);
   else assert.equal(response.body,undefined);
 }
 test("OpenAPI validates and retains Api/health/base URL; Section 12 operation set complete",async()=>{
@@ -76,22 +79,83 @@ for(const route of mockOperations) {
     }
   });
 }
-test("clinical consent does not leak history to reception or administrator",()=>{
+test("doctor-only network candidates use exact Basic/Clinical visit projections, never demographic identity",()=>{
   const lookup=mockOperations.find(r=>r.operation.operationId==="lookupNetwork");
   for(const role of ["doctor","front-desk","admin"])for(const consent of ["none","basic","clinical","withdrawn"])for(const mode of ["network","lite"]) {
     const response=dispatchMock(requestFor(lookup,{"x-mock-role":role,"x-mock-consent":consent,"x-mock-clinic-mode":mode}));
     assertResponse(lookup,response);
-    if(role==="admin")assert.equal(response.status,403);
+    if(role!=="doctor")assert.equal(response.status,403);
     else if(mode==="lite"||["none","withdrawn"].includes(consent))assert.deepEqual(response.body.items,[]);
     else {
       const patient=response.body.items[0];
-      assert.equal("visits" in patient,role==="doctor");
-      if(role==="doctor")assert.equal("complaint" in patient.visits[0],consent==="clinical");
-      assert.equal(patient.visibility,role==="doctor"&&consent==="clinical"?"clinical":"basic");
+      assert.deepEqual(Object.keys(patient).sort(),["id","identityVerified","name","visits"]);
+      assert.equal(patient.identityVerified,false);
+      const visit=patient.visits[0];
+      assert.equal(visit.visibility,consent);
+      assert.deepEqual(Object.keys(visit).sort(),[
+        "clinicId","clinicName","doctorId","doctorName","seenAt","visibility",
+        ...(consent==="clinical"?["complaint","keyAlerts"]:[]),
+      ].sort());
       const parsed=generated.LookupNetworkResponse.parse(response.body);
-      assert.equal("visits" in parsed.items[0],role==="doctor","Generated Zod must preserve the correct projection");
+      assert.equal(parsed.items[0].identityVerified,false);
+      assert.equal("complaint" in parsed.items[0].visits[0],consent==="clinical","Generated Zod must preserve the correct projection");
     }
   }
+});
+test("local patient mock stays demographics-only regardless of role, sharing or clinical scenario",()=>{
+  const route=mockOperations.find(r=>r.operation.operationId==="getPatient");
+  for(const role of ["doctor","front-desk"])for(const consent of ["none","basic","clinical","withdrawn"]) {
+    const response=dispatchMock(requestFor(route,{"x-mock-role":role,"x-mock-consent":consent,"x-mock-scenario":"clinical"}));
+    assert.equal(response.status,200);
+    assertResponse(route,response);
+    assert.deepEqual(Object.keys(response.body).sort(),["clinicId","dateOfBirth","id","name","phone","visibility"]);
+    assert.equal(response.body.visibility,"basic");
+  }
+});
+test("consent state distinguishes latest transition/history/effective level and withdrawals retain grant level",()=>{
+  const list=mockOperations.find(r=>r.operation.operationId==="listPatientConsent");
+  for(const consent of ["none","basic","clinical","withdrawn"]) {
+    const response=dispatchMock(requestFor(list,{"x-mock-consent":consent}));
+    assert.equal(response.status,200);
+    assertResponse(list,response);
+    assert.deepEqual(Object.keys(response.body).sort(),["current","effectiveLevel","history"]);
+    generated.ListPatientConsentResponse.parse(response.body);
+    if(consent==="none") {
+      assert.deepEqual(response.body,{current:null,history:[],effectiveLevel:"none"});
+    } else {
+      const {current,history,effectiveLevel}=response.body;
+      assert.deepEqual(history,[current]);
+      assert.equal(current.patientId,301);
+      assert.equal(current.level,consent==="withdrawn"?"basic":consent);
+      assert.equal(effectiveLevel,consent==="withdrawn"?"none":consent);
+      assert.equal(current.status,consent==="withdrawn"?"withdrawn":"active");
+      assert.equal(current.withdrawnAt!==null,consent==="withdrawn");
+      assert.equal(current.recordedByUserId,902);
+      assert.equal(current.recordedClinicId,101);
+      assert.equal(current.givenBy,"patient");
+      assert.equal(current.evidence,"signed");
+    }
+  }
+  for(const id of ["recordPatientConsent","withdrawConsent"]) {
+    const route=mockOperations.find(r=>r.operation.operationId===id);
+    assert.deepEqual(route.operation["x-roles"],["front-desk"]);
+    for(const role of ["doctor","admin"])assert.equal(dispatchMock(requestFor(route,{"x-mock-role":role})).status,403);
+  }
+  const record=mockOperations.find(r=>r.operation.operationId==="recordPatientConsent");
+  const req=requestFor(record);
+  req.body={...req.body,level:"clinical",evidence:"verbal",guardian:{name:"Synthetic guardian",relationship:"mother"}};
+  const recorded=dispatchMock(req);
+  assert.equal(recorded.status,201);
+  assertResponse(record,recorded);
+  assert.equal(recorded.body.givenBy,"guardian");
+  assert.equal(recorded.body.evidence,"verbal");
+  assert.deepEqual(recorded.body.guardian,req.body.guardian);
+  const withdraw=mockOperations.find(r=>r.operation.operationId==="withdrawConsent");
+  const withdrawn=dispatchMock(requestFor(withdraw));
+  assertResponse(withdraw,withdrawn);
+  assert.equal(withdrawn.body.level,"basic","withdrawal changes status/effective permission, not historical grant level");
+  assert.equal(withdrawn.body.status,"withdrawn");
+  assert.equal(withdrawn.body.withdrawnAt,"2026-09-09T07:05:00Z");
 });
 test("all 24 import rows require review; three name suggestions never links; commit blocked until explicit reviewed scenario",()=>{
   const upload=mockOperations.find(r=>r.operation.operationId==="uploadImport");

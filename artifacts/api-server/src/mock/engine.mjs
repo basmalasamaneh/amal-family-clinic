@@ -78,14 +78,15 @@ export function dispatchMock({method="GET",url="/api/healthz",headers={},body}) 
       result.reauth={required:false,validUntil:"2026-09-09T07:05:00Z"};
     }
   }
-  if(id==="withdrawConsent"||scenario==="withdrawn"&&id==="recordPatientConsent") result={...result,level:"none",status:"withdrawn"};
-  if(id==="lookupNetwork"||id==="getPatient") {
-    const clinical=role==="doctor"&&!["none","withdrawn"].includes(consent)&&scenario!=="withdrawn"&&(consent==="clinical"||scenario==="clinical");
-    let patient=clone(contract.paths["/patients/{id}"].get.responses[200].content["application/json"].example);
-    if(role==="doctor"&&!["none","withdrawn"].includes(consent)&&scenario!=="withdrawn")patient={...patient,visits:[{clinicId:101,doctorId:201,seenAt:"2026-09-09T07:00:00Z"}]};
-    if(clinical)patient={...patient,visibility:"clinical",visits:[{clinicId:101,doctorId:201,seenAt:"2026-09-09T07:00:00Z",complaint:"Dizziness (synthetic)",keyAlerts:["Synthetic medication alert"]}]};
-    if(id==="lookupNetwork")result={items:mode==="lite"||["none","withdrawn"].includes(consent)||scenario==="withdrawn"?[]:[patient],nextCursor:null};
-    else result=patient;
+  if(id==="lookupNetwork") {
+    const clinical=consent==="clinical"||scenario==="clinical";
+    const visit={
+      clinicId:102,doctorId:202,clinicName:"Synthetic source clinic",doctorName:"Synthetic source doctor",
+      seenAt:"2026-09-09T07:00:00Z",visibility:clinical?"clinical":"basic",
+      ...(clinical?{complaint:"Dizziness (synthetic)",keyAlerts:["Synthetic medication alert"]}:{}),
+    };
+    const candidate={id:301,name:"Synthetic patient",identityVerified:false,visits:[visit]};
+    result={items:mode==="lite"||["none","withdrawn"].includes(consent)||scenario==="withdrawn"?[]:[candidate],nextCursor:null};
   }
   if(id==="checkAppointments"&&scenario==="no-conflict")result={ok:true,conflicts:[]};
   if(id==="pushSync")result={outcomes:body.operations.map((o,i)=>{
@@ -96,7 +97,24 @@ export function dispatchMock({method="GET",url="/api/healthz",headers={},body}) 
     const decision=body.decisions.find(d=>d.rowId===row.rowId);
     return decision?{...row,status:decision.decision==="skip"?"skipped":"approved",linkedPatientId:decision.decision==="link"?decision.patientId:null}:row;
   });
-  if(id==="recordPatientConsent")result={...result,level:body.level,...(body.guardian?{guardian:body.guardian}:{})};
+  if(["listPatientConsent","recordPatientConsent","withdrawConsent"].includes(id)) {
+    const withdrawn=id==="withdrawConsent"||consent==="withdrawn"&&id==="listPatientConsent"||scenario==="withdrawn";
+    const current={
+      ...clone(contract.paths["/patients/{id}/consent"].post.responses[201].content["application/json"].example),
+      recordedByUserId:902,recordedClinicId:101,givenBy:"patient",evidence:"signed",
+      status:withdrawn?"withdrawn":"active",withdrawnAt:withdrawn?"2026-09-09T07:05:00Z":null,
+    };
+    if(id==="listPatientConsent") {
+      current.patientId=Number(params.id);
+      current.level=consent==="clinical"||scenario==="clinical"?"clinical":"basic";
+      result=consent==="none"&&scenario!=="withdrawn"
+        ?{current:null,history:[],effectiveLevel:"none"}
+        :{current,history:[clone(current)],effectiveLevel:withdrawn?"none":current.level};
+    } else if(id==="recordPatientConsent") {
+      result={...current,patientId:Number(params.id),level:body.level,evidence:body.evidence,
+        givenBy:body.guardian?"guardian":"patient",...(body.guardian?{guardian:body.guardian}:{})};
+    } else result={...current,id:Number(params.id)};
+  }
   if(id==="mergePatients")result={sourceId:body.sourceId,targetId:body.targetId,decision:body.decision==="merge"?"merged":"not-a-match",simulated:true};
   if(id==="createAppointment") {
     const {overrideReason,holdToken,...values}=body;
@@ -110,9 +128,6 @@ export function dispatchMock({method="GET",url="/api/healthz",headers={},body}) 
   if(id==="createClinic"||id==="updateClinic")result={...result,...body};
   if(id==="enrollDevice")result={id:1001,...body};
   if(["getClinic","updateClinic","getPatient","mapImport","commitImport"].includes(id))result.id=Number(params.id);
-  if(id==="listPatientConsent")result.items=result.items.map(c=>({...c,patientId:Number(params.id)}));
-  if(id==="recordPatientConsent")result.patientId=Number(params.id);
-  if(id==="withdrawConsent")result.id=Number(params.id);
   if(id==="getKpis")result.range=parsed.searchParams.get("range");
   assertValid(media.schema,result,`Mock ${id}`);
   return {status:Number(status),body:result};

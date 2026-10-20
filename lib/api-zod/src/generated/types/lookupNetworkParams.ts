@@ -9,6 +9,7 @@
 export type LookupNetworkParams = {
 /**
  * @minLength 2
+ * @maxLength 200
  */
 q: string;
 cursor?: string;

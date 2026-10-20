@@ -37,7 +37,7 @@ import type {
   ConflictPreview,
   Consent,
   ConsentInput,
-  ConsentPage,
+  ConsentState,
   Device,
   DeviceInput,
   DoctorPage,
@@ -62,13 +62,13 @@ import type {
   MergeInput,
   MergeResult,
   NetworkHealth,
+  NetworkPatientPage,
   OperationInput,
   PasswordCredentials,
   PatientBasic,
   PatientBasicPage,
   PatientInput,
   PatientProjection,
-  PatientProjectionPage,
   PatientUpdate,
   PinCredentials,
   PinReentry,
@@ -1563,12 +1563,12 @@ export const getLookupNetworkUrl = (params: LookupNetworkParams,) => {
 }
 
 /**
- * Contract-only domain service; mock responses are simulated. Clinic scope comes from authenticated identity, not submitted identifiers. Admin has no implicit clinical access. Network visibility requires active consent and excludes Lite clinics. Mutations require CSRF; clientOpId is replay-safe per clinic, with changed payload returning 409. Front-desk gets identity/coordination only, never visit history. Doctor Basic consent permits visit date/clinic/doctor summaries without notes or alerts; Clinical additionally permits notes and key alerts. None/withdrawn consent yields no network results, as does Lite mode. Admin denied.
+ * Implemented doctor-only normalized name substring lookup. Name matches are candidates, not verified identities. Current authoritative consent is evaluated every request. Cross-clinic Basic shares date/clinic/doctor only; Clinical adds notes and existing alerts. None/withdrawn and Lite sources/requesters disclose no cross-clinic records. Own-patient local clinical authority is independent of consent and never unlocks remote notes. Privacy filtering precedes pagination; no hidden counts. Every cross-source visit is durably audited before response. Cache-Control: private, no-store. Display UTC instants in Asia/Hebron.
  * @summary lookup network
  */
-export const lookupNetwork = async (params: LookupNetworkParams, options?: Parameters<typeof customFetch>[1]): Promise<PatientProjectionPage> => {
+export const lookupNetwork = async (params: LookupNetworkParams, options?: Parameters<typeof customFetch>[1]): Promise<NetworkPatientPage> => {
 
-  return customFetch<PatientProjectionPage>(getLookupNetworkUrl(params),
+  return customFetch<NetworkPatientPage>(getLookupNetworkUrl(params),
   {
     ...options,
     method: 'GET'
@@ -1641,12 +1641,12 @@ export const getListPatientConsentUrl = (id: number,) => {
 }
 
 /**
- * Contract-only domain service; mock responses are simulated. Clinic scope comes from authenticated identity, not submitted identifiers. Admin has no implicit clinical access. Network visibility requires active consent and excludes Lite clinics. Mutations require CSRF; clientOpId is replay-safe per clinic, with changed payload returning 409.
+ * Implemented scoped consent state and ordered history. Server-derived local patient relationship required; admins denied. Effective level defaults to none; withdrawing the latest grant never revives an older grant. Current is distinct from history. Private no-store.
  * @summary list patient consent
  */
-export const listPatientConsent = async (id: number, options?: Parameters<typeof customFetch>[1]): Promise<ConsentPage> => {
+export const listPatientConsent = async (id: number, options?: Parameters<typeof customFetch>[1]): Promise<ConsentState> => {
 
-  return customFetch<ConsentPage>(getListPatientConsentUrl(id),
+  return customFetch<ConsentState>(getListPatientConsentUrl(id),
   {
     ...options,
     method: 'GET'
@@ -1719,7 +1719,7 @@ export const getRecordPatientConsentUrl = (id: number,) => {
 }
 
 /**
- * Contract-only domain service; mock responses are simulated. Clinic scope comes from authenticated identity, not submitted identifiers. Admin has no implicit clinical access. Network visibility requires active consent and excludes Lite clinics. Mutations require CSRF; clientOpId is replay-safe per clinic, with changed payload returning 409. Front-desk requires PIN re-entry within five minutes; future services must enforce this guard.
+ * Implemented front-desk-only consent recording within trusted operational clinic scope, with CSRF and PIN verified in the last five minutes. Doctors have no upstream explicit management grant and are denied. Actor, clinic and timestamps are server-derived. Under-18 demo policy uses date-only DOB and today's Asia/Hebron date; minors require guardian name/relationship. Invalid or unknown DOB cannot authorize a grant. Atomic ordered transitions retain previous records. clientOpId replays cannot reactivate withdrawn or superseded consent.
  * @summary record patient consent
  */
 export const recordPatientConsent = async (id: number,
@@ -1809,7 +1809,7 @@ export const getWithdrawConsentUrl = (id: number,) => {
 }
 
 /**
- * Contract-only domain service; mock responses are simulated. Clinic scope comes from authenticated identity, not submitted identifiers. Admin has no implicit clinical access. Network visibility requires active consent and excludes Lite clinics. Mutations require CSRF; clientOpId is replay-safe per clinic, with changed payload returning 409. Front-desk requires PIN re-entry within five minutes; future services must enforce this guard.
+ * Implemented front-desk-only withdrawal with CSRF, fresh PIN, trusted local patient scope and recording-clinic ownership. Retains grant and guardian evidence, records actor/time, and never restores an older grant. Committed withdrawal is authoritative on the next request across sessions and instances. In-flight lookup ordered before withdrawal may complete with its previously authorized projection. Private no-store.
  * @summary withdraw consent
  */
 export const withdrawConsent = async (id: number,
