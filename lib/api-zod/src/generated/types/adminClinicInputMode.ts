@@ -6,10 +6,12 @@
  * OpenAPI spec version: 0.2.0
  */
 
+/**
+ * Optional compatibility field. Clinics are always created in persisted Trial with local-only Lite network mode; use the manager adoption route to transition.
+ */
 export type AdminClinicInputMode = typeof AdminClinicInputMode[keyof typeof AdminClinicInputMode];
 
 
 export const AdminClinicInputMode = {
-  full: 'full',
   lite: 'lite',
 } as const;

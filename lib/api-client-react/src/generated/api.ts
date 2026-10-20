@@ -45,6 +45,15 @@ import type {
   AppointmentPage,
   AppointmentUpdate,
   Clinic,
+  ClinicAdoption,
+  ClinicAdoptionStateResponse,
+  ClinicAdoptionTransition,
+  ClinicExportAttachmentResponse,
+  ClinicExportInput,
+  ClinicExportTooLargeResponse,
+  ClinicExportUnavailableResponse,
+  ClinicLeaveInput,
+  ClinicLifecycleConflictResponse,
   ClinicPage,
   ConflictPreview,
   Consent,
@@ -152,6 +161,354 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
   }
   return result;
 };
+
+export const getGetClinicAdoptionUrl = (id: number,) => {
+
+
+
+
+  return `/api/clinics/${id}/adoption`
+}
+
+/**
+ * Authenticated doctor/front-desk, own clinic only. Capabilities reflect explicit clinic-manager assignment; no privilege is inferred from being a doctor.
+ * @summary Read persisted clinic adoption
+ */
+export const getClinicAdoption = async (id: number, options?: Parameters<typeof customFetch>[1]): Promise<ClinicAdoptionStateResponse> => {
+
+  return customFetch<ClinicAdoptionStateResponse>(getGetClinicAdoptionUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetClinicAdoptionQueryKey = (id: number,) => {
+    return [
+    `/api/clinics/${id}/adoption`
+    ] as const;
+    }
+
+
+export const getGetClinicAdoptionQueryOptions = <TData = Awaited<ReturnType<typeof getClinicAdoption>>, TError = ErrorType<ImportValidationResponse | ImportUnauthorizedResponse | ImportForbiddenResponse | ImportNotFoundResponse | ClinicLifecycleConflictResponse>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getClinicAdoption>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetClinicAdoptionQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getClinicAdoption>>> = ({ signal }) => getClinicAdoption(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getClinicAdoption>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetClinicAdoptionQueryResult = NonNullable<Awaited<ReturnType<typeof getClinicAdoption>>>
+export type GetClinicAdoptionQueryError = ErrorType<ImportValidationResponse | ImportUnauthorizedResponse | ImportForbiddenResponse | ImportNotFoundResponse | ClinicLifecycleConflictResponse>
+
+
+/**
+ * @summary Read persisted clinic adoption
+ */
+
+export function useGetClinicAdoption<TData = Awaited<ReturnType<typeof getClinicAdoption>>, TError = ErrorType<ImportValidationResponse | ImportUnauthorizedResponse | ImportForbiddenResponse | ImportNotFoundResponse | ClinicLifecycleConflictResponse>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getClinicAdoption>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetClinicAdoptionQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getTransitionClinicAdoptionUrl = (id: number,) => {
+
+
+
+
+  return `/api/clinics/${id}/adoption`
+}
+
+/**
+ * Own-clinic, active explicitly assigned doctor-manager only, with CSRF. Trial may move to Lite or Full; Lite and Full may switch. Repeating the current state is idempotent. Left clinics cannot transition. Changes are transactional and audited.
+ * @summary Choose Lite or Full adoption
+ */
+export const transitionClinicAdoption = async (id: number,
+    clinicAdoptionTransition: ClinicAdoptionTransition, options?: Parameters<typeof customFetch>[1]): Promise<ClinicAdoptionStateResponse> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<ClinicAdoptionStateResponse>(getTransitionClinicAdoptionUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(clinicAdoptionTransition)
+  }
+);}
+
+
+
+
+
+export const getTransitionClinicAdoptionMutationKey = () => ['transitionClinicAdoption'] as const;
+
+export const getTransitionClinicAdoptionMutationOptions = <TError = ErrorType<ImportValidationResponse | ImportUnauthorizedResponse | ImportForbiddenResponse | ImportNotFoundResponse | ClinicLifecycleConflictResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof transitionClinicAdoption>>, TError,TransitionClinicAdoptionMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof transitionClinicAdoption>>, TError,TransitionClinicAdoptionMutationVariables, TContext> => {
+
+const mutationKey = getTransitionClinicAdoptionMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof transitionClinicAdoption>>, TransitionClinicAdoptionMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  transitionClinicAdoption(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type TransitionClinicAdoptionMutationResult = NonNullable<Awaited<ReturnType<typeof transitionClinicAdoption>>>
+    export type TransitionClinicAdoptionMutationBody = BodyType<ClinicAdoptionTransition>
+    export type TransitionClinicAdoptionMutationError = ErrorType<ImportValidationResponse | ImportUnauthorizedResponse | ImportForbiddenResponse | ImportNotFoundResponse | ClinicLifecycleConflictResponse>
+    export type TransitionClinicAdoptionMutationVariables = {id: number;data: BodyType<ClinicAdoptionTransition>}
+
+    /**
+ * @summary Choose Lite or Full adoption
+ */
+export const useTransitionClinicAdoption = <TError = ErrorType<ImportValidationResponse | ImportUnauthorizedResponse | ImportForbiddenResponse | ImportNotFoundResponse | ClinicLifecycleConflictResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof transitionClinicAdoption>>, TError,TransitionClinicAdoptionMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof transitionClinicAdoption>>,
+        TError,
+        TransitionClinicAdoptionMutationVariables,
+        TContext
+      > => {
+      return useMutation(getTransitionClinicAdoptionMutationOptions(options));
+    }
+
+export const getLeaveClinicUrl = (id: number,) => {
+
+
+
+
+  return `/api/clinics/${id}/leave`
+}
+
+/**
+ * Own-clinic, active explicitly assigned doctor-manager only, with CSRF and literal confirm:true. Transactionally marks membership left and sets adoption/network mode Lite. Stops network sharing without deleting data or local booking; export remains available. Repeated leave is idempotent.
+ * @summary Leave network while retaining local use
+ */
+export const leaveClinic = async (id: number,
+    clinicLeaveInput: ClinicLeaveInput, options?: Parameters<typeof customFetch>[1]): Promise<ClinicAdoption> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<ClinicAdoption>(getLeaveClinicUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(clinicLeaveInput)
+  }
+);}
+
+
+
+
+
+export const getLeaveClinicMutationKey = () => ['leaveClinic'] as const;
+
+export const getLeaveClinicMutationOptions = <TError = ErrorType<ImportValidationResponse | ImportUnauthorizedResponse | ImportForbiddenResponse | ImportNotFoundResponse | ClinicLifecycleConflictResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof leaveClinic>>, TError,LeaveClinicMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof leaveClinic>>, TError,LeaveClinicMutationVariables, TContext> => {
+
+const mutationKey = getLeaveClinicMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof leaveClinic>>, LeaveClinicMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  leaveClinic(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type LeaveClinicMutationResult = NonNullable<Awaited<ReturnType<typeof leaveClinic>>>
+    export type LeaveClinicMutationBody = BodyType<ClinicLeaveInput>
+    export type LeaveClinicMutationError = ErrorType<ImportValidationResponse | ImportUnauthorizedResponse | ImportForbiddenResponse | ImportNotFoundResponse | ClinicLifecycleConflictResponse>
+    export type LeaveClinicMutationVariables = {id: number;data: BodyType<ClinicLeaveInput>}
+
+    /**
+ * @summary Leave network while retaining local use
+ */
+export const useLeaveClinic = <TError = ErrorType<ImportValidationResponse | ImportUnauthorizedResponse | ImportForbiddenResponse | ImportNotFoundResponse | ClinicLifecycleConflictResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof leaveClinic>>, TError,LeaveClinicMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof leaveClinic>>,
+        TError,
+        LeaveClinicMutationVariables,
+        TContext
+      > => {
+      return useMutation(getLeaveClinicMutationOptions(options));
+    }
+
+export const getExportClinicUrl = (id: number,) => {
+
+
+
+
+  return `/api/clinics/${id}/export`
+}
+
+/**
+ * Own-clinic, active explicitly assigned doctor-manager only, with CSRF and a required empty JSON object. Available before and after leaving. One repeatable-read snapshot, allowlisted fields only, audited before response. Maximum 10,000 cumulative rows, 8 MiB UTF-8 JSON and 15 seconds; failures return structured errors, never partial files. Client must preserve the JSON attachment rather than treat it as a URL.
+ * @summary Download versioned clinic JSON export
+ */
+export const exportClinic = async (id: number,
+    clinicExportInput: ClinicExportInput, options?: Parameters<typeof customFetch>[1]): Promise<ClinicExportAttachmentResponse> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<ClinicExportAttachmentResponse>(getExportClinicUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(clinicExportInput)
+  }
+);}
+
+
+
+
+
+export const getExportClinicMutationKey = () => ['exportClinic'] as const;
+
+export const getExportClinicMutationOptions = <TError = ErrorType<ImportValidationResponse | ImportUnauthorizedResponse | ImportForbiddenResponse | ImportNotFoundResponse | ClinicLifecycleConflictResponse | ClinicExportTooLargeResponse | ClinicExportUnavailableResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof exportClinic>>, TError,ExportClinicMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof exportClinic>>, TError,ExportClinicMutationVariables, TContext> => {
+
+const mutationKey = getExportClinicMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof exportClinic>>, ExportClinicMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  exportClinic(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ExportClinicMutationResult = NonNullable<Awaited<ReturnType<typeof exportClinic>>>
+    export type ExportClinicMutationBody = BodyType<ClinicExportInput>
+    export type ExportClinicMutationError = ErrorType<ImportValidationResponse | ImportUnauthorizedResponse | ImportForbiddenResponse | ImportNotFoundResponse | ClinicLifecycleConflictResponse | ClinicExportTooLargeResponse | ClinicExportUnavailableResponse>
+    export type ExportClinicMutationVariables = {id: number;data: BodyType<ClinicExportInput>}
+
+    /**
+ * @summary Download versioned clinic JSON export
+ */
+export const useExportClinic = <TError = ErrorType<ImportValidationResponse | ImportUnauthorizedResponse | ImportForbiddenResponse | ImportNotFoundResponse | ClinicLifecycleConflictResponse | ClinicExportTooLargeResponse | ClinicExportUnavailableResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof exportClinic>>, TError,ExportClinicMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof exportClinic>>,
+        TError,
+        ExportClinicMutationVariables,
+        TContext
+      > => {
+      return useMutation(getExportClinicMutationOptions(options));
+    }
 
 export const getGetReceptionContextUrl = () => {
 
@@ -3123,7 +3480,7 @@ export const getGetDoctorPrivacyUrl = () => {
 }
 
 /**
- * Doctor-only trusted clinic context. Full means consent-based sharing; Lite/unknown deny sharing. Current model does not represent Trial: trialStateAvailable is false and Trial is never inferred. Read-only, private no-store; no query parameters.
+ * Doctor-only trusted clinic context with optional persisted adoption metadata. Full means consent-based sharing; Trial/Lite/unknown deny sharing. trialStateAvailable is true; mode reflects persisted adoption, never inferred from joinedAt. Read-only, private no-store; no query parameters.
  * @summary Read clinic sharing state
  */
 export const getDoctorPrivacy = async ( options?: Parameters<typeof customFetch>[1]): Promise<DoctorPrivacy> => {

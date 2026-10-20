@@ -51,7 +51,76 @@ export const ClinicMode = {
   lite: 'lite',
 } as const;
 
+export type ClinicAdoptionState = typeof ClinicAdoptionState[keyof typeof ClinicAdoptionState];
+
+
+export const ClinicAdoptionState = {
+  trial: 'trial',
+  lite: 'lite',
+  full: 'full',
+} as const;
+
+export type ClinicAdoptionMembershipStatus = typeof ClinicAdoptionMembershipStatus[keyof typeof ClinicAdoptionMembershipStatus];
+
+
+export const ClinicAdoptionMembershipStatus = {
+  active: 'active',
+  left: 'left',
+} as const;
+
+export interface ClinicAdoptionCapabilities {
+  canManage: boolean;
+  canExport: boolean;
+  canLeave: boolean;
+  localBooking: true;
+  networkSharing: boolean;
+}
+
+export type ClinicAdoptionAllowedTransitionsItem = typeof ClinicAdoptionAllowedTransitionsItem[keyof typeof ClinicAdoptionAllowedTransitionsItem];
+
+
+export const ClinicAdoptionAllowedTransitionsItem = {
+  lite: 'lite',
+  full: 'full',
+} as const;
+
+/**
+ * Persisted adoption lifecycle, separate from operational network mode. Trial and left clinics are local-only. Leaving retains local booking and clinic data; a left clinic cannot rejoin through adoption transitions. Capabilities are caller-specific; only an explicitly assigned, active doctor-manager may mutate or export.
+ */
+export interface ClinicAdoption {
+  /**
+     * @minimum 1
+     * @maximum 2147483647
+     */
+  clinicId: number;
+  state: ClinicAdoptionState;
+  membershipStatus: ClinicAdoptionMembershipStatus;
+  /**
+     * Null for historical clinics without a known transition; joinedAt is not transition evidence.
+     * @nullable
+     */
+  changedAt: string | null;
+  /** @nullable */
+  trialStartedAt: string | null;
+  /** @nullable */
+  liteStartedAt: string | null;
+  /** @nullable */
+  fullStartedAt: string | null;
+  /** @nullable */
+  leftAt: string | null;
+  /**
+     * @minimum 1
+     * @maximum 2147483647
+     * @nullable
+     */
+  leftBy: number | null;
+  capabilities: ClinicAdoptionCapabilities;
+  /** @maxItems 2 */
+  allowedTransitions: ClinicAdoptionAllowedTransitionsItem[];
+}
+
 export interface Clinic {
+  adoption?: ClinicAdoption;
   /** @minimum 1 */
   id: number;
   name: string;
@@ -709,11 +778,12 @@ export const DoctorPrivacyEffectiveSharing = {
 } as const;
 
 export interface DoctorPrivacy {
+  adoption?: ClinicAdoption;
   clinic: DoctorPrivacyClinic;
   mode: DoctorPrivacyMode;
   effectiveSharing: DoctorPrivacyEffectiveSharing;
-  /** The current persisted model has Full/Lite only; Trial state is unavailable and never inferred. */
-  trialStateAvailable: false;
+  /** Persisted Trial adoption is supported. See optional adoption metadata for known lifecycle timestamps; historical unknown transition dates remain null. */
+  trialStateAvailable: true;
 }
 
 export type DoctorAuditPageItemsItemPatient = {
@@ -1590,7 +1660,7 @@ export interface KpiAdoptionClinic {
 }
 
 /**
- * Trial is absent from the upstream state model, so its count is unavailable rather than an invented zero.
+ * Legacy KPI aggregate projection has no lifecycle metadata and does not yet count persisted Trial separately. Trial remains unavailable here rather than an invented zero; use clinic adoption endpoints for lifecycle detail.
  */
 export interface KpiAdoptionCounts {
   /** @nullable */
@@ -1608,7 +1678,7 @@ export const KpiAdoptionHistoryValue = {
 export type KpiAdoptionHistory = typeof KpiAdoptionHistoryValue;
 
 /**
- * Current clinic adoption, not selected-window history. Does not infer adoption from booking volume or fabricate Trial transitions.
+ * Legacy current operational-mode aggregate, not selected-window history or the new clinic lifecycle projection. It does not expose persisted adoption metadata or count Trial separately, infer adoption from booking volume, or fabricate transitions. Use clinic adoption endpoints for lifecycle detail.
  */
 export interface KpiAdoptionAggregate {
   clinics: KpiAdoptionClinic[];
@@ -2507,6 +2577,7 @@ export const AdminClinicMode = {
 } as const;
 
 export interface AdminClinic {
+  adoption?: ClinicAdoption;
   /**
      * @minimum 1
      * @maximum 2147483647
@@ -2553,11 +2624,13 @@ export interface AdminClinic {
   joinedAt: string;
 }
 
+/**
+ * Optional compatibility field. Clinics are always created in persisted Trial with local-only Lite network mode; use the manager adoption route to transition.
+ */
 export type AdminClinicInputMode = typeof AdminClinicInputMode[keyof typeof AdminClinicInputMode];
 
 
 export const AdminClinicInputMode = {
-  full: 'full',
   lite: 'lite',
 } as const;
 
@@ -2593,6 +2666,7 @@ export interface AdminClinicInput {
   openTime?: string;
   /** @pattern ^(?:[01]\d|2[0-3]):[0-5]\d$ */
   closeTime?: string;
+  /** Optional compatibility field. Clinics are always created in persisted Trial with local-only Lite network mode; use the manager adoption route to transition. */
   mode?: AdminClinicInputMode;
   /**
      * Valid IANA zone. Local openTime must precede closeTime; overnight hours unsupported.
@@ -2601,14 +2675,6 @@ export interface AdminClinicInput {
      */
   timezone?: string;
 }
-
-export type AdminClinicUpdateMode = typeof AdminClinicUpdateMode[keyof typeof AdminClinicUpdateMode];
-
-
-export const AdminClinicUpdateMode = {
-  full: 'full',
-  lite: 'lite',
-} as const;
 
 export interface AdminClinicUpdate {
   /**
@@ -2642,13 +2708,427 @@ export interface AdminClinicUpdate {
   openTime?: string;
   /** @pattern ^(?:[01]\d|2[0-3]):[0-5]\d$ */
   closeTime?: string;
-  mode?: AdminClinicUpdateMode;
   /**
      * Valid IANA zone. Local openTime must precede closeTime; overnight hours unsupported.
      * @minLength 1
      * @maxLength 100
      */
   timezone?: string;
+}
+
+export type ClinicAdoptionTransitionState = typeof ClinicAdoptionTransitionState[keyof typeof ClinicAdoptionTransitionState];
+
+
+export const ClinicAdoptionTransitionState = {
+  lite: 'lite',
+  full: 'full',
+} as const;
+
+export interface ClinicAdoptionTransition {
+  state: ClinicAdoptionTransitionState;
+}
+
+export interface ClinicLeaveInput {
+  confirm: true;
+}
+
+export interface ClinicExportInput { [key: string]: unknown }
+
+export type ClinicExportDatasetName = typeof ClinicExportDatasetName[keyof typeof ClinicExportDatasetName];
+
+
+export const ClinicExportDatasetName = {
+  clinicSettings: 'clinicSettings',
+  doctors: 'doctors',
+  patients: 'patients',
+  appointments: 'appointments',
+  visits: 'visits',
+  consents: 'consents',
+  importBatches: 'importBatches',
+  importProvenance: 'importProvenance',
+} as const;
+
+export type ClinicExportManifestFormat = typeof ClinicExportManifestFormat[keyof typeof ClinicExportManifestFormat];
+
+
+export const ClinicExportManifestFormat = {
+  'amal-clinic-export': 'amal-clinic-export',
+} as const;
+
+export type ClinicExportManifestSchemaVersion = typeof ClinicExportManifestSchemaVersion[keyof typeof ClinicExportManifestSchemaVersion];
+
+
+export const ClinicExportManifestSchemaVersion = {
+  NUMBER_1: 1,
+} as const;
+
+export type ClinicExportManifestEncoding = typeof ClinicExportManifestEncoding[keyof typeof ClinicExportManifestEncoding];
+
+
+export const ClinicExportManifestEncoding = {
+  'UTF-8': 'UTF-8',
+} as const;
+
+export type ClinicExportManifestDisplayTimezone = typeof ClinicExportManifestDisplayTimezone[keyof typeof ClinicExportManifestDisplayTimezone];
+
+
+export const ClinicExportManifestDisplayTimezone = {
+  'Asia/Hebron': 'Asia/Hebron',
+} as const;
+
+export type ClinicExportManifestIncludedDatasetsItem = {
+  dataset: ClinicExportDatasetName;
+  /**
+     * @minimum 0
+     * @maximum 10000
+     */
+  count: number;
+  fields: string[];
+};
+
+export type ClinicExportManifestExcludedDatasetsItemDataset = typeof ClinicExportManifestExcludedDatasetsItemDataset[keyof typeof ClinicExportManifestExcludedDatasetsItemDataset];
+
+
+export const ClinicExportManifestExcludedDatasetsItemDataset = {
+  otherClinicData: 'otherClinicData',
+  unattributedConsents: 'unattributedConsents',
+  unassociatedPatients: 'unassociatedPatients',
+  usersAndAuthentication: 'usersAndAuthentication',
+  syncAndOperationReceipts: 'syncAndOperationReceipts',
+  importRawAndReviewData: 'importRawAndReviewData',
+  auditLogs: 'auditLogs',
+  seedAndFixtureData: 'seedAndFixtureData',
+  derivedAndTransientData: 'derivedAndTransientData',
+} as const;
+
+export type ClinicExportManifestExcludedDatasetsItem = {
+  dataset: ClinicExportManifestExcludedDatasetsItemDataset;
+  /** @minLength 1 */
+  reason: string;
+};
+
+export type ClinicExportManifestLimitsMaxRows = typeof ClinicExportManifestLimitsMaxRows[keyof typeof ClinicExportManifestLimitsMaxRows];
+
+
+export const ClinicExportManifestLimitsMaxRows = {
+  NUMBER_10000: 10000,
+} as const;
+
+export type ClinicExportManifestLimitsMaxBytes = typeof ClinicExportManifestLimitsMaxBytes[keyof typeof ClinicExportManifestLimitsMaxBytes];
+
+
+export const ClinicExportManifestLimitsMaxBytes = {
+  NUMBER_8388608: 8388608,
+} as const;
+
+export type ClinicExportManifestLimitsMaxDurationMs = typeof ClinicExportManifestLimitsMaxDurationMs[keyof typeof ClinicExportManifestLimitsMaxDurationMs];
+
+
+export const ClinicExportManifestLimitsMaxDurationMs = {
+  NUMBER_15000: 15000,
+} as const;
+
+export type ClinicExportManifestLimits = {
+  maxRows: ClinicExportManifestLimitsMaxRows;
+  maxBytes: ClinicExportManifestLimitsMaxBytes;
+  maxDurationMs: ClinicExportManifestLimitsMaxDurationMs;
+};
+
+export interface ClinicExportManifest {
+  format: ClinicExportManifestFormat;
+  schemaVersion: ClinicExportManifestSchemaVersion;
+  encoding: ClinicExportManifestEncoding;
+  exportedAt: string;
+  displayTimezone: ClinicExportManifestDisplayTimezone;
+  /**
+     * @minimum 1
+     * @maximum 2147483647
+     */
+  clinicId: number;
+  /** True when clinicSettings is the only exported row. */
+  empty: boolean;
+  /**
+     * @minimum 1
+     * @maximum 10000
+     */
+  rowCount: number;
+  /**
+     * @minItems 8
+     * @maxItems 8
+     */
+  includedDatasets: ClinicExportManifestIncludedDatasetsItem[];
+  /**
+     * @minItems 9
+     * @maxItems 9
+     */
+  excludedDatasets: ClinicExportManifestExcludedDatasetsItem[];
+  limits: ClinicExportManifestLimits;
+}
+
+export type ClinicExportSettingsRowNetworkMode = typeof ClinicExportSettingsRowNetworkMode[keyof typeof ClinicExportSettingsRowNetworkMode];
+
+
+export const ClinicExportSettingsRowNetworkMode = {
+  full: 'full',
+  lite: 'lite',
+} as const;
+
+export type ClinicExportSettingsRowAdoptionState = typeof ClinicExportSettingsRowAdoptionState[keyof typeof ClinicExportSettingsRowAdoptionState];
+
+
+export const ClinicExportSettingsRowAdoptionState = {
+  trial: 'trial',
+  lite: 'lite',
+  full: 'full',
+} as const;
+
+export type ClinicExportSettingsRowMembershipStatus = typeof ClinicExportSettingsRowMembershipStatus[keyof typeof ClinicExportSettingsRowMembershipStatus];
+
+
+export const ClinicExportSettingsRowMembershipStatus = {
+  active: 'active',
+  left: 'left',
+} as const;
+
+export interface ClinicExportSettingsRow {
+  /** @minimum 1 */
+  clinic_id: number;
+  clinic_name: string;
+  city: string;
+  booking_method: string;
+  /**
+     * @minimum 1
+     * @maximum 1440
+     */
+  slot_minutes: number;
+  /**
+     * @items.minimum 0
+     * @items.maximum 6
+     */
+  working_days: number[];
+  /** PostgreSQL local time text, including seconds. */
+  open_time: string;
+  /** PostgreSQL local time text, including seconds. */
+  close_time: string;
+  network_mode: ClinicExportSettingsRowNetworkMode;
+  timezone: string;
+  joined_at: string;
+  adoption_state: ClinicExportSettingsRowAdoptionState;
+  membership_status: ClinicExportSettingsRowMembershipStatus;
+  /**
+     * @minimum 1
+     * @maximum 2147483647
+     * @nullable
+     */
+  left_by: number | null;
+  /** UTC ISO timestamp. */
+  adoption_changed_at: string;
+  /**
+     * UTC ISO timestamp when known.
+     * @nullable
+     */
+  trial_started_at: string | null;
+  /**
+     * UTC ISO timestamp when known.
+     * @nullable
+     */
+  lite_started_at: string | null;
+  /**
+     * UTC ISO timestamp when known.
+     * @nullable
+     */
+  full_started_at: string | null;
+  /**
+     * UTC ISO timestamp when the clinic left.
+     * @nullable
+     */
+  left_at: string | null;
+}
+
+export interface ClinicExportDoctorRow {
+  /** @minimum 1 */
+  doctor_id: number;
+  /** @minimum 1 */
+  clinic_id: number;
+  doctor_name: string;
+  specialty: string;
+}
+
+export interface ClinicExportPatientRow {
+  /** @minimum 1 */
+  patient_id: number;
+  patient_name: string;
+  phone: string;
+  /** @nullable */
+  guardian_name: string | null;
+  /** @nullable */
+  guardian_relation: string | null;
+  dob: string;
+}
+
+export type ClinicExportAppointmentRowStatus = typeof ClinicExportAppointmentRowStatus[keyof typeof ClinicExportAppointmentRowStatus];
+
+
+export const ClinicExportAppointmentRowStatus = {
+  booked: 'booked',
+  completed: 'completed',
+  double_booked: 'double_booked',
+  no_show: 'no_show',
+  cancelled: 'cancelled',
+} as const;
+
+export type ClinicExportAppointmentRowConflictState = typeof ClinicExportAppointmentRowConflictState[keyof typeof ClinicExportAppointmentRowConflictState];
+
+
+export const ClinicExportAppointmentRowConflictState = {
+  none: 'none',
+  flagged: 'flagged',
+  resolved: 'resolved',
+} as const;
+
+export interface ClinicExportAppointmentRow {
+  /** @minimum 1 */
+  appointment_id: number;
+  /** @minimum 1 */
+  clinic_id: number;
+  /** @minimum 1 */
+  doctor_id: number;
+  /** @minimum 1 */
+  patient_id: number;
+  booking_method: string;
+  status: ClinicExportAppointmentRowStatus;
+  /**
+     * @minimum 1
+     * @maximum 1440
+     */
+  duration_minutes: number;
+  conflict_state: ClinicExportAppointmentRowConflictState;
+  /** @nullable */
+  cancel_reason: string | null;
+  /** @minimum 1 */
+  version: number;
+  scheduled_at: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ClinicExportVisitRow {
+  /** @minimum 1 */
+  visit_id: number;
+  /** @minimum 1 */
+  clinic_id: number;
+  /** @minimum 1 */
+  doctor_id: number;
+  /** @minimum 1 */
+  patient_id: number;
+  diagnosis_notes: string;
+  visit_date: string;
+}
+
+export type ClinicExportConsentRowLevel = typeof ClinicExportConsentRowLevel[keyof typeof ClinicExportConsentRowLevel];
+
+
+export const ClinicExportConsentRowLevel = {
+  none: 'none',
+  basic: 'basic',
+  clinical: 'clinical',
+} as const;
+
+export type ClinicExportConsentRowGivenBy = typeof ClinicExportConsentRowGivenBy[keyof typeof ClinicExportConsentRowGivenBy];
+
+
+export const ClinicExportConsentRowGivenBy = {
+  patient: 'patient',
+  guardian: 'guardian',
+} as const;
+
+/**
+ * @nullable
+ */
+export type ClinicExportConsentRowEvidence = typeof ClinicExportConsentRowEvidence[keyof typeof ClinicExportConsentRowEvidence] | null;
+
+
+export const ClinicExportConsentRowEvidence = {
+  signed: 'signed',
+  verbal: 'verbal',
+} as const;
+
+export interface ClinicExportConsentRow {
+  /** @minimum 1 */
+  id: number;
+  /** @minimum 1 */
+  patient_id: number;
+  /** @minimum 1 */
+  recorded_clinic_id: number;
+  level: ClinicExportConsentRowLevel;
+  given_by: ClinicExportConsentRowGivenBy;
+  /** @nullable */
+  guardian_name: string | null;
+  /** @nullable */
+  guardian_relation: string | null;
+  /** @nullable */
+  evidence: ClinicExportConsentRowEvidence;
+  given_at: string;
+  /** @nullable */
+  withdrawn_at: string | null;
+}
+
+export type ClinicExportImportBatchRowStatus = typeof ClinicExportImportBatchRowStatus[keyof typeof ClinicExportImportBatchRowStatus];
+
+
+export const ClinicExportImportBatchRowStatus = {
+  review_required: 'review_required',
+  reviewed: 'reviewed',
+  committed: 'committed',
+} as const;
+
+export interface ClinicExportImportBatchRow {
+  /** @minimum 1 */
+  id: number;
+  /** @minimum 1 */
+  clinic_id: number;
+  source_name: string;
+  status: ClinicExportImportBatchRowStatus;
+  /** @minimum 1 */
+  version: number;
+  created_at: string;
+  /** @nullable */
+  committed_at: string | null;
+}
+
+export interface ClinicExportImportProvenanceRow {
+  /** @minimum 1 */
+  batch_id: number;
+  /** @minimum 1 */
+  row_id: number;
+  /** @minimum 1 */
+  appointment_id: number;
+  source_name: string;
+  source_event_id: number;
+  created_at: string;
+}
+
+export interface ClinicExportDatasets {
+  /**
+     * @minItems 1
+     * @maxItems 1
+     */
+  clinicSettings: ClinicExportSettingsRow[];
+  doctors: ClinicExportDoctorRow[];
+  patients: ClinicExportPatientRow[];
+  appointments: ClinicExportAppointmentRow[];
+  visits: ClinicExportVisitRow[];
+  consents: ClinicExportConsentRow[];
+  importBatches: ClinicExportImportBatchRow[];
+  importProvenance: ClinicExportImportProvenanceRow[];
+}
+
+/**
+ * Versioned JSON portability attachment from one repeatable-read snapshot. Only explicitly allowlisted clinic-local datasets and associated patient demographics; never foreign notes, accounts, credentials, raw sync/import payloads or audit logs. All dataset keys and manifest coverage are present even for empty arrays. UTC timestamps, date-only dates and local PostgreSQL time text are preserved. No partial export is returned on failure.
+ */
+export interface ClinicExport {
+  manifest: ClinicExportManifest;
+  datasets: ClinicExportDatasets;
 }
 
 export interface AdminClinicPage {
@@ -3060,6 +3540,31 @@ export interface AdminAuditPage {
   /** @nullable */
   nextBeforeId: number | null;
 }
+
+/**
+ * Caller-specific persisted adoption state. Cache-Control: private, no-store.
+ */
+export type ClinicAdoptionStateResponse = ClinicAdoption;
+
+/**
+ * Complete versioned clinic portability attachment, not a server-side file or download URL. Includes all eight allowlisted datasets and explicit exclusions. No partial response.
+ */
+export type ClinicExportAttachmentResponse = ClinicExport;
+
+/**
+ * CLINIC_LEFT rejects a transition after leaving; LIFECYCLE_RETRY requests a retry after serialization, lock or statement timeout.
+ */
+export type ClinicLifecycleConflictResponse = ApiFailure;
+
+/**
+ * Export exceeds the cumulative 10,000-row or UTF-8 8 MiB ceiling; no partial attachment.
+ */
+export type ClinicExportTooLargeResponse = ApiFailure;
+
+/**
+ * EXPORT_TIMEOUT exceeds the 15-second export budget; EXPORT_RESOURCE_UNAVAILABLE indicates bounded database resource failure. No partial attachment.
+ */
+export type ClinicExportUnavailableResponse = ApiFailure;
 
 /**
  * Invalid input or unsupported file format

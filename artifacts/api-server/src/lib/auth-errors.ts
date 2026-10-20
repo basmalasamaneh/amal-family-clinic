@@ -6,6 +6,11 @@ export class ApiError extends Error {
 export const fail = (status: number, code: string, key: string, params = {}) => new ApiError(status, code, key, params);
 export const translations = {
   en: {
+    clinicLeft: "This clinic has left the network. Rejoining is not available.",
+    lifecycleRetry: "The clinic changed concurrently. Refresh and try again.",
+    exportLimitExceeded: "The clinic export exceeds the download limit.",
+    exportTimeout: "The export timed out. Try again.",
+    exportResourceUnavailable: "Export is temporarily unavailable. Try again.",
     invalidCursor: "This sync cursor is invalid. Start synchronization again.",
     cursorScopeChanged: "Your access changed. Clear the previous local snapshot and synchronize again.",
     patientReferenced: "This patient has protected records and cannot be deleted.",
@@ -16,6 +21,11 @@ export const translations = {
     pinLocked: "PIN access is temporarily locked.", rateLimited: "Too many attempts. Try again later.", internal: "An unexpected error occurred.",
   },
   ar: {
+    clinicLeft: "غادرت هذه العيادة الشبكة. إعادة الانضمام غير متاحة.",
+    lifecycleRetry: "تغيّرت حالة العيادة بالتزامن. حدّث الصفحة وحاول مجددًا.",
+    exportLimitExceeded: "تجاوز تصدير العيادة الحد المسموح للتنزيل.",
+    exportTimeout: "انتهت مهلة التصدير. حاول مجددًا.",
+    exportResourceUnavailable: "التصدير غير متاح مؤقتًا. حاول مجددًا.",
     invalidCursor: "مؤشر المزامنة غير صالح. ابدأ المزامنة من جديد.",
     cursorScopeChanged: "تغيّرت صلاحياتك. امسح النسخة المحلية السابقة وأعد المزامنة.",
     patientReferenced: "لدى هذا المريض سجلات محمية ولا يمكن حذفه.",

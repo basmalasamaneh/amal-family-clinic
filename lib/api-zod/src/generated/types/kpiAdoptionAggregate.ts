@@ -10,7 +10,7 @@ import type { KpiAdoptionCounts } from './kpiAdoptionCounts';
 import type { KpiAdoptionHistory } from './kpiAdoptionHistory';
 
 /**
- * Current clinic adoption, not selected-window history. Does not infer adoption from booking volume or fabricate Trial transitions.
+ * Legacy current operational-mode aggregate, not selected-window history or the new clinic lifecycle projection. It does not expose persisted adoption metadata or count Trial separately, infer adoption from booking volume, or fabricate transitions. Use clinic adoption endpoints for lifecycle detail.
  */
 export interface KpiAdoptionAggregate {
   clinics: KpiAdoptionClinic[];

@@ -6,8 +6,10 @@
  * OpenAPI spec version: 0.2.0
  */
 import type { AdminClinicMode } from './adminClinicMode';
+import type { ClinicAdoption } from './clinicAdoption';
 
 export interface AdminClinic {
+  adoption?: ClinicAdoption;
   /**
      * @minimum 1
      * @maximum 2147483647

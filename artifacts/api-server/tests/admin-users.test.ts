@@ -102,8 +102,8 @@ before(async () => {
     client.release = (...args) => { client.query = original; client.release = release; release(...args); };
     return client;
   };
-  clinic = (await pool.query("INSERT INTO operational.clinics(clinic_name,city,booking_method) VALUES('Test A','Test','phone') RETURNING clinic_id")).rows[0].clinic_id;
-  otherClinic = (await pool.query("INSERT INTO operational.clinics(clinic_name,city,booking_method) VALUES('Test B','Test','phone') RETURNING clinic_id")).rows[0].clinic_id;
+  clinic = (await pool.query("INSERT INTO operational.clinics(clinic_name,city,booking_method,adoption_state) VALUES('Test A','Test','phone','full') RETURNING clinic_id")).rows[0].clinic_id;
+  otherClinic = (await pool.query("INSERT INTO operational.clinics(clinic_name,city,booking_method,adoption_state) VALUES('Test B','Test','phone','full') RETURNING clinic_id")).rows[0].clinic_id;
   doctorId = (await pool.query(`INSERT INTO operational.doctors(doctor_name,clinic_id,specialty,email)
     VALUES('Test doctor',$1,'general','doctor@admin.test') RETURNING doctor_id`, [clinic])).rows[0].doctor_id;
   const hash = await bcrypt.hash(password, 4);

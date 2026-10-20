@@ -9,6 +9,319 @@ import * as zod from 'zod';
 
 
 /**
+ * Authenticated doctor/front-desk, own clinic only. Capabilities reflect explicit clinic-manager assignment; no privilege is inferred from being a doctor.
+ * @summary Read persisted clinic adoption
+ */
+export const getClinicAdoptionPathIdMax = 2147483647;
+
+
+
+export const GetClinicAdoptionParams = zod.object({
+  "id": zod.coerce.number().int().min(1).max(getClinicAdoptionPathIdMax)
+}).strict()
+
+export const getClinicAdoptionResponseClinicIdMax = 2147483647;
+
+export const getClinicAdoptionResponseLeftByMax = 2147483647;
+
+export const getClinicAdoptionResponseAllowedTransitionsMax = 2;
+
+
+
+export const GetClinicAdoptionResponse = zod.object({
+  "clinicId": zod.number().int().min(1).max(getClinicAdoptionResponseClinicIdMax),
+  "state": zod.enum(['trial', 'lite', 'full']),
+  "membershipStatus": zod.enum(['active', 'left']),
+  "changedAt": zod.coerce.date().nullable().describe('Null for historical clinics without a known transition; joinedAt is not transition evidence.'),
+  "trialStartedAt": zod.coerce.date().nullable(),
+  "liteStartedAt": zod.coerce.date().nullable(),
+  "fullStartedAt": zod.coerce.date().nullable(),
+  "leftAt": zod.coerce.date().nullable(),
+  "leftBy": zod.number().int().min(1).max(getClinicAdoptionResponseLeftByMax).nullable(),
+  "capabilities": zod.object({
+  "canManage": zod.boolean(),
+  "canExport": zod.boolean(),
+  "canLeave": zod.boolean(),
+  "localBooking": zod.literal(true),
+  "networkSharing": zod.boolean()
+}).strict(),
+  "allowedTransitions": zod.array(zod.enum(['lite', 'full'])).max(getClinicAdoptionResponseAllowedTransitionsMax)
+}).strict().describe('Persisted adoption lifecycle, separate from operational network mode. Trial and left clinics are local-only. Leaving retains local booking and clinic data; a left clinic cannot rejoin through adoption transitions. Capabilities are caller-specific; only an explicitly assigned, active doctor-manager may mutate or export.')
+
+
+/**
+ * Own-clinic, active explicitly assigned doctor-manager only, with CSRF. Trial may move to Lite or Full; Lite and Full may switch. Repeating the current state is idempotent. Left clinics cannot transition. Changes are transactional and audited.
+ * @summary Choose Lite or Full adoption
+ */
+export const transitionClinicAdoptionPathIdMax = 2147483647;
+
+
+
+export const TransitionClinicAdoptionParams = zod.object({
+  "id": zod.coerce.number().int().min(1).max(transitionClinicAdoptionPathIdMax)
+}).strict()
+
+export const TransitionClinicAdoptionBody = zod.object({
+  "state": zod.enum(['lite', 'full'])
+}).strict()
+
+export const transitionClinicAdoptionResponseClinicIdMax = 2147483647;
+
+export const transitionClinicAdoptionResponseLeftByMax = 2147483647;
+
+export const transitionClinicAdoptionResponseAllowedTransitionsMax = 2;
+
+
+
+export const TransitionClinicAdoptionResponse = zod.object({
+  "clinicId": zod.number().int().min(1).max(transitionClinicAdoptionResponseClinicIdMax),
+  "state": zod.enum(['trial', 'lite', 'full']),
+  "membershipStatus": zod.enum(['active', 'left']),
+  "changedAt": zod.coerce.date().nullable().describe('Null for historical clinics without a known transition; joinedAt is not transition evidence.'),
+  "trialStartedAt": zod.coerce.date().nullable(),
+  "liteStartedAt": zod.coerce.date().nullable(),
+  "fullStartedAt": zod.coerce.date().nullable(),
+  "leftAt": zod.coerce.date().nullable(),
+  "leftBy": zod.number().int().min(1).max(transitionClinicAdoptionResponseLeftByMax).nullable(),
+  "capabilities": zod.object({
+  "canManage": zod.boolean(),
+  "canExport": zod.boolean(),
+  "canLeave": zod.boolean(),
+  "localBooking": zod.literal(true),
+  "networkSharing": zod.boolean()
+}).strict(),
+  "allowedTransitions": zod.array(zod.enum(['lite', 'full'])).max(transitionClinicAdoptionResponseAllowedTransitionsMax)
+}).strict().describe('Persisted adoption lifecycle, separate from operational network mode. Trial and left clinics are local-only. Leaving retains local booking and clinic data; a left clinic cannot rejoin through adoption transitions. Capabilities are caller-specific; only an explicitly assigned, active doctor-manager may mutate or export.')
+
+
+/**
+ * Own-clinic, active explicitly assigned doctor-manager only, with CSRF and literal confirm:true. Transactionally marks membership left and sets adoption/network mode Lite. Stops network sharing without deleting data or local booking; export remains available. Repeated leave is idempotent.
+ * @summary Leave network while retaining local use
+ */
+export const leaveClinicPathIdMax = 2147483647;
+
+
+
+export const LeaveClinicParams = zod.object({
+  "id": zod.coerce.number().int().min(1).max(leaveClinicPathIdMax)
+}).strict()
+
+export const LeaveClinicBody = zod.object({
+  "confirm": zod.literal(true)
+}).strict()
+
+export const leaveClinicResponseClinicIdMax = 2147483647;
+
+export const leaveClinicResponseLeftByMax = 2147483647;
+
+export const leaveClinicResponseAllowedTransitionsMax = 2;
+
+
+
+export const LeaveClinicResponse = zod.object({
+  "clinicId": zod.number().int().min(1).max(leaveClinicResponseClinicIdMax),
+  "state": zod.enum(['trial', 'lite', 'full']),
+  "membershipStatus": zod.enum(['active', 'left']),
+  "changedAt": zod.coerce.date().nullable().describe('Null for historical clinics without a known transition; joinedAt is not transition evidence.'),
+  "trialStartedAt": zod.coerce.date().nullable(),
+  "liteStartedAt": zod.coerce.date().nullable(),
+  "fullStartedAt": zod.coerce.date().nullable(),
+  "leftAt": zod.coerce.date().nullable(),
+  "leftBy": zod.number().int().min(1).max(leaveClinicResponseLeftByMax).nullable(),
+  "capabilities": zod.object({
+  "canManage": zod.boolean(),
+  "canExport": zod.boolean(),
+  "canLeave": zod.boolean(),
+  "localBooking": zod.literal(true),
+  "networkSharing": zod.boolean()
+}).strict(),
+  "allowedTransitions": zod.array(zod.enum(['lite', 'full'])).max(leaveClinicResponseAllowedTransitionsMax)
+}).strict().describe('Persisted adoption lifecycle, separate from operational network mode. Trial and left clinics are local-only. Leaving retains local booking and clinic data; a left clinic cannot rejoin through adoption transitions. Capabilities are caller-specific; only an explicitly assigned, active doctor-manager may mutate or export.')
+
+
+/**
+ * Own-clinic, active explicitly assigned doctor-manager only, with CSRF and a required empty JSON object. Available before and after leaving. One repeatable-read snapshot, allowlisted fields only, audited before response. Maximum 10,000 cumulative rows, 8 MiB UTF-8 JSON and 15 seconds; failures return structured errors, never partial files. Client must preserve the JSON attachment rather than treat it as a URL.
+ * @summary Download versioned clinic JSON export
+ */
+export const exportClinicPathIdMax = 2147483647;
+
+
+
+export const ExportClinicParams = zod.object({
+  "id": zod.coerce.number().int().min(1).max(exportClinicPathIdMax)
+}).strict()
+
+export const ExportClinicBody = zod.object({
+
+})
+
+export const exportClinicResponseManifestClinicIdMax = 2147483647;
+
+export const exportClinicResponseManifestRowCountMax = 10000;
+
+export const exportClinicResponseManifestIncludedDatasetsItemCountMin = 0;
+export const exportClinicResponseManifestIncludedDatasetsItemCountMax = 10000;
+
+export const exportClinicResponseManifestIncludedDatasetsMin = 8;
+export const exportClinicResponseManifestIncludedDatasetsMax = 8;
+
+
+export const exportClinicResponseManifestExcludedDatasetsMin = 9;
+export const exportClinicResponseManifestExcludedDatasetsMax = 9;
+
+
+export const exportClinicResponseDatasetsClinicSettingsItemSlotMinutesMax = 1440;
+
+export const exportClinicResponseDatasetsClinicSettingsItemWorkingDaysItemMin = 0;
+export const exportClinicResponseDatasetsClinicSettingsItemWorkingDaysItemMax = 6;
+
+export const exportClinicResponseDatasetsClinicSettingsItemLeftByMax = 2147483647;
+
+export const exportClinicResponseDatasetsClinicSettingsMax = 1;
+
+
+
+
+
+
+
+
+export const exportClinicResponseDatasetsAppointmentsItemDurationMinutesMax = 1440;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+export const ExportClinicResponse = zod.object({
+  "manifest": zod.object({
+  "format": zod.enum(['amal-clinic-export']),
+  "schemaVersion": zod.literal(1),
+  "encoding": zod.enum(['UTF-8']),
+  "exportedAt": zod.coerce.date(),
+  "displayTimezone": zod.enum(['Asia/Hebron']),
+  "clinicId": zod.number().int().min(1).max(exportClinicResponseManifestClinicIdMax),
+  "empty": zod.boolean().describe('True when clinicSettings is the only exported row.'),
+  "rowCount": zod.number().int().min(1).max(exportClinicResponseManifestRowCountMax),
+  "includedDatasets": zod.array(zod.object({
+  "dataset": zod.enum(['clinicSettings', 'doctors', 'patients', 'appointments', 'visits', 'consents', 'importBatches', 'importProvenance']),
+  "count": zod.number().int().min(exportClinicResponseManifestIncludedDatasetsItemCountMin).max(exportClinicResponseManifestIncludedDatasetsItemCountMax),
+  "fields": zod.array(zod.string())
+}).strict()).min(exportClinicResponseManifestIncludedDatasetsMin).max(exportClinicResponseManifestIncludedDatasetsMax),
+  "excludedDatasets": zod.array(zod.object({
+  "dataset": zod.enum(['otherClinicData', 'unattributedConsents', 'unassociatedPatients', 'usersAndAuthentication', 'syncAndOperationReceipts', 'importRawAndReviewData', 'auditLogs', 'seedAndFixtureData', 'derivedAndTransientData']),
+  "reason": zod.string().min(1)
+}).strict()).min(exportClinicResponseManifestExcludedDatasetsMin).max(exportClinicResponseManifestExcludedDatasetsMax),
+  "limits": zod.object({
+  "maxRows": zod.literal(10000),
+  "maxBytes": zod.literal(8388608),
+  "maxDurationMs": zod.literal(15000)
+}).strict()
+}).strict(),
+  "datasets": zod.object({
+  "clinicSettings": zod.array(zod.object({
+  "clinic_id": zod.number().int().min(1),
+  "clinic_name": zod.string(),
+  "city": zod.string(),
+  "booking_method": zod.string(),
+  "slot_minutes": zod.number().int().min(1).max(exportClinicResponseDatasetsClinicSettingsItemSlotMinutesMax),
+  "working_days": zod.array(zod.number().int().min(exportClinicResponseDatasetsClinicSettingsItemWorkingDaysItemMin).max(exportClinicResponseDatasetsClinicSettingsItemWorkingDaysItemMax)),
+  "open_time": zod.string().describe('PostgreSQL local time text, including seconds.'),
+  "close_time": zod.string().describe('PostgreSQL local time text, including seconds.'),
+  "network_mode": zod.enum(['full', 'lite']),
+  "timezone": zod.string(),
+  "joined_at": zod.coerce.date(),
+  "adoption_state": zod.enum(['trial', 'lite', 'full']),
+  "membership_status": zod.enum(['active', 'left']),
+  "left_by": zod.number().int().min(1).max(exportClinicResponseDatasetsClinicSettingsItemLeftByMax).nullable(),
+  "adoption_changed_at": zod.coerce.date().describe('UTC ISO timestamp.'),
+  "trial_started_at": zod.coerce.date().nullable().describe('UTC ISO timestamp when known.'),
+  "lite_started_at": zod.coerce.date().nullable().describe('UTC ISO timestamp when known.'),
+  "full_started_at": zod.coerce.date().nullable().describe('UTC ISO timestamp when known.'),
+  "left_at": zod.coerce.date().nullable().describe('UTC ISO timestamp when the clinic left.')
+}).strict()).min(1).max(exportClinicResponseDatasetsClinicSettingsMax),
+  "doctors": zod.array(zod.object({
+  "doctor_id": zod.number().int().min(1),
+  "clinic_id": zod.number().int().min(1),
+  "doctor_name": zod.string(),
+  "specialty": zod.string()
+}).strict()),
+  "patients": zod.array(zod.object({
+  "patient_id": zod.number().int().min(1),
+  "patient_name": zod.string(),
+  "phone": zod.string(),
+  "guardian_name": zod.string().nullable(),
+  "guardian_relation": zod.string().nullable(),
+  "dob": zod.coerce.date()
+}).strict()),
+  "appointments": zod.array(zod.object({
+  "appointment_id": zod.number().int().min(1),
+  "clinic_id": zod.number().int().min(1),
+  "doctor_id": zod.number().int().min(1),
+  "patient_id": zod.number().int().min(1),
+  "booking_method": zod.string(),
+  "status": zod.enum(['booked', 'completed', 'double_booked', 'no_show', 'cancelled']),
+  "duration_minutes": zod.number().int().min(1).max(exportClinicResponseDatasetsAppointmentsItemDurationMinutesMax),
+  "conflict_state": zod.enum(['none', 'flagged', 'resolved']),
+  "cancel_reason": zod.string().nullable(),
+  "version": zod.number().int().min(1),
+  "scheduled_at": zod.coerce.date(),
+  "created_at": zod.coerce.date(),
+  "updated_at": zod.coerce.date()
+}).strict()),
+  "visits": zod.array(zod.object({
+  "visit_id": zod.number().int().min(1),
+  "clinic_id": zod.number().int().min(1),
+  "doctor_id": zod.number().int().min(1),
+  "patient_id": zod.number().int().min(1),
+  "diagnosis_notes": zod.string(),
+  "visit_date": zod.coerce.date()
+}).strict()),
+  "consents": zod.array(zod.object({
+  "id": zod.number().int().min(1),
+  "patient_id": zod.number().int().min(1),
+  "recorded_clinic_id": zod.number().int().min(1),
+  "level": zod.enum(['none', 'basic', 'clinical']),
+  "given_by": zod.enum(['patient', 'guardian']),
+  "guardian_name": zod.string().nullable(),
+  "guardian_relation": zod.string().nullable(),
+  "evidence": zod.union([zod.literal('signed'),zod.literal('verbal'),zod.literal(null)]).nullable(),
+  "given_at": zod.coerce.date(),
+  "withdrawn_at": zod.coerce.date().nullable()
+}).strict()),
+  "importBatches": zod.array(zod.object({
+  "id": zod.number().int().min(1),
+  "clinic_id": zod.number().int().min(1),
+  "source_name": zod.string(),
+  "status": zod.enum(['review_required', 'reviewed', 'committed']),
+  "version": zod.number().int().min(1),
+  "created_at": zod.coerce.date(),
+  "committed_at": zod.coerce.date().nullable()
+}).strict()),
+  "importProvenance": zod.array(zod.object({
+  "batch_id": zod.number().int().min(1),
+  "row_id": zod.number().int().min(1),
+  "appointment_id": zod.number().int().min(1),
+  "source_name": zod.string(),
+  "source_event_id": zod.number().int(),
+  "created_at": zod.coerce.date()
+}).strict())
+}).strict()
+}).strict().describe('Versioned JSON portability attachment from one repeatable-read snapshot. Only explicitly allowlisted clinic-local datasets and associated patient demographics; never foreign notes, accounts, credentials, raw sync/import payloads or audit logs. All dataset keys and manifest coverage are present even for empty arrays. UTC timestamps, date-only dates and local PostgreSQL time text are preserved. No partial export is returned on failure.')
+
+
+/**
  * Real pre-session endpoint. Requires the existing HttpOnly trusted-device cookie. Returns only its assigned clinic ID/name, never an account list, device credential, or clinic directory. Missing, forged and revoked devices receive the same 403. This grants no session or enrollment authority; PIN login still requires account email and four ASCII digits.
  * @summary Trusted reception device clinic
  */
@@ -45,11 +358,36 @@ export const ListClinicsQueryParams = zod.object({
   "limit": zod.coerce.number().int().min(1).max(listClinicsQueryLimitMax).optional()
 }).strict()
 
+export const listClinicsResponseItemsItemAdoptionClinicIdMax = 2147483647;
+
+export const listClinicsResponseItemsItemAdoptionLeftByMax = 2147483647;
+
+export const listClinicsResponseItemsItemAdoptionAllowedTransitionsMax = 2;
+
 
 
 
 export const ListClinicsResponse = zod.object({
   "items": zod.array(zod.object({
+  "adoption": zod.object({
+  "clinicId": zod.number().int().min(1).max(listClinicsResponseItemsItemAdoptionClinicIdMax),
+  "state": zod.enum(['trial', 'lite', 'full']),
+  "membershipStatus": zod.enum(['active', 'left']),
+  "changedAt": zod.coerce.date().nullable().describe('Null for historical clinics without a known transition; joinedAt is not transition evidence.'),
+  "trialStartedAt": zod.coerce.date().nullable(),
+  "liteStartedAt": zod.coerce.date().nullable(),
+  "fullStartedAt": zod.coerce.date().nullable(),
+  "leftAt": zod.coerce.date().nullable(),
+  "leftBy": zod.number().int().min(1).max(listClinicsResponseItemsItemAdoptionLeftByMax).nullable(),
+  "capabilities": zod.object({
+  "canManage": zod.boolean(),
+  "canExport": zod.boolean(),
+  "canLeave": zod.boolean(),
+  "localBooking": zod.literal(true),
+  "networkSharing": zod.boolean()
+}).strict(),
+  "allowedTransitions": zod.array(zod.enum(['lite', 'full'])).max(listClinicsResponseItemsItemAdoptionAllowedTransitionsMax)
+}).strict().optional().describe('Persisted adoption lifecycle, separate from operational network mode. Trial and left clinics are local-only. Leaving retains local booking and clinic data; a left clinic cannot rejoin through adoption transitions. Capabilities are caller-specific; only an explicitly assigned, active doctor-manager may mutate or export.'),
   "id": zod.number().int().min(1),
   "name": zod.string(),
   "mode": zod.enum(['network', 'lite']),
@@ -89,9 +427,15 @@ export const CreateClinicBody = zod.object({
   "workingDays": zod.array(zod.number().int().min(createClinicBodyWorkingDaysItemMin).max(createClinicBodyWorkingDaysItemMax)).min(1).max(createClinicBodyWorkingDaysMax).optional(),
   "openTime": zod.string().regex(createClinicBodyOpenTimeRegExp).optional(),
   "closeTime": zod.string().regex(createClinicBodyCloseTimeRegExp).optional(),
-  "mode": zod.enum(['full', 'lite']).optional(),
+  "mode": zod.enum(['lite']).optional().describe('Optional compatibility field. Clinics are always created in persisted Trial with local-only Lite network mode; use the manager adoption route to transition.'),
   "timezone": zod.string().min(1).max(createClinicBodyTimezoneMax).optional().describe('Valid IANA zone. Local openTime must precede closeTime; overnight hours unsupported.')
 }).strict()
+
+export const createClinicResponseAdoptionClinicIdMax = 2147483647;
+
+export const createClinicResponseAdoptionLeftByMax = 2147483647;
+
+export const createClinicResponseAdoptionAllowedTransitionsMax = 2;
 
 export const createClinicResponseIdMax = 2147483647;
 
@@ -115,6 +459,25 @@ export const createClinicResponseTimezoneMax = 100;
 
 
 export const CreateClinicResponse = zod.object({
+  "adoption": zod.object({
+  "clinicId": zod.number().int().min(1).max(createClinicResponseAdoptionClinicIdMax),
+  "state": zod.enum(['trial', 'lite', 'full']),
+  "membershipStatus": zod.enum(['active', 'left']),
+  "changedAt": zod.coerce.date().nullable().describe('Null for historical clinics without a known transition; joinedAt is not transition evidence.'),
+  "trialStartedAt": zod.coerce.date().nullable(),
+  "liteStartedAt": zod.coerce.date().nullable(),
+  "fullStartedAt": zod.coerce.date().nullable(),
+  "leftAt": zod.coerce.date().nullable(),
+  "leftBy": zod.number().int().min(1).max(createClinicResponseAdoptionLeftByMax).nullable(),
+  "capabilities": zod.object({
+  "canManage": zod.boolean(),
+  "canExport": zod.boolean(),
+  "canLeave": zod.boolean(),
+  "localBooking": zod.literal(true),
+  "networkSharing": zod.boolean()
+}).strict(),
+  "allowedTransitions": zod.array(zod.enum(['lite', 'full'])).max(createClinicResponseAdoptionAllowedTransitionsMax)
+}).strict().optional().describe('Persisted adoption lifecycle, separate from operational network mode. Trial and left clinics are local-only. Leaving retains local booking and clinic data; a left clinic cannot rejoin through adoption transitions. Capabilities are caller-specific; only an explicitly assigned, active doctor-manager may mutate or export.'),
   "id": zod.number().int().min(1).max(createClinicResponseIdMax),
   "name": zod.string().min(1).max(createClinicResponseNameMax),
   "city": zod.string().min(1).max(createClinicResponseCityMax),
@@ -140,10 +503,35 @@ export const GetClinicParams = zod.object({
   "id": zod.coerce.number().int().min(1)
 }).strict()
 
+export const getClinicResponseAdoptionClinicIdMax = 2147483647;
+
+export const getClinicResponseAdoptionLeftByMax = 2147483647;
+
+export const getClinicResponseAdoptionAllowedTransitionsMax = 2;
+
 
 
 
 export const GetClinicResponse = zod.object({
+  "adoption": zod.object({
+  "clinicId": zod.number().int().min(1).max(getClinicResponseAdoptionClinicIdMax),
+  "state": zod.enum(['trial', 'lite', 'full']),
+  "membershipStatus": zod.enum(['active', 'left']),
+  "changedAt": zod.coerce.date().nullable().describe('Null for historical clinics without a known transition; joinedAt is not transition evidence.'),
+  "trialStartedAt": zod.coerce.date().nullable(),
+  "liteStartedAt": zod.coerce.date().nullable(),
+  "fullStartedAt": zod.coerce.date().nullable(),
+  "leftAt": zod.coerce.date().nullable(),
+  "leftBy": zod.number().int().min(1).max(getClinicResponseAdoptionLeftByMax).nullable(),
+  "capabilities": zod.object({
+  "canManage": zod.boolean(),
+  "canExport": zod.boolean(),
+  "canLeave": zod.boolean(),
+  "localBooking": zod.literal(true),
+  "networkSharing": zod.boolean()
+}).strict(),
+  "allowedTransitions": zod.array(zod.enum(['lite', 'full'])).max(getClinicResponseAdoptionAllowedTransitionsMax)
+}).strict().optional().describe('Persisted adoption lifecycle, separate from operational network mode. Trial and left clinics are local-only. Leaving retains local booking and clinic data; a left clinic cannot rejoin through adoption transitions. Capabilities are caller-specific; only an explicitly assigned, active doctor-manager may mutate or export.'),
   "id": zod.number().int().min(1),
   "name": zod.string(),
   "mode": zod.enum(['network', 'lite']),
@@ -189,9 +577,14 @@ export const UpdateClinicBody = zod.object({
   "workingDays": zod.array(zod.number().int().min(updateClinicBodyWorkingDaysItemMin).max(updateClinicBodyWorkingDaysItemMax)).min(1).max(updateClinicBodyWorkingDaysMax).optional(),
   "openTime": zod.string().regex(updateClinicBodyOpenTimeRegExp).optional(),
   "closeTime": zod.string().regex(updateClinicBodyCloseTimeRegExp).optional(),
-  "mode": zod.enum(['full', 'lite']).optional(),
   "timezone": zod.string().min(1).max(updateClinicBodyTimezoneMax).optional().describe('Valid IANA zone. Local openTime must precede closeTime; overnight hours unsupported.')
 }).strict()
+
+export const updateClinicResponseAdoptionClinicIdMax = 2147483647;
+
+export const updateClinicResponseAdoptionLeftByMax = 2147483647;
+
+export const updateClinicResponseAdoptionAllowedTransitionsMax = 2;
 
 export const updateClinicResponseIdMax = 2147483647;
 
@@ -215,6 +608,25 @@ export const updateClinicResponseTimezoneMax = 100;
 
 
 export const UpdateClinicResponse = zod.object({
+  "adoption": zod.object({
+  "clinicId": zod.number().int().min(1).max(updateClinicResponseAdoptionClinicIdMax),
+  "state": zod.enum(['trial', 'lite', 'full']),
+  "membershipStatus": zod.enum(['active', 'left']),
+  "changedAt": zod.coerce.date().nullable().describe('Null for historical clinics without a known transition; joinedAt is not transition evidence.'),
+  "trialStartedAt": zod.coerce.date().nullable(),
+  "liteStartedAt": zod.coerce.date().nullable(),
+  "fullStartedAt": zod.coerce.date().nullable(),
+  "leftAt": zod.coerce.date().nullable(),
+  "leftBy": zod.number().int().min(1).max(updateClinicResponseAdoptionLeftByMax).nullable(),
+  "capabilities": zod.object({
+  "canManage": zod.boolean(),
+  "canExport": zod.boolean(),
+  "canLeave": zod.boolean(),
+  "localBooking": zod.literal(true),
+  "networkSharing": zod.boolean()
+}).strict(),
+  "allowedTransitions": zod.array(zod.enum(['lite', 'full'])).max(updateClinicResponseAdoptionAllowedTransitionsMax)
+}).strict().optional().describe('Persisted adoption lifecycle, separate from operational network mode. Trial and left clinics are local-only. Leaving retains local booking and clinic data; a left clinic cannot rejoin through adoption transitions. Capabilities are caller-specific; only an explicitly assigned, active doctor-manager may mutate or export.'),
   "id": zod.number().int().min(1).max(updateClinicResponseIdMax),
   "name": zod.string().min(1).max(updateClinicResponseNameMax),
   "city": zod.string().min(1).max(updateClinicResponseCityMax),
@@ -2343,13 +2755,13 @@ export const GetKpisResponse = zod.object({
   "trial": zod.null(),
   "lite": zod.number().int().min(getKpisResponseAdoptionCountsLiteMin),
   "full": zod.number().int().min(getKpisResponseAdoptionCountsFullMin)
-}).strict().describe('Trial is absent from the upstream state model, so its count is unavailable rather than an invented zero.'),
+}).strict().describe('Legacy KPI aggregate projection has no lifecycle metadata and does not yet count persisted Trial separately. Trial remains unavailable here rather than an invented zero; use clinic adoption endpoints for lifecycle detail.'),
   "history": zod.object({
   "available": zod.literal(false),
   "reason": zod.literal("ADOPTION_TRANSITION_HISTORY_UNAVAILABLE")
 }).strict(),
   "coverage": zod.string()
-}).strict().describe('Current clinic adoption, not selected-window history. Does not infer adoption from booking volume or fabricate Trial transitions.')
+}).strict().describe('Legacy current operational-mode aggregate, not selected-window history or the new clinic lifecycle projection. It does not expose persisted adoption metadata or count Trial separately, infer adoption from booking volume, or fabricate transitions. Use clinic adoption endpoints for lifecycle detail.')
 }).strict().describe('Administrator-only aggregate evidence. Inherited appointments/completed/noShowRate/periodStart/periodEnd alias the selected after metrics/window. No raw clinical records, identities other than clinic IDs/names, lookup queries, audit actors, or individual events.')
 
 
@@ -2486,20 +2898,45 @@ export const GetDoctorPatientResponse = zod.object({
 
 
 /**
- * Doctor-only trusted clinic context. Full means consent-based sharing; Lite/unknown deny sharing. Current model does not represent Trial: trialStateAvailable is false and Trial is never inferred. Read-only, private no-store; no query parameters.
+ * Doctor-only trusted clinic context with optional persisted adoption metadata. Full means consent-based sharing; Trial/Lite/unknown deny sharing. trialStateAvailable is true; mode reflects persisted adoption, never inferred from joinedAt. Read-only, private no-store; no query parameters.
  * @summary Read clinic sharing state
  */
+export const getDoctorPrivacyResponseAdoptionClinicIdMax = 2147483647;
+
+export const getDoctorPrivacyResponseAdoptionLeftByMax = 2147483647;
+
+export const getDoctorPrivacyResponseAdoptionAllowedTransitionsMax = 2;
+
 
 
 
 export const GetDoctorPrivacyResponse = zod.object({
+  "adoption": zod.object({
+  "clinicId": zod.number().int().min(1).max(getDoctorPrivacyResponseAdoptionClinicIdMax),
+  "state": zod.enum(['trial', 'lite', 'full']),
+  "membershipStatus": zod.enum(['active', 'left']),
+  "changedAt": zod.coerce.date().nullable().describe('Null for historical clinics without a known transition; joinedAt is not transition evidence.'),
+  "trialStartedAt": zod.coerce.date().nullable(),
+  "liteStartedAt": zod.coerce.date().nullable(),
+  "fullStartedAt": zod.coerce.date().nullable(),
+  "leftAt": zod.coerce.date().nullable(),
+  "leftBy": zod.number().int().min(1).max(getDoctorPrivacyResponseAdoptionLeftByMax).nullable(),
+  "capabilities": zod.object({
+  "canManage": zod.boolean(),
+  "canExport": zod.boolean(),
+  "canLeave": zod.boolean(),
+  "localBooking": zod.literal(true),
+  "networkSharing": zod.boolean()
+}).strict(),
+  "allowedTransitions": zod.array(zod.enum(['lite', 'full'])).max(getDoctorPrivacyResponseAdoptionAllowedTransitionsMax)
+}).strict().optional().describe('Persisted adoption lifecycle, separate from operational network mode. Trial and left clinics are local-only. Leaving retains local booking and clinic data; a left clinic cannot rejoin through adoption transitions. Capabilities are caller-specific; only an explicitly assigned, active doctor-manager may mutate or export.'),
   "clinic": zod.object({
   "id": zod.number().int().min(1),
   "name": zod.string()
 }).strict(),
   "mode": zod.enum(['full', 'lite', 'trial', 'unknown']),
   "effectiveSharing": zod.enum(['consent', 'local-only']),
-  "trialStateAvailable": zod.literal(false).describe('The current persisted model has Full/Lite only; Trial state is unavailable and never inferred.')
+  "trialStateAvailable": zod.literal(true).describe('Persisted Trial adoption is supported. See optional adoption metadata for known lifecycle timestamps; historical unknown transition dates remain null.')
 }).strict()
 
 
@@ -3280,6 +3717,12 @@ export const ListAdminClinicsQueryParams = zod.object({
   "limit": zod.coerce.number().int().min(1).max(listAdminClinicsQueryLimitMax).default(listAdminClinicsQueryLimitDefault)
 }).strict()
 
+export const listAdminClinicsResponseItemsItemAdoptionClinicIdMax = 2147483647;
+
+export const listAdminClinicsResponseItemsItemAdoptionLeftByMax = 2147483647;
+
+export const listAdminClinicsResponseItemsItemAdoptionAllowedTransitionsMax = 2;
+
 export const listAdminClinicsResponseItemsItemIdMax = 2147483647;
 
 export const listAdminClinicsResponseItemsItemNameMax = 200;
@@ -3303,6 +3746,25 @@ export const listAdminClinicsResponseItemsItemTimezoneMax = 100;
 
 export const ListAdminClinicsResponse = zod.object({
   "items": zod.array(zod.object({
+  "adoption": zod.object({
+  "clinicId": zod.number().int().min(1).max(listAdminClinicsResponseItemsItemAdoptionClinicIdMax),
+  "state": zod.enum(['trial', 'lite', 'full']),
+  "membershipStatus": zod.enum(['active', 'left']),
+  "changedAt": zod.coerce.date().nullable().describe('Null for historical clinics without a known transition; joinedAt is not transition evidence.'),
+  "trialStartedAt": zod.coerce.date().nullable(),
+  "liteStartedAt": zod.coerce.date().nullable(),
+  "fullStartedAt": zod.coerce.date().nullable(),
+  "leftAt": zod.coerce.date().nullable(),
+  "leftBy": zod.number().int().min(1).max(listAdminClinicsResponseItemsItemAdoptionLeftByMax).nullable(),
+  "capabilities": zod.object({
+  "canManage": zod.boolean(),
+  "canExport": zod.boolean(),
+  "canLeave": zod.boolean(),
+  "localBooking": zod.literal(true),
+  "networkSharing": zod.boolean()
+}).strict(),
+  "allowedTransitions": zod.array(zod.enum(['lite', 'full'])).max(listAdminClinicsResponseItemsItemAdoptionAllowedTransitionsMax)
+}).strict().optional().describe('Persisted adoption lifecycle, separate from operational network mode. Trial and left clinics are local-only. Leaving retains local booking and clinic data; a left clinic cannot rejoin through adoption transitions. Capabilities are caller-specific; only an explicitly assigned, active doctor-manager may mutate or export.'),
   "id": zod.number().int().min(1).max(listAdminClinicsResponseItemsItemIdMax),
   "name": zod.string().min(1).max(listAdminClinicsResponseItemsItemNameMax),
   "city": zod.string().min(1).max(listAdminClinicsResponseItemsItemCityMax),
@@ -3330,6 +3792,12 @@ export const GetAdminClinicParams = zod.object({
   "id": zod.coerce.number().int().min(1).max(getAdminClinicPathIdMax)
 }).strict()
 
+export const getAdminClinicResponseAdoptionClinicIdMax = 2147483647;
+
+export const getAdminClinicResponseAdoptionLeftByMax = 2147483647;
+
+export const getAdminClinicResponseAdoptionAllowedTransitionsMax = 2;
+
 export const getAdminClinicResponseIdMax = 2147483647;
 
 export const getAdminClinicResponseNameMax = 200;
@@ -3352,6 +3820,25 @@ export const getAdminClinicResponseTimezoneMax = 100;
 
 
 export const GetAdminClinicResponse = zod.object({
+  "adoption": zod.object({
+  "clinicId": zod.number().int().min(1).max(getAdminClinicResponseAdoptionClinicIdMax),
+  "state": zod.enum(['trial', 'lite', 'full']),
+  "membershipStatus": zod.enum(['active', 'left']),
+  "changedAt": zod.coerce.date().nullable().describe('Null for historical clinics without a known transition; joinedAt is not transition evidence.'),
+  "trialStartedAt": zod.coerce.date().nullable(),
+  "liteStartedAt": zod.coerce.date().nullable(),
+  "fullStartedAt": zod.coerce.date().nullable(),
+  "leftAt": zod.coerce.date().nullable(),
+  "leftBy": zod.number().int().min(1).max(getAdminClinicResponseAdoptionLeftByMax).nullable(),
+  "capabilities": zod.object({
+  "canManage": zod.boolean(),
+  "canExport": zod.boolean(),
+  "canLeave": zod.boolean(),
+  "localBooking": zod.literal(true),
+  "networkSharing": zod.boolean()
+}).strict(),
+  "allowedTransitions": zod.array(zod.enum(['lite', 'full'])).max(getAdminClinicResponseAdoptionAllowedTransitionsMax)
+}).strict().optional().describe('Persisted adoption lifecycle, separate from operational network mode. Trial and left clinics are local-only. Leaving retains local booking and clinic data; a left clinic cannot rejoin through adoption transitions. Capabilities are caller-specific; only an explicitly assigned, active doctor-manager may mutate or export.'),
   "id": zod.number().int().min(1).max(getAdminClinicResponseIdMax),
   "name": zod.string().min(1).max(getAdminClinicResponseNameMax),
   "city": zod.string().min(1).max(getAdminClinicResponseCityMax),

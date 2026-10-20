@@ -471,6 +471,37 @@ test("sync API: ordered durable operations, explicit resolutions and scoped curs
       operations: [createOp(2, { ...booking(31), startsAt: "2091-03-24T03:30:00+03:00" })],
     })).status, 400);
   });
+  await t.test("cached conflicts and operation replays do not redisclose remote existence after downgrade", async () => {
+    const actor = await makeActor();
+    await direct(remote, booking(90, 15, doctorIds[2]!, clinicIds[1]!));
+    const input = booking(90, 15);
+    const [original] = await push(actor, [createOp(1, input)]);
+    assert.equal(original.status, "conflict");
+    const stored = (await admin.query("SELECT reasons FROM operational.sync_conflicts WHERE id=$1", [original.conflictId])).rows[0];
+    assert(stored.reasons.some((reason: { type: string }) => reason.type === "patient-overlap"));
+    try {
+      await admin.query(`UPDATE operational.clinics SET adoption_state='lite',network_mode='lite' WHERE clinic_id=$1`, [clinicIds[1]]);
+      const page = await request(actor, "/sync/conflicts");
+      assert.equal(page.status, 200);
+      const item = page.data.items.find((row: { id: string }) => row.id === original.conflictId);
+      assert(item);
+      assert.deepEqual(item.reasons, []);
+      const [replayed] = await push(actor, [createOp(1, input)]);
+      assert.equal(replayed.status, "conflict", "keep durable device ordering; do not reapply a rejected proposal");
+      assert.equal("conflictCount" in replayed.params, false);
+      const onlineReplay = await request(actor, "/appointments", "POST", input);
+      assert.equal(onlineReplay.status, 409);
+      assert.equal("conflictCount" in onlineReplay.data.params, false);
+      const check = await request(actor, "/appointments/check", "POST", input);
+      assert.deepEqual(check.data, { ok: true, conflicts: [] });
+      const localBooking = await request(actor, "/appointments", "POST", { ...input, clientOpId: randomUUID() });
+      assert.equal(localBooking.status, 201);
+      assert.deepEqual((await admin.query("SELECT reasons FROM operational.sync_conflicts WHERE id=$1", [original.conflictId])).rows[0], stored,
+        "redaction is a delivery projection, not deletion of durable evidence");
+    } finally {
+      await admin.query(`UPDATE operational.clinics SET adoption_state='full',membership_status='active',network_mode='full' WHERE clinic_id=$1`, [clinicIds[1]]);
+    }
+  });
   await t.test("conflict pages are stable, scoped, retain original proposals and redact call history", async () => {
     const actor = await makeActor();
     const saved = await conflict(actor, 32);

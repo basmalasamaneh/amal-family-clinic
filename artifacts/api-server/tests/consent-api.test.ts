@@ -50,16 +50,16 @@ async function clinic(mode = "full") {
     RETURNING clinic_id`, [`consent-${run}-${randomUUID()}`, mode])).rows[0].clinic_id as number;
 }
 
-async function actor(role: string, clinicId: number): Promise<Actor> {
+async function actor(role: string, clinicId: number, pinHash: string | null = null): Promise<Actor> {
   let doctorId: number | undefined;
   if (role === "doctor") {
     doctorId = (await admin.query(`INSERT INTO operational.doctors(doctor_name,clinic_id,specialty,email)
       VALUES($1,$2,'consent-test',$3) RETURNING doctor_id`,
     [`Consent doctor ${randomUUID()}`, clinicId, `${randomUUID()}@consent.test`])).rows[0].doctor_id;
   }
-  const id = (await admin.query(`INSERT INTO operational.users(email,password_hash,role,clinic_id,doctor_id)
-    VALUES($1,'unused',$2,$3,$4) RETURNING id`,
-  [`${randomUUID()}@consent.test`, role, clinicId, doctorId ?? null])).rows[0].id as number;
+  const id = (await admin.query(`INSERT INTO operational.users(email,password_hash,role,clinic_id,doctor_id,pin_hash)
+    VALUES($1,'unused',$2,$3,$4,$5) RETURNING id`,
+  [`${randomUUID()}@consent.test`, role, clinicId, doctorId ?? null, pinHash])).rows[0].id as number;
   users.push(id);
   if (doctorId) await admin.query("UPDATE operational.doctors SET user_id=$1 WHERE doctor_id=$2", [id, doctorId]);
   const a: Actor = { id, clinic: clinicId, doctorId, session: randomUUID(), csrf: randomUUID() };
@@ -281,10 +281,10 @@ test("doctor reads: exact patient scope, My Day, privacy and source-clinic audit
     const disclosures = (await admin.query(`SELECT detail FROM operational.audit_log
       WHERE user_id=$1 AND patient_id=$2 AND action='network.lookup'`, [localDoctor.id, p.id])).rows;
     assert(disclosures.some(row => row.detail.sourceVisitId === remote.id && row.detail.projection === "clinical"));
-    const restore = async () => admin.query("UPDATE operational.clinics SET network_mode='full' WHERE clinic_id=ANY($1::integer[])", [[localDoctor.clinic, remoteDoctor.clinic]]);
+    const restore = async () => admin.query("UPDATE operational.clinics SET adoption_state='full',network_mode='full' WHERE clinic_id=ANY($1::integer[])", [[localDoctor.clinic, remoteDoctor.clinic]]);
     try {
       for (const clinicId of [localDoctor.clinic, remoteDoctor.clinic]) {
-        await admin.query("UPDATE operational.clinics SET network_mode='lite' WHERE clinic_id=$1", [clinicId]);
+        await admin.query("UPDATE operational.clinics SET adoption_state='lite',network_mode='lite' WHERE clinic_id=$1", [clinicId]);
         const lite = await get();
         assert.deepEqual(lite.data.visits.map((v: NetworkVisit) => v.complaint), [own.note]);
         await restore();
@@ -295,7 +295,133 @@ test("doctor reads: exact patient scope, My Day, privacy and source-clinic audit
     assert.equal(withdrawn.data.effectiveConsentLevel, "none");
     assert.deepEqual(withdrawn.data.visits.map((v: NetworkVisit) => v.complaint), [own.note]);
   });
-  await t.test("privacy is trusted Full/Lite read-only state, not invented Trial", async () => {
+  await t.test("lifecycle restrictions revalidate clinical, consent and disclosure-history projections", async () => {
+    const p = await patient();
+    await trustedDoctor(p);
+    await trustedDoctor(p, remoteDoctor);
+    const localGrant = await record(p);
+    await record(p, "clinical", remoteDesk);
+    const own = await visit(p);
+    await visit(p, remoteDoctor);
+    const card = () => request(localDoctor, `/doctor/patients/${p.id}`);
+    assert.equal((await card()).data.visits.length, 2);
+    await networkPatient(p, remoteDoctor); // durable remote-view evidence at the local source
+    const setState = async (clinicId: number, adoption: string, membership: string) => {
+      await admin.query(`UPDATE operational.clinics SET adoption_state=$2,membership_status=$3,
+        left_at=CASE WHEN $3='left' THEN clock_timestamp() ELSE NULL END,
+        left_by=CASE WHEN $3='left' THEN $4::integer ELSE NULL END,
+        network_mode=CASE WHEN $2='full' AND $3='active' THEN 'full'::operational.network_mode
+          ELSE 'lite'::operational.network_mode END WHERE clinic_id=$1`, [clinicId, adoption, membership, manager.id]);
+    };
+    try {
+      for (const restricted of [localDoctor.clinic, remoteDoctor.clinic]) {
+        for (const [adoption, membership] of [["trial", "active"], ["lite", "active"], ["lite", "left"]]) {
+          await setState(restricted, adoption!, membership!);
+          const result = await card();
+          assert.equal(result.status, 200);
+          assert.deepEqual(result.data.visits.map((v: NetworkVisit) => v.complaint), [own.note]);
+          assert.equal(result.data.effectiveConsentLevel, "none", "hidden remote consent is not an existence badge");
+          const grants = await consent(p);
+          assert.equal(grants.current, null);
+          assert.equal(grants.effectiveLevel, "none", "do not resurrect the older local grant");
+          assert.deepEqual(grants.history.map((c: { id: number }) => c.id), [localGrant.id]);
+          const audit = await request(localDoctor, `/audit?patientId=${p.id}`);
+          assert.deepEqual(audit.data.items, []);
+          const assisted = await request(desk, `/patients/${p.id}/access-history`, "POST", { patientRequestConfirmed: true });
+          assert.deepEqual(assisted.data.items, []);
+          assert.equal(assisted.data.nextCursor, null);
+          await setState(restricted, "full", "active");
+        }
+      }
+    } finally {
+      for (const clinicId of [localDoctor.clinic, remoteDoctor.clinic]) await setState(clinicId, "full", "active");
+    }
+  });
+  await t.test("three-clinic consent provenance gates Full-to-Full sharing without reviving older grants", async () => {
+    // Requester and visit source remain Full throughout. Only the independent
+    // consent-recording clinic changes lifecycle state.
+    const recorderClinic = await clinic("full");
+    const recorder = await actor("receptionist", recorderClinic);
+    const ownPatient = await patient(), remoteOnly = await patient();
+    await trustedDoctor(ownPatient);
+    const own = await visit(ownPatient);
+    for (const p of [ownPatient, remoteOnly]) {
+      await record(p); // older eligible Full grant must never become a fallback
+      await visit(p, remoteDoctor);
+      await admin.query("INSERT INTO operational.patient_clinic_access(patient_id,clinic_id) VALUES($1,$2)", [p.id, recorderClinic]);
+    }
+    const setRecorderState = async (adoption: string, membership = "active") => {
+      await admin.query(`UPDATE operational.clinics SET adoption_state=$2,membership_status=$3,
+        left_at=CASE WHEN $3='left' THEN clock_timestamp() ELSE NULL END,
+        left_by=CASE WHEN $3='left' THEN $4::integer ELSE NULL END,
+        network_mode=CASE WHEN $2='full' AND $3='active' THEN 'full'::operational.network_mode
+          ELSE 'lite'::operational.network_mode END WHERE clinic_id=$1`, [recorderClinic, adoption, membership, manager.id]);
+    };
+    const assertDenied = async () => {
+      const result = await request(localDoctor, `/doctor/patients/${ownPatient.id}`);
+      assert.equal(result.status, 200);
+      assert.deepEqual(result.data.visits.map((v: NetworkVisit) => v.complaint), [own.note]);
+      assert.equal(result.data.effectiveConsentLevel, "none");
+      const search = await lookup(localDoctor, remoteOnly.name);
+      assert.equal(search.status, 200);
+      assert.deepEqual(search.data, { items: [], nextCursor: null }, "no patient existence or pagination metadata");
+    };
+    try {
+      for (const [adoption, membership] of [["trial", "active"], ["lite", "active"], ["lite", "left"]]) {
+        const latest = [];
+        for (const p of [ownPatient, remoteOnly]) latest.push(await record(p, "clinical", recorder));
+        assert.equal((await request(localDoctor, `/doctor/patients/${ownPatient.id}`)).data.visits.length, 2);
+        assert((await networkPatient(remoteOnly, localDoctor))?.visits.some(v => v.clinicId === remoteDoctor.clinic));
+        await setRecorderState(adoption!, membership!);
+        await assertDenied(); // hidden newest clinical grant cannot authorize Full source data
+        for (const grant of latest) {
+          assert.equal((await request(recorder, `/consent/${grant.id}/withdraw`, "POST", { clientOpId: randomUUID() })).status, 200);
+        }
+        await assertDenied(); // hidden newest withdrawal must remain a denial
+        await setRecorderState("full");
+        await assertDenied(); // restoring provenance must not undo withdrawal
+        for (const p of [ownPatient, remoteOnly]) await record(p, "none", recorder);
+        await setRecorderState(adoption!, membership!);
+        await assertDenied(); // hidden explicit denial must not resurrect the older Full grant
+        await setRecorderState("full");
+        await assertDenied();
+      }
+    } finally { await setRecorderState("full"); }
+  });
+  await t.test("a clinical request queued behind a downgrade reads its committed authoritative mode", async () => {
+    const p = await patient();
+    await trustedDoctor(p);
+    await record(p);
+    const own = await visit(p);
+    await visit(p, remoteDoctor);
+    const blocker = new pg.Client({ connectionString: process.env.DATABASE_URL });
+    await blocker.connect();
+    let pending: ReturnType<typeof request> | undefined;
+    try {
+      await blocker.query("BEGIN");
+      await blocker.query("SELECT pg_advisory_xact_lock(160005)");
+      await blocker.query("SELECT pg_advisory_xact_lock(761910)");
+      await blocker.query(`UPDATE operational.clinics SET adoption_state='lite',network_mode='lite' WHERE clinic_id=$1`, [remoteDoctor.clinic]);
+      pending = request(localDoctor, `/doctor/patients/${p.id}`);
+      let waiting = false;
+      for (let attempt = 0; attempt < 100 && !waiting; attempt++) {
+        waiting = (await admin.query(`SELECT EXISTS(SELECT 1 FROM pg_locks
+          WHERE locktype='advisory' AND objid=160005 AND mode='ShareLock' AND NOT granted) AS waiting`)).rows[0].waiting;
+        if (!waiting) await new Promise(resolve => setTimeout(resolve, 10));
+      }
+      assert(waiting, "protected request must participate in the lifecycle transaction lock");
+      await blocker.query("COMMIT");
+      const result = await pending;
+      assert.equal(result.status, 200);
+      assert.deepEqual(result.data.visits.map((v: NetworkVisit) => v.complaint), [own.note]);
+    } finally {
+      await blocker.query("ROLLBACK");
+      await blocker.end();
+      if (pending) await pending;
+      await admin.query(`UPDATE operational.clinics SET adoption_state='full',membership_status='active',network_mode='full' WHERE clinic_id=$1`, [remoteDoctor.clinic]);
+    }
+  });
+  await t.test("privacy exposes persisted adoption with Trial support and trusted sharing state", async () => {
     for (const [a, mode] of [[localDoctor, "full"], [liteDoctor, "lite"]] as const) {
       const r = await request(a, "/doctor/privacy");
       assert.equal(r.status, 200, JSON.stringify(r.data));
@@ -303,7 +429,10 @@ test("doctor reads: exact patient scope, My Day, privacy and source-clinic audit
       assert(r.data.clinic.name);
       assert.equal(r.data.mode, mode);
       assert.equal(r.data.effectiveSharing, mode === "full" ? "consent" : "local-only");
-      assert.equal(r.data.trialStateAvailable, false);
+      assert.equal(r.data.trialStateAvailable, true);
+      assert.equal(r.data.adoption.clinicId, a.clinic);
+      assert.equal(r.data.adoption.state, mode);
+      assert.equal(r.data.adoption.capabilities.networkSharing, mode === "full");
       assert.equal(r.cacheControl, "private, no-store");
     }
   });
@@ -515,8 +644,9 @@ test("reception-assisted access history: authorization, confirmation, bounded pr
     for (let i = 1; i < events.length; i++) assert(events[i - 1].at > events[i].at);
   });
   await t.test("real PIN reauth rotates credentials without invalidating a same-device continuation", async () => {
-    const a = await actor("receptionist", desk.clinic), p = await patient(a);
-    await admin.query("UPDATE operational.users SET pin_hash=$1 WHERE id=$2", [await bcrypt.hash("0123", 4), a.id]);
+    // Provision the PIN before issuing the session: credential changes revoke
+    // existing sessions and must not be bypassed by the fixture.
+    const a = await actor("receptionist", desk.clinic, await bcrypt.hash("0123", 4)), p = await patient(a);
     await visit(p);
     await record(p, "clinical", a);
     await networkPatient(p, remoteDoctor);

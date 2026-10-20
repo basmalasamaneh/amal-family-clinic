@@ -4,6 +4,7 @@ import { pool } from "@workspace/db";
 import { ListClinicsResponse, ListDoctorsResponse } from "@workspace/api-zod";
 import { authenticate, enforceScope, forbidden, requireRoles, type Auth } from "../lib/auth";
 import { fail } from "../lib/auth-errors";
+import { adoption } from "../adoption/service";
 
 const router: IRouter = Router();
 const page = z.object({
@@ -32,10 +33,13 @@ router.get("/clinics", authenticate, requireRoles("doctor", "front-desk"), async
   const query = page.parse(req.query), auth = req.auth!, clinicId = clinicScope(auth);
   const scope = `clinics:${auth.id}:${clinicId}`, afterId = after(query.cursor, scope);
   const { rows } = await pool.query(
-    "SELECT clinic_id,clinic_name,network_mode,timezone FROM operational.clinics WHERE clinic_id=$1 AND clinic_id>$2",
-    [clinicId, afterId]);
+    `SELECT c.*, EXISTS(SELECT 1 FROM operational.clinic_managers m
+      WHERE m.clinic_id=c.clinic_id AND m.user_id=$3) AS can_manage
+      FROM operational.clinics c WHERE clinic_id=$1 AND clinic_id>$2`,
+    [clinicId, afterId, req.auth!.id]);
   const result = { items: rows.map(row => ({ id: row.clinic_id, name: row.clinic_name,
-    mode: row.network_mode === "full" ? "network" : "lite", timezone: row.timezone })), nextCursor: null };
+    mode: row.network_mode === "full" ? "network" : "lite", timezone: row.timezone,
+    adoption: adoption(row,req.auth!.role==="doctor" && row.can_manage) })), nextCursor: null };
   ListClinicsResponse.parse(result);
   res.json(result);
 });

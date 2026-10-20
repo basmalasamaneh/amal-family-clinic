@@ -39,6 +39,7 @@ export interface AdminClinicInput {
   openTime?: string;
   /** @pattern ^(?:[01]\d|2[0-3]):[0-5]\d$ */
   closeTime?: string;
+  /** Optional compatibility field. Clinics are always created in persisted Trial with local-only Lite network mode; use the manager adoption route to transition. */
   mode?: AdminClinicInputMode;
   /**
      * Valid IANA zone. Local openTime must precede closeTime; overnight hours unsupported.

@@ -11,6 +11,7 @@ import {
 } from "@workspace/api-zod";
 import { authenticate, auditAdministration, csrf, enforceScope, forbidden, lockAdministration, requireRoles, type Auth } from "../lib/auth";
 import { fail } from "../lib/auth-errors";
+import { adoption } from "../adoption/service";
 
 const router: IRouter = Router();
 const id = z.coerce.number().int().min(1).max(2147483647);
@@ -32,9 +33,9 @@ const clinicCreate = clinicFields.extend({
   slotMinutes: clinicFields.shape.slotMinutes.default(30),
   workingDays: clinicFields.shape.workingDays.default([0, 1, 2, 3, 4, 5, 6]),
   openTime: time.default("08:00"), closeTime: time.default("17:00"),
-  mode: clinicFields.shape.mode.default("full"), timezone: timezone.default("Asia/Hebron"),
+  mode: z.literal("lite").default("lite"), timezone: timezone.default("Asia/Hebron"),
 });
-const clinicPatch = clinicFields.partial().refine(value => Object.keys(value).length > 0);
+const clinicPatch = clinicFields.omit({mode:true}).partial().refine(value => Object.keys(value).length > 0);
 const doctorFields = z.object({
   name: text, clinicId: z.number().int().min(1).max(2147483647), specialty: text,
   email: z.email().max(254).transform(value => value.toLowerCase()),
@@ -65,7 +66,8 @@ function clinic(row: QueryResultRow) {
   return { id: row.clinic_id, name: row.clinic_name, city: row.city, bookingMethod: row.booking_method,
     slotMinutes: row.slot_minutes, workingDays: row.working_days,
     openTime: row.open_time.slice(0, 5), closeTime: row.close_time.slice(0, 5),
-    mode: row.network_mode, timezone: row.timezone, joinedAt: row.joined_at.toISOString() };
+    mode: row.network_mode, timezone: row.timezone, joinedAt: row.joined_at.toISOString(),
+    adoption: adoption(row, false) };
 }
 function doctor(row: QueryResultRow) {
   return { id: row.doctor_id, name: row.doctor_name, clinicId: row.clinic_id,
@@ -110,10 +112,12 @@ router.get("/clinics/:id", authenticate, requireRoles("doctor", "front-desk"), a
   const clinicId = contract(GetClinicParams, { id: id.parse(req.params.id) }).id;
   enforceScope(req.auth!, clinicId);
   const { rows: [row] } = await pool.query(
-    "SELECT clinic_id,clinic_name,network_mode,timezone FROM operational.clinics WHERE clinic_id=$1", [clinicId]);
+    `SELECT c.*, EXISTS(SELECT 1 FROM operational.clinic_managers m WHERE m.clinic_id=c.clinic_id
+      AND m.user_id=$2) AS can_manage FROM operational.clinics c WHERE clinic_id=$1`, [clinicId,req.auth!.id]);
   if (!row) throw missing();
   res.json(contract(GetClinicResponse, { id: row.clinic_id, name: row.clinic_name,
-    mode: row.network_mode === "full" ? "network" : "lite", timezone: row.timezone }, true));
+    mode: row.network_mode === "full" ? "network" : "lite", timezone: row.timezone,
+    adoption: adoption(row,req.auth!.role==="doctor" && row.can_manage) }, true));
 });
 
 router.get("/admin/clinics", authenticate, requireRoles("admin"), async (req, res) => {
@@ -159,8 +163,8 @@ router.post("/clinics", authenticate, requireRoles("admin"), csrf, async (req, r
   if (input.openTime >= input.closeTime) throw invalid();
   res.status(201).json(await mutate(req.auth!, async client => {
     const { rows: [row] } = await client.query(`INSERT INTO operational.clinics
-      (clinic_name,city,booking_method,slot_minutes,working_days,open_time,close_time,network_mode,timezone)
-      VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *`,
+      (clinic_name,city,booking_method,slot_minutes,working_days,open_time,close_time,network_mode,timezone,adoption_state,trial_started_at)
+      VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,'trial',clock_timestamp()) RETURNING *`,
     [input.name, input.city, input.bookingMethod, input.slotMinutes, input.workingDays,
       input.openTime, input.closeTime, input.mode, input.timezone]);
     await audit(client, req.auth!, "admin.clinic.created", row.clinic_id, row.clinic_id, Object.keys(input));
@@ -174,7 +178,7 @@ router.patch("/clinics/:id", authenticate, requireRoles("admin"), csrf, async (r
   res.json(await mutate(req.auth!, async client => {
     const { rows: [existing] } = await client.query("SELECT * FROM operational.clinics WHERE clinic_id=$1 FOR UPDATE", [clinicId]);
     if (!existing) throw missing();
-    const { id: _id, joinedAt: _joinedAt, ...settings } = clinic(existing);
+    const { id: _id, joinedAt: _joinedAt, adoption: _adoption, ...settings } = clinic(existing);
     const merged = clinicFields.parse({ ...settings, ...input });
     if (merged.openTime >= merged.closeTime) throw invalid();
     const { rows: [row] } = await client.query(`UPDATE operational.clinics SET clinic_name=$2,city=$3,

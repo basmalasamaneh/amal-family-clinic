@@ -6,10 +6,10 @@
  * OpenAPI spec version: 0.2.0
  */
 
-export type AdminClinicUpdateMode = typeof AdminClinicUpdateMode[keyof typeof AdminClinicUpdateMode];
+export type ClinicAdoptionMembershipStatus = typeof ClinicAdoptionMembershipStatus[keyof typeof ClinicAdoptionMembershipStatus];
 
 
-export const AdminClinicUpdateMode = {
-  full: 'full',
-  lite: 'lite',
+export const ClinicAdoptionMembershipStatus = {
+  active: 'active',
+  left: 'left',
 } as const;

@@ -33,7 +33,7 @@ export function validTimezone(tz: string): boolean {
   try { new Intl.DateTimeFormat('en', { timeZone: tz }); return tz.trim().length > 0 && tz.length <= 100; } catch { return false; } }
 
 export interface ClinicDraft { name: string; city: string; bookingMethod: string; slotMinutes: string; workingDays: number[]; openTime: string; closeTime: string; mode: 'full' | 'lite'; timezone: string }
-export const EMPTY_DRAFT: ClinicDraft = { name: '', city: '', bookingMethod: '', slotMinutes: '30', workingDays: [0, 1, 2, 3, 4, 5, 6], openTime: '08:00', closeTime: '17:00', mode: 'full', timezone: 'Asia/Hebron' };
+export const EMPTY_DRAFT: ClinicDraft = { name: '', city: '', bookingMethod: '', slotMinutes: '30', workingDays: [0, 1, 2, 3, 4, 5, 6], openTime: '08:00', closeTime: '17:00', mode: 'lite', timezone: 'Asia/Hebron' };
 export type FieldErr = { id: string; text: string };
 
 const len = (s: string) => s.trim().length >= 1 && s.trim().length <= 200;
@@ -56,7 +56,9 @@ export function validateSchedule(d: ClinicDraft, t: (k: string) => string): Fiel
   return e;
 }
 export function toPayload(d: ClinicDraft) {
+  // Adoption is clinic-owned: create uses the server's Trial/Lite default;
+  // settings updates must never include mode.
   return { name: d.name.trim(), city: d.city.trim(), bookingMethod: d.bookingMethod.trim(), slotMinutes: Number(d.slotMinutes),
-    workingDays: [...d.workingDays].sort((a, b) => a - b), openTime: d.openTime, closeTime: d.closeTime, mode: d.mode, timezone: d.timezone.trim() };
+    workingDays: [...d.workingDays].sort((a, b) => a - b), openTime: d.openTime, closeTime: d.closeTime, timezone: d.timezone.trim() };
 }
 

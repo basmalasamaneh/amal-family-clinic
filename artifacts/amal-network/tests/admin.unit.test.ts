@@ -22,6 +22,13 @@ test('clinic validation accepts arbitrary names, all days and supported schedule
   }
 });
 
+test('new clinics default to Lite and admin payloads never change adoption', () => {
+  assert.equal(EMPTY_DRAFT.mode, 'lite');
+  for (const mode of ['lite', 'full'] as const) {
+    assert.equal(Object.hasOwn(toPayload({ ...valid(), mode }), 'mode'), false);
+  }
+});
+
 test('overnight hours, absent days, invalid times and timezone match upstream policy', () => {
   assert(validateSchedule({ ...valid(), workingDays: [] }, t).some(e => e.id === 'clinic-day-0'));
   for (const closeTime of ['07:59', '08:00', '25:00']) {

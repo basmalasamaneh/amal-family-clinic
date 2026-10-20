@@ -79,12 +79,19 @@ export async function getConsent(auth: Auth, patientId: number) {
   return transaction(false, async client => {
     const patient = await scopedPatient(client, auth, patientId, false);
     const rows = await history(client, patientId);
+    const { rows: clinics } = await client.query<{ clinic_id: number; network_mode: string }>(
+      "SELECT clinic_id,network_mode FROM operational.clinics");
+    const full = new Set(clinics.filter(row => row.network_mode === "full").map(row => row.clinic_id));
+    const visible = rows.filter(row => row.recorded_clinic_id === auth.clinicId ||
+      (full.has(auth.clinicId!) && row.recorded_clinic_id !== null && full.has(row.recorded_clinic_id)));
+    // Do not resurrect an older visible grant when the newest one is hidden.
+    const current = rows[0] && visible.includes(rows[0]) ? rows[0] : undefined;
     const { rows: [clock] } = await client.query<{ at: Date }>("SELECT clock_timestamp() AS at");
     return {
-      current: rows[0] ? projectConsent(rows[0]) : null, history: rows.map(projectConsent), effectiveLevel: effectiveLevel(rows[0]),
+      current: current ? projectConsent(current) : null, history: visible.map(projectConsent), effectiveLevel: effectiveLevel(current),
       patient: { id: patient.patient_id, name: patient.patient_name },
       eligibility: consentEligibility(patient.dob, clock!.at),
-      canWithdraw: auth.role === "front-desk" && !!rows[0] && !rows[0].withdrawn_at && rows[0].recorded_clinic_id === auth.clinicId,
+      canWithdraw: auth.role === "front-desk" && !!current && !current.withdrawn_at && current.recorded_clinic_id === auth.clinicId,
     };
   });
 }
@@ -127,14 +134,17 @@ export async function patientAccessHistory(auth: Auth, patientId: number, body: 
         c.clinic_name AS viewer_clinic_name
       FROM operational.audit_log a
       JOIN operational.clinics source ON source.clinic_id::text=a.detail->>'sourceClinicId'
+      JOIN operational.clinics viewer ON viewer.clinic_id=a.clinic_id
+      JOIN operational.clinics requester ON requester.clinic_id=$5
       LEFT JOIN operational.users u ON u.id=a.user_id AND u.role='doctor' AND u.clinic_id=a.clinic_id
       LEFT JOIN operational.doctors d ON d.doctor_id=u.doctor_id AND d.clinic_id=u.clinic_id AND d.user_id=u.id
       LEFT JOIN operational.clinics c ON c.clinic_id=d.clinic_id
       WHERE a.patient_id=$1 AND a.action='network.lookup' AND a.detail->>'outcome'='disclosed'
+        AND requester.network_mode='full' AND source.network_mode='full' AND viewer.network_mode='full'
         AND a.clinic_id IS NOT NULL AND a.clinic_id<>source.clinic_id
         AND ($2::timestamptz IS NULL OR (date_trunc('milliseconds',a.at),a.id)<($2::timestamptz,$3::integer))
       ORDER BY date_trunc('milliseconds',a.at) DESC,a.id DESC LIMIT $4`,
-    [patientId, cursor?.at ?? null, cursor?.id ?? null, limit + 1]);
+    [patientId, cursor?.at ?? null, cursor?.id ?? null, limit + 1, auth.clinicId]);
     const page = rows.slice(0, limit), last = page.at(-1);
     // Audit only the assisted read, never the returned rows, request body or cursor.
     await appendAudit(client, auth, "patient.access-history.read", patientId, { correlationId, outcome: "read" });
@@ -208,6 +218,7 @@ interface LookupRow extends VisitSource {
   visit_day: string;
   patient_id: number; patient_name: string; visit_id: number; source_mode: string;
   own_patient: boolean; consent_level: "none" | "basic" | "clinical"; consent_withdrawn_at: Date | null;
+  consent_visible: boolean;
 }
 export interface NetworkPatient { id: number; name: string; identityVerified: false; effectiveConsentLevel: "none" | "basic" | "clinical"; visits: NetworkVisit[] }
 export async function lookupNetwork(auth: Auth, query: unknown, correlationId = randomUUID()) {
@@ -237,10 +248,12 @@ export async function projectNetworkPatients(
       SELECT p.patient_id,p.patient_name,
         (${patientScopeSql("$1")} AND EXISTS(SELECT 1 FROM operational.patient_doctor_access da
           WHERE da.patient_id=p.patient_id AND da.clinic_id=$1 AND da.doctor_id=$2)) AS own_patient,
-        COALESCE(consent.level,'none') AS consent_level,consent.withdrawn_at AS consent_withdrawn_at
+        COALESCE(consent.level,'none') AS consent_level,consent.withdrawn_at AS consent_withdrawn_at,
+        COALESCE(consent.recorded_clinic_id=$1 OR ($5='full' AND consent.source_mode='full'),false) AS consent_visible
       FROM operational.patients p
-      LEFT JOIN LATERAL (SELECT level,withdrawn_at FROM operational.patient_consents
-        WHERE patient_id=p.patient_id ORDER BY id DESC LIMIT 1) consent ON true
+      LEFT JOIN LATERAL (SELECT pc.level,pc.withdrawn_at,pc.recorded_clinic_id,c.network_mode AS source_mode
+        FROM operational.patient_consents pc LEFT JOIN operational.clinics c ON c.clinic_id=pc.recorded_clinic_id
+        WHERE pc.patient_id=p.patient_id ORDER BY pc.id DESC LIMIT 1) consent ON true
       WHERE p.merged_into_id IS NULL AND p.patient_id>$3
         AND (CASE WHEN $7::integer[] IS NULL THEN strpos(p.name_normalized,$4)>0 ELSE p.patient_id=ANY($7) END)
     ), eligible AS (
@@ -251,7 +264,7 @@ export async function projectNetworkPatients(
         WHERE v.patient_id=p.patient_id AND (
           (v.clinic_id=$1 AND p.own_patient)
           OR (v.clinic_id<>$1 AND c.network_mode='full' AND $5='full'
-            AND p.consent_withdrawn_at IS NULL AND p.consent_level IN ('basic','clinical'))
+            AND p.consent_visible AND p.consent_withdrawn_at IS NULL AND p.consent_level IN ('basic','clinical'))
         )
       ))
       ORDER BY p.patient_id LIMIT $6
@@ -260,7 +273,7 @@ export async function projectNetworkPatients(
       v.visit_id,v.clinic_id,v.doctor_id,v.diagnosis_notes,
       v.visit_date::text AS visit_day,
       v.clinic_name,v.source_mode,v.doctor_name,
-      p.consent_level,p.consent_withdrawn_at,p.own_patient,
+      p.consent_level,p.consent_withdrawn_at,p.consent_visible,p.own_patient,
       COALESCE((SELECT array_agg(a.label ORDER BY a.id) FROM operational.visit_alerts a
         WHERE a.visit_id=v.visit_id AND a.patient_id=p.patient_id),ARRAY[]::text[]) AS key_alerts,
       (v.clinic_id<>$1) AS cross_clinic,
@@ -278,7 +291,7 @@ export async function projectNetworkPatients(
         WHERE v.patient_id=p.patient_id AND (
           (v.clinic_id=$1 AND p.own_patient)
           OR (v.clinic_id<>$1 AND c.network_mode='full' AND $5='full'
-            AND p.consent_withdrawn_at IS NULL AND p.consent_level IN ('basic','clinical'))
+            AND p.consent_visible AND p.consent_withdrawn_at IS NULL AND p.consent_level IN ('basic','clinical'))
         )
         ORDER BY v.visit_date DESC,v.visit_id DESC LIMIT 100
       ) v ON true
@@ -287,18 +300,22 @@ export async function projectNetworkPatients(
     // Apply visibility before pagination, and never expose totals of hidden matches.
     const patients = new Map<number, { patient: NetworkPatient; disclosures: { row: LookupRow; visibility: "basic" | "clinical" }[] }>();
     for (const row of rows) {
-      const consent = row.consent_withdrawn_at ? "none" : row.consent_level;
+      // The newest row remains authoritative even when its recording clinic is
+      // ineligible. Hidden grants must not authorize a different Full clinic's
+      // visits; hidden withdrawals/denials must not revive an older grant.
+      const consent = !row.consent_visible || row.consent_withdrawn_at ? "none" : row.consent_level;
+      const reportedConsent = consent;
       // Exact-ID own patients retain an identity projection even without visits.
       if (input.patientIds && row.own_patient && !patients.has(row.patient_id)) {
         patients.set(row.patient_id, { patient: { id: row.patient_id, name: row.patient_name,
-          identityVerified: false, effectiveConsentLevel: consent, visits: [] }, disclosures: [] });
+          identityVerified: false, effectiveConsentLevel: reportedConsent, visits: [] }, disclosures: [] });
       }
       if (row.visit_id == null) continue;
       const visibility = visitVisibility({ auth, sourceClinicId: row.clinic_id, sourceMode: row.source_mode, requesterMode, ownPatient: row.own_patient, consent });
       if (!visibility) continue;
       let entry = patients.get(row.patient_id);
       if (!entry) {
-        entry = { patient: { id: row.patient_id, name: row.patient_name, identityVerified: false, effectiveConsentLevel: consent, visits: [] }, disclosures: [] };
+        entry = { patient: { id: row.patient_id, name: row.patient_name, identityVerified: false, effectiveConsentLevel: reportedConsent, visits: [] }, disclosures: [] };
         patients.set(row.patient_id, entry);
       }
       // Legacy dates have no recorded time: use documented local start-of-day.

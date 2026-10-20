@@ -7,7 +7,7 @@
  */
 
 /**
- * Trial is absent from the upstream state model, so its count is unavailable rather than an invented zero.
+ * Legacy KPI aggregate projection has no lifecycle metadata and does not yet count persisted Trial separately. Trial remains unavailable here rather than an invented zero; use clinic adoption endpoints for lifecycle detail.
  */
 export interface KpiAdoptionCounts {
   /** @nullable */

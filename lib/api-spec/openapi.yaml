@@ -168,6 +168,7 @@
         "type": "object",
         "additionalProperties": false,
         "properties": {
+          "adoption": { "$ref": "#/components/schemas/ClinicAdoption" },
           "id": {
             "type": "integer",
             "minimum": 1
@@ -1646,6 +1647,7 @@
           "trialStateAvailable"
         ],
         "properties": {
+          "adoption": { "$ref": "#/components/schemas/ClinicAdoption" },
           "clinic": {
             "type": "object",
             "additionalProperties": false,
@@ -1682,9 +1684,9 @@
           "trialStateAvailable": {
             "type": "boolean",
             "enum": [
-              false
+              true
             ],
-            "description": "The current persisted model has Full/Lite only; Trial state is unavailable and never inferred."
+            "description": "Persisted Trial adoption is supported. See optional adoption metadata for known lifecycle timestamps; historical unknown transition dates remain null."
           }
         }
       },
@@ -6178,7 +6180,7 @@
           "lite",
           "full"
         ],
-        "description": "Trial is absent from the upstream state model, so its count is unavailable rather than an invented zero."
+        "description": "Legacy KPI aggregate projection has no lifecycle metadata and does not yet count persisted Trial separately. Trial remains unavailable here rather than an invented zero; use clinic adoption endpoints for lifecycle detail."
       },
       "KpiAdoptionHistory": {
         "type": "object",
@@ -6224,7 +6226,7 @@
           "history",
           "coverage"
         ],
-        "description": "Current clinic adoption, not selected-window history. Does not infer adoption from booking volume or fabricate Trial transitions."
+        "description": "Legacy current operational-mode aggregate, not selected-window history or the new clinic lifecycle projection. It does not expose persisted adoption metadata or count Trial separately, infer adoption from booking volume, or fabricate transitions. Use clinic adoption endpoints for lifecycle detail."
       },
       "KpiScope": {
         "type": "object",
@@ -6310,6 +6312,7 @@
         "type": "object",
         "additionalProperties": false,
         "properties": {
+          "adoption": { "$ref": "#/components/schemas/ClinicAdoption" },
           "id": {
             "type": "integer",
             "minimum": 1,
@@ -6432,9 +6435,9 @@
           "mode": {
             "type": "string",
             "enum": [
-              "full",
               "lite"
-            ]
+            ],
+            "description": "Optional compatibility field. Clinics are always created in persisted Trial with local-only Lite network mode; use the manager adoption route to transition."
           },
           "timezone": {
             "type": "string",
@@ -6492,13 +6495,6 @@
             "type": "string",
             "pattern": "^(?:[01]\\d|2[0-3]):[0-5]\\d$"
           },
-          "mode": {
-            "type": "string",
-            "enum": [
-              "full",
-              "lite"
-            ]
-          },
           "timezone": {
             "type": "string",
             "minLength": 1,
@@ -6508,6 +6504,207 @@
         },
         "required": [],
         "minProperties": 1
+      },
+      "ClinicAdoptionCapabilities": {
+        "type": "object", "additionalProperties": false,
+        "required": ["canManage", "canExport", "canLeave", "localBooking", "networkSharing"],
+        "properties": {
+          "canManage": { "type": "boolean" },
+          "canExport": { "type": "boolean" },
+          "canLeave": { "type": "boolean" },
+          "localBooking": { "type": "boolean", "enum": [true] },
+          "networkSharing": { "type": "boolean" }
+        }
+      },
+      "ClinicAdoption": {
+        "type": "object", "additionalProperties": false,
+        "description": "Persisted adoption lifecycle, separate from operational network mode. Trial and left clinics are local-only. Leaving retains local booking and clinic data; a left clinic cannot rejoin through adoption transitions. Capabilities are caller-specific; only an explicitly assigned, active doctor-manager may mutate or export.",
+        "required": ["clinicId", "state", "membershipStatus", "changedAt", "trialStartedAt", "liteStartedAt", "fullStartedAt", "leftAt", "leftBy", "capabilities", "allowedTransitions"],
+        "properties": {
+          "clinicId": { "type": "integer", "minimum": 1, "maximum": 2147483647 },
+          "state": { "type": "string", "enum": ["trial", "lite", "full"] },
+          "membershipStatus": { "type": "string", "enum": ["active", "left"] },
+          "changedAt": { "type": ["string", "null"], "format": "date-time", "description": "Null for historical clinics without a known transition; joinedAt is not transition evidence." },
+          "trialStartedAt": { "type": ["string", "null"], "format": "date-time" },
+          "liteStartedAt": { "type": ["string", "null"], "format": "date-time" },
+          "fullStartedAt": { "type": ["string", "null"], "format": "date-time" },
+          "leftAt": { "type": ["string", "null"], "format": "date-time" },
+          "leftBy": { "type": ["integer", "null"], "minimum": 1, "maximum": 2147483647 },
+          "capabilities": { "$ref": "#/components/schemas/ClinicAdoptionCapabilities" },
+          "allowedTransitions": { "type": "array", "maxItems": 2, "uniqueItems": true, "items": { "type": "string", "enum": ["lite", "full"] } }
+        }
+      },
+      "ClinicAdoptionTransition": {
+        "type": "object", "additionalProperties": false, "required": ["state"],
+        "properties": { "state": { "type": "string", "enum": ["lite", "full"] } }
+      },
+      "ClinicLeaveInput": {
+        "type": "object", "additionalProperties": false, "required": ["confirm"],
+        "properties": { "confirm": { "type": "boolean", "enum": [true] } }
+      },
+      "ClinicExportInput": {
+        "type": "object", "additionalProperties": false, "properties": {}
+      },
+      "ClinicExportDatasetName": {
+        "type": "string", "enum": ["clinicSettings", "doctors", "patients", "appointments", "visits", "consents", "importBatches", "importProvenance"]
+      },
+      "ClinicExportManifest": {
+        "type": "object", "additionalProperties": false,
+        "required": ["format", "schemaVersion", "encoding", "exportedAt", "displayTimezone", "clinicId", "empty", "rowCount", "includedDatasets", "excludedDatasets", "limits"],
+        "properties": {
+          "format": { "type": "string", "enum": ["amal-clinic-export"] },
+          "schemaVersion": { "type": "integer", "enum": [1] },
+          "encoding": { "type": "string", "enum": ["UTF-8"] },
+          "exportedAt": { "type": "string", "format": "date-time" },
+          "displayTimezone": { "type": "string", "enum": ["Asia/Hebron"] },
+          "clinicId": { "type": "integer", "minimum": 1, "maximum": 2147483647 },
+          "empty": { "type": "boolean", "description": "True when clinicSettings is the only exported row." },
+          "rowCount": { "type": "integer", "minimum": 1, "maximum": 10000 },
+          "includedDatasets": {
+            "type": "array", "minItems": 8, "maxItems": 8,
+            "items": {
+              "type": "object", "additionalProperties": false, "required": ["dataset", "count", "fields"],
+              "properties": {
+                "dataset": { "$ref": "#/components/schemas/ClinicExportDatasetName" },
+                "count": { "type": "integer", "minimum": 0, "maximum": 10000 },
+                "fields": { "type": "array", "items": { "type": "string" }, "uniqueItems": true }
+              }
+            }
+          },
+          "excludedDatasets": {
+            "type": "array", "minItems": 9, "maxItems": 9,
+            "items": {
+              "type": "object", "additionalProperties": false, "required": ["dataset", "reason"],
+              "properties": {
+                "dataset": { "type": "string", "enum": ["otherClinicData", "unattributedConsents", "unassociatedPatients", "usersAndAuthentication", "syncAndOperationReceipts", "importRawAndReviewData", "auditLogs", "seedAndFixtureData", "derivedAndTransientData"] },
+                "reason": { "type": "string", "minLength": 1 }
+              }
+            }
+          },
+          "limits": {
+            "type": "object", "additionalProperties": false, "required": ["maxRows", "maxBytes", "maxDurationMs"],
+            "properties": {
+              "maxRows": { "type": "integer", "enum": [10000] },
+              "maxBytes": { "type": "integer", "enum": [8388608] },
+              "maxDurationMs": { "type": "integer", "enum": [15000] }
+            }
+          }
+        }
+      },
+      "ClinicExportSettingsRow": {
+        "type": "object", "additionalProperties": false,
+        "required": ["clinic_id", "clinic_name", "city", "booking_method", "slot_minutes", "working_days", "open_time", "close_time", "network_mode", "timezone", "adoption_state", "membership_status", "left_by", "joined_at", "adoption_changed_at", "trial_started_at", "lite_started_at", "full_started_at", "left_at"],
+        "properties": {
+          "clinic_id": { "type": "integer", "minimum": 1 }, "clinic_name": { "type": "string" },
+          "city": { "type": "string" }, "booking_method": { "type": "string" },
+          "slot_minutes": { "type": "integer", "minimum": 1, "maximum": 1440 },
+          "working_days": { "type": "array", "items": { "type": "integer", "minimum": 0, "maximum": 6 } },
+          "open_time": { "type": "string", "description": "PostgreSQL local time text, including seconds." },
+          "close_time": { "type": "string", "description": "PostgreSQL local time text, including seconds." },
+          "network_mode": { "type": "string", "enum": ["full", "lite"] },
+          "timezone": { "type": "string" }, "joined_at": { "type": "string", "format": "date-time" },
+          "adoption_state": { "type": "string", "enum": ["trial", "lite", "full"] },
+          "membership_status": { "type": "string", "enum": ["active", "left"] },
+          "left_by": { "type": ["integer", "null"], "minimum": 1, "maximum": 2147483647 },
+          "adoption_changed_at": { "type": "string", "format": "date-time", "description": "UTC ISO timestamp." },
+          "trial_started_at": { "type": ["string", "null"], "format": "date-time", "description": "UTC ISO timestamp when known." },
+          "lite_started_at": { "type": ["string", "null"], "format": "date-time", "description": "UTC ISO timestamp when known." },
+          "full_started_at": { "type": ["string", "null"], "format": "date-time", "description": "UTC ISO timestamp when known." },
+          "left_at": { "type": ["string", "null"], "format": "date-time", "description": "UTC ISO timestamp when the clinic left." }
+        }
+      },
+      "ClinicExportDoctorRow": {
+        "type": "object", "additionalProperties": false, "required": ["doctor_id", "clinic_id", "doctor_name", "specialty"],
+        "properties": {
+          "doctor_id": { "type": "integer", "minimum": 1 }, "clinic_id": { "type": "integer", "minimum": 1 },
+          "doctor_name": { "type": "string" }, "specialty": { "type": "string" }
+        }
+      },
+      "ClinicExportPatientRow": {
+        "type": "object", "additionalProperties": false,
+        "required": ["patient_id", "patient_name", "phone", "guardian_name", "guardian_relation", "dob"],
+        "properties": {
+          "patient_id": { "type": "integer", "minimum": 1 }, "patient_name": { "type": "string" }, "phone": { "type": "string" },
+          "guardian_name": { "type": ["string", "null"] }, "guardian_relation": { "type": ["string", "null"] },
+          "dob": { "type": "string", "format": "date" }
+        }
+      },
+      "ClinicExportAppointmentRow": {
+        "type": "object", "additionalProperties": false,
+        "required": ["appointment_id", "clinic_id", "doctor_id", "patient_id", "booking_method", "status", "duration_minutes", "conflict_state", "cancel_reason", "version", "scheduled_at", "created_at", "updated_at"],
+        "properties": {
+          "appointment_id": { "type": "integer", "minimum": 1 }, "clinic_id": { "type": "integer", "minimum": 1 },
+          "doctor_id": { "type": "integer", "minimum": 1 }, "patient_id": { "type": "integer", "minimum": 1 },
+          "booking_method": { "type": "string" }, "status": { "type": "string", "enum": ["booked", "completed", "double_booked", "no_show", "cancelled"] },
+          "duration_minutes": { "type": "integer", "minimum": 1, "maximum": 1440 },
+          "conflict_state": { "type": "string", "enum": ["none", "flagged", "resolved"] },
+          "cancel_reason": { "type": ["string", "null"] }, "version": { "type": "integer", "minimum": 1 },
+          "scheduled_at": { "type": "string", "format": "date-time" }, "created_at": { "type": "string", "format": "date-time" },
+          "updated_at": { "type": "string", "format": "date-time" }
+        }
+      },
+      "ClinicExportVisitRow": {
+        "type": "object", "additionalProperties": false,
+        "required": ["visit_id", "clinic_id", "doctor_id", "patient_id", "diagnosis_notes", "visit_date"],
+        "properties": {
+          "visit_id": { "type": "integer", "minimum": 1 }, "clinic_id": { "type": "integer", "minimum": 1 },
+          "doctor_id": { "type": "integer", "minimum": 1 }, "patient_id": { "type": "integer", "minimum": 1 },
+          "diagnosis_notes": { "type": "string" }, "visit_date": { "type": "string", "format": "date" }
+        }
+      },
+      "ClinicExportConsentRow": {
+        "type": "object", "additionalProperties": false,
+        "required": ["id", "patient_id", "recorded_clinic_id", "level", "given_by", "guardian_name", "guardian_relation", "evidence", "given_at", "withdrawn_at"],
+        "properties": {
+          "id": { "type": "integer", "minimum": 1 }, "patient_id": { "type": "integer", "minimum": 1 },
+          "recorded_clinic_id": { "type": "integer", "minimum": 1 },
+          "level": { "type": "string", "enum": ["none", "basic", "clinical"] },
+          "given_by": { "type": "string", "enum": ["patient", "guardian"] },
+          "guardian_name": { "type": ["string", "null"] }, "guardian_relation": { "type": ["string", "null"] },
+          "evidence": { "type": ["string", "null"], "enum": ["signed", "verbal", null] },
+          "given_at": { "type": "string", "format": "date-time" }, "withdrawn_at": { "type": ["string", "null"], "format": "date-time" }
+        }
+      },
+      "ClinicExportImportBatchRow": {
+        "type": "object", "additionalProperties": false,
+        "required": ["id", "clinic_id", "source_name", "status", "version", "created_at", "committed_at"],
+        "properties": {
+          "id": { "type": "integer", "minimum": 1 }, "clinic_id": { "type": "integer", "minimum": 1 },
+          "source_name": { "type": "string" }, "status": { "type": "string", "enum": ["review_required", "reviewed", "committed"] },
+          "version": { "type": "integer", "minimum": 1 }, "created_at": { "type": "string", "format": "date-time" },
+          "committed_at": { "type": ["string", "null"], "format": "date-time" }
+        }
+      },
+      "ClinicExportImportProvenanceRow": {
+        "type": "object", "additionalProperties": false,
+        "required": ["batch_id", "row_id", "appointment_id", "source_name", "source_event_id", "created_at"],
+        "properties": {
+          "batch_id": { "type": "integer", "minimum": 1 }, "row_id": { "type": "integer", "minimum": 1 },
+          "appointment_id": { "type": "integer", "minimum": 1 }, "source_name": { "type": "string" },
+          "source_event_id": { "type": "integer" }, "created_at": { "type": "string", "format": "date-time" }
+        }
+      },
+      "ClinicExportDatasets": {
+        "type": "object", "additionalProperties": false,
+        "required": ["clinicSettings", "doctors", "patients", "appointments", "visits", "consents", "importBatches", "importProvenance"],
+        "properties": {
+          "clinicSettings": { "type": "array", "minItems": 1, "maxItems": 1, "items": { "$ref": "#/components/schemas/ClinicExportSettingsRow" } },
+          "doctors": { "type": "array", "items": { "$ref": "#/components/schemas/ClinicExportDoctorRow" } },
+          "patients": { "type": "array", "items": { "$ref": "#/components/schemas/ClinicExportPatientRow" } },
+          "appointments": { "type": "array", "items": { "$ref": "#/components/schemas/ClinicExportAppointmentRow" } },
+          "visits": { "type": "array", "items": { "$ref": "#/components/schemas/ClinicExportVisitRow" } },
+          "consents": { "type": "array", "items": { "$ref": "#/components/schemas/ClinicExportConsentRow" } },
+          "importBatches": { "type": "array", "items": { "$ref": "#/components/schemas/ClinicExportImportBatchRow" } },
+          "importProvenance": { "type": "array", "items": { "$ref": "#/components/schemas/ClinicExportImportProvenanceRow" } }
+        }
+      },
+      "ClinicExport": {
+        "type": "object", "additionalProperties": false, "required": ["manifest", "datasets"],
+        "description": "Versioned JSON portability attachment from one repeatable-read snapshot. Only explicitly allowlisted clinic-local datasets and associated patient demographics; never foreign notes, accounts, credentials, raw sync/import payloads or audit logs. All dataset keys and manifest coverage are present even for empty arrays. UTC timestamps, date-only dates and local PostgreSQL time text are preserved. No partial export is returned on failure.",
+        "properties": {
+          "manifest": { "$ref": "#/components/schemas/ClinicExportManifest" },
+          "datasets": { "$ref": "#/components/schemas/ClinicExportDatasets" }
+        }
       },
       "AdminClinicPage": {
         "type": "object",
@@ -7350,6 +7547,96 @@
       }
     },
     "responses": {
+      "ClinicAdoptionState": {
+        "description": "Caller-specific persisted adoption state. Cache-Control: private, no-store.",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/ClinicAdoption" },
+            "example": {
+              "clinicId": 101, "state": "lite", "membershipStatus": "active",
+              "changedAt": "2026-01-01T00:00:00.000Z", "trialStartedAt": "2026-01-01T00:00:00.000Z",
+              "liteStartedAt": "2026-01-01T00:00:00.000Z", "fullStartedAt": null, "leftAt": null, "leftBy": null,
+              "capabilities": { "canManage": true, "canExport": true, "canLeave": true, "localBooking": true, "networkSharing": false },
+              "allowedTransitions": ["full"]
+            }
+          }
+        }
+      },
+      "ClinicExportAttachment": {
+        "description": "Complete versioned clinic portability attachment, not a server-side file or download URL. Includes all eight allowlisted datasets and explicit exclusions. No partial response.",
+        "headers": {
+          "Content-Disposition": { "schema": { "type": "string" }, "description": "attachment; filename=\"clinic-{id}-export.json\"" },
+          "Cache-Control": { "schema": { "type": "string", "enum": ["private, no-store"] } }
+        },
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/ClinicExport" },
+            "example": {
+              "manifest": {
+                "format": "amal-clinic-export", "schemaVersion": 1, "encoding": "UTF-8",
+                "exportedAt": "2026-01-01T00:00:00.000Z", "displayTimezone": "Asia/Hebron", "clinicId": 101,
+                "empty": true, "rowCount": 1,
+                "includedDatasets": [
+                  { "dataset": "clinicSettings", "count": 1, "fields": ["clinic_id", "clinic_name", "city", "booking_method", "slot_minutes", "working_days", "open_time", "close_time", "network_mode", "timezone", "adoption_state", "membership_status", "left_by", "joined_at", "adoption_changed_at", "trial_started_at", "lite_started_at", "full_started_at", "left_at"] },
+                  { "dataset": "doctors", "count": 0, "fields": ["doctor_id", "clinic_id", "doctor_name", "specialty"] },
+                  { "dataset": "patients", "count": 0, "fields": ["patient_id", "patient_name", "phone", "guardian_name", "guardian_relation", "dob"] },
+                  { "dataset": "appointments", "count": 0, "fields": ["appointment_id", "clinic_id", "doctor_id", "patient_id", "booking_method", "status", "duration_minutes", "conflict_state", "cancel_reason", "version", "scheduled_at", "created_at", "updated_at"] },
+                  { "dataset": "visits", "count": 0, "fields": ["visit_id", "clinic_id", "doctor_id", "patient_id", "diagnosis_notes", "visit_date"] },
+                  { "dataset": "consents", "count": 0, "fields": ["id", "patient_id", "recorded_clinic_id", "level", "given_by", "guardian_name", "guardian_relation", "evidence", "given_at", "withdrawn_at"] },
+                  { "dataset": "importBatches", "count": 0, "fields": ["id", "clinic_id", "source_name", "status", "version", "created_at", "committed_at"] },
+                  { "dataset": "importProvenance", "count": 0, "fields": ["batch_id", "row_id", "appointment_id", "source_name", "source_event_id", "created_at"] }
+                ],
+                "excludedDatasets": [
+                  { "dataset": "otherClinicData", "reason": "Only the exporting clinic's records; no foreign visits, notes, appointments, doctors, consents or imports." },
+                  { "dataset": "unattributedConsents", "reason": "Missing recorded_clinic_id is not inferred from current user assignment." },
+                  { "dataset": "unassociatedPatients", "reason": "Only demographics associated through local access, appointments or visits." },
+                  { "dataset": "usersAndAuthentication", "reason": "No accounts, password/PIN hashes, sessions, tokens, devices or credentials." },
+                  { "dataset": "syncAndOperationReceipts", "reason": "No raw sync payloads, conflicts, request hashes or idempotency receipts." },
+                  { "dataset": "importRawAndReviewData", "reason": "No source_payload, staging, report, source hashes, candidate identities or review detail." },
+                  { "dataset": "auditLogs", "reason": "Audit data is not a clinic portability dataset." },
+                  { "dataset": "seedAndFixtureData", "reason": "No seed tables, fixture keys or source references." },
+                  { "dataset": "derivedAndTransientData", "reason": "No alerts, KPI snapshots, notifications, holds, merge candidates or telemetry." }
+                ],
+                "limits": { "maxRows": 10000, "maxBytes": 8388608, "maxDurationMs": 15000 }
+              },
+              "datasets": {
+                "clinicSettings": [{
+                  "clinic_id": 101, "clinic_name": "Synthetic demonstration clinic", "city": "Synthetic city",
+                  "booking_method": "scheduled", "slot_minutes": 30, "working_days": [0,1,2,3,4],
+                  "open_time": "08:00:00", "close_time": "17:00:00", "network_mode": "lite",
+                  "timezone": "Asia/Hebron", "joined_at": "2026-01-01T00:00:00.000Z",
+                  "adoption_state": "trial", "membership_status": "active", "left_by": null,
+                  "adoption_changed_at": "2026-01-01T00:00:00.000Z",
+                  "trial_started_at": "2026-01-01T00:00:00.000Z", "lite_started_at": null,
+                  "full_started_at": null, "left_at": null
+                }],
+                "doctors": [], "patients": [], "appointments": [], "visits": [], "consents": [], "importBatches": [], "importProvenance": []
+              }
+            }
+          }
+        }
+      },
+      "ClinicLifecycleConflict": {
+        "description": "CLINIC_LEFT rejects a transition after leaving; LIFECYCLE_RETRY requests a retry after serialization, lock or statement timeout.",
+        "content": { "application/json": {
+          "schema": { "$ref": "#/components/schemas/ApiFailure" },
+          "example": { "code": "CLINIC_LEFT", "messageKey": "error.clinicLeft", "params": {} }
+        } }
+      },
+      "ClinicExportTooLarge": {
+        "description": "Export exceeds the cumulative 10,000-row or UTF-8 8 MiB ceiling; no partial attachment.",
+        "content": { "application/json": {
+          "schema": { "$ref": "#/components/schemas/ApiFailure" },
+          "example": { "code": "EXPORT_LIMIT_EXCEEDED", "messageKey": "error.exportLimitExceeded", "params": {} }
+        } }
+      },
+      "ClinicExportUnavailable": {
+        "description": "EXPORT_TIMEOUT exceeds the 15-second export budget; EXPORT_RESOURCE_UNAVAILABLE indicates bounded database resource failure. No partial attachment.",
+        "content": { "application/json": {
+          "schema": { "$ref": "#/components/schemas/ApiFailure" },
+          "example": { "code": "EXPORT_TIMEOUT", "messageKey": "error.exportTimeout", "params": {} }
+        } }
+      },
       "ImportValidation": {
         "description": "Invalid input or unsupported file format",
         "content": {
@@ -7507,6 +7794,92 @@
     }
   },
   "paths": {
+    "/clinics/{id}/adoption": {
+      "get": {
+        "operationId": "getClinicAdoption", "tags": ["clinics"], "summary": "Read persisted clinic adoption",
+        "description": "Authenticated doctor/front-desk, own clinic only. Capabilities reflect explicit clinic-manager assignment; no privilege is inferred from being a doctor.",
+        "security": [{ "sessionCookie": [] }], "x-roles": ["doctor", "front-desk"], "x-implementation": "real",
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer", "minimum": 1, "maximum": 2147483647 }, "example": 101 }],
+        "responses": {
+          "200": { "$ref": "#/components/responses/ClinicAdoptionState" },
+          "400": { "$ref": "#/components/responses/ImportValidation" },
+          "401": { "$ref": "#/components/responses/ImportUnauthorized" },
+          "403": { "$ref": "#/components/responses/ImportForbidden" },
+          "404": { "$ref": "#/components/responses/ImportNotFound" },
+          "409": { "$ref": "#/components/responses/ClinicLifecycleConflict" }
+        }
+      },
+      "post": {
+        "operationId": "transitionClinicAdoption", "tags": ["clinics"], "summary": "Choose Lite or Full adoption",
+        "description": "Own-clinic, active explicitly assigned doctor-manager only, with CSRF. Trial may move to Lite or Full; Lite and Full may switch. Repeating the current state is idempotent. Left clinics cannot transition. Changes are transactional and audited.",
+        "security": [{ "sessionCookie": [], "csrfToken": [] }], "x-roles": ["doctor"], "x-implementation": "real",
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer", "minimum": 1, "maximum": 2147483647 }, "example": 101 }],
+        "requestBody": { "required": true, "content": { "application/json": {
+          "schema": { "$ref": "#/components/schemas/ClinicAdoptionTransition" }, "example": { "state": "lite" }
+        } } },
+        "responses": {
+          "200": { "$ref": "#/components/responses/ClinicAdoptionState" },
+          "400": { "$ref": "#/components/responses/ImportValidation" },
+          "401": { "$ref": "#/components/responses/ImportUnauthorized" },
+          "403": { "$ref": "#/components/responses/ImportForbidden" },
+          "404": { "$ref": "#/components/responses/ImportNotFound" },
+          "409": { "$ref": "#/components/responses/ClinicLifecycleConflict" }
+        }
+      }
+    },
+    "/clinics/{id}/leave": {
+      "post": {
+        "operationId": "leaveClinic", "tags": ["clinics"], "summary": "Leave network while retaining local use",
+        "description": "Own-clinic, active explicitly assigned doctor-manager only, with CSRF and literal confirm:true. Transactionally marks membership left and sets adoption/network mode Lite. Stops network sharing without deleting data or local booking; export remains available. Repeated leave is idempotent.",
+        "security": [{ "sessionCookie": [], "csrfToken": [] }], "x-roles": ["doctor"], "x-implementation": "real",
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer", "minimum": 1, "maximum": 2147483647 }, "example": 101 }],
+        "requestBody": { "required": true, "content": { "application/json": {
+          "schema": { "$ref": "#/components/schemas/ClinicLeaveInput" }, "example": { "confirm": true }
+        } } },
+        "responses": {
+          "200": {
+            "description": "Left membership with Lite adoption, retained local booking and export capability.",
+            "content": { "application/json": {
+              "schema": { "$ref": "#/components/schemas/ClinicAdoption" },
+              "example": {
+                "clinicId": 101, "state": "lite", "membershipStatus": "left",
+                "changedAt": "2026-01-01T00:00:00.000Z", "trialStartedAt": null,
+                "liteStartedAt": "2026-01-01T00:00:00.000Z", "fullStartedAt": null,
+                "leftAt": "2026-01-01T00:00:00.000Z", "leftBy": 301,
+                "capabilities": { "canManage": true, "canExport": true, "canLeave": false, "localBooking": true, "networkSharing": false },
+                "allowedTransitions": []
+              }
+            } }
+          },
+          "400": { "$ref": "#/components/responses/ImportValidation" },
+          "401": { "$ref": "#/components/responses/ImportUnauthorized" },
+          "403": { "$ref": "#/components/responses/ImportForbidden" },
+          "404": { "$ref": "#/components/responses/ImportNotFound" },
+          "409": { "$ref": "#/components/responses/ClinicLifecycleConflict" }
+        }
+      }
+    },
+    "/clinics/{id}/export": {
+      "post": {
+        "operationId": "exportClinic", "tags": ["clinics"], "summary": "Download versioned clinic JSON export",
+        "description": "Own-clinic, active explicitly assigned doctor-manager only, with CSRF and a required empty JSON object. Available before and after leaving. One repeatable-read snapshot, allowlisted fields only, audited before response. Maximum 10,000 cumulative rows, 8 MiB UTF-8 JSON and 15 seconds; failures return structured errors, never partial files. Client must preserve the JSON attachment rather than treat it as a URL.",
+        "security": [{ "sessionCookie": [], "csrfToken": [] }], "x-roles": ["doctor"], "x-implementation": "real",
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer", "minimum": 1, "maximum": 2147483647 }, "example": 101 }],
+        "requestBody": { "required": true, "content": { "application/json": {
+          "schema": { "$ref": "#/components/schemas/ClinicExportInput" }, "example": {}
+        } } },
+        "responses": {
+          "200": { "$ref": "#/components/responses/ClinicExportAttachment" },
+          "400": { "$ref": "#/components/responses/ImportValidation" },
+          "401": { "$ref": "#/components/responses/ImportUnauthorized" },
+          "403": { "$ref": "#/components/responses/ImportForbidden" },
+          "404": { "$ref": "#/components/responses/ImportNotFound" },
+          "409": { "$ref": "#/components/responses/ClinicLifecycleConflict" },
+          "413": { "$ref": "#/components/responses/ClinicExportTooLarge" },
+          "503": { "$ref": "#/components/responses/ClinicExportUnavailable" }
+        }
+      }
+    },
     "/auth/device-context": {
       "get": {
         "operationId": "getReceptionContext",
@@ -13302,7 +13675,7 @@
           "doctor"
         ],
         "summary": "Read clinic sharing state",
-        "description": "Doctor-only trusted clinic context. Full means consent-based sharing; Lite/unknown deny sharing. Current model does not represent Trial: trialStateAvailable is false and Trial is never inferred. Read-only, private no-store; no query parameters.",
+        "description": "Doctor-only trusted clinic context with optional persisted adoption metadata. Full means consent-based sharing; Trial/Lite/unknown deny sharing. trialStateAvailable is true; mode reflects persisted adoption, never inferred from joinedAt. Read-only, private no-store; no query parameters.",
         "security": [
           {
             "sessionCookie": []
@@ -13335,7 +13708,7 @@
                   },
                   "mode": "full",
                   "effectiveSharing": "consent",
-                  "trialStateAvailable": false
+                  "trialStateAvailable": true
                 }
               }
             }

@@ -88,8 +88,8 @@ before(async () => {
     client.release = (...args) => { client.query = query; client.release = release; release(...args); };
     return client;
   };
-  clinicId = (await pool.query("INSERT INTO operational.clinics(clinic_name,city,booking_method) VALUES('Observed','Test','phone') RETURNING clinic_id")).rows[0].clinic_id;
-  emptyClinicId = (await pool.query("INSERT INTO operational.clinics(clinic_name,city,booking_method,network_mode) VALUES('Never observed','Test','phone','lite') RETURNING clinic_id")).rows[0].clinic_id;
+  clinicId = (await pool.query("INSERT INTO operational.clinics(clinic_name,city,booking_method,adoption_state) VALUES('Observed','Test','phone','full') RETURNING clinic_id")).rows[0].clinic_id;
+  emptyClinicId = (await pool.query("INSERT INTO operational.clinics(clinic_name,city,booking_method,network_mode,adoption_state) VALUES('Never observed','Test','phone','lite','lite') RETURNING clinic_id")).rows[0].clinic_id;
   doctorId = (await pool.query("INSERT INTO operational.doctors(clinic_id,doctor_name,specialty,email) VALUES($1,'Test','Test',$2) RETURNING doctor_id", [clinicId, `${randomUUID()}@network.test`])).rows[0].doctor_id;
   patientId = (await pool.query(`INSERT INTO operational.patients(patient_name,phone,dob,name_normalized,created_clinic_id)
     VALUES('Test','0599000000','1990-01-01','test',$1) RETURNING patient_id`, [clinicId])).rows[0].patient_id;

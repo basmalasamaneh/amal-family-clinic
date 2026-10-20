@@ -28,3 +28,4 @@ export * from "./operational-import";
 export * from "./operational-merge";
 export * from "./operational-sync";
 export * from "./operational-network-health";
+export * from "./operational-adoption";

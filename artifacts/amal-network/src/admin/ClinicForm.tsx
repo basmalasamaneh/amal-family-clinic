@@ -38,16 +38,7 @@ export function ScheduleFields({ d, set, errors }: { d: ClinicDraft; set: (p: Pa
       <TextField id="clinic-close" name="closeTime" type="time" label={t('adm.wizard.closeTime')} required value={d.closeTime} onChange={(e) => set({ closeTime: e.target.value })} error={err('clinic-close')} data-testid="input-clinic-close" />
     </div>
     <p className="amal-field__hint adm-tight">{t('adm.wizard.hoursHint')}</p>
-    <fieldset className="adm-fieldset">
-      <legend className="amal-field__label">{t('adm.clinics.mode')}</legend>
-      <div className="adm-modes">
-        {(['full', 'lite'] as const).map(m => (
-          <label key={m} className={`adm-mode${d.mode === m ? ' is-on' : ''}`}>
-            <input type="radio" name="mode" value={m} checked={d.mode === m} onChange={() => set({ mode: m })} data-testid={`radio-clinic-mode-${m}`} />
-            <span><strong>{t(`adm.wizard.${m}`)}</strong><small>{t(`adm.wizard.${m}Desc`)}</small></span>
-          </label>))}
-      </div>
-    </fieldset>
+    <p className="amal-field__hint" data-testid="text-clinic-adoption-policy">{t('adm.clinics.adoptionPolicy')}</p>
     <TextField id="clinic-tz" name="timezone" label={t('adm.clinics.timezone')} hint={t('adm.wizard.tzHint')} required dir="ltr" maxLength={100} value={d.timezone} onChange={(e) => set({ timezone: e.target.value })} error={err('clinic-tz')} data-testid="input-clinic-timezone" />
   </>;
 }

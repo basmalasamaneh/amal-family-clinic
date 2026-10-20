@@ -121,7 +121,8 @@ test("administration auth, CSRF, and existing directory scope remain separate", 
   assert.equal((await request("/clinics", "GET", undefined, adminSession)).status, 403);
   const scoped = await request(`/clinics/${originalClinic}`, "GET", undefined, doctorSession);
   assert.equal(scoped.status, 200);
-  assert.deepEqual(Object.keys(scoped.body).sort(), ["id", "mode", "name", "timezone"]);
+  assert.deepEqual(Object.keys(scoped.body).sort(), ["adoption", "id", "mode", "name", "timezone"]);
+  assert.equal(scoped.body.adoption.capabilities.canManage, false);
   assert.equal((await request(`/clinics/${secondClinic}`, "GET", undefined, doctorSession)).status, 403);
   assert.equal((await request("/doctors?clinicId=" + secondClinic, "GET", undefined, doctorSession)).status, 403);
 });
@@ -203,20 +204,23 @@ test("admin audit denies other roles, scopes events and excludes sensitive paylo
   await admin.query("UPDATE operational.auth_sessions SET revoked_at=NULL WHERE token_digest=$1", [digest(secondAdmin.token)]);
 });
 
-test("clinic settings roundtrip, full/lite, IANA zone, bounded partial and overnight validation", async () => {
+test("Trial clinic settings roundtrip preserves lifecycle; mode bypass, IANA zone, partial and overnight validation", async () => {
   const clinic = await createClinic();
-  assert.equal(clinic.mode, "full");
+  assert.equal(clinic.mode, "lite");
+  assert.equal(clinic.adoption.state, "trial");
   assert.equal(clinic.slotMinutes, 30);
   assert.equal(clinic.timezone, "Asia/Hebron");
-  const settings = { mode: "lite", timezone: "America/New_York", openTime: "09:15", closeTime: "18:45",
+  const settings = { timezone: "America/New_York", openTime: "09:15", closeTime: "18:45",
     slotMinutes: 15, workingDays: [0, 2, 4], name: "Updated clinic", city: "Other city", bookingMethod: "online" };
   const updated = await request(`/clinics/${clinic.id}`, "PATCH", settings);
   assert.equal(updated.status, 200);
   for (const [key, value] of Object.entries(settings)) assert.deepEqual(updated.body[key], value);
+  assert.deepEqual(updated.body.adoption, clinic.adoption, "settings cannot mutate lifecycle state or timestamps");
   assert.deepEqual((await request(`/admin/clinics/${clinic.id}`)).body, updated.body);
   for (const patch of [{}, { slotMinutes: 0 }, { slotMinutes: 1441 }, { slotMinutes: 2.5 },
     { workingDays: [] }, { workingDays: [1, 1] }, { workingDays: [7] }, { workingDays: [null] },
-    { timezone: "+03:00" }, { timezone: "Not/AZone" }, { mode: "network" }, { openTime: "24:00" },
+    { timezone: "+03:00" }, { timezone: "Not/AZone" }, { mode: "network" }, { mode: "full" }, { mode: "lite" },
+    { adoption: { state: "full" } }, { adoptionState: "full" }, { membershipStatus: "active" }, { openTime: "24:00" },
     { closeTime: "08:00" }, { openTime: "19:00" }, { openTime: "18:45" }, { name: " " },
     { joinedAt: "2026-01-01" }, { userId: users[0] }]) {
     assert.equal((await request(`/clinics/${clinic.id}`, "PATCH", patch)).status, 400, JSON.stringify(patch));

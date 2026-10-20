@@ -297,6 +297,62 @@ test("appointment APIs: authenticated scope, transactions, idempotency, holds an
     assert(audits[0].detail.affectedAppointments.some((ref: { appointmentId: number }) => ref.appointmentId === winner.data.id));
     await assert.rejects(admin.query("UPDATE operational.audit_log SET detail='{}' WHERE patient_id=$1", [patientId]), /append-only/);
   });
+  await t.test("Trial, Lite and left clinics neither publish nor consume scheduling conflicts; local booking remains", async () => {
+    const patientId = patientIds[0]!;
+    const body = { ...booking(doctor, patientId, 6), startsAt: "2096-06-04T06:00:00.000Z", endsAt: "2096-06-04T06:30:00.000Z" };
+    const setState = async (clinicId: number, adoption: string, membership: string) => {
+      await admin.query(`UPDATE operational.clinics SET adoption_state=$2,membership_status=$3,
+        left_at=CASE WHEN $3='left' THEN clock_timestamp() ELSE NULL END,
+        left_by=CASE WHEN $3='left' THEN $4::integer ELSE NULL END,
+        network_mode=CASE WHEN $2='full' AND $3='active' THEN 'full'::operational.network_mode
+          ELSE 'lite'::operational.network_mode END WHERE clinic_id=$1`, [clinicId, adoption, membership, manager.id]);
+    };
+    try {
+      for (const clinicId of clinicIds) await setState(clinicId, "full", "active");
+      assert.equal((await request(remoteDoctor, "/appointments", "POST", {
+        ...body, clientOpId: randomUUID(), clinicId: remoteDoctor.clinicId, doctorId: remoteDoctor.doctorId,
+      })).status, 201);
+      assert.equal((await request(doctor, "/appointments/check", "POST", body)).data.ok, false);
+      for (const restricted of [doctor.clinicId, remoteDoctor.clinicId]) {
+        for (const [adoption, membership] of [["trial", "active"], ["lite", "active"], ["lite", "left"]]) {
+          await setState(restricted, adoption!, membership!);
+          const preview = await request(doctor, "/appointments/check", "POST", body);
+          assert.equal(preview.status, 200);
+          assert.deepEqual(preview.data, { ok: true, conflicts: [] }, `${restricted}: ${adoption}/${membership}`);
+          // Local clinical/scheduling directories must remain local in every state.
+          const directory = await request(desk, "/clinics");
+          assert.deepEqual(directory.data.items.map((c: { id: number }) => c.id), [desk.clinicId]);
+          await setState(restricted, "full", "active");
+        }
+      }
+      await setState(doctor.clinicId, "trial", "active");
+      const created = await request(doctor, "/appointments", "POST", body);
+      assert.equal(created.status, 201, JSON.stringify(created.data));
+      const localConflict = await request(doctor, "/appointments/check", "POST", { ...body, clientOpId: randomUUID() });
+      assert(localConflict.data.conflicts.some((c: { type: string }) => c.type === "doctor-overlap"));
+    } finally {
+      for (const clinicId of clinicIds) await setState(clinicId, "full", "active");
+    }
+  });
+  await t.test("availability suggestions ignore restricted source clinics, not merely their identifiers", async () => {
+    const patientId = patientIds[0]!;
+    const path = `/appointments/availability?clinicId=${doctor.clinicId}&patientId=${patientId}`;
+    const baseline = await request(doctor, path);
+    assert.equal(baseline.status, 200);
+    const slot = baseline.data.items.find((item: { doctorId: number }) => item.doctorId === doctor.doctorId);
+    assert(slot);
+    const remote = await request(remoteDoctor, "/appointments", "POST", {
+      ...booking(remoteDoctor, patientId, 1), startsAt: slot.startsAt, endsAt: slot.endsAt,
+    });
+    assert.equal(remote.status, 201, JSON.stringify(remote.data));
+    try {
+      await admin.query(`UPDATE operational.clinics SET adoption_state='lite',network_mode='lite' WHERE clinic_id=$1`, [remoteDoctor.clinicId]);
+      const hidden = await request(doctor, path);
+      assert.deepEqual(hidden.data.items, baseline.data.items);
+    } finally {
+      await admin.query(`UPDATE operational.clinics SET adoption_state='full',membership_status='active',network_mode='full' WHERE clinic_id=$1`, [remoteDoctor.clinicId]);
+    }
+  });
   await t.test("moves use expectedVersion; cancellation keeps history/reason; update and cancel replay exactly", async () => {
     const created = await request(doctor, "/appointments", "POST", booking(doctor, patientIds[4]!, 8));
     assert.equal(created.status, 201);

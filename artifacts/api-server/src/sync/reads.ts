@@ -3,7 +3,7 @@ import { z } from "zod/v4";
 import type { Auth } from "../lib/auth";
 import { forbidden } from "../lib/auth";
 import { fail } from "../lib/auth-errors";
-import { canonical, transaction } from "../appointments/service";
+import { canonical, projectStoredOperationResult, transaction } from "../appointments/service";
 
 const page = { limit: z.coerce.number().int().min(1).max(100).default(25) };
 const pullInput = z.object({ ...page, since: z.string().max(2048).optional() }).strict();
@@ -103,11 +103,20 @@ export async function listSyncConflicts(auth: Auth, raw: unknown) {
       const reasons = [];
       for (const storedReason of row.reasons) {
         const { httpStatus: _httpStatus, ...reason } = storedReason;
-        if (!reason.with) { reasons.push(reason); continue; }
+        // Anonymous remote evidence cannot be reauthorized: the old redaction
+        // discarded its source clinic. Do not expose its existence or the slots
+        // computed from former cross-clinic occupancy, even to a Full clinic.
+        if (reason.type === "same-day-other-clinic") continue;
+        if (!reason.with) {
+          if (!["patient-overlap", "doctor-overlap"].includes(reason.type)) reasons.push(projectStoredOperationResult({ ...reason,
+            ...(reason.suggestedSlots ? { suggestedSlots: [] } : {}) }));
+          continue;
+        }
         const { rows: visible } = await client.query(`SELECT 1 FROM operational.appointments
           WHERE appointment_id=$1 AND clinic_id=$2 AND ($3::integer IS NULL OR doctor_id=$3)`,
         [reason.with.appointmentId, actor.clinicId, actor.role === "doctor" ? actor.doctorId : null]);
-        reasons.push({ ...reason, with: visible.length ? reason.with : null });
+        if (!visible.length) continue;
+        reasons.push({ ...reason, with: reason.with, suggestedSlots: [] });
       }
       items.push({
         id: row.id, clientOpId: row.client_op_id, operation: { target: row.operation.target, payload: proposal },
@@ -115,7 +124,7 @@ export async function listSyncConflicts(auth: Auth, raw: unknown) {
         reasons, status: row.status, version: row.version,
         createdAt: row.created_at.toISOString(), updatedAt: row.updated_at.toISOString(),
         history: history.map(item => {
-          const { phone: _phone, ...result } = item.result;
+          const { phone: _phone, ...result } = projectStoredOperationResult(item.result);
           return { id: item.id, clientOpId: item.client_op_id, action: item.action, result, createdAt: item.created_at.toISOString() };
         }),
       });

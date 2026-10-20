@@ -20,3 +20,4 @@ pnpm --filter @workspace/api-server merge:migrate
 pnpm --filter @workspace/api-server sync:migrate
 pnpm --filter @workspace/api-server kpis:migrate
 pnpm --filter @workspace/api-server admin:migrate
+pnpm --filter @workspace/api-server adoption:migrate

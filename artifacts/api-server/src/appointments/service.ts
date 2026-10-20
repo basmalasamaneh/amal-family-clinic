@@ -102,6 +102,17 @@ export function canonical(value: unknown): string {
   if (value && typeof value === "object") return `{${Object.entries(value).filter(([, v]) => v !== undefined).sort(([a], [b]) => a.localeCompare(b)).map(([k, v]) => `${JSON.stringify(k)}:${canonical(v)}`).join(",")}}`;
   return JSON.stringify(value);
 }
+/** Receipts preserve outcomes, not the authority to redisclose old counts.
+ * Historical evidence has no reliable source-clinic provenance after redaction.
+ * Apply at every receipt/history delivery, including sync error envelopes. */
+export function projectStoredOperationResult<T extends Record<string, any>>(result: T): T {
+  if (result.code === "APPOINTMENT_CONFLICT" && result.params) {
+    const { conflictCount: _count, ...params } = result.params;
+    return { ...result, params };
+  }
+  if (result.error) return { ...result, error: projectStoredOperationResult(result.error) };
+  return result;
+}
 export async function replay(client: PoolClient, actor: Auth, clientOpId: string, target: string, payload: unknown) {
   const hash = createHash("sha256").update(canonical({ target, payload })).digest("hex");
   const { rows: [op] } = await client.query("SELECT * FROM operational.appointment_operations WHERE client_op_id=$1", [clientOpId]);
@@ -110,6 +121,7 @@ export async function replay(client: PoolClient, actor: Auth, clientOpId: string
     bookingScope(actor, op.clinic_id, op.doctor_id);
     if (op.actor_id !== actor.id || op.payload_hash !== hash) throw conflict("IDEMPOTENCY_CONFLICT");
     if (op.device_id !== null && op.device_id !== actor.device?.id) throw conflict("IDEMPOTENCY_CONFLICT");
+    op.result = projectStoredOperationResult(op.result);
     if (op.status === "conflict" || op.status === "rejected") throw fail(op.result.httpStatus ?? 409, op.result.code, "conflict", op.result.params);
   }
   return { hash, op };
@@ -149,7 +161,11 @@ export async function getAppointmentAvailability(auth: Auth, raw: unknown) {
       [input.clinicId, actor.role === "doctor" ? actor.doctorId : null]);
     // Patient collisions may be cross-clinic; only proposed local slots leave the service.
     const { rows: appointments } = await client.query<Row>(
-      "SELECT * FROM operational.appointments WHERE (clinic_id=$1 OR patient_id=$2) AND status IN ('booked','double_booked')",
+      `SELECT a.* FROM operational.appointments a
+        JOIN operational.clinics source ON source.clinic_id=a.clinic_id
+        JOIN operational.clinics requester ON requester.clinic_id=$1
+        WHERE (a.clinic_id=$1 OR (a.patient_id=$2 AND source.network_mode='full' AND requester.network_mode='full'))
+          AND a.status IN ('booked','double_booked')`,
       [input.clinicId, input.patientId]);
     const { rows: holds } = await client.query<HoldRow>(
       "SELECT * FROM operational.appointment_holds WHERE clinic_id=$1 AND expires_at>$2", [input.clinicId, now]);
@@ -186,7 +202,14 @@ async function preview(client: PoolClient, actor: Auth, now: Date, input: z.infe
   }
   const { rows: [clinic] } = await client.query("SELECT * FROM operational.clinics WHERE clinic_id=$1", [input.clinicId]);
   if (!clinic) throw fail(422, "INVALID_BOOKING_REFERENCE", "validation");
-  const { rows: appointments } = await client.query<Row>("SELECT * FROM operational.appointments WHERE (doctor_id=$1 OR patient_id=$2) AND status IN ('booked','double_booked')", [input.doctorId, input.patientId]);
+  // The scheduling lock orders this authoritative mode read against lifecycle
+  // transitions. Filtering before evaluation also protects counts, suggestions,
+  // overrides and eligibility (redacting only `with` would still leak existence).
+  const { rows: appointments } = await client.query<Row>(`SELECT a.* FROM operational.appointments a
+    JOIN operational.clinics source ON source.clinic_id=a.clinic_id
+    WHERE (a.doctor_id=$1 OR a.patient_id=$2) AND a.status IN ('booked','double_booked')
+      AND (a.clinic_id=$3 OR (source.network_mode='full' AND $4='full'))`,
+  [input.doctorId, input.patientId, input.clinicId, clinic.network_mode]);
   const { rows: holds } = await client.query<HoldRow>("SELECT * FROM operational.appointment_holds WHERE doctor_id=$1 AND expires_at>$2", [input.doctorId, now]);
   if (input.holdToken && !holds.some(h => h.token === input.holdToken && exactHold(h, actor, input, minutes, input.appointmentId))) throw conflict("HOLD_EXPIRED");
   const result = evaluate({
@@ -208,7 +231,7 @@ async function preview(client: PoolClient, actor: Auth, now: Date, input: z.infe
 }
 function requireEligible(result: ConflictResult) {
   // ApiFailure params are scalars; the exact structured preview is obtained from /check.
-  if (!result.ok) throw Object.assign(conflict("APPOINTMENT_CONFLICT", { conflictCount: result.conflicts.length }), { evidence: result.conflicts });
+  if (!result.ok) throw Object.assign(conflict("APPOINTMENT_CONFLICT"), { evidence: result.conflicts });
 }
 async function auditOverride(client: PoolClient, actor: Auth, input: { clinicId: number; patientId: number; overrideReason?: string }, appointmentId: number, clientOpId: string, result: ConflictResult, operation: "create" | "update", affectedAppointments: { appointmentId: number; clinicId: number; doctorId: number }[]) {
   if (!result.conflicts.some(c => c.type === "patient-overlap")) return;
@@ -237,6 +260,7 @@ async function mutation<T>(auth: Auth, target: string, input: Booking | z.infer<
       bookingScope(actor, prior.clinic_id, prior.doctor_id);
       if (prior.actor_id !== actor.id || prior.payload_hash !== hash) throw conflict("IDEMPOTENCY_CONFLICT");
       if (prior.device_id !== null && prior.device_id !== actor.device?.id) throw conflict("IDEMPOTENCY_CONFLICT");
+      prior.result = projectStoredOperationResult(prior.result);
       if (prior.status === "conflict" || prior.status === "rejected") return {
         error: Object.assign(fail(prior.result.httpStatus ?? 409, prior.result.code,
           String(prior.result.messageKey).replace(/^error\./, ""), prior.result.params),

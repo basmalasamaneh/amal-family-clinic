@@ -13,7 +13,8 @@ async function schedule(page: Page) {
   await page.getByTestId('input-clinic-slot').fill('30');
   await page.getByTestId('input-clinic-open').fill('07:45');
   await page.getByTestId('input-clinic-close').fill('19:15');
-  await page.getByTestId('radio-clinic-mode-lite').check();
+  await expect(page.getByTestId('text-clinic-adoption-policy')).toBeVisible();
+  await expect(page.locator('input[name="mode"]')).toHaveCount(0);
   await page.getByTestId('button-wizard-next').click();
 }
 
@@ -52,7 +53,8 @@ test('create wizard preserves input and confirmed clinic survives reload and app
   await page.getByTestId('button-wizard-submit').click();
   await expect(page.getByTestId('panel-wizard-done')).toBeVisible();
   expect(fixture.writes).toHaveLength(1);
-  expect(fixture.writes[0].body).toMatchObject({ name, slotMinutes: 30, timezone: 'Asia/Hebron', mode: 'lite', openTime: '07:45', closeTime: '19:15' });
+  expect(fixture.writes[0].body).toMatchObject({ name, slotMinutes: 30, timezone: 'Asia/Hebron', openTime: '07:45', closeTime: '19:15' });
+  expect(fixture.writes[0].body).not.toHaveProperty('mode');
   await page.getByTestId('button-wizard-finish').click();
   await page.reload();
   await expect(page.locator('main')).toContainText(name);

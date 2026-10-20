@@ -9,6 +9,9 @@ function context(offset = 0) {
     slot_minutes: 30, working_days: [0, 1, 2, 3, 4, 5, 6], open_time: "08:00",
     close_time: "17:00", network_mode: "full", joined_at: new Date("2026-01-01T00:00:00Z"),
     timezone: "Asia/Hebron",
+    adoption_state: "full", membership_status: "active", adoption_changed_at: new Date("2026-01-01T00:00:00Z"),
+    trial_started_at: null, lite_started_at: null, full_started_at: new Date("2026-01-01T00:00:00Z"),
+    left_at: null, left_by: null,
   });
   return {
     sourceClinic: clinic(701 + offset, "Synthetic source"),

@@ -6,6 +6,7 @@ import { fail } from "../lib/auth-errors";
 import { patientScopeSql } from "../lib/patient-access";
 import { hebronDay } from "../patients/demographics";
 import { idSchema, projectNetworkPatients, requireDoctor, transaction } from "../consent/service";
+import { adoption } from "../adoption/service";
 
 const limitSchema = z.string().regex(/^\d+$/).transform(Number).pipe(z.number().int().min(1).max(100));
 const pageSchema = z.object({ limit: limitSchema.optional(), cursor: z.string().min(1).max(512).optional() }).strict();
@@ -80,11 +81,15 @@ export async function doctorPrivacy(auth: Auth, query: unknown) {
   emptySchema.parse(query);
   return transaction(false, async client => {
     const networkMode = await requireDoctor(client, auth);
-    const { rows: [clinic] } = await client.query<{ id: number; name: string }>(
-      "SELECT clinic_id AS id,clinic_name AS name FROM operational.clinics WHERE clinic_id=$1", [auth.clinicId]);
-    if (!clinic) throw fail(403, "FORBIDDEN", "forbidden");
-    const mode = networkMode === "full" || networkMode === "lite" ? networkMode : "unknown";
-    return { clinic, mode, effectiveSharing: mode === "full" ? "consent" : "local-only", trialStateAvailable: false };
+    const { rows: [row] } = await client.query(
+      `SELECT c.*, EXISTS(SELECT 1 FROM operational.clinic_managers m
+        WHERE m.clinic_id=c.clinic_id AND m.user_id=$2) AS can_manage
+       FROM operational.clinics c WHERE c.clinic_id=$1`, [auth.clinicId, auth.id]);
+    if (!row) throw fail(403, "FORBIDDEN", "forbidden");
+    const mode = ["trial", "lite", "full"].includes(row.adoption_state) ? row.adoption_state : "unknown";
+    return { clinic: { id: row.clinic_id, name: row.clinic_name }, mode,
+      effectiveSharing: mode === "full" && networkMode === "full" ? "consent" : "local-only",
+      trialStateAvailable: true, adoption: adoption(row, row.can_manage) };
   });
 }
 export async function doctorAudit(auth: Auth, query: unknown) {
@@ -100,12 +105,15 @@ export async function doctorAudit(auth: Auth, query: unknown) {
         CASE WHEN a.clinic_id=$1 AND u.clinic_id=$1 THEN d.doctor_name ELSE NULL END AS viewer_name,
         CASE WHEN a.clinic_id=$1 AND u.clinic_id=$1 THEN c.clinic_name ELSE NULL END AS viewer_clinic_name
       FROM operational.audit_log a JOIN operational.patients p ON p.patient_id=a.patient_id
+      JOIN operational.clinics source ON source.clinic_id=$1
+      LEFT JOIN operational.clinics viewer ON viewer.clinic_id=a.clinic_id
       LEFT JOIN operational.users u ON u.id=a.user_id AND u.role='doctor'
       LEFT JOIN operational.doctors d ON d.doctor_id=u.doctor_id AND d.clinic_id=u.clinic_id AND d.user_id=u.id
       LEFT JOIN operational.clinics c ON c.clinic_id=u.clinic_id AND d.doctor_id IS NOT NULL
       WHERE ${patientScopeSql("$1")} AND ${ownPatient}
         AND a.action='network.lookup' AND a.detail->>'outcome'='disclosed'
         AND a.detail->>'sourceClinicId'=$1::text
+        AND (a.clinic_id=$1 OR (source.network_mode='full' AND (viewer.network_mode='full' OR a.clinic_id IS NULL)))
         AND ($3::integer IS NULL OR p.patient_id=$3)
         AND ($4::timestamptz IS NULL OR (date_trunc('milliseconds',a.at),a.id)<($4::timestamptz,$5::integer))
       ORDER BY date_trunc('milliseconds',a.at) DESC,a.id DESC LIMIT $6`,

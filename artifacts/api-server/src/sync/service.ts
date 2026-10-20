@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import type { PoolClient } from "pg";
 import { type Auth, forbidden } from "../lib/auth";
 import { ApiError, fail } from "../lib/auth-errors";
-import { bookingScope, createAppointment, currentAuth, existing, project, record, replay, transaction, updateAppointment } from "../appointments/service";
+import { bookingScope, createAppointment, currentAuth, existing, project, projectStoredOperationResult, record, replay, transaction, updateAppointment } from "../appointments/service";
 import { pushInput, resolveInput } from "./validation";
 import { patientScopeSql } from "../lib/patient-access";
 import { lockNetworkDevice, recordSuccessfulSync } from "../network-health/service";
@@ -82,7 +82,7 @@ export async function pushSync(auth: Auth, raw: unknown) {
           error.operationId === operation.input.clientOpId && error.operationHash === op?.payload_hash &&
           op?.actor_id === actor.id && ["conflict", "rejected"].includes(op.status)) {
           bookingScope(actor, op.clinic_id, op.doctor_id);
-          const { httpStatus: _httpStatus, ...publicResult } = op.result;
+          const { httpStatus: _httpStatus, ...publicResult } = projectStoredOperationResult(op.result);
           outcome = op.status === "conflict" ? { ...base, status: "conflict", ...publicResult }
             : { ...base, status: "rejected", error: publicResult };
           if (op.status === "rejected") blocked = true;

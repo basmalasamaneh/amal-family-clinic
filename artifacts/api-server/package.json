@@ -9,6 +9,8 @@
     "start": "node --enable-source-maps ./dist/index.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.privacy.json --noEmit",
     "auth:migrate": "tsx scripts/auth-migrate.ts",
+    "adoption:migrate": "tsx scripts/adoption-migrate.ts",
+    "adoption:test": "tsx --test --test-concurrency=1 tests/adoption*.test.ts",
     "admin:migrate": "tsx scripts/admin-migrate.ts && tsx scripts/network-health-migrate.ts",
     "admin:test": "tsx --test --test-concurrency=1 tests/admin-users.test.ts tests/admin-directory.test.ts tests/network-health.test.ts",
     "appointments:migrate": "tsx scripts/appointments-migrate.ts",
