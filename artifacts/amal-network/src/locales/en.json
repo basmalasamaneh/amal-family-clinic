@@ -477,5 +477,97 @@
       }
     },
     "foot": "This page explains the design of Amal Network in plain language. It is not a legal statement."
+  },
+  "calendar": {
+    "mock": "Demo data · {{scenario}}",
+    "actions": {
+      "newBooking": "New booking",
+      "walkIn": "Walk-in"
+    },
+    "nav": {
+      "label": "Date navigation",
+      "prev": {
+        "day": "Previous day",
+        "week": "Previous week"
+      },
+      "next": {
+        "day": "Next day",
+        "week": "Next week"
+      },
+      "today": "Today",
+      "pick": "Choose a date",
+      "demo": "Demo date: {{date}}",
+      "isToday": "Today",
+      "isDemo": "Demo date, not today"
+    },
+    "filter": {
+      "label": "Doctor",
+      "all": "All doctors"
+    },
+    "view": {
+      "label": "Calendar view",
+      "day": "Day",
+      "week": "Week"
+    },
+    "week": {
+      "heading": "{{from}} – {{to}}",
+      "openDay": "Open day view for {{date}}",
+      "empty": "No appointments"
+    },
+    "day": {
+      "region": "Appointments by doctor",
+      "slot": "Start booking at {{time}} with {{doctor}}"
+    },
+    "card": {
+      "aria": "{{name}}, {{start}} to {{end}}, {{doctor}}, {{status}}",
+      "noName": "Name not available",
+      "noDoctor": "Doctor not listed",
+      "unknownStatus": "Unknown status",
+      "minutes": "{{n}} min"
+    },
+    "state": {
+      "loading": "Loading the schedule",
+      "error": "The schedule could not be loaded",
+      "errorDesc": "Nothing is shown rather than outdated or guessed data. Check the connection and try again.",
+      "retry": "Try again",
+      "noDoctors": "No doctors for this clinic",
+      "noDoctorsDesc": "Ask an administrator to assign doctors to this clinic.",
+      "noAppointments": "No appointments on this date.",
+      "noHours": "Clinic hours are not configured, so open slots are not shown. Use New booking instead.",
+      "noClinic": "No clinic selected",
+      "noClinicDesc": "Choose an authorized clinic to see its calendar."
+    },
+    "booking": {
+      "walkInTitle": "Walk-in",
+      "placeholder": "The booking form is not available yet. Your selection is kept below; nothing has been saved and no appointment was created.",
+      "source": "Source",
+      "sources": {
+        "phone": "Scheduled booking",
+        "walk-in": "Walk-in"
+      },
+      "clinic": "Clinic",
+      "doctor": "Doctor",
+      "doctorId": "Doctor record {{id}}",
+      "time": "Time",
+      "now": "As soon as possible",
+      "notChosen": "Not chosen yet",
+      "stepsLabel": "Booking steps",
+      "steps": {
+        "patient": "Patient",
+        "slot": "Doctor and time",
+        "confirm": "Confirm"
+      },
+      "stepPending": "Coming with the booking form",
+      "back": "Back to Today",
+      "timeNotChosen": "time not chosen"
+    },
+    "scenarios": {
+      "standard": "standard schedule",
+      "empty": "no appointments",
+      "no-doctors": "no doctors",
+      "error": "load error",
+      "no-hours": "hours not configured",
+      "slow": "slow responses"
+    }
   }
 }

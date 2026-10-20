@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link, Redirect, useLocation } from 'wouter';
+import { Link, Redirect, useLocation, useSearch } from 'wouter';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import * as Dialog from '@radix-ui/react-dialog';
-import { BookOpenText, CircleHelp, CircleUserRound, PlayCircle, ShieldCheck, FlaskConical, LogOut, MoreHorizontal, RotateCw, Search, Wifi, WifiOff, X } from 'lucide-react';
+import { DoorOpen, BookOpenText, CircleHelp, CircleUserRound, PlayCircle, ShieldCheck, FlaskConical, LogOut, MoreHorizontal, RotateCw, Search, Wifi, WifiOff, X } from 'lucide-react';
 import { useOnlineStatus } from '@/hooks/use-online-status';
 import './offline-messages';
 import { usePrivateCacheContext } from './private-cache-lifecycle';
@@ -13,6 +13,10 @@ import { formatInstant, formatNumber } from './formatting';
 import { demoPath, type ShellClinic, type ShellIdentity } from './identity';
 import { TourOverlay } from '@/tour/TourOverlay';
 import { useTour } from '@/tour/use-tour';
+import { CalendarPage } from '@/calendar/CalendarPage';
+import { BookingHandoff } from '@/calendar/BookingHandoff';
+import { bookingQuery } from '@/calendar/booking';
+import { withCarry } from '@/calendar/carry';
 import { isKnownRole, landingFor, resolve, routesFor, type Resolution, type ShellRoute } from './routes';
 
 const BOTTOM_SLOTS = 4;
@@ -22,6 +26,7 @@ interface Props { identity: ShellIdentity; fixture: boolean; onRefresh: () => Pr
 export function AppShell({ identity, fixture, onRefresh, onLogout }: Props) {
   const { t } = useTranslation();
   const [location] = useLocation();
+  const search = useSearch();
   const role = isKnownRole(identity.role) ? identity.role : null;
   const items = useMemo(() => routesFor(role), [role]);
   const res = resolve(location, role);
@@ -76,6 +81,11 @@ export function AppShell({ identity, fixture, onRefresh, onLogout }: Props) {
         <header className="shell-top">
           <div className="shell-top__brand"><AmalLogo /></div>
           <ClinicSwitcher clinics={clinics} state={identity.clinicsState} value={clinicId} onChange={(id) => { void localCache.setContext(null); setClinicId(id); }} onRetry={onRefresh} />
+          {role === 'front-desk' && clinic && (
+            <Link href={demoPath(withCarry(bookingQuery({ clinicId: clinic.id, source: 'walk-in' }), search))} className="shell-walkin" data-testid="link-walk-in">
+              <DoorOpen size={22} aria-hidden="true" /><span>{t('calendar.actions.walkIn')}</span>
+            </Link>
+          )}
           <GlobalSearch key={clinicId ?? 'none'} />
           <div className="shell-top__end">
             <ConnectionPill />
@@ -86,7 +96,7 @@ export function AppShell({ identity, fixture, onRefresh, onLogout }: Props) {
         </header>
 
         <main id="main" tabIndex={-1} className="shell-main" key={clinicId ?? 'none'}>
-          <PageContent res={res} title={title} clinic={clinic} landing={landingFor(role)} />
+          <PageContent res={res} title={title} clinic={clinic} fixture={fixture} landing={landingFor(role)} />
         </main>
       </div>
 
@@ -109,10 +119,14 @@ function titleFor(res: Resolution, t: (k: string) => string): string {
 function NavLink({ route, location, variant }: { route: ShellRoute; location: string; variant: 'side' | 'bottom' }) {
   const { t } = useTranslation();
   const Icon = route.icon;
+  const search = useSearch();
   const active = location === route.path;
+  // Today/Week keep the selected date and doctor filter (validated again by the calendar page).
+  const calendarRoute = route.id === 'today' || route.id === 'week';
+  const fromCalendar = location === '/desk/today' || location === '/desk/week';
   return (
     <Link
-      href={demoPath(route.path)}
+      href={demoPath(calendarRoute && fromCalendar ? withCarry(route.path, search) : route.path)}
       className={`shell-nav shell-nav--${variant}${active ? ' is-active' : ''}`}
       aria-current={active ? 'page' : undefined}
       data-testid={`link-nav-${variant}-${route.id}`}
@@ -338,11 +352,13 @@ function HelpMenu({ onReplay, canReplay }: { onReplay: () => void; canReplay: bo
   );
 }
 
-function PageContent({ res, title, clinic, landing }: { res: Resolution; title: string; clinic: ShellClinic | null; landing: string | null }) {
+function PageContent({ res, title, clinic, fixture, landing }: { res: Resolution; title: string; clinic: ShellClinic | null; fixture: boolean; landing: string | null }) {
   const { t } = useTranslation();
   const { locale, digitPreference } = useAmalPreferences();
   const [now] = useState(() => new Date().toISOString());
 
+  if (res.kind === 'page' && (res.route.id === 'today' || res.route.id === 'week')) return <CalendarPage view={res.route.id === 'today' ? 'day' : 'week'} clinic={clinic} fixture={fixture} title={title} />;
+  if (res.kind === 'page' && res.route.id === 'newBooking') return <BookingHandoff clinic={clinic} fixture={fixture} title={title} />;
   if (res.kind === 'page') {
     const Icon = res.route.icon;
     const isAdmin = res.route.roles.includes('admin');
