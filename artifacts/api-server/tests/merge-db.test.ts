@@ -2,10 +2,14 @@ import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import pg from "pg";
+import express from "express";
+import cookieParser from "cookie-parser";
+import mergeRouter from "../src/routes/patient-merge";
+import { digest } from "../src/lib/auth";
 import { pool } from "@workspace/db";
 import { normalizeName } from "@workspace/db/patient-search";
 import type { Auth } from "../src/lib/auth";
-import { listPatientDuplicates, mergePatients, duplicateIdentity } from "../src/patients/merge";
+import { listPatientDuplicates, mergePatients, duplicateIdentity, previewPatientMerge } from "../src/patients/merge";
 
 if (process.env.NODE_ENV === "production" || process.env.REPLIT_DEPLOYMENT === "1") throw new Error("Merge tests prohibited in deployment");
 const admin = new pg.Client({ connectionString: process.env.DATABASE_URL });
@@ -13,6 +17,7 @@ let auth: Auth, clinic: number, doctor: number, beforeSeeds: unknown;
 const patients: number[] = [], operations: string[] = [], visits: number[] = [], batches: number[] = [];
 const extraSessions: string[] = [];
 let device: number, user: number;
+const sessionCredential = randomUUID(), deviceCredential = randomUUID();
 async function snapshot() {
   const result: Record<string, unknown> = {};
   for (const table of ["clinics", "doctors", "patients", "appointments", "patient_visit_history", "calendar_app_export"]) {
@@ -55,8 +60,8 @@ before(async () => {
   user = (await admin.query(`INSERT INTO operational.users(email,password_hash,role,clinic_id)
     VALUES($1,'unused','receptionist',$2) RETURNING id`, [`${randomUUID()}@merge.test`, clinic])).rows[0].id;
   device = (await admin.query("INSERT INTO operational.devices(clinic_id,label) VALUES($1,'mergeTest') RETURNING id", [clinic])).rows[0].id;
-  await admin.query("INSERT INTO operational.auth_devices(device_id,credential_digest) VALUES($1,$2)", [device, randomUUID()]);
-  const token = randomUUID();
+  await admin.query("INSERT INTO operational.auth_devices(device_id,credential_digest) VALUES($1,$2)", [device, digest(deviceCredential)]);
+  const token = digest(sessionCredential);
   await admin.query(`INSERT INTO operational.auth_sessions(token_digest,user_id,device_id,csrf_token,absolute_expires_at)
     VALUES($1,$2,$3,'unused',now()+interval '1 hour')`, [token, user, device]);
   auth = { id: user, email: "unused", clinicId: clinic, doctorId: null, role: "front-desk",
@@ -97,6 +102,67 @@ test("real seed Samer records are never exact duplicate candidates; real export 
   const keys = rows.map(duplicateIdentity).filter(Boolean);
   assert.equal(keys.length, new Set(keys).size);
   assert.equal((await admin.query("SELECT count(*)::integer n FROM public.calendar_app_export")).rows[0].n, 24);
+});
+test("preview is read-only, clinic-scoped, sanitized and never authorizes a later merge", async () => {
+  const [source, target] = await pair();
+  await admin.query(`INSERT INTO operational.appointments(clinic_id,doctor_id,patient_id,scheduled_at,booking_method,status)
+    VALUES($1,$2,$3,'2020-01-01T08:00Z','phone','completed')`, [clinic, doctor, source]);
+  async function operationalSnapshot() {
+    const tables = (await admin.query(`SELECT tablename FROM pg_tables WHERE schemaname='operational' ORDER BY tablename`)).rows;
+    const result: Record<string, unknown> = {};
+    for (const { tablename } of tables) {
+      result[tablename] = (await admin.query(`SELECT count(*)::integer n,
+        md5(string_agg(row_to_json(t)::text,E'\\n' ORDER BY row_to_json(t)::text)) hash
+        FROM operational."${tablename.replaceAll('"', '""')}" t`)).rows[0];
+    }
+    return result;
+  }
+  const before = await operationalSnapshot();
+  const app = express();
+  app.use(express.json(), cookieParser(), mergeRouter);
+  app.use((error: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+    res.status(error.status ?? 400).json({ code: error.code ?? "VALIDATION" });
+  });
+  const server = app.listen(0, "127.0.0.1");
+  await new Promise<void>(resolve => server.once("listening", resolve));
+  try {
+    const address = server.address();
+    assert(address && typeof address !== "string");
+    const url = `http://127.0.0.1:${address.port}/patients/merge/preview`;
+    const headers = { "Content-Type": "application/json", "x-csrf-token": "unused",
+      Cookie: `amal_session=${sessionCredential}; amal_device=${deviceCredential}` };
+    const request = { method: "POST", headers, body: JSON.stringify({ sourceId: source, targetId: target }) };
+    const response = await fetch(url, request);
+    assert.equal(response.status, 200);
+    assert.equal(response.headers.get("cache-control"), "no-store");
+    assert.equal((await response.json()).sourceVersion, 1);
+    assert.equal((await fetch(url, { ...request, headers: { ...headers, Cookie: "" } })).status, 401);
+    assert.equal((await fetch(url, { ...request, headers: { ...headers, "x-csrf-token": "" } })).status, 403);
+    assert.equal((await fetch(url, { ...request, body: JSON.stringify({ sourceId: source, targetId: 2147483647 }) })).status, 404);
+  } finally { await new Promise<void>((resolve, reject) => server.close(e => e ? reject(e) : resolve())); }
+  const result = await previewPatientMerge(auth, { sourceId: source, targetId: target });
+  assert.deepEqual(result, { sourceId: source, targetId: target, sourceVersion: 1, targetVersion: 1,
+    canMerge: true, blockers: [], references: { appointments: { sourceCount: 1, targetCount: 0, scope: "current-actor" },
+      clinicalReferences: "withheld", auditHistory: "retained-on-source" }, requiresTransactionalRevalidation: true });
+  assert.deepEqual(await operationalSnapshot(), before, "Every operational table unchanged");
+  await admin.query(`INSERT INTO operational.patient_consents(patient_id,level,given_by,recorded_by_user,recorded_clinic_id,evidence)
+    VALUES($1,'none','patient',$2,$3,'verbal')`, [target, user, clinic]);
+  const blocked = await previewPatientMerge(auth, { sourceId: source, targetId: target });
+  assert.deepEqual(blocked.blockers, ["MERGE_RESTRICTED"]);
+  assert.equal(blocked.canMerge, false);
+  assert(!JSON.stringify(blocked).includes("consent"));
+  await assert.rejects(mergePatients(auth, body(source, target)), code("MERGE_CONSENT"));
+  await assert.rejects(previewPatientMerge({ ...auth, role: "admin" }, { sourceId: source, targetId: target }), code("FORBIDDEN"));
+  await admin.query("UPDATE operational.patients SET created_clinic_id=NULL WHERE patient_id=$1", [target]);
+  await assert.rejects(previewPatientMerge(auth, { sourceId: source, targetId: target }), code("NOT_FOUND"));
+  await assert.rejects(previewPatientMerge(auth, { sourceId: source, targetId: 2147483647 }), code("NOT_FOUND"));
+  await assert.rejects(previewPatientMerge(auth, { sourceId: source, targetId: source, clinicId: clinic }));
+  assert.equal((await previewPatientMerge(auth, { sourceId: source, targetId: source })).canMerge, false);
+  const [a, b] = await pair();
+  const preview = await previewPatientMerge(auth, { sourceId: a, targetId: b });
+  await admin.query("UPDATE operational.patients SET phone=phone WHERE patient_id=$1", [a]);
+  assert.equal((await previewPatientMerge(auth, { sourceId: a, targetId: b })).sourceVersion, 2);
+  await assert.rejects(mergePatients(auth, body(a, b, { sourceVersion: preview.sourceVersion })), code("MERGE_STALE"));
 });
 test("scoped duplicate pagination and exact matching reject name-only, different DOB and out-of-scope", async () => {
   const [a, b] = await pair();

@@ -14,3 +14,9 @@ Exact duplicate demographics do not establish consent equivalence. Block merges 
 **Why:** Reassigning a visit to an otherwise identical patient can expose it under the survivor's existing consent or doctor rights; preserving evidence alone does not prevent that disclosure.
 
 **How to apply:** Future merge UI must explain these blockers, not offer a generic force-merge action. Do not remove blockers merely to increase the number of mergeable candidates.
+
+Merge preview must not reveal which hidden clinical evidence caused a safety blocker; expose a generic restriction and actor-scoped scheduling counts, not global clinical totals.
+
+**Why:** Authority to view two demographic records is not authority to infer their consent or clinical history. A read-only preview can still leak private information through counts and specific blocker reasons.
+
+**How to apply:** Keep future preview fields within the requesting actor's visibility. Treat preview as advisory and independently revalidate the actual merge transaction.

@@ -4434,6 +4434,125 @@
             }
           }
         }
+      },
+      "PatientMergePreviewRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "sourceId",
+          "targetId"
+        ],
+        "properties": {
+          "sourceId": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "targetId": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          }
+        }
+      },
+      "PatientMergePreview": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "sourceId",
+          "targetId",
+          "sourceVersion",
+          "targetVersion",
+          "canMerge",
+          "blockers",
+          "references",
+          "requiresTransactionalRevalidation"
+        ],
+        "properties": {
+          "sourceId": {
+            "type": "integer"
+          },
+          "targetId": {
+            "type": "integer"
+          },
+          "sourceVersion": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "targetVersion": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "canMerge": {
+            "type": "boolean"
+          },
+          "blockers": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "enum": [
+                "MERGE_IDENTITY",
+                "MERGE_RESTRICTED"
+              ]
+            }
+          },
+          "references": {
+            "$ref": "#/components/schemas/PatientMergePreviewReferences"
+          },
+          "requiresTransactionalRevalidation": {
+            "type": "boolean",
+            "const": true
+          }
+        }
+      },
+      "PatientMergePreviewReferences": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "appointments",
+          "clinicalReferences",
+          "auditHistory"
+        ],
+        "properties": {
+          "appointments": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "sourceCount",
+              "targetCount",
+              "scope"
+            ],
+            "properties": {
+              "sourceCount": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "targetCount": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "scope": {
+                "type": "string",
+                "enum": [
+                  "current-actor"
+                ]
+              }
+            }
+          },
+          "clinicalReferences": {
+            "type": "string",
+            "enum": [
+              "withheld"
+            ]
+          },
+          "auditHistory": {
+            "type": "string",
+            "enum": [
+              "retained-on-source"
+            ]
+          }
+        }
       }
     },
     "responses": {
@@ -12380,6 +12499,129 @@
           },
           "500": {
             "$ref": "#/components/responses/ImportInternal"
+          }
+        }
+      }
+    },
+    "/patients/merge/preview": {
+      "post": {
+        "operationId": "previewPatientMerge",
+        "tags": [
+          "Patients"
+        ],
+        "x-roles": [
+          "doctor",
+          "front-desk"
+        ],
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfToken": []
+          }
+        ],
+        "description": "Read-only advisory snapshot for the selected source and survivor (targetId). Both must be authorized in the authenticated clinic; doctors additionally require trusted patient grants. No writes, audit entries, session refresh or reservations. Returns current versions, only current-clinic appointments (own doctor for doctors), and generic blockers without clinical details or cross-clinic counts. MERGE_RESTRICTED deliberately conceals whether consent, visibility, references, aliases or overlaps block the merge. Counts are NOT global totals. canMerge is advisory, never a guarantee: POST /patients/merge independently revalidates authorization, supplied versions and every safety check transactionally. Cache-Control: no-store.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PatientMergePreviewRequest"
+              },
+              "example": {
+                "sourceId": 900001,
+                "targetId": 900002
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Advisory preview, including blockers",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PatientMergePreview"
+                },
+                "example": {
+                  "sourceId": 900001,
+                  "targetId": 900002,
+                  "sourceVersion": 1,
+                  "targetVersion": 1,
+                  "canMerge": true,
+                  "blockers": [],
+                  "references": {
+                    "appointments": {
+                      "sourceCount": 0,
+                      "targetCount": 0,
+                      "scope": "current-actor"
+                    },
+                    "clinicalReferences": "withheld",
+                    "auditHistory": "retained-on-source"
+                  },
+                  "requiresTransactionalRevalidation": true
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                },
+                "example": {
+                  "code": "VALIDATION",
+                  "messageKey": "error.validation",
+                  "params": {}
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign in required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                },
+                "example": {
+                  "code": "UNAUTHORIZED",
+                  "messageKey": "error.unauthorized",
+                  "params": {}
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Role, session, device or CSRF denied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                },
+                "example": {
+                  "code": "FORBIDDEN",
+                  "messageKey": "error.forbidden",
+                  "params": {}
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Either selection absent or unauthorized; no partial preview",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                },
+                "example": {
+                  "code": "NOT_FOUND",
+                  "messageKey": "error.notFound",
+                  "params": {}
+                }
+              }
+            }
           }
         }
       }

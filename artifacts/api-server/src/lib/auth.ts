@@ -64,15 +64,17 @@ export async function verifyPin(userId: number, pin: string) {
   finally { client.release(); }
   if (error) { await audit("auth.pin.denied", userId); throw error; }
 }
-export const authenticate: RequestHandler = async (req, _res, next) => {
+const authentication = (readOnly: boolean): RequestHandler => async (req, _res, next) => {
   try {
     const credential = req.cookies?.[cookies.session];
     if (typeof credential !== "string" || credential.length > 100) throw unauthorized();
-    const { rows: [r] } = await pool.query(`UPDATE operational.auth_sessions s SET last_seen_at=now()
-      FROM operational.users u WHERE s.token_digest=$1 AND u.id=s.user_id AND s.revoked_at IS NULL
+    const { rows: [r] } = await pool.query(`${readOnly
+      ? "SELECT u.id,u.email,u.role,u.clinic_id,u.doctor_id,u.locale,u.theme,s.* FROM operational.auth_sessions s, operational.users u"
+      : "UPDATE operational.auth_sessions s SET last_seen_at=now() FROM operational.users u"}
+      WHERE s.token_digest=$1 AND u.id=s.user_id AND s.revoked_at IS NULL
       AND ((u.role='receptionist' AND s.device_id IS NOT NULL AND s.absolute_expires_at>now()) OR (u.role IN ('doctor','administrator') AND s.last_seen_at>now()-interval '30 minutes'))
       AND (s.device_id IS NULL OR EXISTS(SELECT 1 FROM operational.auth_devices a JOIN operational.devices d ON d.id=a.device_id WHERE a.device_id=s.device_id AND a.revoked_at IS NULL AND d.clinic_id=u.clinic_id))
-      RETURNING u.id,u.email,u.role,u.clinic_id,u.doctor_id,u.locale,u.theme,s.*`, [digest(credential)]);
+      ${readOnly ? "" : "RETURNING u.id,u.email,u.role,u.clinic_id,u.doctor_id,u.locale,u.theme,s.*"}`, [digest(credential)]);
     if (!r || !Object.hasOwn(roles, r.role)) throw unauthorized();
     if (r.device_id) {
       const d = await trustedDevice(req);
@@ -84,6 +86,9 @@ export const authenticate: RequestHandler = async (req, _res, next) => {
     next();
   } catch (e) { next(e); }
 };
+export const authenticate = authentication(false);
+/** Does not refresh the session or write audit state. */
+export const authenticateReadOnly = authentication(true);
 export const requireRoles = (...allowed: Role[]): RequestHandler => (req, _res, next) => {
   next(!req.auth ? unauthorized() : !allowed.includes(req.auth.role) ? forbidden() : undefined);
 };

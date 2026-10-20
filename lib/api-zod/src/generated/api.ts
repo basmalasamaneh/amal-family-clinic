@@ -2313,3 +2313,45 @@ export const DownloadImportReportResponse = zod.object({
 }).strict()
 
 
+/**
+ * Read-only advisory snapshot for the selected source and survivor (targetId). Both must be authorized in the authenticated clinic; doctors additionally require trusted patient grants. No writes, audit entries, session refresh or reservations. Returns current versions, only current-clinic appointments (own doctor for doctors), and generic blockers without clinical details or cross-clinic counts. MERGE_RESTRICTED deliberately conceals whether consent, visibility, references, aliases or overlaps block the merge. Counts are NOT global totals. canMerge is advisory, never a guarantee: POST /patients/merge independently revalidates authorization, supplied versions and every safety check transactionally. Cache-Control: no-store.
+ */
+export const previewPatientMergeBodySourceIdMax = 2147483647;
+
+export const previewPatientMergeBodyTargetIdMax = 2147483647;
+
+
+
+export const PreviewPatientMergeBody = zod.object({
+  "sourceId": zod.number().int().min(1).max(previewPatientMergeBodySourceIdMax),
+  "targetId": zod.number().int().min(1).max(previewPatientMergeBodyTargetIdMax)
+}).strict()
+
+
+
+export const previewPatientMergeResponseReferencesAppointmentsSourceCountMin = 0;
+
+export const previewPatientMergeResponseReferencesAppointmentsTargetCountMin = 0;
+
+
+
+export const PreviewPatientMergeResponse = zod.object({
+  "sourceId": zod.number().int(),
+  "targetId": zod.number().int(),
+  "sourceVersion": zod.number().int().min(1),
+  "targetVersion": zod.number().int().min(1),
+  "canMerge": zod.boolean(),
+  "blockers": zod.array(zod.enum(['MERGE_IDENTITY', 'MERGE_RESTRICTED'])),
+  "references": zod.object({
+  "appointments": zod.object({
+  "sourceCount": zod.number().int().min(previewPatientMergeResponseReferencesAppointmentsSourceCountMin),
+  "targetCount": zod.number().int().min(previewPatientMergeResponseReferencesAppointmentsTargetCountMin),
+  "scope": zod.enum(['current-actor'])
+}).strict(),
+  "clinicalReferences": zod.enum(['withheld']),
+  "auditHistory": zod.enum(['retained-on-source'])
+}).strict(),
+  "requiresTransactionalRevalidation": zod.literal(true)
+}).strict()
+
+

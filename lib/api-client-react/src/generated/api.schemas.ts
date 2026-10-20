@@ -1709,6 +1709,75 @@ export interface PatientMergeResult {
   mergedAt: string;
 }
 
+export interface PatientMergePreviewRequest {
+  /**
+     * @minimum 1
+     * @maximum 2147483647
+     */
+  sourceId: number;
+  /**
+     * @minimum 1
+     * @maximum 2147483647
+     */
+  targetId: number;
+}
+
+export type PatientMergePreviewBlockersItem = typeof PatientMergePreviewBlockersItem[keyof typeof PatientMergePreviewBlockersItem];
+
+
+export const PatientMergePreviewBlockersItem = {
+  MERGE_IDENTITY: 'MERGE_IDENTITY',
+  MERGE_RESTRICTED: 'MERGE_RESTRICTED',
+} as const;
+
+export type PatientMergePreviewReferencesAppointmentsScope = typeof PatientMergePreviewReferencesAppointmentsScope[keyof typeof PatientMergePreviewReferencesAppointmentsScope];
+
+
+export const PatientMergePreviewReferencesAppointmentsScope = {
+  'current-actor': 'current-actor',
+} as const;
+
+export type PatientMergePreviewReferencesClinicalReferences = typeof PatientMergePreviewReferencesClinicalReferences[keyof typeof PatientMergePreviewReferencesClinicalReferences];
+
+
+export const PatientMergePreviewReferencesClinicalReferences = {
+  withheld: 'withheld',
+} as const;
+
+export type PatientMergePreviewReferencesAuditHistory = typeof PatientMergePreviewReferencesAuditHistory[keyof typeof PatientMergePreviewReferencesAuditHistory];
+
+
+export const PatientMergePreviewReferencesAuditHistory = {
+  'retained-on-source': 'retained-on-source',
+} as const;
+
+export type PatientMergePreviewReferencesAppointments = {
+  /** @minimum 0 */
+  sourceCount: number;
+  /** @minimum 0 */
+  targetCount: number;
+  scope: PatientMergePreviewReferencesAppointmentsScope;
+};
+
+export interface PatientMergePreviewReferences {
+  appointments: PatientMergePreviewReferencesAppointments;
+  clinicalReferences: PatientMergePreviewReferencesClinicalReferences;
+  auditHistory: PatientMergePreviewReferencesAuditHistory;
+}
+
+export interface PatientMergePreview {
+  sourceId: number;
+  targetId: number;
+  /** @minimum 1 */
+  sourceVersion: number;
+  /** @minimum 1 */
+  targetVersion: number;
+  canMerge: boolean;
+  blockers: PatientMergePreviewBlockersItem[];
+  references: PatientMergePreviewReferences;
+  requiresTransactionalRevalidation: true;
+}
+
 /**
  * Invalid input or unsupported file format
  */

@@ -30,7 +30,7 @@ export function duplicateIdentity(row: Identity): string | null {
   const name = normalizeName(row.patient_name), phone = canonicalPhone(row.phone);
   return name && phone ? JSON.stringify([name, row.dob, phone]) : null;
 }
-async function currentActor(client: PoolClient, auth: Auth) {
+async function currentActor(client: PoolClient, auth: Auth, readOnly = false) {
   if (!["doctor", "front-desk"].includes(auth.role) || !auth.clinicId) throw forbidden();
   // Reauthorize after waiting for locks, including lost-response replays. Hold
   // actor/session/device locks until commit so revocations linearize with merge.
@@ -41,18 +41,18 @@ async function currentActor(client: PoolClient, auth: Auth) {
       AND ((u.role='receptionist' AND s.device_id IS NOT NULL AND s.absolute_expires_at>clock_timestamp())
         OR (u.role='doctor' AND s.last_seen_at>clock_timestamp()-interval '30 minutes'))
       AND s.device_id IS NOT DISTINCT FROM $6
-    FOR SHARE OF u,s`,
+    ${readOnly ? "" : "FOR SHARE OF u,s"}`,
   [auth.id, auth.clinicId, auth.role === "front-desk" ? "receptionist" : "doctor", auth.doctorId, auth.sessionDigest, auth.device?.id ?? null]);
   if (!row) throw forbidden();
   if (auth.device) {
     const { rowCount } = await client.query(`SELECT d.id FROM operational.devices d
       JOIN operational.auth_devices a ON a.device_id=d.id
-      WHERE d.id=$1 AND d.clinic_id=$2 AND a.revoked_at IS NULL FOR SHARE OF d,a`, [auth.device.id, auth.clinicId]);
+      WHERE d.id=$1 AND d.clinic_id=$2 AND a.revoked_at IS NULL ${readOnly ? "" : "FOR SHARE OF d,a"}`, [auth.device.id, auth.clinicId]);
     if (!rowCount) throw forbidden();
   }
   if (auth.role === "doctor") {
     const { rowCount } = await client.query(`SELECT doctor_id FROM operational.doctors
-      WHERE doctor_id=$1 AND clinic_id=$2 AND user_id=$3 FOR SHARE`, [auth.doctorId, auth.clinicId, auth.id]);
+      WHERE doctor_id=$1 AND clinic_id=$2 AND user_id=$3 ${readOnly ? "" : "FOR SHARE"}`, [auth.doctorId, auth.clinicId, auth.id]);
     if (!rowCount) throw forbidden();
   }
 }
@@ -140,12 +140,13 @@ const knownReferences = new Set([
   "patient_doctor_access.patient_id", "patient_merge_operations.source_id", "patient_merge_operations.target_id",
   "patient_merge_moves.source_id", "patient_merge_moves.target_id",
 ]);
-async function safeReferences(client: PoolClient, ids: number[]) {
+async function referenceBlockers(client: PoolClient, ids: number[]) {
+  const blockers: string[] = [];
   const { rows: refs } = await client.query(`SELECT n.nspname,t.relname,a.attname FROM pg_constraint c
     JOIN pg_class t ON t.oid=c.conrelid JOIN pg_namespace n ON n.oid=t.relnamespace
     JOIN pg_attribute a ON a.attrelid=t.oid AND a.attnum=ANY(c.conkey)
     WHERE c.contype='f' AND c.confrelid='operational.patients'::regclass`);
-  if (refs.some(r => r.nspname !== "operational" || !knownReferences.has(`${r.relname}.${r.attname}`))) throw unsafe("MERGE_UNKNOWN_REFERENCE");
+  if (refs.some(r => r.nspname !== "operational" || !knownReferences.has(`${r.relname}.${r.attname}`))) blockers.push("MERGE_UNKNOWN_REFERENCE");
   // Protect JSON reviews and historical mappings as well as direct FK columns.
   // No consent grant, denial, withdrawal or guardian evidence is reattributed.
   const { rows: [blocked] } = await client.query(`SELECT
@@ -159,8 +160,63 @@ async function safeReferences(client: PoolClient, ids: number[]) {
         OR jsonb_path_exists(s.payload,'$.**.patient_id ? (@ == $id)',jsonb_build_object('id',selected.patient_id)))) AS synced,
     EXISTS(SELECT 1 FROM operational.appointment_holds WHERE patient_id=ANY($1) AND expires_at>clock_timestamp()) AS held,
     EXISTS(SELECT 1 FROM operational.patients WHERE merged_into_id=ANY($1)) AS alias`, [ids]);
-  if (blocked.consent) throw unsafe("MERGE_CONSENT");
-  if (blocked.imported || blocked.synced || blocked.held || blocked.alias) throw unsafe();
+  if (blocked.consent) blockers.push("MERGE_CONSENT");
+  if (blocked.imported || blocked.synced || blocked.held || blocked.alias) blockers.push("MERGE_UNSAFE");
+  return blockers;
+}
+async function mergeBlockers(client: PoolClient, source: Patient, target: Patient) {
+  const blockers: string[] = [];
+  if (source.patient_id === target.patient_id || source.merged_into_id || target.merged_into_id) blockers.push("MERGE_UNSAFE");
+  const key = duplicateIdentity(source);
+  if (!key || key !== duplicateIdentity(target) || source.guardian_name !== target.guardian_name ||
+    source.guardian_relation !== target.guardian_relation) blockers.push("MERGE_IDENTITY");
+  if (await visibility(client, source) !== await visibility(client, target)) blockers.push("MERGE_VISIBILITY");
+  blockers.push(...await referenceBlockers(client, [source.patient_id, target.patient_id]));
+  const { rowCount } = await client.query(`SELECT 1 FROM operational.appointments a
+    JOIN operational.appointments b ON b.patient_id=$2 AND b.status IN ('booked','double_booked')
+      AND a.scheduled_at < b.scheduled_at+b.duration_minutes*interval '1 minute'
+      AND b.scheduled_at < a.scheduled_at+a.duration_minutes*interval '1 minute'
+    WHERE a.patient_id=$1 AND a.status IN ('booked','double_booked') LIMIT 1`, [source.patient_id, target.patient_id]);
+  if (rowCount) blockers.push("MERGE_PATIENT_OVERLAP");
+  return blockers;
+}
+
+export const mergePreviewInput = z.object({ sourceId: positive, targetId: positive }).strict();
+export async function previewPatientMerge(auth: Auth, raw: unknown) {
+  const input = mergePreviewInput.parse(raw);
+  const client = await pool.connect();
+  try {
+    // Consistent advisory snapshot, never a reservation or permission to merge.
+    // PostgreSQL itself prohibits writes, including accidental future writes.
+    await client.query("BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY");
+    await currentActor(client, auth, true);
+    const { rows } = await client.query<Patient>(`SELECT ${fields} FROM operational.patients p
+      WHERE ${scope(auth, true)} AND p.patient_id=ANY($3::integer[]) ORDER BY p.patient_id`,
+    [...scopeArgs(auth), [input.sourceId, input.targetId]]);
+    const source = rows.find(p => p.patient_id === input.sourceId), target = rows.find(p => p.patient_id === input.targetId);
+    if (!source || !target) throw fail(404, "NOT_FOUND", "notFound");
+    const internal = await mergeBlockers(client, source, target);
+    // Do not reveal the existence/type of hidden clinical evidence or overlaps.
+    const blockers = [...new Set(internal.map(code =>
+      code === "MERGE_IDENTITY" ? "MERGE_IDENTITY" as const : "MERGE_RESTRICTED" as const))];
+    const { rows: [counts] } = await client.query<{source: number; target: number}>(`SELECT
+      count(*) FILTER (WHERE patient_id=$1)::integer AS source,
+      count(*) FILTER (WHERE patient_id=$2)::integer AS target
+      FROM operational.appointments WHERE patient_id=ANY($3::integer[]) AND clinic_id=$4
+      AND ($5::integer IS NULL OR doctor_id=$5)`,
+    [source.patient_id, target.patient_id, [source.patient_id, target.patient_id], ...scopeArgs(auth)]);
+    const result = {
+      sourceId: source.patient_id, targetId: target.patient_id,
+      sourceVersion: source.version, targetVersion: target.version,
+      canMerge: blockers.length === 0, blockers,
+      references: { appointments: { sourceCount: counts!.source, targetCount: counts!.target, scope: "current-actor" as const },
+        clinicalReferences: "withheld" as const, auditHistory: "retained-on-source" as const },
+      requiresTransactionalRevalidation: true as const,
+    };
+    await client.query("COMMIT");
+    return result;
+  } catch (error) { await client.query("ROLLBACK"); throw error; }
+  finally { client.release(); }
 }
 export async function mergePatients(auth: Auth, raw: unknown) {
   const input = mergeInput.parse(raw);
@@ -183,18 +239,8 @@ export async function mergePatients(auth: Auth, raw: unknown) {
     }
     if (source.merged_into_id || target.merged_into_id) throw unsafe();
     if (source.version !== input.sourceVersion || target.version !== input.targetVersion) throw unsafe("MERGE_STALE");
-    const key = duplicateIdentity(source);
-    if (!key || key !== duplicateIdentity(target)) throw unsafe("MERGE_IDENTITY");
-    if (source.guardian_name !== target.guardian_name || source.guardian_relation !== target.guardian_relation) throw unsafe("MERGE_IDENTITY");
-    if (await visibility(client, source) !== await visibility(client, target)) throw unsafe("MERGE_VISIBILITY");
-    await safeReferences(client, [source.patient_id, target.patient_id]);
-    // Existing history is never dropped to resolve an unsafe patient collision.
-    const { rowCount: overlaps } = await client.query(`SELECT 1 FROM operational.appointments a
-      JOIN operational.appointments b ON b.patient_id=$2 AND b.status IN ('booked','double_booked')
-        AND a.scheduled_at < b.scheduled_at+b.duration_minutes*interval '1 minute'
-        AND b.scheduled_at < a.scheduled_at+a.duration_minutes*interval '1 minute'
-      WHERE a.patient_id=$1 AND a.status IN ('booked','double_booked') LIMIT 1`, [source.patient_id, target.patient_id]);
-    if (overlaps) throw unsafe("MERGE_PATIENT_OVERLAP");
+    const blockers = await mergeBlockers(client, source, target);
+    if (blockers.length) throw unsafe(blockers[0]);
     await client.query("SET CONSTRAINTS operational.alerts_visit_patient_fk,operational.notifications_appointment_patient_clinic_fk DEFERRED");
     for (const [table, pk] of [
       ["appointments", "appointment_id"], ["patient_visit_history", "visit_id"],

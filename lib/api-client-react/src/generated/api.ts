@@ -84,6 +84,8 @@ import type {
   PatientBasicPage,
   PatientDuplicates,
   PatientInput,
+  PatientMergePreview,
+  PatientMergePreviewRequest,
   PatientMergeRequest,
   PatientMergeResult,
   PatientProjection,
@@ -4171,4 +4173,89 @@ export function useDownloadImportReport<TData = Awaited<ReturnType<typeof downlo
 
 
 
+
+export const getPreviewPatientMergeUrl = () => {
+
+
+
+
+  return `/api/patients/merge/preview`
+}
+
+/**
+ * Read-only advisory snapshot for the selected source and survivor (targetId). Both must be authorized in the authenticated clinic; doctors additionally require trusted patient grants. No writes, audit entries, session refresh or reservations. Returns current versions, only current-clinic appointments (own doctor for doctors), and generic blockers without clinical details or cross-clinic counts. MERGE_RESTRICTED deliberately conceals whether consent, visibility, references, aliases or overlaps block the merge. Counts are NOT global totals. canMerge is advisory, never a guarantee: POST /patients/merge independently revalidates authorization, supplied versions and every safety check transactionally. Cache-Control: no-store.
+ */
+export const previewPatientMerge = async (patientMergePreviewRequest: PatientMergePreviewRequest, options?: Parameters<typeof customFetch>[1]): Promise<PatientMergePreview> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<PatientMergePreview>(getPreviewPatientMergeUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(patientMergePreviewRequest)
+  }
+);}
+
+
+
+
+
+export const getPreviewPatientMergeMutationKey = () => ['previewPatientMerge'] as const;
+
+export const getPreviewPatientMergeMutationOptions = <TError = ErrorType<ApiFailure>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof previewPatientMerge>>, TError,PreviewPatientMergeMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof previewPatientMerge>>, TError,PreviewPatientMergeMutationVariables, TContext> => {
+
+const mutationKey = getPreviewPatientMergeMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof previewPatientMerge>>, PreviewPatientMergeMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  previewPatientMerge(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PreviewPatientMergeMutationResult = NonNullable<Awaited<ReturnType<typeof previewPatientMerge>>>
+    export type PreviewPatientMergeMutationBody = BodyType<PatientMergePreviewRequest>
+    export type PreviewPatientMergeMutationError = ErrorType<ApiFailure>
+    export type PreviewPatientMergeMutationVariables = {data: BodyType<PatientMergePreviewRequest>}
+
+    export const usePreviewPatientMerge = <TError = ErrorType<ApiFailure>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof previewPatientMerge>>, TError,PreviewPatientMergeMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof previewPatientMerge>>,
+        TError,
+        PreviewPatientMergeMutationVariables,
+        TContext
+      > => {
+      return useMutation(getPreviewPatientMergeMutationOptions(options));
+    }
 
