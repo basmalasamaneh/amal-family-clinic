@@ -1,0 +1,14 @@
+import pg from "pg";
+import { readFile } from "node:fs/promises";
+
+// Development only: managed production migrations are applied by Publish.
+if (process.env.NODE_ENV === "production" || process.env.REPLIT_DEPLOYMENT === "1") throw new Error("Development migration prohibited in deployment");
+if (!process.env.DATABASE_URL) throw new Error("DATABASE_URL is required");
+const client = new pg.Client({ connectionString: process.env.DATABASE_URL });
+try {
+  await client.connect();
+  const { rows: [prerequisite] } = await client.query("SELECT to_regclass('operational.auth_sessions') IS NOT NULL AND to_regclass('operational.appointments') IS NOT NULL AS ready");
+  if (!prerequisite?.ready) throw new Error("Operational and auth prerequisites must already exist");
+  await client.query(await readFile(new URL("../../../lib/db/migrations/0003_appointments.sql", import.meta.url), "utf8"));
+  console.log("Appointments migration applied");
+} finally { await client.end(); }

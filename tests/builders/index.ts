@@ -124,7 +124,7 @@ export function createDemoBuilders(input: ClinicContext, initialOptions: Builder
     const row: OperationalAppointment = {
       scheduled_at: hebronInstant(asOf), booking_method: "amal_network", status: "booked",
       duration_minutes: 30, source_ref: null, client_op_id: null, conflict_state: "none",
-      created_at: stamp(), updated_at: stamp(), cancel_reason: null,
+      created_at: stamp(), updated_at: stamp(), cancel_reason: null, version: 1,
       ...structuredClone(options.appointment), ...structuredClone(overrides),
       appointment_id: id(), clinic_id: assignedDoctor.clinic_id, doctor_id: assignedDoctor.doctor_id,
       patient_id: assignedPatient.patient_id, created_by: null,

@@ -7,7 +7,8 @@ import { createMockServer } from "../src/mock/server.mjs";
 import * as generated from "../../../lib/api-zod/src/generated/api.ts";
 
 function requestFor(route, headers={}) {
-  let path=route.path.replaceAll("{id}","301");
+  let path=route.path;
+  for(const p of route.operation.parameters??[])if(p.in==="path")path=path.replaceAll(`{${p.name}}`,String(p.example));
   const search=new URLSearchParams();
   for(const p of route.operation.parameters??[])if(p.in==="query"&&p.required)search.set(p.name,String(p.example));
   if(search.size)path+=`?${search}`;
@@ -24,7 +25,7 @@ function assertResponse(route, response) {
 }
 test("OpenAPI validates and retains Api/health/base URL; Section 12 operation set complete",async()=>{
   const validated=await validateContract();
-  assert.equal(validated.operations,36);
+  assert.equal(validated.operations,mockOperations.length);
   assert.ok(validated.examples>=380);
   assert.equal(contract.info.title,"Api");
   assert.equal(contract.servers[0].url,"/api");
@@ -33,6 +34,7 @@ test("OpenAPI validates and retains Api/health/base URL; Section 12 operation se
     "/auth/login":["post"],"/auth/pin":["post"],"/auth/logout":["post"],"/me":["get"],
     "/clinics":["get","post"],"/clinics/{id}":["get","patch"],"/doctors":["get"],
     "/appointments":["get","post"],"/appointments/{id}":["patch"],"/appointments/check":["post"],
+    "/appointments/holds":["post"],"/appointments/holds/{token}":["delete"],
     "/patients":["get","post"],"/patients/{id}":["get"],"/network/lookup":["get"],
     "/patients/{id}/consent":["get","post"],"/consent/{id}/withdraw":["post"],
     "/sync/push":["post"],"/sync/pull":["get"],"/sync/conflicts":["get"],"/sync/resolve":["post"],
@@ -61,6 +63,7 @@ for(const route of mockOperations) {
   });
   test(`${route.operation.operationId}: all documented error examples and role matrix`,()=>{
     for(const [scenario,status] of Object.entries({validation:400,unauthorized:401,forbidden:403,missing:404,conflict:409,locked:423,"rate-limit":429,internal:500})) {
+      if(!route.operation.responses[status])continue;
       const response=dispatchMock(requestFor(route,{"x-mock-scenario":scenario}));
       assert.equal(response.status,status);
       assertResponse(route,response);

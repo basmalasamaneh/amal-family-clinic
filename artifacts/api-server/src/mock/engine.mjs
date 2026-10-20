@@ -98,9 +98,12 @@ export function dispatchMock({method="GET",url="/api/healthz",headers={},body}) 
   });
   if(id==="recordPatientConsent")result={...result,level:body.level,...(body.guardian?{guardian:body.guardian}:{})};
   if(id==="mergePatients")result={sourceId:body.sourceId,targetId:body.targetId,decision:body.decision==="merge"?"merged":"not-a-match",simulated:true};
-  if(id==="createAppointment")result={...result,...body};
+  if(id==="createAppointment") {
+    const {overrideReason,holdToken,...values}=body;
+    result={...result,...values};
+  }
   if(id==="updateAppointment") {
-    const {expectedVersion,...changes}=body;
+    const {expectedVersion,overrideReason,holdToken,cancelReason,...changes}=body;
     result={...result,...changes,id:Number(params.id),version:expectedVersion+1};
   }
   if(id==="createPatient")result={...result,name:body.name,dateOfBirth:body.dateOfBirth,phone:body.phone};

@@ -33,7 +33,12 @@ See [auth-contract-shapes.md](auth-contract-shapes.md) and
 [auth-security.md](auth-security.md) for the real authentication behavior.
 Device labels are localization keys, not user-entered names.
 
-**Contract and mocks only:** clinics, doctors, appointments, conflict preview,
+**Real appointment extension:** appointment listing, create/update/cancel,
+conflict preview and server-owned holds now use operational persistence. See
+[appointments.md](appointments.md) for scope, status, idempotency and hold rules.
+The explicit mock server remains stateless even for these routes.
+
+**Contract and mocks only:** clinics, doctors,
 patients, network lookup, consent, sync, imports, KPIs, audit browsing,
 network health, duplicates and merge. These are not registered as real
 business services by this work. The mock does not authenticate anyone,
@@ -137,7 +142,8 @@ Reception has an eight-hour absolute lifetime. Doctor/admin idle expiry is
 
 ## Domain integration semantics
 
-- `clientOpId` is an idempotency key scoped to authenticated clinic and operation.
+- Appointment `clientOpId` is a globally unique operation key bound to its
+  authenticated actor, authorized clinic and operation payload/target.
   Repeating the same payload returns the prior result; changing payload under
   the same key returns 409. Mutation responses are not optimistic server writes
   in mock mode. Appointment edits supply `expectedVersion`; stale writes conflict.
@@ -181,8 +187,8 @@ formatInTimeZone(apiInstant, "Asia/Hebron", "yyyy-MM-dd HH:mm");
 fromZonedTime(localDateTime, "Asia/Hebron").toISOString();
 ```
 
-No timestamp conversion is implemented here, so no new DST conversion test is
-claimed. Future input conversion must test DST gaps, overlaps and round trips.
+The original mock does not perform timestamp conversion. The operational
+appointment engine now tests DST gaps, overlaps, local dates and working windows.
 Never apply Asia/Hebron normalization twice to the seed instants. All six seed
 tables remain immutable; this code never imports the database package.
 

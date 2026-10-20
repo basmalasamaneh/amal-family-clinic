@@ -28,6 +28,7 @@ export const operationalAppointments = operational.table("appointments", {
   created_at: instant("created_at").notNull().defaultNow(),
   updated_at: instant("updated_at").notNull().defaultNow(),
   cancel_reason: text("cancel_reason"),
+  version: integer("version").notNull().default(1),
 }, (t) => [
   unique("appointments_id_patient_clinic_unique").on(t.appointment_id, t.patient_id, t.clinic_id),
   foreignKey({ name: "appointments_doctor_clinic_fk", columns: [t.doctor_id, t.clinic_id], foreignColumns: [operationalDoctors.doctor_id, operationalDoctors.clinic_id] }),

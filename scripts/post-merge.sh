@@ -10,3 +10,4 @@ pnpm --filter @workspace/scripts seed:verify
 # never populate or reset them automatically during merge/deployment.
 pnpm --filter @workspace/scripts operational:migrate
 pnpm --filter @workspace/api-server auth:migrate
+pnpm --filter @workspace/api-server appointments:migrate

@@ -3,7 +3,7 @@
   "info": {
     "title": "Api",
     "version": "0.2.0",
-    "description": "Amal Network Section 12. All domain services are contracts/mocks only in P1-02. UTC ISO instants, date-only DOB, Asia/Hebron display. Reception gets identity/coordination only; doctor Basic consent adds visit date/clinic/doctor, Clinical adds notes and alerts. No visit history for reception or admin. Lite clinics excluded from network. Network accesses audited. Withdrawal removes future network access, not existing lawful local records. Lists use opaque cursor plus limit (1–100, default 25); null nextCursor ends pagination."
+    "description": "Amal Network Section 12. Authentication and appointments are implemented; other domain services remain contracts/mocks. UTC ISO instants, date-only DOB, Asia/Hebron display. Reception gets identity/coordination only; doctor Basic consent adds visit date/clinic/doctor, Clinical adds notes and alerts. No visit history for reception or admin. Lite clinics excluded from network. Network accesses audited. Withdrawal removes future network access, not existing lawful local records. Lists use opaque cursor plus limit (1–100, default 25); null nextCursor ends pagination."
   },
   "servers": [
     {
@@ -35,19 +35,36 @@
       "ReceptionContext": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["clinic"],
+        "required": [
+          "clinic"
+        ],
         "properties": {
           "clinic": {
             "type": "object",
             "additionalProperties": false,
-            "required": ["id", "name"],
+            "required": [
+              "id",
+              "name"
+            ],
             "properties": {
-              "id": { "type": "integer", "minimum": 1 },
-              "name": { "type": "string" }
+              "id": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "name": {
+                "type": "string"
+              }
             }
           }
         },
-        "examples": [{ "clinic": { "id": 101, "name": "Synthetic demonstration clinic" } }]
+        "examples": [
+          {
+            "clinic": {
+              "id": 101,
+              "name": "Synthetic demonstration clinic"
+            }
+          }
+        ]
       },
       "HealthStatus": {
         "type": "object",
@@ -562,11 +579,13 @@
           },
           "startsAt": {
             "type": "string",
-            "format": "date-time"
+            "format": "date-time",
+            "description": "UTC ISO 8601 instant ending in Z; enforced by the appointment service before coercion."
           },
           "endsAt": {
             "type": "string",
-            "format": "date-time"
+            "format": "date-time",
+            "description": "UTC ISO 8601 instant ending in Z; enforced by the appointment service before coercion."
           },
           "source": {
             "type": "string",
@@ -576,6 +595,16 @@
               "online",
               "import"
             ]
+          },
+          "overrideReason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000,
+            "pattern": "\\S"
+          },
+          "holdToken": {
+            "type": "string",
+            "format": "uuid"
           }
         },
         "required": [
@@ -604,8 +633,10 @@
         "additionalProperties": false,
         "properties": {
           "clientOpId": {
-            "type": "string",
-            "format": "uuid"
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "clinicId": {
             "type": "integer",
@@ -628,13 +659,7 @@
             "format": "date-time"
           },
           "source": {
-            "type": "string",
-            "enum": [
-              "phone",
-              "walk-in",
-              "online",
-              "import"
-            ]
+            "type": "string"
           },
           "id": {
             "type": "integer",
@@ -644,8 +669,9 @@
             "type": "string",
             "enum": [
               "booked",
-              "arrived",
+              "double_booked",
               "completed",
+              "no_show",
               "cancelled"
             ]
           },
@@ -695,20 +721,39 @@
           },
           "startsAt": {
             "type": "string",
-            "format": "date-time"
+            "format": "date-time",
+            "description": "UTC ISO 8601 instant ending in Z; enforced by the appointment service before coercion."
           },
           "endsAt": {
             "type": "string",
-            "format": "date-time"
+            "format": "date-time",
+            "description": "UTC ISO 8601 instant ending in Z; enforced by the appointment service before coercion."
           },
           "status": {
             "type": "string",
             "enum": [
               "booked",
-              "arrived",
+              "double_booked",
               "completed",
+              "no_show",
               "cancelled"
             ]
+          },
+          "overrideReason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000,
+            "pattern": "\\S"
+          },
+          "holdToken": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "cancelReason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000,
+            "pattern": "\\S"
           }
         },
         "required": [
@@ -719,7 +764,7 @@
           {
             "clientOpId": "00000000-0000-4000-8000-000000000001",
             "expectedVersion": 1,
-            "status": "arrived"
+            "status": "completed"
           }
         ]
       },
@@ -732,32 +777,48 @@
             "enum": [
               "doctor-overlap",
               "patient-overlap",
-              "outside-hours"
+              "same-day-other-clinic",
+              "outside-hours",
+              "slot-held"
             ]
           },
           "with": {
-            "type": "object",
-            "additionalProperties": false,
-            "properties": {
-              "appointmentId": {
-                "type": "integer",
-                "minimum": 1
+            "oneOf": [
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "appointmentId": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "clinicId": {
+                    "type": "integer",
+                    "minimum": 1
+                  }
+                },
+                "required": [
+                  "appointmentId",
+                  "clinicId"
+                ],
+                "examples": [
+                  {
+                    "appointmentId": 402,
+                    "clinicId": 101
+                  }
+                ]
               },
-              "clinicId": {
-                "type": "integer",
-                "minimum": 1
+              {
+                "type": "null"
               }
-            },
-            "required": [
-              "appointmentId",
-              "clinicId"
             ]
           },
           "severity": {
             "type": "string",
             "enum": [
               "blocking",
-              "warning"
+              "warning",
+              "info"
             ]
           },
           "suggestedSlots": {
@@ -843,7 +904,8 @@
               }
             ]
           }
-        ]
+        ],
+        "description": "Exactly {ok, conflicts}. ok means committing is permitted by current rules, not a reservation. Blocking conflicts always prevent writes. Patient warnings require an authorized nonblank overrideReason. Information alone never blocks. Preview has no appointment/audit writes."
       },
       "ConsentInput": {
         "type": "object",
@@ -2966,6 +3028,169 @@
             "label": "device.syntheticReception"
           }
         ]
+      },
+      "AppointmentCheckInput": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "clientOpId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "clinicId": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "doctorId": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "patientId": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "startsAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "UTC ISO 8601 instant ending in Z; enforced by the appointment service before coercion."
+          },
+          "endsAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "UTC ISO 8601 instant ending in Z; enforced by the appointment service before coercion."
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "phone",
+              "walk-in",
+              "online",
+              "import"
+            ]
+          },
+          "overrideReason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000,
+            "pattern": "\\S"
+          },
+          "holdToken": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "appointmentId": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "expectedVersion": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "clinicId",
+          "doctorId",
+          "patientId",
+          "startsAt",
+          "endsAt",
+          "source"
+        ],
+        "examples": [
+          {
+            "clientOpId": "00000000-0000-4000-8000-000000000001",
+            "clinicId": 101,
+            "doctorId": 201,
+            "patientId": 301,
+            "startsAt": "2026-09-09T07:00:00Z",
+            "endsAt": "2026-09-09T07:15:00Z",
+            "source": "walk-in"
+          }
+        ]
+      },
+      "AppointmentHoldInput": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "clientOpId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "clinicId": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "doctorId": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "patientId": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "startsAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "UTC ISO 8601 instant ending in Z; enforced by the appointment service before coercion."
+          },
+          "endsAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "UTC ISO 8601 instant ending in Z; enforced by the appointment service before coercion."
+          },
+          "overrideReason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000,
+            "pattern": "\\S"
+          },
+          "appointmentId": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "clientOpId",
+          "clinicId",
+          "doctorId",
+          "patientId",
+          "startsAt",
+          "endsAt"
+        ],
+        "examples": [
+          {
+            "clientOpId": "00000000-0000-4000-8000-000000000001",
+            "clinicId": 101,
+            "doctorId": 201,
+            "patientId": 301,
+            "startsAt": "2026-09-09T07:00:00Z",
+            "endsAt": "2026-09-09T07:15:00Z"
+          }
+        ]
+      },
+      "AppointmentHold": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "token": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "UTC ISO 8601 instant ending in Z; enforced by the appointment service before coercion."
+          }
+        },
+        "required": [
+          "token",
+          "expiresAt"
+        ],
+        "examples": [
+          {
+            "token": "00000000-0000-4000-8000-000000000099",
+            "expiresAt": "2026-09-09T07:00:30Z"
+          }
+        ]
       }
     }
   },
@@ -2973,23 +3198,65 @@
     "/auth/device-context": {
       "get": {
         "operationId": "getReceptionContext",
-        "tags": ["auth"],
+        "tags": [
+          "auth"
+        ],
         "summary": "Trusted reception device clinic",
         "description": "Real pre-session endpoint. Requires the existing HttpOnly trusted-device cookie. Returns only its assigned clinic ID/name, never an account list, device credential, or clinic directory. Missing, forged and revoked devices receive the same 403. This grants no session or enrollment authority; PIN login still requires account email and four ASCII digits.",
-        "security": [{ "deviceCookie": [] }],
-        "x-roles": ["front-desk"],
+        "security": [
+          {
+            "deviceCookie": []
+          }
+        ],
+        "x-roles": [
+          "front-desk"
+        ],
         "responses": {
           "200": {
             "description": "Registered device clinic",
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ReceptionContext" }, "example": { "clinic": { "id": 101, "name": "Synthetic demonstration clinic" } } } }
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReceptionContext"
+                },
+                "example": {
+                  "clinic": {
+                    "id": 101,
+                    "name": "Synthetic demonstration clinic"
+                  }
+                }
+              }
+            }
           },
           "403": {
             "description": "Device untrusted; contact the clinic administrator",
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ApiFailure" }, "example": { "code": "DEVICE_UNTRUSTED", "messageKey": "error.deviceUntrusted", "params": {} } } }
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                },
+                "example": {
+                  "code": "DEVICE_UNTRUSTED",
+                  "messageKey": "error.deviceUntrusted",
+                  "params": {}
+                }
+              }
+            }
           },
           "500": {
             "description": "Server failure",
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ApiFailure" }, "example": { "code": "INTERNAL", "messageKey": "error.internal", "params": {} } } }
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                },
+                "example": {
+                  "code": "INTERNAL",
+                  "messageKey": "error.internal",
+                  "params": {}
+                }
+              }
+            }
           }
         }
       }
@@ -4078,7 +4345,7 @@
           "appointments"
         ],
         "summary": "list appointments",
-        "description": "Contract-only domain service; mock responses are simulated. Clinic scope comes from authenticated identity, not submitted identifiers. Admin has no implicit clinical access. Network visibility requires active consent and excludes Lite clinics. Mutations require CSRF; clientOpId is replay-safe per clinic, with changed payload returning 409.",
+        "description": "Operational appointments only. Doctor/front-desk within own clinic, doctor within own doctor scope. UTC instants, Asia/Hebron working hours. Cancel through PATCH status=cancelled; history is retained. All mutations require actor-bound clientOpId; edits require expectedVersion. See docs/appointments.md.",
         "security": [
           {
             "sessionCookie": []
@@ -4088,7 +4355,7 @@
           "doctor",
           "front-desk"
         ],
-        "x-implementation": "contract-only",
+        "x-implementation": "real",
         "parameters": [
           {
             "name": "clinicId",
@@ -4149,6 +4416,32 @@
               "maximum": 100
             },
             "example": 25
+          },
+          {
+            "name": "patientId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "example": 301
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "booked",
+                "double_booked",
+                "completed",
+                "no_show",
+                "cancelled"
+              ]
+            },
+            "example": "booked"
           }
         ],
         "responses": {
@@ -4254,6 +4547,21 @@
               }
             }
           },
+          "422": {
+            "description": "Invalid scheduling input or missing/invalid clinic settings",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                },
+                "example": {
+                  "code": "INVALID_CLINIC_SETTINGS",
+                  "messageKey": "error.invalidClinicSettings",
+                  "params": {}
+                }
+              }
+            }
+          },
           "423": {
             "description": "PIN_LOCKED",
             "content": {
@@ -4307,7 +4615,7 @@
           "appointments"
         ],
         "summary": "create appointment",
-        "description": "Contract-only domain service; mock responses are simulated. Clinic scope comes from authenticated identity, not submitted identifiers. Admin has no implicit clinical access. Network visibility requires active consent and excludes Lite clinics. Mutations require CSRF; clientOpId is replay-safe per clinic, with changed payload returning 409.",
+        "description": "Operational appointments only. Doctor/front-desk within own clinic, doctor within own doctor scope. UTC instants, Asia/Hebron working hours. Cancel through PATCH status=cancelled; history is retained. All mutations require actor-bound clientOpId; edits require expectedVersion. See docs/appointments.md.",
         "security": [
           {
             "sessionCookie": [],
@@ -4318,7 +4626,7 @@
           "doctor",
           "front-desk"
         ],
-        "x-implementation": "contract-only",
+        "x-implementation": "real",
         "parameters": [
           {
             "name": "X-CSRF-Token",
@@ -4428,6 +4736,21 @@
               }
             }
           },
+          "422": {
+            "description": "Invalid scheduling input or missing/invalid clinic settings",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                },
+                "example": {
+                  "code": "INVALID_CLINIC_SETTINGS",
+                  "messageKey": "error.invalidClinicSettings",
+                  "params": {}
+                }
+              }
+            }
+          },
           "423": {
             "description": "PIN_LOCKED",
             "content": {
@@ -4502,7 +4825,7 @@
           "appointments"
         ],
         "summary": "update appointment",
-        "description": "Contract-only domain service; mock responses are simulated. Clinic scope comes from authenticated identity, not submitted identifiers. Admin has no implicit clinical access. Network visibility requires active consent and excludes Lite clinics. Mutations require CSRF; clientOpId is replay-safe per clinic, with changed payload returning 409.",
+        "description": "Operational appointments only. Doctor/front-desk within own clinic, doctor within own doctor scope. UTC instants, Asia/Hebron working hours. Cancel through PATCH status=cancelled; history is retained. All mutations require actor-bound clientOpId; edits require expectedVersion. See docs/appointments.md.",
         "security": [
           {
             "sessionCookie": [],
@@ -4513,7 +4836,7 @@
           "doctor",
           "front-desk"
         ],
-        "x-implementation": "contract-only",
+        "x-implementation": "real",
         "parameters": [
           {
             "name": "id",
@@ -4633,6 +4956,21 @@
               }
             }
           },
+          "422": {
+            "description": "Invalid scheduling input or missing/invalid clinic settings",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                },
+                "example": {
+                  "code": "INVALID_CLINIC_SETTINGS",
+                  "messageKey": "error.invalidClinicSettings",
+                  "params": {}
+                }
+              }
+            }
+          },
           "423": {
             "description": "PIN_LOCKED",
             "content": {
@@ -4689,7 +5027,7 @@
               "example": {
                 "clientOpId": "00000000-0000-4000-8000-000000000001",
                 "expectedVersion": 1,
-                "status": "arrived"
+                "status": "completed"
               }
             }
           }
@@ -4703,7 +5041,7 @@
           "appointments"
         ],
         "summary": "check appointments",
-        "description": "Contract-only domain service; mock responses are simulated. Clinic scope comes from authenticated identity, not submitted identifiers. Admin has no implicit clinical access. Network visibility requires active consent and excludes Lite clinics. Mutations require CSRF; clientOpId is replay-safe per clinic, with changed payload returning 409.",
+        "description": "Operational appointments only. Doctor/front-desk within own clinic, doctor within own doctor scope. UTC instants, Asia/Hebron working hours. Cancel through PATCH status=cancelled; history is retained. All mutations require actor-bound clientOpId; edits require expectedVersion. See docs/appointments.md.",
         "security": [
           {
             "sessionCookie": [],
@@ -4714,7 +5052,7 @@
           "doctor",
           "front-desk"
         ],
-        "x-implementation": "contract-only",
+        "x-implementation": "real",
         "parameters": [
           {
             "name": "X-CSRF-Token",
@@ -4831,6 +5169,21 @@
               }
             }
           },
+          "422": {
+            "description": "Invalid scheduling input or missing/invalid clinic settings",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                },
+                "example": {
+                  "code": "INVALID_CLINIC_SETTINGS",
+                  "messageKey": "error.invalidClinicSettings",
+                  "params": {}
+                }
+              }
+            }
+          },
           "423": {
             "description": "PIN_LOCKED",
             "content": {
@@ -4882,7 +5235,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/AppointmentInput"
+                "$ref": "#/components/schemas/AppointmentCheckInput"
               },
               "example": {
                 "clientOpId": "00000000-0000-4000-8000-000000000001",
@@ -10391,6 +10744,383 @@
                   "messageKey": "error.internal",
                   "params": {}
                 }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/appointments/holds": {
+      "post": {
+        "operationId": "acquireAppointmentHold",
+        "tags": [
+          "appointments"
+        ],
+        "summary": "create appointment",
+        "description": "Acquire an exact owner/doctor/clinic/interval hold for 30 server-timed seconds. No renewal; retrying clientOpId returns original token and expiry. Booking always rechecks. No appointment or override audit writes.",
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfToken": []
+          }
+        ],
+        "x-roles": [
+          "doctor",
+          "front-desk"
+        ],
+        "x-implementation": "real",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppointmentHold"
+                },
+                "example": {
+                  "token": "00000000-0000-4000-8000-000000000099",
+                  "expiresAt": "2026-09-09T07:00:30Z"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "VALIDATION",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                },
+                "example": {
+                  "code": "VALIDATION",
+                  "messageKey": "error.validation",
+                  "params": {}
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHORIZED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                },
+                "example": {
+                  "code": "UNAUTHORIZED",
+                  "messageKey": "error.unauthorized",
+                  "params": {}
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                },
+                "example": {
+                  "code": "FORBIDDEN",
+                  "messageKey": "error.forbidden",
+                  "params": {}
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                },
+                "example": {
+                  "code": "NOT_FOUND",
+                  "messageKey": "error.notFound",
+                  "params": {}
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "CONFLICT",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                },
+                "example": {
+                  "code": "CONFLICT",
+                  "messageKey": "error.conflict",
+                  "params": {}
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid scheduling input or missing/invalid clinic settings",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                },
+                "example": {
+                  "code": "INVALID_CLINIC_SETTINGS",
+                  "messageKey": "error.invalidClinicSettings",
+                  "params": {}
+                }
+              }
+            }
+          },
+          "423": {
+            "description": "PIN_LOCKED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                },
+                "example": {
+                  "code": "PIN_LOCKED",
+                  "messageKey": "error.pinLocked",
+                  "params": {}
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "RATE_LIMITED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                },
+                "example": {
+                  "code": "RATE_LIMITED",
+                  "messageKey": "error.rateLimited",
+                  "params": {}
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "INTERNAL",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                },
+                "example": {
+                  "code": "INTERNAL",
+                  "messageKey": "error.internal",
+                  "params": {}
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AppointmentHoldInput"
+              },
+              "example": {
+                "clientOpId": "00000000-0000-4000-8000-000000000001",
+                "clinicId": 101,
+                "doctorId": 201,
+                "patientId": 301,
+                "startsAt": "2026-09-09T07:00:00Z",
+                "endsAt": "2026-09-09T07:15:00Z"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/appointments/holds/{token}": {
+      "delete": {
+        "operationId": "releaseAppointmentHold",
+        "tags": [
+          "appointments"
+        ],
+        "summary": "create appointment",
+        "description": "Release an owned hold using clientOpId. Another owner cannot release it. Expiry requires no cleanup job.",
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfToken": []
+          }
+        ],
+        "x-roles": [
+          "doctor",
+          "front-desk"
+        ],
+        "x-implementation": "real",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "example": "00000000-0000-4000-8000-000000000099"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Released (idempotent)"
+          },
+          "400": {
+            "description": "VALIDATION",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                },
+                "example": {
+                  "code": "VALIDATION",
+                  "messageKey": "error.validation",
+                  "params": {}
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHORIZED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                },
+                "example": {
+                  "code": "UNAUTHORIZED",
+                  "messageKey": "error.unauthorized",
+                  "params": {}
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                },
+                "example": {
+                  "code": "FORBIDDEN",
+                  "messageKey": "error.forbidden",
+                  "params": {}
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                },
+                "example": {
+                  "code": "NOT_FOUND",
+                  "messageKey": "error.notFound",
+                  "params": {}
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "CONFLICT",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                },
+                "example": {
+                  "code": "CONFLICT",
+                  "messageKey": "error.conflict",
+                  "params": {}
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid scheduling input or missing/invalid clinic settings",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                },
+                "example": {
+                  "code": "INVALID_CLINIC_SETTINGS",
+                  "messageKey": "error.invalidClinicSettings",
+                  "params": {}
+                }
+              }
+            }
+          },
+          "423": {
+            "description": "PIN_LOCKED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                },
+                "example": {
+                  "code": "PIN_LOCKED",
+                  "messageKey": "error.pinLocked",
+                  "params": {}
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "RATE_LIMITED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                },
+                "example": {
+                  "code": "RATE_LIMITED",
+                  "messageKey": "error.rateLimited",
+                  "params": {}
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "INTERNAL",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                },
+                "example": {
+                  "code": "INTERNAL",
+                  "messageKey": "error.internal",
+                  "params": {}
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OperationInput"
+              },
+              "example": {
+                "clientOpId": "00000000-0000-4000-8000-000000000001"
               }
             }
           }
