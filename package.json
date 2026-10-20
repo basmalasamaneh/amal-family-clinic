@@ -10,6 +10,7 @@
     "typecheck:harness": "tsc -p tests/tsconfig.json --noEmit",
     "test": "vitest run --config vitest.config.mts",
     "e2e": "playwright test --config playwright.config.ts",
+    "test:booking": "playwright test --config artifacts/amal-network/playwright.booking.config.ts",
     "test:a11y": "pnpm run e2e --grep @axe",
     "test:screenshots": "pnpm run e2e --grep @screenshot",
     "test:screenshots:update": "pnpm run test:screenshots --update-snapshots"

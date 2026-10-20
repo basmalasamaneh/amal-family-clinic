@@ -60,7 +60,6 @@ export function AppointmentCard({ appt, doctor, showDoctor, compact }: { appt: C
       onClick={() => cancellation?.open(appt)}
       disabled={pending}
       className={`cal-card cal-card--${status ?? 'unknown'}${compact ? ' cal-card--compact' : ''}`}
-      aria-label={t('calendar.card.aria', { name, start, end, status: statusLabel, doctor: doctorName })}
       data-testid={`card-appointment-${appt.id}`}
     >
       <span className="cal-card__time"><bdi>{start}</bdi>–<bdi>{end}</bdi><span className="cal-card__dur">{Number.isFinite(mins) && mins > 0 ? t('calendar.card.minutes', { n: formatNum(mins, digitPreference) }) : ''}</span></span>

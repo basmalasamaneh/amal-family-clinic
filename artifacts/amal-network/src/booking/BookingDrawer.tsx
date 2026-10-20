@@ -266,14 +266,14 @@ export function BookingDrawer({ clinic, ctx, title, scheduling, patients, api, o
         <Dialog.Overlay className="bk-overlay" />
         <Dialog.Content className="bk-drawer" onCloseAutoFocus={(e) => e.preventDefault()} data-testid="drawer-booking" data-source={source} aria-describedby="bk-stage-desc"
           onInteractOutside={(e) => { if (submitting) e.preventDefault(); }} onEscapeKeyDown={(e) => { if (submitting) e.preventDefault(); }}>
-          <header className="bk-head">
+          <div className="bk-head">
             <div className="bk-head__txt">
               <p className="bk-eyebrow"><bdi>{clinic.name}</bdi> · {walkIn ? t('bk.srcWalkIn') : t('bk.srcPhone')}</p>
               <Dialog.Title className="bk-title"><Icon size={26} aria-hidden="true" />{walkIn ? t('bk.walkInTitle') : title}</Dialog.Title>
             </div>
             {!walkIn && !submitting && <WalkInHandoff testId="button-drawer-walkin" context={{ clinicId: clinic.id, patient, doctorId }} />}
             <Dialog.Close className="bk-x" aria-label={t('bk.close')} disabled={submitting} data-testid="button-close-booking"><X size={22} aria-hidden="true" /></Dialog.Close>
-          </header>
+          </div>
           <ol className="bk-steps" aria-label={t('bk.stepsLabel')}>
             {steps.map((s, i) => (
               <li key={s} className={'bk-step' + (i === stage ? ' is-current' : i < stage ? ' is-done' : '')} aria-current={i === stage ? 'step' : undefined}>

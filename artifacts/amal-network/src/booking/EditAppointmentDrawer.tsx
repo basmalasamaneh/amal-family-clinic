@@ -243,13 +243,13 @@ export function EditAppointmentDrawer({ target, clinicName, onClose, api = realE
         <Dialog.Content className="bk-drawer" data-testid="drawer-edit-appointment" aria-describedby={undefined} onCloseAutoFocus={(e) => e.preventDefault()}
           onInteractOutside={(e) => { if (submitting || uncertain) { e.preventDefault(); if (uncertain) setCloseBlocked(true); } }}
           onEscapeKeyDown={(e) => { if (submitting || uncertain) { e.preventDefault(); if (uncertain) setCloseBlocked(true); } }}>
-          <header className="bk-head">
+          <div className="bk-head">
             <div className="bk-head__txt">
               <p className="bk-eyebrow"><bdi>{clinicName}</bdi> · {t('ed.eyebrow', { id: target.id })}</p>
               <Dialog.Title className="bk-title"><CalendarClock size={26} aria-hidden="true" />{t('ed.title')}</Dialog.Title>
             </div>
             <button type="button" className="bk-x" aria-label={t('ed.close')} disabled={submitting} onClick={requestClose} data-testid="button-close-edit"><X size={22} aria-hidden="true" /></button>
-          </header>
+          </div>
           <div className="bk-body">
             {!online && <Msg tone="warn" icon={WifiOff} testId="status-edit-offline">{t('ed.offline')}</Msg>}
             {authLost && <Msg tone="block" icon={Lock} testId="status-edit-auth">{t('ed.authLost')}</Msg>}
