@@ -17,3 +17,4 @@
 - [Clinical authority](clinical-authority.md) — clinic demographics do not imply doctor ownership; consent readers and writers need cross-instance ordering.
 - [Source-note extraction](alert-conservatism.md) — uncertain clause scope favors suppression, not inferred clinical claims.
 - [Assisted patient history](assisted-patient-history.md) — approved staff-assisted patient requests, not patient accounts or general reception audit access.
+- [Import and merge authority](import-merge-boundaries.md) — filenames cannot reset event identity; exact demographics cannot transfer consent or visibility rights.

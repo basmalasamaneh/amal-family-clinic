@@ -1,0 +1,36 @@
+/** Report dictionary keys match row issues/conflicts; clients can reuse these keys
+ * in their own i18n bundles without treating source text as a translation key. */
+export const importMessages = {
+  en: {
+    "import.INVALID_COLUMNS": "Use exactly event_id, doctor_email, patient_name_typed, start_time, end_time and event_status. Check field types.",
+    "import.MISSING_DOCTOR": "Select an authorized operational doctor; no email match was found.",
+    "import.AMBIGUOUS_DOCTOR": "More than one doctor matches this email. Explicitly select an authorized doctor.",
+    "import.DOCTOR_OUT_OF_SCOPE": "The source doctor is outside your scope. Remap to an authorized doctor or skip this row.",
+    "import.UNSUPPORTED_STATUS": "Use confirmed, completed or cancelled; otherwise skip this source row.",
+    "import.INVALID_LOCAL_TIME": "Enter a real, unambiguous Asia/Hebron local date and time without an offset.",
+    "import.AMBIGUOUS_LOCAL_TIME": "This Asia/Hebron clock reading occurs twice. Reschedule to an unambiguous local time.",
+    "import.INVALID_INTERVAL": "End must follow start by a whole number of minutes, between 1 and 1440 minutes.",
+    "import.doctor-overlap": "Doctor time overlaps another active appointment. Reschedule, associate an exact reviewed match, or skip.",
+    "import.patient-overlap": "Patient has an overlapping active appointment. Record an authorized warning acknowledgement or reschedule.",
+    "import.same-day-other-clinic": "Patient has another appointment on this Hebron date.",
+    "import.outside-hours": "The interval is outside clinic working hours. Reschedule or skip.",
+    "import.slot-held": "Another booking holds this doctor interval. Wait and recheck, reschedule or skip.",
+    "import.doctor-time-coincidence": "Doctor and start time coincide with an existing appointment; this is not proof of patient identity or permission to deduplicate.",
+  },
+  ar: {
+    "import.INVALID_COLUMNS": "استخدم فقط event_id وdoctor_email وpatient_name_typed وstart_time وend_time وevent_status وتحقق من أنواع القيم.",
+    "import.MISSING_DOCTOR": "اختر طبيبًا مصرحًا لك بالوصول إليه؛ لم تتم مطابقة البريد الإلكتروني.",
+    "import.AMBIGUOUS_DOCTOR": "يطابق البريد أكثر من طبيب. اختر طبيبًا مصرحًا به صراحة.",
+    "import.DOCTOR_OUT_OF_SCOPE": "طبيب المصدر خارج نطاق صلاحيتك. اختر طبيبًا مصرحًا به أو تخطّ السطر.",
+    "import.UNSUPPORTED_STATUS": "استخدم confirmed أو completed أو cancelled، أو تخطّ سطر المصدر.",
+    "import.INVALID_LOCAL_TIME": "أدخل تاريخًا ووقتًا محليًا صالحًا وغير ملتبس في Asia/Hebron دون إزاحة زمنية.",
+    "import.AMBIGUOUS_LOCAL_TIME": "يتكرر هذا الوقت المحلي مرتين. أعد الجدولة إلى وقت غير ملتبس.",
+    "import.INVALID_INTERVAL": "يجب أن تكون النهاية بعد البداية بعدد صحيح من الدقائق بين 1 و1440.",
+    "import.doctor-overlap": "يتداخل الوقت مع موعد نشط للطبيب. أعد الجدولة أو اربط تطابقًا تامًا تمت مراجعته أو تخطّ السطر.",
+    "import.patient-overlap": "للمريض موعد نشط متداخل. سجّل سببًا مصرحًا لقبول التحذير أو أعد الجدولة.",
+    "import.same-day-other-clinic": "للمريض موعد آخر في هذا اليوم بتوقيت الخليل.",
+    "import.outside-hours": "الفترة خارج ساعات عمل العيادة. أعد الجدولة أو تخطّ السطر.",
+    "import.slot-held": "هناك حجز مؤقت لهذه الفترة. انتظر وأعد التحقق أو أعد الجدولة أو تخطّ السطر.",
+    "import.doctor-time-coincidence": "يتطابق الطبيب ووقت البداية مع موعد موجود؛ هذا لا يثبت هوية المريض ولا يسمح بإزالة التكرار تلقائيًا.",
+  },
+};

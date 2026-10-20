@@ -75,6 +75,7 @@ export function createDemoBuilders(input: ClinicContext, initialOptions: Builder
     const patient_name = values.patient_name ?? `Synthetic patient ${patient_id}`;
     if ((values.guardian_name == null) !== (values.guardian_relation == null)) throw new Error("Guardian details must be paired");
     const row: OperationalPatient = {
+      version: 1,
       created_clinic_id: null,
       patient_name, phone: `000${patient_id}`, dob, minor_as_of,
       name_normalized: normalize(patient_name), guardian_name: null, guardian_relation: null,
@@ -241,6 +242,7 @@ export function createDemoBuilders(input: ClinicContext, initialOptions: Builder
     const assignedDoctor = doctor(context.sourceClinic);
     const people = [patient(), patient(), patient()];
     const batch: OperationalImportBatch = {
+      version: 1, owner_id: null, owner_doctor_id: null, committed_at: null, report: null,
       id: id(), fixture_key: "test.calendar.batch", clinic_id: context.sourceClinic.clinic_id,
       source_name: overrides.sourceName ?? "synthetic_calendar_export",
       source_checksum: "synthetic-in-memory-not-a-workbook-checksum", status: "review_required", created_at: stamp(),
@@ -251,6 +253,7 @@ export function createDemoBuilders(input: ClinicContext, initialOptions: Builder
       const time = `${String(8 + slot % 4).padStart(2, "0")}:00`;
       return {
       id: id(), batch_id: batch.id, source_event_id: i + 1,
+      staging: {},
       source_payload: {
         event_id: i + 1, patient_name: i < 3 ? people[i]!.patient_name : `Synthetic unmatched export person ${i + 1}`,
         doctor_email: assignedDoctor.email,

@@ -6,11 +6,32 @@
  * OpenAPI spec version: 0.2.0
  */
 
-export type ImportMappingDecisionsItemDecision = typeof ImportMappingDecisionsItemDecision[keyof typeof ImportMappingDecisionsItemDecision];
-
-
-export const ImportMappingDecisionsItemDecision = {
-  link: 'link',
-  'new-patient': 'new-patient',
-  skip: 'skip',
-} as const;
+export interface PatientMergeRequest {
+  /**
+     * @minimum 1
+     * @maximum 2147483647
+     */
+  sourceId: number;
+  /**
+     * @minimum 1
+     * @maximum 2147483647
+     */
+  targetId: number;
+  /**
+     * @minimum 1
+     * @maximum 2147483647
+     */
+  sourceVersion: number;
+  /**
+     * @minimum 1
+     * @maximum 2147483647
+     */
+  targetVersion: number;
+  confirmed: true;
+  /**
+     * @minLength 1
+     * @maxLength 1000
+     */
+  reason: string;
+  clientOpId: string;
+}

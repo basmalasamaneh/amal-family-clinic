@@ -51,6 +51,9 @@ app.use(
   }),
 );
 app.use(cors({ origin: origins, credentials: true, allowedHeaders: ["Content-Type", "X-CSRF-Token"], methods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"] }));
+// The calendar-export adapter has its own bounded 100-row upload contract.
+// Keep all other API payload limits unchanged.
+app.use("/api/import/upload", express.json({ limit: "128kb" }));
 app.use(express.json({ limit: "32kb" }));
 app.use(cookieParser());
 

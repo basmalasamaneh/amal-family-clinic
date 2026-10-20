@@ -43,16 +43,27 @@ import type {
   DoctorDay,
   DoctorPage,
   DoctorPrivacy,
-  DuplicateCandidatePage,
+  DownloadImportReportParams,
   GetAppointmentAvailabilityParams,
   GetDoctorDayParams,
   GetKpisParams,
   HealthStatus,
   Identity,
-  ImportCommitResult,
-  ImportMapping,
-  ImportReview,
-  ImportUploadInput,
+  ImportBatch,
+  ImportCommit,
+  ImportConflictFailureResponse,
+  ImportForbiddenResponse,
+  ImportInternalResponse,
+  ImportInvalidRowResponse,
+  ImportLockedResponse,
+  ImportMap,
+  ImportNotFoundResponse,
+  ImportRateLimitResponse,
+  ImportReport,
+  ImportTooLargeResponse,
+  ImportUnauthorizedResponse,
+  ImportUpload,
+  ImportValidationResponse,
   KpiResult,
   ListAppointmentsParams,
   ListClinicsParams,
@@ -62,8 +73,6 @@ import type {
   ListPatientsParams,
   ListSyncConflictsParams,
   LookupNetworkParams,
-  MergeInput,
-  MergeResult,
   NetworkHealth,
   NetworkPatient,
   NetworkPatientPage,
@@ -73,7 +82,10 @@ import type {
   PatientAccessHistoryPage,
   PatientBasic,
   PatientBasicPage,
+  PatientDuplicates,
   PatientInput,
+  PatientMergeRequest,
+  PatientMergeResult,
   PatientProjection,
   PatientUpdate,
   PinCredentials,
@@ -2343,10 +2355,9 @@ export const getUploadImportUrl = () => {
 }
 
 /**
- * Contract-only domain service; mock responses are simulated. Clinic scope comes from authenticated identity, not submitted identifiers. Admin has no implicit clinical access. Network visibility requires active consent and excludes Lite clinics. Mutations require CSRF; clientOpId is replay-safe per clinic, with changed payload returning 409. Every source row requires explicit human identity review. Name matches are suggestions only, never links. 24-row fixture has three suggestions and 24 pending reviews. Commit rejects outstanding reviews with 409 REVIEW_REQUIRED; approved link requires patientId, new-patient requires separate patient creation, skip is explicit. No automatic linkage.
- * @summary upload import
+ * Stage immutable calendar_app_export with source=seed, or JSON rows in its exact six-column format. JSON times are Asia/Hebron wall-clock yyyy-MM-ddTHH:mm:ss without offset; seed instants are already UTC. Maximum 100 rows and 128 KiB. Invalid raw rows are retained with per-row errors. The fixed calendar_app_export adapter namespace and event_id identify source events independently of filenames. No clinical writes.
  */
-export const uploadImport = async (importUploadInput: ImportUploadInput, options?: Parameters<typeof customFetch>[1]): Promise<ImportReview> => {
+export const uploadImport = async (importUpload: ImportUpload, options?: Parameters<typeof customFetch>[1]): Promise<ImportBatch> => {
 
     const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
@@ -2362,12 +2373,12 @@ export const uploadImport = async (importUploadInput: ImportUploadInput, options
     }
     return headers;
   };
-return customFetch<ImportReview>(getUploadImportUrl(),
+return customFetch<ImportBatch>(getUploadImportUrl(),
   {
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
-    body: JSON.stringify(importUploadInput)
+    body: JSON.stringify(importUpload)
   }
 );}
 
@@ -2377,7 +2388,7 @@ return customFetch<ImportReview>(getUploadImportUrl(),
 
 export const getUploadImportMutationKey = () => ['uploadImport'] as const;
 
-export const getUploadImportMutationOptions = <TError = ErrorType<ApiFailure>,
+export const getUploadImportMutationOptions = <TError = ErrorType<ImportValidationResponse | ImportUnauthorizedResponse | ImportForbiddenResponse | ImportNotFoundResponse | ImportConflictFailureResponse | ImportTooLargeResponse | ImportInvalidRowResponse | ImportLockedResponse | ImportRateLimitResponse | ImportInternalResponse>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof uploadImport>>, TError,UploadImportMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
 ): UseMutationOptions<Awaited<ReturnType<typeof uploadImport>>, TError,UploadImportMutationVariables, TContext> => {
 
@@ -2405,14 +2416,11 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type UploadImportMutationResult = NonNullable<Awaited<ReturnType<typeof uploadImport>>>
-    export type UploadImportMutationBody = BodyType<ImportUploadInput>
-    export type UploadImportMutationError = ErrorType<ApiFailure>
-    export type UploadImportMutationVariables = {data: BodyType<ImportUploadInput>}
+    export type UploadImportMutationBody = BodyType<ImportUpload>
+    export type UploadImportMutationError = ErrorType<ImportValidationResponse | ImportUnauthorizedResponse | ImportForbiddenResponse | ImportNotFoundResponse | ImportConflictFailureResponse | ImportTooLargeResponse | ImportInvalidRowResponse | ImportLockedResponse | ImportRateLimitResponse | ImportInternalResponse>
+    export type UploadImportMutationVariables = {data: BodyType<ImportUpload>}
 
-    /**
- * @summary upload import
- */
-export const useUploadImport = <TError = ErrorType<ApiFailure>,
+    export const useUploadImport = <TError = ErrorType<ImportValidationResponse | ImportUnauthorizedResponse | ImportForbiddenResponse | ImportNotFoundResponse | ImportConflictFailureResponse | ImportTooLargeResponse | ImportInvalidRowResponse | ImportLockedResponse | ImportRateLimitResponse | ImportInternalResponse>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof uploadImport>>, TError,UploadImportMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof uploadImport>>,
@@ -2432,11 +2440,10 @@ export const getMapImportUrl = (id: number,) => {
 }
 
 /**
- * Contract-only domain service; mock responses are simulated. Clinic scope comes from authenticated identity, not submitted identifiers. Admin has no implicit clinical access. Network visibility requires active consent and excludes Lite clinics. Mutations require CSRF; clientOpId is replay-safe per clinic, with changed payload returning 409. Every source row requires explicit human identity review. Name matches are suggestions only, never links. 24-row fixture has three suggestions and 24 pending reviews. Commit rejects outstanding reviews with 409 REVIEW_REQUIRED; approved link requires patientId, new-patient requires separate patient creation, skip is explicit. No automatic linkage.
- * @summary map import
+ * Replace review for supplied rows. Every included replacement requires fresh identity verification and explicit doctor selection. No patient is created until atomic commit.
  */
 export const mapImport = async (id: number,
-    importMapping: ImportMapping, options?: Parameters<typeof customFetch>[1]): Promise<ImportReview> => {
+    importMap: ImportMap, options?: Parameters<typeof customFetch>[1]): Promise<ImportBatch> => {
 
     const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
@@ -2452,12 +2459,12 @@ export const mapImport = async (id: number,
     }
     return headers;
   };
-return customFetch<ImportReview>(getMapImportUrl(id),
+return customFetch<ImportBatch>(getMapImportUrl(id),
   {
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
-    body: JSON.stringify(importMapping)
+    body: JSON.stringify(importMap)
   }
 );}
 
@@ -2467,7 +2474,7 @@ return customFetch<ImportReview>(getMapImportUrl(id),
 
 export const getMapImportMutationKey = () => ['mapImport'] as const;
 
-export const getMapImportMutationOptions = <TError = ErrorType<ApiFailure>,
+export const getMapImportMutationOptions = <TError = ErrorType<ImportValidationResponse | ImportUnauthorizedResponse | ImportForbiddenResponse | ImportNotFoundResponse | ImportConflictFailureResponse | ImportInvalidRowResponse | ImportLockedResponse | ImportRateLimitResponse | ImportInternalResponse>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof mapImport>>, TError,MapImportMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
 ): UseMutationOptions<Awaited<ReturnType<typeof mapImport>>, TError,MapImportMutationVariables, TContext> => {
 
@@ -2495,14 +2502,11 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type MapImportMutationResult = NonNullable<Awaited<ReturnType<typeof mapImport>>>
-    export type MapImportMutationBody = BodyType<ImportMapping>
-    export type MapImportMutationError = ErrorType<ApiFailure>
-    export type MapImportMutationVariables = {id: number;data: BodyType<ImportMapping>}
+    export type MapImportMutationBody = BodyType<ImportMap>
+    export type MapImportMutationError = ErrorType<ImportValidationResponse | ImportUnauthorizedResponse | ImportForbiddenResponse | ImportNotFoundResponse | ImportConflictFailureResponse | ImportInvalidRowResponse | ImportLockedResponse | ImportRateLimitResponse | ImportInternalResponse>
+    export type MapImportMutationVariables = {id: number;data: BodyType<ImportMap>}
 
-    /**
- * @summary map import
- */
-export const useMapImport = <TError = ErrorType<ApiFailure>,
+    export const useMapImport = <TError = ErrorType<ImportValidationResponse | ImportUnauthorizedResponse | ImportForbiddenResponse | ImportNotFoundResponse | ImportConflictFailureResponse | ImportInvalidRowResponse | ImportLockedResponse | ImportRateLimitResponse | ImportInternalResponse>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof mapImport>>, TError,MapImportMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof mapImport>>,
@@ -2521,12 +2525,8 @@ export const getCommitImportUrl = (id: number,) => {
   return `/api/import/${id}/commit`
 }
 
-/**
- * Contract-only domain service; mock responses are simulated. Clinic scope comes from authenticated identity, not submitted identifiers. Admin has no implicit clinical access. Network visibility requires active consent and excludes Lite clinics. Mutations require CSRF; clientOpId is replay-safe per clinic, with changed payload returning 409. Front-desk requires PIN re-entry within five minutes; future services must enforce this guard. Every source row requires explicit human identity review. Name matches are suggestions only, never links. 24-row fixture has three suggestions and 24 pending reviews. Commit rejects outstanding reviews with 409 REVIEW_REQUIRED; approved link requires patientId, new-patient requires separate patient creation, skip is explicit. No automatic linkage.
- * @summary commit import
- */
 export const commitImport = async (id: number,
-    operationInput: OperationInput, options?: Parameters<typeof customFetch>[1]): Promise<ImportCommitResult> => {
+    importCommit: ImportCommit, options?: Parameters<typeof customFetch>[1]): Promise<ImportBatch> => {
 
     const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
@@ -2542,12 +2542,12 @@ export const commitImport = async (id: number,
     }
     return headers;
   };
-return customFetch<ImportCommitResult>(getCommitImportUrl(id),
+return customFetch<ImportBatch>(getCommitImportUrl(id),
   {
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
-    body: JSON.stringify(operationInput)
+    body: JSON.stringify(importCommit)
   }
 );}
 
@@ -2557,7 +2557,7 @@ return customFetch<ImportCommitResult>(getCommitImportUrl(id),
 
 export const getCommitImportMutationKey = () => ['commitImport'] as const;
 
-export const getCommitImportMutationOptions = <TError = ErrorType<ApiFailure>,
+export const getCommitImportMutationOptions = <TError = ErrorType<ImportValidationResponse | ImportUnauthorizedResponse | ImportForbiddenResponse | ImportNotFoundResponse | ImportConflictFailureResponse | ImportInvalidRowResponse | ImportLockedResponse | ImportRateLimitResponse | ImportInternalResponse>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commitImport>>, TError,CommitImportMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
 ): UseMutationOptions<Awaited<ReturnType<typeof commitImport>>, TError,CommitImportMutationVariables, TContext> => {
 
@@ -2585,14 +2585,11 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type CommitImportMutationResult = NonNullable<Awaited<ReturnType<typeof commitImport>>>
-    export type CommitImportMutationBody = BodyType<OperationInput>
-    export type CommitImportMutationError = ErrorType<ApiFailure>
-    export type CommitImportMutationVariables = {id: number;data: BodyType<OperationInput>}
+    export type CommitImportMutationBody = BodyType<ImportCommit>
+    export type CommitImportMutationError = ErrorType<ImportValidationResponse | ImportUnauthorizedResponse | ImportForbiddenResponse | ImportNotFoundResponse | ImportConflictFailureResponse | ImportInvalidRowResponse | ImportLockedResponse | ImportRateLimitResponse | ImportInternalResponse>
+    export type CommitImportMutationVariables = {id: number;data: BodyType<ImportCommit>}
 
-    /**
- * @summary commit import
- */
-export const useCommitImport = <TError = ErrorType<ApiFailure>,
+    export const useCommitImport = <TError = ErrorType<ImportValidationResponse | ImportUnauthorizedResponse | ImportForbiddenResponse | ImportNotFoundResponse | ImportConflictFailureResponse | ImportInvalidRowResponse | ImportLockedResponse | ImportRateLimitResponse | ImportInternalResponse>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commitImport>>, TError,CommitImportMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof commitImport>>,
@@ -3108,12 +3105,11 @@ export const getListPatientDuplicatesUrl = (params?: ListPatientDuplicatesParams
 }
 
 /**
- * Contract-only domain service; mock responses are simulated. Clinic scope comes from authenticated identity, not submitted identifiers. Admin has no implicit clinical access. Network visibility requires active consent and excludes Lite clinics. Mutations require CSRF; clientOpId is replay-safe per clinic, with changed payload returning 409.
- * @summary list patient duplicates
+ * Scoped before exact normalized-name, date-only DOB and canonical-phone comparison; all three required. Doctors additionally require trusted doctor grants. Candidates are not merge authorization. Ascending ID pairs; cursor binds actor and scope.
  */
-export const listPatientDuplicates = async (params?: ListPatientDuplicatesParams, options?: Parameters<typeof customFetch>[1]): Promise<DuplicateCandidatePage> => {
+export const listPatientDuplicates = async (params?: ListPatientDuplicatesParams, options?: Parameters<typeof customFetch>[1]): Promise<PatientDuplicates> => {
 
-  return customFetch<DuplicateCandidatePage>(getListPatientDuplicatesUrl(params),
+  return customFetch<PatientDuplicates>(getListPatientDuplicatesUrl(params),
   {
     ...options,
     method: 'GET'
@@ -3155,9 +3151,6 @@ export type ListPatientDuplicatesQueryResult = NonNullable<Awaited<ReturnType<ty
 export type ListPatientDuplicatesQueryError = ErrorType<ApiFailure>
 
 
-/**
- * @summary list patient duplicates
- */
 
 export function useListPatientDuplicates<TData = Awaited<ReturnType<typeof listPatientDuplicates>>, TError = ErrorType<ApiFailure>>(
  params?: ListPatientDuplicatesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listPatientDuplicates>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
@@ -3186,10 +3179,9 @@ export const getMergePatientsUrl = () => {
 }
 
 /**
- * Contract-only domain service; mock responses are simulated. Clinic scope comes from authenticated identity, not submitted identifiers. Admin has no implicit clinical access. Network visibility requires active consent and excludes Lite clinics. Mutations require CSRF; clientOpId is replay-safe per clinic, with changed payload returning 409. Front-desk requires PIN re-entry within five minutes; future services must enforce this guard. Requires explicit identity review independent of name. Different DOB/phone default to not-a-match. Source is retained as a redirect after an authorized merge; audit/consent history preserved. Conflicting revisions return 409. Mock never merges records.
- * @summary merge patients
+ * Explicit selection and confirmation only. Revalidates authorization, exact identity and versions under consent and booking locks. Rejects any consent evidence, different visibility grants, aliases/chains, import references, active holds, patient overlaps and unknown references. Preserves source tombstone, immutable audit IDs and move provenance. Durable actor-bound idempotency; replay reauthorizes.
  */
-export const mergePatients = async (mergeInput: MergeInput, options?: Parameters<typeof customFetch>[1]): Promise<MergeResult> => {
+export const mergePatients = async (patientMergeRequest: PatientMergeRequest, options?: Parameters<typeof customFetch>[1]): Promise<PatientMergeResult> => {
 
     const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
@@ -3205,12 +3197,12 @@ export const mergePatients = async (mergeInput: MergeInput, options?: Parameters
     }
     return headers;
   };
-return customFetch<MergeResult>(getMergePatientsUrl(),
+return customFetch<PatientMergeResult>(getMergePatientsUrl(),
   {
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
-    body: JSON.stringify(mergeInput)
+    body: JSON.stringify(patientMergeRequest)
   }
 );}
 
@@ -3248,14 +3240,11 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type MergePatientsMutationResult = NonNullable<Awaited<ReturnType<typeof mergePatients>>>
-    export type MergePatientsMutationBody = BodyType<MergeInput>
+    export type MergePatientsMutationBody = BodyType<PatientMergeRequest>
     export type MergePatientsMutationError = ErrorType<ApiFailure>
-    export type MergePatientsMutationVariables = {data: BodyType<MergeInput>}
+    export type MergePatientsMutationVariables = {data: BodyType<PatientMergeRequest>}
 
-    /**
- * @summary merge patients
- */
-export const useMergePatients = <TError = ErrorType<ApiFailure>,
+    export const useMergePatients = <TError = ErrorType<ApiFailure>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof mergePatients>>, TError,MergePatientsMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof mergePatients>>,
@@ -4028,4 +4017,158 @@ export const useReleaseAppointmentHold = <TError = ErrorType<ApiFailure>,
       > => {
       return useMutation(getReleaseAppointmentHoldMutationOptions(options));
     }
+
+export const getGetImportBatchUrl = (id: number,) => {
+
+
+
+
+  return `/api/import/${id}`
+}
+
+export const getImportBatch = async (id: number, options?: Parameters<typeof customFetch>[1]): Promise<ImportBatch> => {
+
+  return customFetch<ImportBatch>(getGetImportBatchUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetImportBatchQueryKey = (id: number,) => {
+    return [
+    `/api/import/${id}`
+    ] as const;
+    }
+
+
+export const getGetImportBatchQueryOptions = <TData = Awaited<ReturnType<typeof getImportBatch>>, TError = ErrorType<ImportValidationResponse | ImportUnauthorizedResponse | ImportForbiddenResponse | ImportNotFoundResponse | ImportConflictFailureResponse | ImportLockedResponse | ImportRateLimitResponse | ImportInternalResponse>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getImportBatch>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetImportBatchQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getImportBatch>>> = ({ signal }) => getImportBatch(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getImportBatch>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetImportBatchQueryResult = NonNullable<Awaited<ReturnType<typeof getImportBatch>>>
+export type GetImportBatchQueryError = ErrorType<ImportValidationResponse | ImportUnauthorizedResponse | ImportForbiddenResponse | ImportNotFoundResponse | ImportConflictFailureResponse | ImportLockedResponse | ImportRateLimitResponse | ImportInternalResponse>
+
+
+
+export function useGetImportBatch<TData = Awaited<ReturnType<typeof getImportBatch>>, TError = ErrorType<ImportValidationResponse | ImportUnauthorizedResponse | ImportForbiddenResponse | ImportNotFoundResponse | ImportConflictFailureResponse | ImportLockedResponse | ImportRateLimitResponse | ImportInternalResponse>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getImportBatch>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetImportBatchQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getDownloadImportReportUrl = (id: number,
+    params?: DownloadImportReportParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/import/${id}/report?${stringifiedParams}` : `/api/import/${id}/report`
+}
+
+export const downloadImportReport = async (id: number,
+    params?: DownloadImportReportParams, options?: Parameters<typeof customFetch>[1]): Promise<ImportReport> => {
+
+  return customFetch<ImportReport>(getDownloadImportReportUrl(id,params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getDownloadImportReportQueryKey = (id: number,
+    params?: DownloadImportReportParams,) => {
+    return [
+    `/api/import/${id}/report`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getDownloadImportReportQueryOptions = <TData = Awaited<ReturnType<typeof downloadImportReport>>, TError = ErrorType<ImportValidationResponse | ImportUnauthorizedResponse | ImportForbiddenResponse | ImportNotFoundResponse | ImportConflictFailureResponse | ImportLockedResponse | ImportRateLimitResponse | ImportInternalResponse>>(id: number,
+    params?: DownloadImportReportParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof downloadImportReport>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getDownloadImportReportQueryKey(id,params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof downloadImportReport>>> = ({ signal }) => downloadImportReport(id,params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof downloadImportReport>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type DownloadImportReportQueryResult = NonNullable<Awaited<ReturnType<typeof downloadImportReport>>>
+export type DownloadImportReportQueryError = ErrorType<ImportValidationResponse | ImportUnauthorizedResponse | ImportForbiddenResponse | ImportNotFoundResponse | ImportConflictFailureResponse | ImportLockedResponse | ImportRateLimitResponse | ImportInternalResponse>
+
+
+
+export function useDownloadImportReport<TData = Awaited<ReturnType<typeof downloadImportReport>>, TError = ErrorType<ImportValidationResponse | ImportUnauthorizedResponse | ImportForbiddenResponse | ImportNotFoundResponse | ImportConflictFailureResponse | ImportLockedResponse | ImportRateLimitResponse | ImportInternalResponse>>(
+ id: number,
+    params?: DownloadImportReportParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof downloadImportReport>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getDownloadImportReportQueryOptions(id,params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 

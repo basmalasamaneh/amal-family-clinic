@@ -15,3 +15,5 @@ pnpm --filter @workspace/api-server patients:migrate
 pnpm --filter @workspace/api-server consent:migrate
 pnpm --filter @workspace/api-server alerts:migrate
 pnpm --filter @workspace/api-server alerts:extract --initialize
+pnpm --filter @workspace/api-server imports:migrate
+pnpm --filter @workspace/api-server merge:migrate

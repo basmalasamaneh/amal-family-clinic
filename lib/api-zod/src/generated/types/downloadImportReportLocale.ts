@@ -6,9 +6,10 @@
  * OpenAPI spec version: 0.2.0
  */
 
-export type ImportReviewStatus = typeof ImportReviewStatus[keyof typeof ImportReviewStatus];
+export type DownloadImportReportLocale = typeof DownloadImportReportLocale[keyof typeof DownloadImportReportLocale];
 
 
-export const ImportReviewStatus = {
-  'review-required': 'review-required',
+export const DownloadImportReportLocale = {
+  ar: 'ar',
+  en: 'en',
 } as const;

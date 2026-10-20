@@ -58,7 +58,6 @@ export function dispatchMock({method="GET",url="/api/healthz",headers={},body}) 
   if(body?.clinicId!==undefined&&body.clinicId!==101)return failure(403);
   if(parsed.searchParams.has("clinicId")&&parsed.searchParams.get("clinicId")!=="101")return failure(403);
   if(body?.startsAt&&body?.endsAt&&Date.parse(body.endsAt)<=Date.parse(body.startsAt))return failure(400);
-  if(operation.operationId==="mapImport"&&body.decisions.some(d=>d.decision==="link"&&!d.patientId))return failure(400);
   if(operation.operationId==="resolveSync"&&body.decision==="reschedule"&&!body.slot)return failure(400);
   if(operation.operationId==="commitImport"&&scenario!=="reviewed")return failure(409,"REVIEW_REQUIRED","error.reviewRequired",{pendingRows:24});
   const [status,response]=Object.entries(operation.responses).find(([s])=>Number(s)<300);
@@ -85,7 +84,7 @@ export function dispatchMock({method="GET",url="/api/healthz",headers={},body}) 
       seenAt:"2026-09-09T07:00:00Z",visibility:clinical?"clinical":"basic",
       ...(clinical?{complaint:"Dizziness (synthetic)",keyAlerts:["Synthetic medication alert"]}:{}),
     };
-    const candidate={id:301,name:"Synthetic patient",identityVerified:false,visits:[visit]};
+    const candidate={id:301,name:"Synthetic patient",identityVerified:false,effectiveConsentLevel:clinical?"clinical":"basic",visits:[visit]};
     result={items:mode==="lite"||["none","withdrawn"].includes(consent)||scenario==="withdrawn"?[]:[candidate],nextCursor:null};
   }
   if(id==="checkAppointments"&&scenario==="no-conflict")result={ok:true,conflicts:[]};
@@ -93,10 +92,8 @@ export function dispatchMock({method="GET",url="/api/healthz",headers={},body}) 
     const outcome=["duplicate","rejected"].includes(scenario)?scenario:["applied","duplicate","conflict"][i%3];
     return {clientOpId:o.clientOpId,outcome,...(outcome==="rejected"?{error:failure(400).body}:outcome==="conflict"?{conflictId:601}:{entityId:401})};
   }),cursor:"demo:1"};
-  if(id==="mapImport")result.rows=result.rows.map(row=>{
-    const decision=body.decisions.find(d=>d.rowId===row.rowId);
-    return decision?{...row,status:decision.decision==="skip"?"skipped":"approved",linkedPatientId:decision.decision==="link"?decision.patientId:null}:row;
-  });
+  // Import review examples are deliberately static. Only the real backend can
+  // verify phone/DOB and produce an authorized review; a mock must not imply it.
   if(["listPatientConsent","recordPatientConsent","withdrawConsent"].includes(id)) {
     const withdrawn=id==="withdrawConsent"||consent==="withdrawn"&&id==="listPatientConsent"||scenario==="withdrawn";
     const current={
@@ -108,14 +105,14 @@ export function dispatchMock({method="GET",url="/api/healthz",headers={},body}) 
       current.patientId=Number(params.id);
       current.level=consent==="clinical"||scenario==="clinical"?"clinical":"basic";
       result=consent==="none"&&scenario!=="withdrawn"
-        ?{current:null,history:[],effectiveLevel:"none"}
-        :{current,history:[clone(current)],effectiveLevel:withdrawn?"none":current.level};
+        ?{...result,current:null,history:[],effectiveLevel:"none"}
+        :{...result,current,history:[clone(current)],effectiveLevel:withdrawn?"none":current.level};
     } else if(id==="recordPatientConsent") {
       result={...current,patientId:Number(params.id),level:body.level,evidence:body.evidence,
         givenBy:body.guardian?"guardian":"patient",...(body.guardian?{guardian:body.guardian}:{})};
     } else result={...current,id:Number(params.id)};
   }
-  if(id==="mergePatients")result={sourceId:body.sourceId,targetId:body.targetId,decision:body.decision==="merge"?"merged":"not-a-match",simulated:true};
+  if(id==="mergePatients")result={...result,sourceId:body.sourceId,targetId:body.targetId,sourceVersion:body.sourceVersion+1,targetVersion:body.targetVersion+1};
   if(id==="createAppointment") {
     const {overrideReason,holdToken,...values}=body;
     result={...result,...values};

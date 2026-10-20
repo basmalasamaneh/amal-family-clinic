@@ -1118,61 +1118,120 @@ export const ResolveSyncResponse = zod.object({
 
 
 /**
- * Contract-only domain service; mock responses are simulated. Clinic scope comes from authenticated identity, not submitted identifiers. Admin has no implicit clinical access. Network visibility requires active consent and excludes Lite clinics. Mutations require CSRF; clientOpId is replay-safe per clinic, with changed payload returning 409. Every source row requires explicit human identity review. Name matches are suggestions only, never links. 24-row fixture has three suggestions and 24 pending reviews. Commit rejects outstanding reviews with 409 REVIEW_REQUIRED; approved link requires patientId, new-patient requires separate patient creation, skip is explicit. No automatic linkage.
- * @summary upload import
+ * Stage immutable calendar_app_export with source=seed, or JSON rows in its exact six-column format. JSON times are Asia/Hebron wall-clock yyyy-MM-ddTHH:mm:ss without offset; seed instants are already UTC. Maximum 100 rows and 128 KiB. Invalid raw rows are retained with per-row errors. The fixed calendar_app_export adapter namespace and event_id identify source events independently of filenames. No clinical writes.
  */
-export const UploadImportHeader = zod.object({
-  "X-CSRF-Token": zod.string().describe('Session-bound CSRF value from Identity.csrfToken; never a session credential.')
-}).strict()
+export const uploadImportBodySourceNameMax = 100;
 
+export const uploadImportBodyRowsMax = 100;
 
 
 
 export const UploadImportBody = zod.object({
-  "filename": zod.string(),
-  "format": zod.enum(['csv', 'ics']),
-  "content": zod.string().min(1)
+  "source": zod.enum(['seed', 'json']),
+  "clientOpId": zod.string().uuid(),
+  "sourceName": zod.string().min(1).max(uploadImportBodySourceNameMax).optional().describe('Display/provenance filename, required for JSON. Does not change event identity: all files use the fixed calendar_app_export adapter namespace. The reserved seed sourceName is forbidden for JSON.'),
+  "rows": zod.array(zod.record(zod.string(), zod.unknown()).describe('Raw source row; expected fields follow ImportSourceRow. Unknown columns and malformed values are preserved with per-row validation errors.')).min(1).max(uploadImportBodyRowsMax).optional()
 }).strict()
 
-
-
-
-
-
-
-
-
 export const UploadImportResponse = zod.object({
-  "id": zod.number().int().min(1),
-  "status": zod.enum(['review-required']),
+  "id": zod.number().int(),
+  "version": zod.number().int(),
+  "sourceName": zod.string().optional().describe('Original source filename or seed adapter name.'),
+  "adapter": zod.enum(['calendar_app_export']).optional(),
+  "status": zod.enum(['review_required', 'reviewed', 'committed']),
+  "createdAt": zod.coerce.date(),
+  "committedAt": zod.coerce.date().nullable(),
   "rows": zod.array(zod.object({
-  "rowId": zod.number().int().min(1),
-  "sourceName": zod.string(),
-  "startsAt": zod.coerce.date(),
-  "reviewRequired": zod.literal(true),
-  "status": zod.enum(['needs-review', 'approved', 'skipped']),
-  "suggestedPatientIds": zod.array(zod.number().int().min(1)),
-  "linkedPatientId": zod.number().int().nullable(),
-  "conflicts": zod.array(zod.object({
-  "type": zod.enum(['doctor-overlap', 'patient-overlap', 'same-day-other-clinic', 'outside-hours', 'slot-held']),
-  "with": zod.union([zod.object({
-  "appointmentId": zod.number().int().min(1),
-  "clinicId": zod.number().int().min(1)
-}).strict(),zod.null()]),
-  "severity": zod.enum(['blocking', 'warning', 'info']),
-  "suggestedSlots": zod.array(zod.object({
-  "startsAt": zod.coerce.date(),
-  "endsAt": zod.coerce.date()
-}).strict())
-}).strict())
+  "id": zod.number().int(),
+  "source": zod.record(zod.string(), zod.unknown()).describe('Original source object, preserved even when malformed.'),
+  "suggestedPatientIds": zod.array(zod.number().int()),
+  "confirmedPatientId": zod.number().int().nullable(),
+  "errors": zod.array(zod.object({
+  "code": zod.string(),
+  "messageKey": zod.string(),
+  "params": zod.record(zod.string(), zod.union([zod.string(),zod.number()]))
 }).strict()),
-  "total": zod.number().int().min(1)
+  "review": zod.object({
+  "action": zod.enum(['include', 'skip']),
+  "reviewerId": zod.number().int(),
+  "reviewedAt": zod.coerce.date(),
+  "verificationMethod": zod.enum(['phone', 'dob', 'new']).optional(),
+  "identityAction": zod.union([zod.literal('create'),zod.literal('existing'),zod.literal(null)]).nullable(),
+  "reason": zod.string().optional(),
+  "overrideReason": zod.string().optional(),
+  "associateAppointmentId": zod.number().int().optional()
+}).strict().nullable(),
+  "reviewHistory": zod.array(zod.object({
+  "rowId": zod.number().int(),
+  "version": zod.number().int(),
+  "reviewerId": zod.number().int(),
+  "reviewedAt": zod.coerce.date(),
+  "action": zod.enum(['include', 'skip']),
+  "verificationMethod": zod.union([zod.literal('phone'),zod.literal('dob'),zod.literal('new'),zod.literal(null)]).nullable(),
+  "patientId": zod.number().int().nullable(),
+  "reason": zod.string().nullable(),
+  "overrideReason": zod.string().nullable(),
+  "associateAppointmentId": zod.number().int().nullable(),
+  "mapping": zod.object({
+  "doctorId": zod.number().int(),
+  "clinicId": zod.number().int(),
+  "startsAt": zod.coerce.date(),
+  "endsAt": zod.coerce.date(),
+  "durationMinutes": zod.number().int(),
+  "status": zod.enum(['booked', 'completed', 'cancelled']),
+  "startLocal": zod.string(),
+  "endLocal": zod.string(),
+  "timezone": zod.enum(['Asia/Hebron'])
+}).strict().nullable(),
+  "priorConflicts": zod.array(zod.object({
+  "kind": zod.enum(['intra-export', 'existing-appointment', 'source-coincidence', 'policy']),
+  "rowIds": zod.array(zod.number().int()),
+  "code": zod.string(),
+  "messageKey": zod.string(),
+  "severity": zod.enum(['blocking', 'warning', 'info', 'acknowledged']),
+  "appointmentId": zod.number().int().optional()
+}).strict())
+}).strict()).optional(),
+  "mapping": zod.object({
+  "doctorId": zod.number().int(),
+  "clinicId": zod.number().int(),
+  "startsAt": zod.coerce.date(),
+  "endsAt": zod.coerce.date(),
+  "durationMinutes": zod.number().int(),
+  "status": zod.enum(['booked', 'completed', 'cancelled']),
+  "startLocal": zod.string(),
+  "endLocal": zod.string(),
+  "timezone": zod.enum(['Asia/Hebron'])
+}).strict().nullable(),
+  "outcome": zod.enum(['review-required', 'reviewed', 'skipped', 'created', 'linked', 'source-replay']),
+  "appointmentId": zod.number().int().nullable(),
+  "availableActions": zod.array(zod.enum(['include-existing', 'create-patient', 'skip']))
+}).strict()),
+  "totals": zod.object({
+  "sourceRows": zod.number().int(),
+  "autoLinked": zod.number().int(),
+  "reviewRequired": zod.number().int(),
+  "suggestedRows": zod.number().int(),
+  "skipped": zod.number().int(),
+  "created": zod.number().int(),
+  "linked": zod.number().int(),
+  "intraExportPairs": zod.number().int(),
+  "existingOverlaps": zod.number().int(),
+  "existingCoincidences": zod.number().int()
+}).strict(),
+  "conflicts": zod.array(zod.object({
+  "kind": zod.enum(['intra-export', 'existing-appointment', 'source-coincidence', 'policy']),
+  "rowIds": zod.array(zod.number().int()),
+  "code": zod.string(),
+  "messageKey": zod.string(),
+  "severity": zod.enum(['blocking', 'warning', 'info', 'acknowledged']),
+  "appointmentId": zod.number().int().optional()
+}).strict())
 }).strict()
 
 
 /**
- * Contract-only domain service; mock responses are simulated. Clinic scope comes from authenticated identity, not submitted identifiers. Admin has no implicit clinical access. Network visibility requires active consent and excludes Lite clinics. Mutations require CSRF; clientOpId is replay-safe per clinic, with changed payload returning 409. Every source row requires explicit human identity review. Name matches are suggestions only, never links. 24-row fixture has three suggestions and 24 pending reviews. Commit rejects outstanding reviews with 409 REVIEW_REQUIRED; approved link requires patientId, new-patient requires separate patient creation, skip is explicit. No automatic linkage.
- * @summary map import
+ * Replace review for supplied rows. Every included replacement requires fresh identity verification and explicit doctor selection. No patient is created until atomic commit.
  */
 
 
@@ -1181,69 +1240,163 @@ export const MapImportParams = zod.object({
   "id": zod.coerce.number().int().min(1)
 }).strict()
 
-export const MapImportHeader = zod.object({
-  "X-CSRF-Token": zod.string().describe('Session-bound CSRF value from Identity.csrfToken; never a session credential.')
-}).strict()
 
 
+export const mapImportBodyRowsItemOneReasonMax = 1000;
+
+
+
+
+export const mapImportBodyRowsItemTwoIdentityOneVerificationValueMax = 40;
+
+export const mapImportBodyRowsItemTwoIdentityTwoPatientNameMax = 200;
+
+export const mapImportBodyRowsItemTwoIdentityTwoPatientPhoneMax = 40;
+
+export const mapImportBodyRowsItemTwoIdentityTwoPatientGuardianNameMax = 200;
+
+export const mapImportBodyRowsItemTwoIdentityTwoPatientGuardianRelationMax = 100;
+
+export const mapImportBodyRowsItemTwoStartLocalRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}$');
+export const mapImportBodyRowsItemTwoEndLocalRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}$');
+
+export const mapImportBodyRowsItemTwoOverrideReasonMax = 1000;
+
+export const mapImportBodyRowsMax = 100;
 
 
 
 export const MapImportBody = zod.object({
-  "columns": zod.object({
-  "name": zod.string(),
-  "startsAt": zod.string(),
-  "endsAt": zod.string()
-}).strict(),
-  "timezone": zod.enum(['Asia/Hebron']),
-  "decisions": zod.array(zod.object({
+  "expectedVersion": zod.number().int().min(1),
+  "rows": zod.array(zod.union([zod.object({
   "rowId": zod.number().int().min(1),
-  "decision": zod.enum(['link', 'new-patient', 'skip']),
-  "reviewed": zod.literal(true),
-  "patientId": zod.number().int().min(1).optional()
-}).strict())
+  "action": zod.enum(['skip']),
+  "reason": zod.string().min(1).max(mapImportBodyRowsItemOneReasonMax)
+}).strict(),zod.object({
+  "rowId": zod.number().int().min(1),
+  "action": zod.enum(['include']),
+  "doctorId": zod.number().int().min(1),
+  "identity": zod.union([zod.object({
+  "kind": zod.enum(['existing']),
+  "patientId": zod.number().int().min(1),
+  "verification": zod.object({
+  "method": zod.enum(['phone', 'dob']),
+  "value": zod.string().min(1).max(mapImportBodyRowsItemTwoIdentityOneVerificationValueMax)
 }).strict()
-
-
-
-
-
-
-
-
+}).strict(),zod.object({
+  "kind": zod.enum(['new']),
+  "patient": zod.object({
+  "name": zod.string().min(1).max(mapImportBodyRowsItemTwoIdentityTwoPatientNameMax),
+  "phone": zod.string().min(1).max(mapImportBodyRowsItemTwoIdentityTwoPatientPhoneMax),
+  "dateOfBirth": zod.coerce.date(),
+  "guardianName": zod.string().max(mapImportBodyRowsItemTwoIdentityTwoPatientGuardianNameMax).optional(),
+  "guardianRelation": zod.string().max(mapImportBodyRowsItemTwoIdentityTwoPatientGuardianRelationMax).optional()
+}).strict()
+}).strict()]),
+  "startLocal": zod.string().regex(mapImportBodyRowsItemTwoStartLocalRegExp).optional(),
+  "endLocal": zod.string().regex(mapImportBodyRowsItemTwoEndLocalRegExp).optional(),
+  "associateAppointmentId": zod.number().int().min(1).optional(),
+  "overrideReason": zod.string().min(1).max(mapImportBodyRowsItemTwoOverrideReasonMax).optional()
+}).strict()])).min(1).max(mapImportBodyRowsMax)
+}).strict()
 
 export const MapImportResponse = zod.object({
-  "id": zod.number().int().min(1),
-  "status": zod.enum(['review-required']),
+  "id": zod.number().int(),
+  "version": zod.number().int(),
+  "sourceName": zod.string().optional().describe('Original source filename or seed adapter name.'),
+  "adapter": zod.enum(['calendar_app_export']).optional(),
+  "status": zod.enum(['review_required', 'reviewed', 'committed']),
+  "createdAt": zod.coerce.date(),
+  "committedAt": zod.coerce.date().nullable(),
   "rows": zod.array(zod.object({
-  "rowId": zod.number().int().min(1),
-  "sourceName": zod.string(),
-  "startsAt": zod.coerce.date(),
-  "reviewRequired": zod.literal(true),
-  "status": zod.enum(['needs-review', 'approved', 'skipped']),
-  "suggestedPatientIds": zod.array(zod.number().int().min(1)),
-  "linkedPatientId": zod.number().int().nullable(),
-  "conflicts": zod.array(zod.object({
-  "type": zod.enum(['doctor-overlap', 'patient-overlap', 'same-day-other-clinic', 'outside-hours', 'slot-held']),
-  "with": zod.union([zod.object({
-  "appointmentId": zod.number().int().min(1),
-  "clinicId": zod.number().int().min(1)
-}).strict(),zod.null()]),
-  "severity": zod.enum(['blocking', 'warning', 'info']),
-  "suggestedSlots": zod.array(zod.object({
-  "startsAt": zod.coerce.date(),
-  "endsAt": zod.coerce.date()
-}).strict())
-}).strict())
+  "id": zod.number().int(),
+  "source": zod.record(zod.string(), zod.unknown()).describe('Original source object, preserved even when malformed.'),
+  "suggestedPatientIds": zod.array(zod.number().int()),
+  "confirmedPatientId": zod.number().int().nullable(),
+  "errors": zod.array(zod.object({
+  "code": zod.string(),
+  "messageKey": zod.string(),
+  "params": zod.record(zod.string(), zod.union([zod.string(),zod.number()]))
 }).strict()),
-  "total": zod.number().int().min(1)
+  "review": zod.object({
+  "action": zod.enum(['include', 'skip']),
+  "reviewerId": zod.number().int(),
+  "reviewedAt": zod.coerce.date(),
+  "verificationMethod": zod.enum(['phone', 'dob', 'new']).optional(),
+  "identityAction": zod.union([zod.literal('create'),zod.literal('existing'),zod.literal(null)]).nullable(),
+  "reason": zod.string().optional(),
+  "overrideReason": zod.string().optional(),
+  "associateAppointmentId": zod.number().int().optional()
+}).strict().nullable(),
+  "reviewHistory": zod.array(zod.object({
+  "rowId": zod.number().int(),
+  "version": zod.number().int(),
+  "reviewerId": zod.number().int(),
+  "reviewedAt": zod.coerce.date(),
+  "action": zod.enum(['include', 'skip']),
+  "verificationMethod": zod.union([zod.literal('phone'),zod.literal('dob'),zod.literal('new'),zod.literal(null)]).nullable(),
+  "patientId": zod.number().int().nullable(),
+  "reason": zod.string().nullable(),
+  "overrideReason": zod.string().nullable(),
+  "associateAppointmentId": zod.number().int().nullable(),
+  "mapping": zod.object({
+  "doctorId": zod.number().int(),
+  "clinicId": zod.number().int(),
+  "startsAt": zod.coerce.date(),
+  "endsAt": zod.coerce.date(),
+  "durationMinutes": zod.number().int(),
+  "status": zod.enum(['booked', 'completed', 'cancelled']),
+  "startLocal": zod.string(),
+  "endLocal": zod.string(),
+  "timezone": zod.enum(['Asia/Hebron'])
+}).strict().nullable(),
+  "priorConflicts": zod.array(zod.object({
+  "kind": zod.enum(['intra-export', 'existing-appointment', 'source-coincidence', 'policy']),
+  "rowIds": zod.array(zod.number().int()),
+  "code": zod.string(),
+  "messageKey": zod.string(),
+  "severity": zod.enum(['blocking', 'warning', 'info', 'acknowledged']),
+  "appointmentId": zod.number().int().optional()
+}).strict())
+}).strict()).optional(),
+  "mapping": zod.object({
+  "doctorId": zod.number().int(),
+  "clinicId": zod.number().int(),
+  "startsAt": zod.coerce.date(),
+  "endsAt": zod.coerce.date(),
+  "durationMinutes": zod.number().int(),
+  "status": zod.enum(['booked', 'completed', 'cancelled']),
+  "startLocal": zod.string(),
+  "endLocal": zod.string(),
+  "timezone": zod.enum(['Asia/Hebron'])
+}).strict().nullable(),
+  "outcome": zod.enum(['review-required', 'reviewed', 'skipped', 'created', 'linked', 'source-replay']),
+  "appointmentId": zod.number().int().nullable(),
+  "availableActions": zod.array(zod.enum(['include-existing', 'create-patient', 'skip']))
+}).strict()),
+  "totals": zod.object({
+  "sourceRows": zod.number().int(),
+  "autoLinked": zod.number().int(),
+  "reviewRequired": zod.number().int(),
+  "suggestedRows": zod.number().int(),
+  "skipped": zod.number().int(),
+  "created": zod.number().int(),
+  "linked": zod.number().int(),
+  "intraExportPairs": zod.number().int(),
+  "existingOverlaps": zod.number().int(),
+  "existingCoincidences": zod.number().int()
+}).strict(),
+  "conflicts": zod.array(zod.object({
+  "kind": zod.enum(['intra-export', 'existing-appointment', 'source-coincidence', 'policy']),
+  "rowIds": zod.array(zod.number().int()),
+  "code": zod.string(),
+  "messageKey": zod.string(),
+  "severity": zod.enum(['blocking', 'warning', 'info', 'acknowledged']),
+  "appointmentId": zod.number().int().optional()
+}).strict())
 }).strict()
 
 
-/**
- * Contract-only domain service; mock responses are simulated. Clinic scope comes from authenticated identity, not submitted identifiers. Admin has no implicit clinical access. Network visibility requires active consent and excludes Lite clinics. Mutations require CSRF; clientOpId is replay-safe per clinic, with changed payload returning 409. Front-desk requires PIN re-entry within five minutes; future services must enforce this guard. Every source row requires explicit human identity review. Name matches are suggestions only, never links. 24-row fixture has three suggestions and 24 pending reviews. Commit rejects outstanding reviews with 409 REVIEW_REQUIRED; approved link requires patientId, new-patient requires separate patient creation, skip is explicit. No automatic linkage.
- * @summary commit import
- */
 
 
 
@@ -1251,40 +1404,108 @@ export const CommitImportParams = zod.object({
   "id": zod.coerce.number().int().min(1)
 }).strict()
 
-export const CommitImportHeader = zod.object({
-  "X-CSRF-Token": zod.string().describe('Session-bound CSRF value from Identity.csrfToken; never a session credential.')
-}).strict()
+
+
 
 export const CommitImportBody = zod.object({
+  "expectedVersion": zod.number().int().min(1),
   "clientOpId": zod.string().uuid()
 }).strict()
 
-
-
-
-
-
-
-
-
 export const CommitImportResponse = zod.object({
-  "id": zod.number().int().min(1),
-  "created": zod.array(zod.number().int().min(1)),
-  "skippedRows": zod.array(zod.number().int().min(1)),
-  "pendingReviewRows": zod.array(zod.number().int().min(1)),
-  "conflicts": zod.array(zod.object({
-  "type": zod.enum(['doctor-overlap', 'patient-overlap', 'same-day-other-clinic', 'outside-hours', 'slot-held']),
-  "with": zod.union([zod.object({
-  "appointmentId": zod.number().int().min(1),
-  "clinicId": zod.number().int().min(1)
-}).strict(),zod.null()]),
-  "severity": zod.enum(['blocking', 'warning', 'info']),
-  "suggestedSlots": zod.array(zod.object({
-  "startsAt": zod.coerce.date(),
-  "endsAt": zod.coerce.date()
-}).strict())
+  "id": zod.number().int(),
+  "version": zod.number().int(),
+  "sourceName": zod.string().optional().describe('Original source filename or seed adapter name.'),
+  "adapter": zod.enum(['calendar_app_export']).optional(),
+  "status": zod.enum(['review_required', 'reviewed', 'committed']),
+  "createdAt": zod.coerce.date(),
+  "committedAt": zod.coerce.date().nullable(),
+  "rows": zod.array(zod.object({
+  "id": zod.number().int(),
+  "source": zod.record(zod.string(), zod.unknown()).describe('Original source object, preserved even when malformed.'),
+  "suggestedPatientIds": zod.array(zod.number().int()),
+  "confirmedPatientId": zod.number().int().nullable(),
+  "errors": zod.array(zod.object({
+  "code": zod.string(),
+  "messageKey": zod.string(),
+  "params": zod.record(zod.string(), zod.union([zod.string(),zod.number()]))
 }).strict()),
-  "simulated": zod.boolean()
+  "review": zod.object({
+  "action": zod.enum(['include', 'skip']),
+  "reviewerId": zod.number().int(),
+  "reviewedAt": zod.coerce.date(),
+  "verificationMethod": zod.enum(['phone', 'dob', 'new']).optional(),
+  "identityAction": zod.union([zod.literal('create'),zod.literal('existing'),zod.literal(null)]).nullable(),
+  "reason": zod.string().optional(),
+  "overrideReason": zod.string().optional(),
+  "associateAppointmentId": zod.number().int().optional()
+}).strict().nullable(),
+  "reviewHistory": zod.array(zod.object({
+  "rowId": zod.number().int(),
+  "version": zod.number().int(),
+  "reviewerId": zod.number().int(),
+  "reviewedAt": zod.coerce.date(),
+  "action": zod.enum(['include', 'skip']),
+  "verificationMethod": zod.union([zod.literal('phone'),zod.literal('dob'),zod.literal('new'),zod.literal(null)]).nullable(),
+  "patientId": zod.number().int().nullable(),
+  "reason": zod.string().nullable(),
+  "overrideReason": zod.string().nullable(),
+  "associateAppointmentId": zod.number().int().nullable(),
+  "mapping": zod.object({
+  "doctorId": zod.number().int(),
+  "clinicId": zod.number().int(),
+  "startsAt": zod.coerce.date(),
+  "endsAt": zod.coerce.date(),
+  "durationMinutes": zod.number().int(),
+  "status": zod.enum(['booked', 'completed', 'cancelled']),
+  "startLocal": zod.string(),
+  "endLocal": zod.string(),
+  "timezone": zod.enum(['Asia/Hebron'])
+}).strict().nullable(),
+  "priorConflicts": zod.array(zod.object({
+  "kind": zod.enum(['intra-export', 'existing-appointment', 'source-coincidence', 'policy']),
+  "rowIds": zod.array(zod.number().int()),
+  "code": zod.string(),
+  "messageKey": zod.string(),
+  "severity": zod.enum(['blocking', 'warning', 'info', 'acknowledged']),
+  "appointmentId": zod.number().int().optional()
+}).strict())
+}).strict()).optional(),
+  "mapping": zod.object({
+  "doctorId": zod.number().int(),
+  "clinicId": zod.number().int(),
+  "startsAt": zod.coerce.date(),
+  "endsAt": zod.coerce.date(),
+  "durationMinutes": zod.number().int(),
+  "status": zod.enum(['booked', 'completed', 'cancelled']),
+  "startLocal": zod.string(),
+  "endLocal": zod.string(),
+  "timezone": zod.enum(['Asia/Hebron'])
+}).strict().nullable(),
+  "outcome": zod.enum(['review-required', 'reviewed', 'skipped', 'created', 'linked', 'source-replay']),
+  "appointmentId": zod.number().int().nullable(),
+  "availableActions": zod.array(zod.enum(['include-existing', 'create-patient', 'skip']))
+}).strict()),
+  "totals": zod.object({
+  "sourceRows": zod.number().int(),
+  "autoLinked": zod.number().int(),
+  "reviewRequired": zod.number().int(),
+  "suggestedRows": zod.number().int(),
+  "skipped": zod.number().int(),
+  "created": zod.number().int(),
+  "linked": zod.number().int(),
+  "intraExportPairs": zod.number().int(),
+  "existingOverlaps": zod.number().int(),
+  "existingCoincidences": zod.number().int()
+}).strict(),
+  "conflicts": zod.array(zod.object({
+  "kind": zod.enum(['intra-export', 'existing-appointment', 'source-coincidence', 'policy']),
+  "rowIds": zod.array(zod.number().int()),
+  "code": zod.string(),
+  "messageKey": zod.string(),
+  "severity": zod.enum(['blocking', 'warning', 'info', 'acknowledged']),
+  "appointmentId": zod.number().int().optional()
+}).strict())
 }).strict()
 
 
@@ -1521,16 +1742,18 @@ export const GetNetworkHealthResponse = zod.object({
 
 
 /**
- * Contract-only domain service; mock responses are simulated. Clinic scope comes from authenticated identity, not submitted identifiers. Admin has no implicit clinical access. Network visibility requires active consent and excludes Lite clinics. Mutations require CSRF; clientOpId is replay-safe per clinic, with changed payload returning 409.
- * @summary list patient duplicates
+ * Scoped before exact normalized-name, date-only DOB and canonical-phone comparison; all three required. Doctors additionally require trusted doctor grants. Candidates are not merge authorization. Ascending ID pairs; cursor binds actor and scope.
  */
+export const listPatientDuplicatesQueryLimitDefault = 25;
 export const listPatientDuplicatesQueryLimitMax = 100;
+
+export const listPatientDuplicatesQueryCursorMax = 512;
 
 
 
 export const ListPatientDuplicatesQueryParams = zod.object({
-  "cursor": zod.coerce.string().optional(),
-  "limit": zod.coerce.number().int().min(1).max(listPatientDuplicatesQueryLimitMax).optional()
+  "limit": zod.coerce.number().int().min(1).max(listPatientDuplicatesQueryLimitMax).default(listPatientDuplicatesQueryLimitDefault),
+  "cursor": zod.coerce.string().max(listPatientDuplicatesQueryCursorMax).optional()
 }).strict()
 
 
@@ -1541,60 +1764,52 @@ export const ListPatientDuplicatesQueryParams = zod.object({
 
 export const ListPatientDuplicatesResponse = zod.object({
   "items": zod.array(zod.object({
-  "left": zod.object({
+  "source": zod.object({
   "id": zod.number().int().min(1),
   "name": zod.string(),
-  "dateOfBirth": zod.coerce.date(),
-  "phone": zod.string(),
-  "visibility": zod.enum(['basic']),
-  "clinicId": zod.number().int().min(1)
+  "version": zod.number().int().min(1)
 }).strict(),
-  "right": zod.object({
+  "target": zod.object({
   "id": zod.number().int().min(1),
   "name": zod.string(),
-  "dateOfBirth": zod.coerce.date(),
-  "phone": zod.string(),
-  "visibility": zod.enum(['basic']),
-  "clinicId": zod.number().int().min(1)
-}).strict(),
-  "decision": zod.enum(['review', 'not-a-match']),
-  "reasons": zod.array(zod.enum(['name-similarity', 'different-dob', 'different-phone']))
+  "version": zod.number().int().min(1)
+}).strict()
 }).strict()),
   "nextCursor": zod.string().nullable()
 }).strict()
 
 
 /**
- * Contract-only domain service; mock responses are simulated. Clinic scope comes from authenticated identity, not submitted identifiers. Admin has no implicit clinical access. Network visibility requires active consent and excludes Lite clinics. Mutations require CSRF; clientOpId is replay-safe per clinic, with changed payload returning 409. Front-desk requires PIN re-entry within five minutes; future services must enforce this guard. Requires explicit identity review independent of name. Different DOB/phone default to not-a-match. Source is retained as a redirect after an authorized merge; audit/consent history preserved. Conflicting revisions return 409. Mock never merges records.
- * @summary merge patients
+ * Explicit selection and confirmation only. Revalidates authorization, exact identity and versions under consent and booking locks. Rejects any consent evidence, different visibility grants, aliases/chains, import references, active holds, patient overlaps and unknown references. Preserves source tombstone, immutable audit IDs and move provenance. Durable actor-bound idempotency; replay reauthorizes.
  */
-export const MergePatientsHeader = zod.object({
-  "X-CSRF-Token": zod.string().describe('Session-bound CSRF value from Identity.csrfToken; never a session credential.')
-}).strict()
+export const mergePatientsBodySourceIdMax = 2147483647;
 
+export const mergePatientsBodyTargetIdMax = 2147483647;
 
+export const mergePatientsBodySourceVersionMax = 2147483647;
 
+export const mergePatientsBodyTargetVersionMax = 2147483647;
+
+export const mergePatientsBodyReasonMax = 1000;
 
 
 
 export const MergePatientsBody = zod.object({
-  "sourceId": zod.number().int().min(1),
-  "targetId": zod.number().int().min(1),
-  "decision": zod.enum(['merge', 'not-a-match']),
-  "identityReviewed": zod.literal(true),
-  "reason": zod.string().min(1),
+  "sourceId": zod.number().int().min(1).max(mergePatientsBodySourceIdMax),
+  "targetId": zod.number().int().min(1).max(mergePatientsBodyTargetIdMax),
+  "sourceVersion": zod.number().int().min(1).max(mergePatientsBodySourceVersionMax),
+  "targetVersion": zod.number().int().min(1).max(mergePatientsBodyTargetVersionMax),
+  "confirmed": zod.literal(true),
+  "reason": zod.string().min(1).max(mergePatientsBodyReasonMax),
   "clientOpId": zod.string().uuid()
 }).strict()
 
-
-
-
-
 export const MergePatientsResponse = zod.object({
-  "sourceId": zod.number().int().min(1),
-  "targetId": zod.number().int().min(1),
-  "decision": zod.enum(['merged', 'not-a-match']),
-  "simulated": zod.boolean()
+  "sourceId": zod.number().int(),
+  "targetId": zod.number().int(),
+  "sourceVersion": zod.number().int(),
+  "targetVersion": zod.number().int(),
+  "mergedAt": zod.coerce.date()
 }).strict()
 
 
@@ -1878,5 +2093,223 @@ export const ReleaseAppointmentHoldBody = zod.object({
 }).strict()
 
 export const ReleaseAppointmentHoldResponse = zod.void()
+
+
+
+
+
+export const GetImportBatchParams = zod.object({
+  "id": zod.coerce.number().int().min(1)
+}).strict()
+
+export const GetImportBatchResponse = zod.object({
+  "id": zod.number().int(),
+  "version": zod.number().int(),
+  "sourceName": zod.string().optional().describe('Original source filename or seed adapter name.'),
+  "adapter": zod.enum(['calendar_app_export']).optional(),
+  "status": zod.enum(['review_required', 'reviewed', 'committed']),
+  "createdAt": zod.coerce.date(),
+  "committedAt": zod.coerce.date().nullable(),
+  "rows": zod.array(zod.object({
+  "id": zod.number().int(),
+  "source": zod.record(zod.string(), zod.unknown()).describe('Original source object, preserved even when malformed.'),
+  "suggestedPatientIds": zod.array(zod.number().int()),
+  "confirmedPatientId": zod.number().int().nullable(),
+  "errors": zod.array(zod.object({
+  "code": zod.string(),
+  "messageKey": zod.string(),
+  "params": zod.record(zod.string(), zod.union([zod.string(),zod.number()]))
+}).strict()),
+  "review": zod.object({
+  "action": zod.enum(['include', 'skip']),
+  "reviewerId": zod.number().int(),
+  "reviewedAt": zod.coerce.date(),
+  "verificationMethod": zod.enum(['phone', 'dob', 'new']).optional(),
+  "identityAction": zod.union([zod.literal('create'),zod.literal('existing'),zod.literal(null)]).nullable(),
+  "reason": zod.string().optional(),
+  "overrideReason": zod.string().optional(),
+  "associateAppointmentId": zod.number().int().optional()
+}).strict().nullable(),
+  "reviewHistory": zod.array(zod.object({
+  "rowId": zod.number().int(),
+  "version": zod.number().int(),
+  "reviewerId": zod.number().int(),
+  "reviewedAt": zod.coerce.date(),
+  "action": zod.enum(['include', 'skip']),
+  "verificationMethod": zod.union([zod.literal('phone'),zod.literal('dob'),zod.literal('new'),zod.literal(null)]).nullable(),
+  "patientId": zod.number().int().nullable(),
+  "reason": zod.string().nullable(),
+  "overrideReason": zod.string().nullable(),
+  "associateAppointmentId": zod.number().int().nullable(),
+  "mapping": zod.object({
+  "doctorId": zod.number().int(),
+  "clinicId": zod.number().int(),
+  "startsAt": zod.coerce.date(),
+  "endsAt": zod.coerce.date(),
+  "durationMinutes": zod.number().int(),
+  "status": zod.enum(['booked', 'completed', 'cancelled']),
+  "startLocal": zod.string(),
+  "endLocal": zod.string(),
+  "timezone": zod.enum(['Asia/Hebron'])
+}).strict().nullable(),
+  "priorConflicts": zod.array(zod.object({
+  "kind": zod.enum(['intra-export', 'existing-appointment', 'source-coincidence', 'policy']),
+  "rowIds": zod.array(zod.number().int()),
+  "code": zod.string(),
+  "messageKey": zod.string(),
+  "severity": zod.enum(['blocking', 'warning', 'info', 'acknowledged']),
+  "appointmentId": zod.number().int().optional()
+}).strict())
+}).strict()).optional(),
+  "mapping": zod.object({
+  "doctorId": zod.number().int(),
+  "clinicId": zod.number().int(),
+  "startsAt": zod.coerce.date(),
+  "endsAt": zod.coerce.date(),
+  "durationMinutes": zod.number().int(),
+  "status": zod.enum(['booked', 'completed', 'cancelled']),
+  "startLocal": zod.string(),
+  "endLocal": zod.string(),
+  "timezone": zod.enum(['Asia/Hebron'])
+}).strict().nullable(),
+  "outcome": zod.enum(['review-required', 'reviewed', 'skipped', 'created', 'linked', 'source-replay']),
+  "appointmentId": zod.number().int().nullable(),
+  "availableActions": zod.array(zod.enum(['include-existing', 'create-patient', 'skip']))
+}).strict()),
+  "totals": zod.object({
+  "sourceRows": zod.number().int(),
+  "autoLinked": zod.number().int(),
+  "reviewRequired": zod.number().int(),
+  "suggestedRows": zod.number().int(),
+  "skipped": zod.number().int(),
+  "created": zod.number().int(),
+  "linked": zod.number().int(),
+  "intraExportPairs": zod.number().int(),
+  "existingOverlaps": zod.number().int(),
+  "existingCoincidences": zod.number().int()
+}).strict(),
+  "conflicts": zod.array(zod.object({
+  "kind": zod.enum(['intra-export', 'existing-appointment', 'source-coincidence', 'policy']),
+  "rowIds": zod.array(zod.number().int()),
+  "code": zod.string(),
+  "messageKey": zod.string(),
+  "severity": zod.enum(['blocking', 'warning', 'info', 'acknowledged']),
+  "appointmentId": zod.number().int().optional()
+}).strict())
+}).strict()
+
+
+
+
+
+export const DownloadImportReportParams = zod.object({
+  "id": zod.coerce.number().int().min(1)
+}).strict()
+
+export const downloadImportReportQueryLocaleDefault = `ar`;
+
+export const DownloadImportReportQueryParams = zod.object({
+  "locale": zod.enum(['ar', 'en']).default(downloadImportReportQueryLocaleDefault)
+}).strict()
+
+export const DownloadImportReportResponse = zod.object({
+  "locale": zod.enum(['ar', 'en']),
+  "labels": zod.record(zod.string(), zod.string()),
+  "batch": zod.object({
+  "id": zod.number().int(),
+  "version": zod.number().int(),
+  "sourceName": zod.string().optional().describe('Original source filename or seed adapter name.'),
+  "adapter": zod.enum(['calendar_app_export']).optional(),
+  "status": zod.enum(['review_required', 'reviewed', 'committed']),
+  "createdAt": zod.coerce.date(),
+  "committedAt": zod.coerce.date().nullable(),
+  "rows": zod.array(zod.object({
+  "id": zod.number().int(),
+  "source": zod.record(zod.string(), zod.unknown()).describe('Original source object, preserved even when malformed.'),
+  "suggestedPatientIds": zod.array(zod.number().int()),
+  "confirmedPatientId": zod.number().int().nullable(),
+  "errors": zod.array(zod.object({
+  "code": zod.string(),
+  "messageKey": zod.string(),
+  "params": zod.record(zod.string(), zod.union([zod.string(),zod.number()]))
+}).strict()),
+  "review": zod.object({
+  "action": zod.enum(['include', 'skip']),
+  "reviewerId": zod.number().int(),
+  "reviewedAt": zod.coerce.date(),
+  "verificationMethod": zod.enum(['phone', 'dob', 'new']).optional(),
+  "identityAction": zod.union([zod.literal('create'),zod.literal('existing'),zod.literal(null)]).nullable(),
+  "reason": zod.string().optional(),
+  "overrideReason": zod.string().optional(),
+  "associateAppointmentId": zod.number().int().optional()
+}).strict().nullable(),
+  "reviewHistory": zod.array(zod.object({
+  "rowId": zod.number().int(),
+  "version": zod.number().int(),
+  "reviewerId": zod.number().int(),
+  "reviewedAt": zod.coerce.date(),
+  "action": zod.enum(['include', 'skip']),
+  "verificationMethod": zod.union([zod.literal('phone'),zod.literal('dob'),zod.literal('new'),zod.literal(null)]).nullable(),
+  "patientId": zod.number().int().nullable(),
+  "reason": zod.string().nullable(),
+  "overrideReason": zod.string().nullable(),
+  "associateAppointmentId": zod.number().int().nullable(),
+  "mapping": zod.object({
+  "doctorId": zod.number().int(),
+  "clinicId": zod.number().int(),
+  "startsAt": zod.coerce.date(),
+  "endsAt": zod.coerce.date(),
+  "durationMinutes": zod.number().int(),
+  "status": zod.enum(['booked', 'completed', 'cancelled']),
+  "startLocal": zod.string(),
+  "endLocal": zod.string(),
+  "timezone": zod.enum(['Asia/Hebron'])
+}).strict().nullable(),
+  "priorConflicts": zod.array(zod.object({
+  "kind": zod.enum(['intra-export', 'existing-appointment', 'source-coincidence', 'policy']),
+  "rowIds": zod.array(zod.number().int()),
+  "code": zod.string(),
+  "messageKey": zod.string(),
+  "severity": zod.enum(['blocking', 'warning', 'info', 'acknowledged']),
+  "appointmentId": zod.number().int().optional()
+}).strict())
+}).strict()).optional(),
+  "mapping": zod.object({
+  "doctorId": zod.number().int(),
+  "clinicId": zod.number().int(),
+  "startsAt": zod.coerce.date(),
+  "endsAt": zod.coerce.date(),
+  "durationMinutes": zod.number().int(),
+  "status": zod.enum(['booked', 'completed', 'cancelled']),
+  "startLocal": zod.string(),
+  "endLocal": zod.string(),
+  "timezone": zod.enum(['Asia/Hebron'])
+}).strict().nullable(),
+  "outcome": zod.enum(['review-required', 'reviewed', 'skipped', 'created', 'linked', 'source-replay']),
+  "appointmentId": zod.number().int().nullable(),
+  "availableActions": zod.array(zod.enum(['include-existing', 'create-patient', 'skip']))
+}).strict()),
+  "totals": zod.object({
+  "sourceRows": zod.number().int(),
+  "autoLinked": zod.number().int(),
+  "reviewRequired": zod.number().int(),
+  "suggestedRows": zod.number().int(),
+  "skipped": zod.number().int(),
+  "created": zod.number().int(),
+  "linked": zod.number().int(),
+  "intraExportPairs": zod.number().int(),
+  "existingOverlaps": zod.number().int(),
+  "existingCoincidences": zod.number().int()
+}).strict(),
+  "conflicts": zod.array(zod.object({
+  "kind": zod.enum(['intra-export', 'existing-appointment', 'source-coincidence', 'policy']),
+  "rowIds": zod.array(zod.number().int()),
+  "code": zod.string(),
+  "messageKey": zod.string(),
+  "severity": zod.enum(['blocking', 'warning', 'info', 'acknowledged']),
+  "appointmentId": zod.number().int().optional()
+}).strict())
+}).strict()
+}).strict()
 
 

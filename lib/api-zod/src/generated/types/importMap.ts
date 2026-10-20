@@ -5,9 +5,14 @@
  * Amal Network Section 12. Authentication, appointments and clinic-local patient CRUD/search are implemented; other domain services remain contracts/mocks. UTC ISO instants, required date-only DOB, Asia/Hebron display. Local patient endpoints return demographics only to doctors/front-desk, never clinical history or admin patient access. Separate network services require consent and exclude Lite clinics. Lists use opaque cursor plus limit (1–100, default 25); null nextCursor ends pagination.
  * OpenAPI spec version: 0.2.0
  */
+import type { ImportRowReview } from './importRowReview';
 
-export type ImportMappingColumns = {
-  name: string;
-  startsAt: string;
-  endsAt: string;
-};
+export interface ImportMap {
+  /** @minimum 1 */
+  expectedVersion: number;
+  /**
+     * @minItems 1
+     * @maxItems 100
+     */
+  rows: ImportRowReview[];
+}

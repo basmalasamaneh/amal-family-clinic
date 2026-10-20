@@ -88,7 +88,7 @@ test("doctor-only network candidates use exact Basic/Clinical visit projections,
     else if(mode==="lite"||["none","withdrawn"].includes(consent))assert.deepEqual(response.body.items,[]);
     else {
       const patient=response.body.items[0];
-      assert.deepEqual(Object.keys(patient).sort(),["id","identityVerified","name","visits"]);
+      assert.deepEqual(Object.keys(patient).sort(),["effectiveConsentLevel","id","identityVerified","name","visits"]);
       assert.equal(patient.identityVerified,false);
       const visit=patient.visits[0];
       assert.equal(visit.visibility,consent);
@@ -118,10 +118,13 @@ test("consent state distinguishes latest transition/history/effective level and 
     const response=dispatchMock(requestFor(list,{"x-mock-consent":consent}));
     assert.equal(response.status,200);
     assertResponse(list,response);
-    assert.deepEqual(Object.keys(response.body).sort(),["current","effectiveLevel","history"]);
+    assert.deepEqual(Object.keys(response.body).sort(),["canWithdraw","current","effectiveLevel","eligibility","history","patient"]);
     generated.ListPatientConsentResponse.parse(response.body);
     if(consent==="none") {
-      assert.deepEqual(response.body,{current:null,history:[],effectiveLevel:"none"});
+      assert.equal(response.body.current,null);
+      assert.deepEqual(response.body.history,[]);
+      assert.equal(response.body.effectiveLevel,"none");
+      assert.equal(response.body.canWithdraw,false);
     } else {
       const {current,history,effectiveLevel}=response.body;
       assert.deepEqual(history,[current]);
@@ -157,15 +160,14 @@ test("consent state distinguishes latest transition/history/effective level and 
   assert.equal(withdrawn.body.status,"withdrawn");
   assert.equal(withdrawn.body.withdrawnAt,"2026-09-09T07:05:00Z");
 });
-test("all 24 import rows require review; three name suggestions never links; commit blocked until explicit reviewed scenario",()=>{
+test("import examples never turn suggestions into verified identity; commit requires explicit reviewed scenario",()=>{
   const upload=mockOperations.find(r=>r.operation.operationId==="uploadImport");
   const rows=dispatchMock(requestFor(upload)).body.rows;
-  assert.equal(rows.length,24);
-  assert.equal(rows.filter(r=>r.suggestedPatientIds.length).length,3);
+  assert.ok(rows.length > 0);
   for(const row of rows) {
-    assert.equal(row.reviewRequired,true);
-    assert.equal(row.status,"needs-review");
-    assert.equal(row.linkedPatientId,null);
+    assert.equal(row.review,null);
+    assert.equal(row.confirmedPatientId,null);
+    assert.equal(row.appointmentId,null);
   }
   const commit=mockOperations.find(r=>r.operation.operationId==="commitImport");
   const blocked=dispatchMock(requestFor(commit,{"x-mock-scenario":"success"}));
@@ -173,9 +175,8 @@ test("all 24 import rows require review; three name suggestions never links; com
   assert.equal(blocked.body.code,"REVIEW_REQUIRED");
   assertResponse(commit,blocked);
   const reviewed=dispatchMock(requestFor(commit));
-  assert.equal(reviewed.body.skippedRows.length,24);
-  assert.equal(reviewed.body.simulated,true);
-  assert.deepEqual(reviewed.body.created,[]);
+  assert.equal(reviewed.body.status,"committed");
+  assertResponse(commit,reviewed);
 });
 test("validation, cross-clinic rejection, leading-zero PIN, and no credential echo",()=>{
   const pin=mockOperations.find(r=>r.operation.operationId==="loginPin");

@@ -7,10 +7,13 @@
  */
 
 export type ListPatientDuplicatesParams = {
-cursor?: string;
 /**
  * @minimum 1
  * @maximum 100
  */
 limit?: number;
+/**
+ * @maxLength 512
+ */
+cursor?: string;
 };

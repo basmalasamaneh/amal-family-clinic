@@ -3,6 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
+    "compose:imports": "node compose-import-merge.mjs",
     "validate": "node validate-contract.mjs",
     "codegen": "orval --config ./orval.config.ts && pnpm -w run typecheck:libs"
   },

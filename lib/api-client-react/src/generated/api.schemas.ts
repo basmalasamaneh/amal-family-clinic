@@ -901,27 +901,57 @@ export interface ImportReviewRow {
   conflicts: ConflictItem[];
 }
 
-export type ImportReviewStatus = typeof ImportReviewStatus[keyof typeof ImportReviewStatus];
+export type ImportReviewAction = typeof ImportReviewAction[keyof typeof ImportReviewAction];
 
 
-export const ImportReviewStatus = {
-  'review-required': 'review-required',
+export const ImportReviewAction = {
+  include: 'include',
+  skip: 'skip',
 } as const;
 
-export interface ImportReview {
-  /** @minimum 1 */
-  id: number;
-  status: ImportReviewStatus;
-  rows: ImportReviewRow[];
-  /** @minimum 1 */
-  total: number;
-}
+export type ImportReviewVerificationMethod = typeof ImportReviewVerificationMethod[keyof typeof ImportReviewVerificationMethod];
 
-export type ImportMappingColumns = {
-  name: string;
-  startsAt: string;
-  endsAt: string;
-};
+
+export const ImportReviewVerificationMethod = {
+  phone: 'phone',
+  dob: 'dob',
+  new: 'new',
+} as const;
+
+/**
+ * @nullable
+ */
+export type ImportReviewIdentityAction = typeof ImportReviewIdentityAction[keyof typeof ImportReviewIdentityAction] | null;
+
+
+export const ImportReviewIdentityAction = {
+  create: 'create',
+  existing: 'existing',
+} as const;
+
+/**
+ * @nullable
+ */
+export type ImportReview = {
+  action: ImportReviewAction;
+  reviewerId: number;
+  reviewedAt: string;
+  verificationMethod?: ImportReviewVerificationMethod;
+  /** @nullable */
+  identityAction: ImportReviewIdentityAction;
+  reason?: string;
+  overrideReason?: string;
+  associateAppointmentId?: number;
+} | null;
+
+export type ImportMappingStatus = typeof ImportMappingStatus[keyof typeof ImportMappingStatus];
+
+
+export const ImportMappingStatus = {
+  booked: 'booked',
+  completed: 'completed',
+  cancelled: 'cancelled',
+} as const;
 
 export type ImportMappingTimezone = typeof ImportMappingTimezone[keyof typeof ImportMappingTimezone];
 
@@ -930,29 +960,20 @@ export const ImportMappingTimezone = {
   'Asia/Hebron': 'Asia/Hebron',
 } as const;
 
-export type ImportMappingDecisionsItemDecision = typeof ImportMappingDecisionsItemDecision[keyof typeof ImportMappingDecisionsItemDecision];
-
-
-export const ImportMappingDecisionsItemDecision = {
-  link: 'link',
-  'new-patient': 'new-patient',
-  skip: 'skip',
-} as const;
-
-export type ImportMappingDecisionsItem = {
-  /** @minimum 1 */
-  rowId: number;
-  decision: ImportMappingDecisionsItemDecision;
-  reviewed: true;
-  /** @minimum 1 */
-  patientId?: number;
-};
-
-export interface ImportMapping {
-  columns: ImportMappingColumns;
+/**
+ * @nullable
+ */
+export type ImportMapping = {
+  doctorId: number;
+  clinicId: number;
+  startsAt: string;
+  endsAt: string;
+  durationMinutes: number;
+  status: ImportMappingStatus;
+  startLocal: string;
+  endLocal: string;
   timezone: ImportMappingTimezone;
-  decisions: ImportMappingDecisionsItem[];
-}
+} | null;
 
 export interface ImportCommitResult {
   /** @minimum 1 */
@@ -1327,6 +1348,417 @@ export interface AppointmentHold {
   expiresAt: string;
 }
 
+export interface ImportSourceRow {
+  /** @minimum 1 */
+  event_id: number;
+  /** @maxLength 254 */
+  doctor_email: string;
+  /** @maxLength 200 */
+  patient_name_typed: string;
+  /** @maxLength 40 */
+  start_time: string;
+  /** @maxLength 40 */
+  end_time: string;
+  /** @maxLength 40 */
+  event_status: string;
+}
+
+export type ImportUploadSource = typeof ImportUploadSource[keyof typeof ImportUploadSource];
+
+
+export const ImportUploadSource = {
+  seed: 'seed',
+  json: 'json',
+} as const;
+
+/**
+ * Raw source row; expected fields follow ImportSourceRow. Unknown columns and malformed values are preserved with per-row validation errors.
+ */
+export type ImportUploadRowsItem = { [key: string]: unknown };
+
+export interface ImportUpload {
+  source: ImportUploadSource;
+  clientOpId: string;
+  /**
+     * Display/provenance filename, required for JSON. Does not change event identity: all files use the fixed calendar_app_export adapter namespace. The reserved seed sourceName is forbidden for JSON.
+     * @minLength 1
+     * @maxLength 100
+     */
+  sourceName?: string;
+  /**
+     * @minItems 1
+     * @maxItems 100
+     */
+  rows?: ImportUploadRowsItem[];
+}
+
+export interface ImportNewPatient {
+  /**
+     * @minLength 1
+     * @maxLength 200
+     */
+  name: string;
+  /**
+     * @minLength 1
+     * @maxLength 40
+     */
+  phone: string;
+  dateOfBirth: string;
+  /** @maxLength 200 */
+  guardianName?: string;
+  /** @maxLength 100 */
+  guardianRelation?: string;
+}
+
+export type ImportIdentity = {
+  kind: 'existing';
+  /** @minimum 1 */
+  patientId: number;
+  verification: {
+  method: 'phone' | 'dob';
+  /**
+     * @minLength 1
+     * @maxLength 40
+     */
+  value: string;
+};
+} | {
+  kind: 'new';
+  patient: ImportNewPatient;
+};
+
+export type ImportRowReview = {
+  /** @minimum 1 */
+  rowId: number;
+  action: 'skip';
+  /**
+     * @minLength 1
+     * @maxLength 1000
+     */
+  reason: string;
+} | {
+  /** @minimum 1 */
+  rowId: number;
+  action: 'include';
+  /** @minimum 1 */
+  doctorId: number;
+  identity: ImportIdentity;
+  /** @pattern ^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$ */
+  startLocal?: string;
+  /** @pattern ^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$ */
+  endLocal?: string;
+  /** @minimum 1 */
+  associateAppointmentId?: number;
+  /**
+     * @minLength 1
+     * @maxLength 1000
+     */
+  overrideReason?: string;
+};
+
+export interface ImportMap {
+  /** @minimum 1 */
+  expectedVersion: number;
+  /**
+     * @minItems 1
+     * @maxItems 100
+     */
+  rows: ImportRowReview[];
+}
+
+export interface ImportCommit {
+  /** @minimum 1 */
+  expectedVersion: number;
+  clientOpId: string;
+}
+
+export type ImportIssueParams = {[key: string]: string | number};
+
+export interface ImportIssue {
+  code: string;
+  messageKey: string;
+  params: ImportIssueParams;
+}
+
+export type ImportBatchAdapter = typeof ImportBatchAdapter[keyof typeof ImportBatchAdapter];
+
+
+export const ImportBatchAdapter = {
+  calendar_app_export: 'calendar_app_export',
+} as const;
+
+export type ImportBatchStatus = typeof ImportBatchStatus[keyof typeof ImportBatchStatus];
+
+
+export const ImportBatchStatus = {
+  review_required: 'review_required',
+  reviewed: 'reviewed',
+  committed: 'committed',
+} as const;
+
+export type ImportReviewHistoryAction = typeof ImportReviewHistoryAction[keyof typeof ImportReviewHistoryAction];
+
+
+export const ImportReviewHistoryAction = {
+  include: 'include',
+  skip: 'skip',
+} as const;
+
+/**
+ * @nullable
+ */
+export type ImportReviewHistoryVerificationMethod = typeof ImportReviewHistoryVerificationMethod[keyof typeof ImportReviewHistoryVerificationMethod] | null;
+
+
+export const ImportReviewHistoryVerificationMethod = {
+  phone: 'phone',
+  dob: 'dob',
+  new: 'new',
+} as const;
+
+export type ImportConflictKind = typeof ImportConflictKind[keyof typeof ImportConflictKind];
+
+
+export const ImportConflictKind = {
+  'intra-export': 'intra-export',
+  'existing-appointment': 'existing-appointment',
+  'source-coincidence': 'source-coincidence',
+  policy: 'policy',
+} as const;
+
+export type ImportConflictSeverity = typeof ImportConflictSeverity[keyof typeof ImportConflictSeverity];
+
+
+export const ImportConflictSeverity = {
+  blocking: 'blocking',
+  warning: 'warning',
+  info: 'info',
+  acknowledged: 'acknowledged',
+} as const;
+
+export interface ImportConflict {
+  kind: ImportConflictKind;
+  rowIds: number[];
+  code: string;
+  messageKey: string;
+  severity: ImportConflictSeverity;
+  appointmentId?: number;
+}
+
+export interface ImportReviewHistory {
+  rowId: number;
+  version: number;
+  reviewerId: number;
+  reviewedAt: string;
+  action: ImportReviewHistoryAction;
+  /** @nullable */
+  verificationMethod: ImportReviewHistoryVerificationMethod;
+  /** @nullable */
+  patientId: number | null;
+  /** @nullable */
+  reason: string | null;
+  /** @nullable */
+  overrideReason: string | null;
+  /** @nullable */
+  associateAppointmentId: number | null;
+  mapping: ImportMapping | null;
+  priorConflicts: ImportConflict[];
+}
+
+export type ImportRowOutcome = typeof ImportRowOutcome[keyof typeof ImportRowOutcome];
+
+
+export const ImportRowOutcome = {
+  'review-required': 'review-required',
+  reviewed: 'reviewed',
+  skipped: 'skipped',
+  created: 'created',
+  linked: 'linked',
+  'source-replay': 'source-replay',
+} as const;
+
+export type ImportRowAvailableActionsItem = typeof ImportRowAvailableActionsItem[keyof typeof ImportRowAvailableActionsItem];
+
+
+export const ImportRowAvailableActionsItem = {
+  'include-existing': 'include-existing',
+  'create-patient': 'create-patient',
+  skip: 'skip',
+} as const;
+
+/**
+ * Original source object, preserved even when malformed.
+ */
+export type ImportRowSource = { [key: string]: unknown };
+
+export interface ImportRow {
+  id: number;
+  /** Original source object, preserved even when malformed. */
+  source: ImportRowSource;
+  suggestedPatientIds: number[];
+  /** @nullable */
+  confirmedPatientId: number | null;
+  errors: ImportIssue[];
+  review: ImportReview | null;
+  reviewHistory?: ImportReviewHistory[];
+  mapping: ImportMapping | null;
+  outcome: ImportRowOutcome;
+  /** @nullable */
+  appointmentId: number | null;
+  availableActions: ImportRowAvailableActionsItem[];
+}
+
+export interface ImportTotals {
+  sourceRows: number;
+  autoLinked: number;
+  reviewRequired: number;
+  suggestedRows: number;
+  skipped: number;
+  created: number;
+  linked: number;
+  intraExportPairs: number;
+  existingOverlaps: number;
+  existingCoincidences: number;
+}
+
+export interface ImportBatch {
+  id: number;
+  version: number;
+  /** Original source filename or seed adapter name. */
+  sourceName?: string;
+  adapter?: ImportBatchAdapter;
+  status: ImportBatchStatus;
+  createdAt: string;
+  /** @nullable */
+  committedAt: string | null;
+  rows: ImportRow[];
+  totals: ImportTotals;
+  conflicts: ImportConflict[];
+}
+
+export type ImportReportLocale = typeof ImportReportLocale[keyof typeof ImportReportLocale];
+
+
+export const ImportReportLocale = {
+  ar: 'ar',
+  en: 'en',
+} as const;
+
+export type ImportReportLabels = {[key: string]: string};
+
+export interface ImportReport {
+  locale: ImportReportLocale;
+  labels: ImportReportLabels;
+  batch: ImportBatch;
+}
+
+export interface DuplicatePatient {
+  /** @minimum 1 */
+  id: number;
+  name: string;
+  /** @minimum 1 */
+  version: number;
+}
+
+export interface PatientDuplicatePair {
+  source: DuplicatePatient;
+  target: DuplicatePatient;
+}
+
+export interface PatientDuplicates {
+  items: PatientDuplicatePair[];
+  /** @nullable */
+  nextCursor: string | null;
+}
+
+export interface PatientMergeRequest {
+  /**
+     * @minimum 1
+     * @maximum 2147483647
+     */
+  sourceId: number;
+  /**
+     * @minimum 1
+     * @maximum 2147483647
+     */
+  targetId: number;
+  /**
+     * @minimum 1
+     * @maximum 2147483647
+     */
+  sourceVersion: number;
+  /**
+     * @minimum 1
+     * @maximum 2147483647
+     */
+  targetVersion: number;
+  confirmed: true;
+  /**
+     * @minLength 1
+     * @maxLength 1000
+     */
+  reason: string;
+  clientOpId: string;
+}
+
+export interface PatientMergeResult {
+  sourceId: number;
+  targetId: number;
+  sourceVersion: number;
+  targetVersion: number;
+  mergedAt: string;
+}
+
+/**
+ * Invalid input or unsupported file format
+ */
+export type ImportValidationResponse = ApiFailure;
+
+/**
+ * Authentication required
+ */
+export type ImportUnauthorizedResponse = ApiFailure;
+
+/**
+ * Scope, ownership, role or CSRF denied
+ */
+export type ImportForbiddenResponse = ApiFailure;
+
+/**
+ * Batch or authorized patient/doctor not found
+ */
+export type ImportNotFoundResponse = ApiFailure;
+
+/**
+ * Stale version/identity, unresolved conflict, incomplete review, changed source, conflicting idempotency key or association mismatch
+ */
+export type ImportConflictFailureResponse = ApiFailure;
+
+/**
+ * Upload exceeds 128 KiB
+ */
+export type ImportTooLargeResponse = ApiFailure;
+
+/**
+ * Verification failed, invalid local time or invalid source row
+ */
+export type ImportInvalidRowResponse = ApiFailure;
+
+/**
+ * PIN locked
+ */
+export type ImportLockedResponse = ApiFailure;
+
+/**
+ * Rate limited
+ */
+export type ImportRateLimitResponse = ApiFailure;
+
+/**
+ * Unexpected server failure; transaction rolled back
+ */
+export type ImportInternalResponse = ApiFailure;
+
 export type ListClinicsParams = {
 cursor?: string;
 /**
@@ -1488,11 +1920,26 @@ limit?: number;
 };
 
 export type ListPatientDuplicatesParams = {
-cursor?: string;
 /**
  * @minimum 1
  * @maximum 100
  */
 limit?: number;
+/**
+ * @maxLength 512
+ */
+cursor?: string;
 };
+
+export type DownloadImportReportParams = {
+locale?: DownloadImportReportLocale;
+};
+
+export type DownloadImportReportLocale = typeof DownloadImportReportLocale[keyof typeof DownloadImportReportLocale];
+
+
+export const DownloadImportReportLocale = {
+  ar: 'ar',
+  en: 'en',
+} as const;
 
