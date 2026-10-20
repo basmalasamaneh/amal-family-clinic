@@ -15,12 +15,14 @@ import adminDirectoryRouter from "./admin-directory";
 import networkHealthRouter from "./network-health";
 import adminAuditRouter from "./admin-audit";
 import adoptionRouter from "./adoption";
+import adoptionResultsRouter from "./adoption-results";
 
 const router: IRouter = Router();
 
 router.use(healthRouter);
 router.use(authRouter);
 router.use(adoptionRouter);
+router.use(adoptionResultsRouter);
 router.use(adminUsersRouter);
 router.use(adminAuditRouter);
 router.use(adminDirectoryRouter);

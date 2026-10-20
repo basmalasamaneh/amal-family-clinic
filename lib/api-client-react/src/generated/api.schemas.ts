@@ -5,6 +5,96 @@
  * Amal Network Section 12. Authentication, appointments and clinic-local patient CRUD/search are implemented; other domain services remain contracts/mocks. UTC ISO instants, required date-only DOB, Asia/Hebron display. Local patient endpoints return demographics only to doctors/front-desk, never clinical history or admin patient access. Separate network services require consent and exclude Lite clinics. Lists use opaque cursor plus limit (1–100, default 25); null nextCursor ends pagination. Administration endpoints are implemented against operational tables, with account deactivation and transactional audit. Network health reports persisted receipt-time telemetry with explicit unknown queue coverage.
  * OpenAPI spec version: 0.2.0
  */
+/**
+ * @nullable
+ */
+export type AdoptionResultMetricReason = typeof AdoptionResultMetricReason[keyof typeof AdoptionResultMetricReason] | null;
+
+
+export const AdoptionResultMetricReason = {
+  NO_PREVENTION_EVIDENCE: 'NO_PREVENTION_EVIDENCE',
+  NO_LOOKUP_SAMPLES: 'NO_LOOKUP_SAMPLES',
+} as const;
+
+export type AdoptionResultMetricUnits = typeof AdoptionResultMetricUnits[keyof typeof AdoptionResultMetricUnits];
+
+
+export const AdoptionResultMetricUnits = {
+  blocks: 'blocks',
+  seconds: 'seconds',
+} as const;
+
+export interface AdoptionResultMetric {
+  available: boolean;
+  /** @nullable */
+  reason: AdoptionResultMetricReason;
+  /**
+     * Null when unavailable; observed zero remains numeric zero.
+     * @minimum 0
+     * @nullable
+     */
+  value: number | null;
+  units: AdoptionResultMetricUnits;
+  /** @minimum 0 */
+  sampleCount: number;
+  coverage: string;
+  provenance: string;
+}
+
+/**
+ * @nullable
+ */
+export type AdoptionResultsReason = typeof AdoptionResultsReason[keyof typeof AdoptionResultsReason] | null;
+
+
+export const AdoptionResultsReason = {
+  SCENARIO_UNCONFIGURED: 'SCENARIO_UNCONFIGURED',
+  SCENARIO_CLINICS_UNAVAILABLE: 'SCENARIO_CLINICS_UNAVAILABLE',
+} as const;
+
+export type AdoptionResultsClinicsItem = {
+  /**
+     * @minimum 1
+     * @maximum 2147483647
+     */
+  clinicId: number;
+  clinicName: string;
+  preventedBlocks: AdoptionResultMetric;
+  medianLookupSeconds: AdoptionResultMetric;
+};
+
+/**
+ * Half-open local-calendar exposure. UTC instants are converted from Asia/Hebron midnights; local calendar days need not be 24 hours at DST.
+ */
+export interface KpiPeriod {
+  startDate: string;
+  endDateExclusive: string;
+  /** UTC ISO 8601 instant. */
+  start: string;
+  /** UTC ISO 8601 instant. */
+  end: string;
+  /** @minimum 1 */
+  days: number;
+  timezone: 'Asia/Hebron';
+}
+
+/**
+ * Intentionally published scalar summary only. Configuration authorizes disclosure independently of clinical sharing consent. available refers to configuration resolution; each metric has independent evidence availability. No trial clinic identity, event, patient or doctor detail. No clinical sharing permission or adoption mutation is implied.
+ */
+export interface AdoptionResults {
+  available: boolean;
+  /** @nullable */
+  reason: AdoptionResultsReason;
+  window: KpiPeriod;
+  generatedAt: string;
+  calculationVersion: string;
+  /**
+     * Exactly two configured result clinics in configuration order when available; empty otherwise. Names are operational data, never used for resolution.
+     * @maxItems 2
+     */
+  clinics: AdoptionResultsClinicsItem[];
+}
+
 export interface OfflinePermit {
   /** base64url JSON signed claims: version=1, audience=amal-offline-tab, tab nonce, account userId, display name, doctor/front-desk role, single clinic id/name, issuedAt/expiresAt UTC milliseconds. Maximum lifetime 30 minutes and never beyond authenticated session expiry. */
   payload: string;
@@ -1380,21 +1470,6 @@ export interface KpiScope {
 export interface KpiComparison {
   equalExposure: boolean;
   note: string;
-}
-
-/**
- * Half-open local-calendar exposure. UTC instants are converted from Asia/Hebron midnights; local calendar days need not be 24 hours at DST.
- */
-export interface KpiPeriod {
-  startDate: string;
-  endDateExclusive: string;
-  /** UTC ISO 8601 instant. */
-  start: string;
-  /** UTC ISO 8601 instant. */
-  end: string;
-  /** @minimum 1 */
-  days: number;
-  timezone: 'Asia/Hebron';
 }
 
 /**

@@ -36,6 +36,8 @@ import { clearConsentSelection } from '@/consent/model';
 import { ConsentPage } from '@/consent/ConsentPage';
 import { ImportPage } from '@/imports/ImportPage';
 import { DuplicatesPage } from '@/duplicates/DuplicatesPage';
+import { AdoptionPage } from '@/adoption/AdoptionPage';
+import '@/adoption/i18n';
 import { SyncQueuePanel } from '@/sync/SyncQueuePanel';
 import { isKnownRole, landingFor, resolve, routesFor, type Resolution, type ShellRoute } from './routes';
 
@@ -122,7 +124,7 @@ function AppShellContent({ identity, fixture, onRefresh, onLogout }: Props) {
         </header>
 
         <main id="main" tabIndex={-1} className="shell-main" key={role === 'admin' ? 'admin' : clinicId ?? 'none'}>
-          <PageContent res={res} title={title} clinic={clinic} clinics={clinics} fixture={fixture} landing={landingFor(role)} scope={`${identity.id}:${role ?? 'none'}:${role === 'admin' ? 'all' : clinic?.id ?? 'none'}`} onRefresh={onRefresh} />
+          <PageContent identity={identity} res={res} title={title} clinic={clinic} clinics={clinics} fixture={fixture} landing={landingFor(role)} scope={`${identity.id}:${role ?? 'none'}:${role === 'admin' ? 'all' : clinic?.id ?? 'none'}`} onRefresh={onRefresh} />
         </main>
       </div>
 
@@ -377,7 +379,7 @@ function HelpMenu({ onReplay, canReplay }: { onReplay: () => void; canReplay: bo
   );
 }
 
-function PageContent({ res, title, clinic, clinics, fixture, landing, scope, onRefresh }: { res: Resolution; title: string; clinic: ShellClinic | null; clinics: ShellClinic[]; fixture: boolean; landing: string | null; scope: string; onRefresh: (strict?: boolean) => Promise<void> }) {
+function PageContent({ identity, res, title, clinic, clinics, fixture, landing, scope, onRefresh }: { identity: ShellIdentity; res: Resolution; title: string; clinic: ShellClinic | null; clinics: ShellClinic[]; fixture: boolean; landing: string | null; scope: string; onRefresh: (strict?: boolean) => Promise<void> }) {
   const { t } = useTranslation();
   const { locale, digitPreference } = useAmalPreferences();
   const [now] = useState(() => new Date().toISOString());
@@ -393,6 +395,7 @@ function PageContent({ res, title, clinic, clinics, fixture, landing, scope, onR
   if (res.kind === 'page' && res.route.id === 'patientCard') return <PatientCardPage clinic={clinic} title={title} scope={scope} />;
   if (res.kind === 'page' && res.route.id === 'myDay') return <MyDayPage clinic={clinic} title={title} scope={scope} />;
   if (res.kind === 'page' && res.route.id === 'privacy') return <PrivacyPage clinic={clinic} title={title} scope={scope} />;
+  if (res.kind === 'page' && res.route.id === 'adoption') return <AdoptionPage key={scope} clinic={clinic} accountId={identity.id} title={title} landing={landing} canSeePrivacy={identity.role === 'doctor'} onRefresh={onRefresh} />;
   if (res.kind === 'page' && res.route.id === 'kpi') return <KpiPage key={scope} title={title} clinics={clinics} />;
   // Admin pages are keyed by account+role scope so late results never cross a logout or role change.
   if (res.kind === 'page' && res.route.id === 'networkHealth') return <NetworkHealthPage key={scope} title={title} />;

@@ -1,6 +1,6 @@
 import type { LucideIcon } from 'lucide-react';
 import {
-  Activity, BarChart3, Building2, CalendarDays, CalendarPlus, CalendarRange, Code2, Copy, FileUp, Globe2, IdCard,
+  Activity, BarChart3, Building2, CalendarDays, CalendarPlus, CalendarRange, Code2, Copy, FileUp, Globe2, Handshake, IdCard,
   Printer, RefreshCcw, ScrollText, Search, ShieldCheck, Stethoscope, Users,
 } from 'lucide-react';
 import type { ShellRole } from './identity';
@@ -35,6 +35,7 @@ export const SHELL_ROUTES: readonly ShellRoute[] = [
   { id: 'developer', path: '/admin/developer', roles: ['admin'], icon: Code2 },
   // P1-07 import/merge APIs authorize doctor and front-desk only; admin status grants no patient-level access.
   { id: 'import', path: '/work/import', roles: ['front-desk', 'doctor'], icon: FileUp },
+  { id: 'adoption', path: '/work/adoption', roles: ['front-desk', 'doctor'], icon: Handshake },
   { id: 'duplicates', path: '/work/duplicates', roles: ['front-desk', 'doctor'], icon: Copy },
 ];
 

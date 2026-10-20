@@ -32,6 +32,45 @@
       }
     },
     "schemas": {
+      "AdoptionResultMetric": {
+        "type": "object", "additionalProperties": false,
+        "required": ["available", "reason", "value", "units", "sampleCount", "coverage", "provenance"],
+        "properties": {
+          "available": { "type": "boolean" },
+          "reason": { "type": ["string", "null"], "enum": [null, "NO_PREVENTION_EVIDENCE", "NO_LOOKUP_SAMPLES"] },
+          "value": { "type": ["number", "null"], "minimum": 0, "description": "Null when unavailable; observed zero remains numeric zero." },
+          "units": { "type": "string", "enum": ["blocks", "seconds"] },
+          "sampleCount": { "type": "integer", "minimum": 0 },
+          "coverage": { "type": "string" },
+          "provenance": { "type": "string" }
+        }
+      },
+      "AdoptionResults": {
+        "type": "object", "additionalProperties": false,
+        "required": ["available", "reason", "window", "generatedAt", "calculationVersion", "clinics"],
+        "description": "Intentionally published scalar summary only. Configuration authorizes disclosure independently of clinical sharing consent. available refers to configuration resolution; each metric has independent evidence availability. No trial clinic identity, event, patient or doctor detail. No clinical sharing permission or adoption mutation is implied.",
+        "properties": {
+          "available": { "type": "boolean" },
+          "reason": { "type": ["string", "null"], "enum": [null, "SCENARIO_UNCONFIGURED", "SCENARIO_CLINICS_UNAVAILABLE"] },
+          "window": { "$ref": "#/components/schemas/KpiPeriod" },
+          "generatedAt": { "type": "string", "format": "date-time" },
+          "calculationVersion": { "type": "string" },
+          "clinics": {
+            "type": "array", "maxItems": 2,
+            "description": "Exactly two configured result clinics in configuration order when available; empty otherwise. Names are operational data, never used for resolution.",
+            "items": {
+              "type": "object", "additionalProperties": false,
+              "required": ["clinicId", "clinicName", "preventedBlocks", "medianLookupSeconds"],
+              "properties": {
+                "clinicId": { "type": "integer", "minimum": 1, "maximum": 2147483647 },
+                "clinicName": { "type": "string" },
+                "preventedBlocks": { "$ref": "#/components/schemas/AdoptionResultMetric" },
+                "medianLookupSeconds": { "$ref": "#/components/schemas/AdoptionResultMetric" }
+              }
+            }
+          }
+        }
+      },
       "OfflinePermit": {
         "type": "object",
         "additionalProperties": false,
@@ -12934,6 +12973,39 @@
           "500": {
             "$ref": "#/components/responses/ImportInternal"
           }
+        }
+      }
+    },
+    "/adoption/results": {
+      "get": {
+        "operationId": "getAdoptionResults",
+        "tags": ["adoption"],
+        "x-roles": ["doctor", "front-desk"],
+        "x-implementation": "real",
+        "summary": "Read intentionally published voluntary-adoption results",
+        "description": "Authenticated doctor/front-desk only, including Trial/Lite. No query parameters accepted (unknown parameters return 400). Fixed rolling seven complete Asia/Hebron local days ending at today's local midnight, half-open UTC instants. Strict committed server configuration must identify exactly one trial and two distinct operational result clinics. Missing/invalid configuration or missing identities fails closed with available:false and no clinics. Only the configured results are disclosed; no arbitrary clinic filters/enumeration. Prevented blocks reuse durable deduplicated APPOINTMENT_CONFLICT counts, excluding approved overrides and warnings; sampleCount counts distinct durable applied/conflict decisions to distinguish observed zero from no evidence. Median lookup seconds is the exact whole-window median over aggregate duration frequencies, with independent availability, sample count and partial coverage. No per-day detail, doctor/patient/event data, administrative KPI payload or adoption mutation. Cache-Control: private, no-store. Configuration intentionally authorizes publication, not clinical sharing. /kpis remains admin-only.",
+        "security": [{ "sessionCookie": [] }],
+        "responses": {
+          "200": {
+            "description": "Narrow scalar summary or explicit unavailable state; unavailable is not zero.",
+            "headers": { "Cache-Control": { "schema": { "type": "string" }, "description": "private, no-store" } },
+            "content": { "application/json": {
+              "schema": { "$ref": "#/components/schemas/AdoptionResults" },
+              "example": {
+                "available": false, "reason": "SCENARIO_UNCONFIGURED",
+                "window": {
+                  "startDate": "2026-09-07", "endDateExclusive": "2026-09-14",
+                  "start": "2026-09-06T21:00:00.000Z", "end": "2026-09-13T21:00:00.000Z",
+                  "days": 7, "timezone": "Asia/Hebron"
+                },
+                "generatedAt": "2026-09-14T09:00:00.000Z", "calculationVersion": "amal-kpi-1",
+                "clinics": []
+              }
+            } }
+          },
+          "400": { "$ref": "#/components/responses/ImportValidation" },
+          "401": { "$ref": "#/components/responses/ImportUnauthorized" },
+          "403": { "$ref": "#/components/responses/ImportForbidden" }
         }
       }
     },

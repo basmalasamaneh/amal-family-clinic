@@ -35,6 +35,7 @@ import type {
   AdminUserInput,
   AdminUserPage,
   AdminUserUpdate,
+  AdoptionResults,
   ApiFailure,
   Appointment,
   AppointmentAvailability,
@@ -3222,6 +3223,84 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       > => {
       return useMutation(getCommitImportMutationOptions(options));
     }
+
+export const getGetAdoptionResultsUrl = () => {
+
+
+
+
+  return `/api/adoption/results`
+}
+
+/**
+ * Authenticated doctor/front-desk only, including Trial/Lite. No query parameters accepted (unknown parameters return 400). Fixed rolling seven complete Asia/Hebron local days ending at today's local midnight, half-open UTC instants. Strict committed server configuration must identify exactly one trial and two distinct operational result clinics. Missing/invalid configuration or missing identities fails closed with available:false and no clinics. Only the configured results are disclosed; no arbitrary clinic filters/enumeration. Prevented blocks reuse durable deduplicated APPOINTMENT_CONFLICT counts, excluding approved overrides and warnings; sampleCount counts distinct durable applied/conflict decisions to distinguish observed zero from no evidence. Median lookup seconds is the exact whole-window median over aggregate duration frequencies, with independent availability, sample count and partial coverage. No per-day detail, doctor/patient/event data, administrative KPI payload or adoption mutation. Cache-Control: private, no-store. Configuration intentionally authorizes publication, not clinical sharing. /kpis remains admin-only.
+ * @summary Read intentionally published voluntary-adoption results
+ */
+export const getAdoptionResults = async ( options?: Parameters<typeof customFetch>[1]): Promise<AdoptionResults> => {
+
+  return customFetch<AdoptionResults>(getGetAdoptionResultsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetAdoptionResultsQueryKey = () => {
+    return [
+    `/api/adoption/results`
+    ] as const;
+    }
+
+
+export const getGetAdoptionResultsQueryOptions = <TData = Awaited<ReturnType<typeof getAdoptionResults>>, TError = ErrorType<ImportValidationResponse | ImportUnauthorizedResponse | ImportForbiddenResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAdoptionResults>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetAdoptionResultsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getAdoptionResults>>> = ({ signal }) => getAdoptionResults({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getAdoptionResults>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetAdoptionResultsQueryResult = NonNullable<Awaited<ReturnType<typeof getAdoptionResults>>>
+export type GetAdoptionResultsQueryError = ErrorType<ImportValidationResponse | ImportUnauthorizedResponse | ImportForbiddenResponse>
+
+
+/**
+ * @summary Read intentionally published voluntary-adoption results
+ */
+
+export function useGetAdoptionResults<TData = Awaited<ReturnType<typeof getAdoptionResults>>, TError = ErrorType<ImportValidationResponse | ImportUnauthorizedResponse | ImportForbiddenResponse>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAdoptionResults>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetAdoptionResultsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export const getGetKpisUrl = (params: GetKpisParams,) => {
   const normalizedParams = new URLSearchParams();

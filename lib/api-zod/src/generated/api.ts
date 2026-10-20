@@ -2284,6 +2284,63 @@ export const CommitImportResponse = zod.object({
 
 
 /**
+ * Authenticated doctor/front-desk only, including Trial/Lite. No query parameters accepted (unknown parameters return 400). Fixed rolling seven complete Asia/Hebron local days ending at today's local midnight, half-open UTC instants. Strict committed server configuration must identify exactly one trial and two distinct operational result clinics. Missing/invalid configuration or missing identities fails closed with available:false and no clinics. Only the configured results are disclosed; no arbitrary clinic filters/enumeration. Prevented blocks reuse durable deduplicated APPOINTMENT_CONFLICT counts, excluding approved overrides and warnings; sampleCount counts distinct durable applied/conflict decisions to distinguish observed zero from no evidence. Median lookup seconds is the exact whole-window median over aggregate duration frequencies, with independent availability, sample count and partial coverage. No per-day detail, doctor/patient/event data, administrative KPI payload or adoption mutation. Cache-Control: private, no-store. Configuration intentionally authorizes publication, not clinical sharing. /kpis remains admin-only.
+ * @summary Read intentionally published voluntary-adoption results
+ */
+
+export const getAdoptionResultsResponseClinicsItemClinicIdMax = 2147483647;
+
+export const getAdoptionResultsResponseClinicsItemPreventedBlocksValueMin = 0;
+
+export const getAdoptionResultsResponseClinicsItemPreventedBlocksSampleCountMin = 0;
+
+export const getAdoptionResultsResponseClinicsItemMedianLookupSecondsValueMin = 0;
+
+export const getAdoptionResultsResponseClinicsItemMedianLookupSecondsSampleCountMin = 0;
+
+export const getAdoptionResultsResponseClinicsMax = 2;
+
+
+
+export const GetAdoptionResultsResponse = zod.object({
+  "available": zod.boolean(),
+  "reason": zod.union([zod.literal(null),zod.literal('SCENARIO_UNCONFIGURED'),zod.literal('SCENARIO_CLINICS_UNAVAILABLE')]).nullable(),
+  "window": zod.object({
+  "startDate": zod.coerce.date(),
+  "endDateExclusive": zod.coerce.date(),
+  "start": zod.coerce.date().describe('UTC ISO 8601 instant.'),
+  "end": zod.coerce.date().describe('UTC ISO 8601 instant.'),
+  "days": zod.number().int().min(1),
+  "timezone": zod.literal("Asia/Hebron")
+}).strict().describe('Half-open local-calendar exposure. UTC instants are converted from Asia/Hebron midnights; local calendar days need not be 24 hours at DST.'),
+  "generatedAt": zod.coerce.date(),
+  "calculationVersion": zod.string(),
+  "clinics": zod.array(zod.object({
+  "clinicId": zod.number().int().min(1).max(getAdoptionResultsResponseClinicsItemClinicIdMax),
+  "clinicName": zod.string(),
+  "preventedBlocks": zod.object({
+  "available": zod.boolean(),
+  "reason": zod.union([zod.literal(null),zod.literal('NO_PREVENTION_EVIDENCE'),zod.literal('NO_LOOKUP_SAMPLES')]).nullable(),
+  "value": zod.number().min(getAdoptionResultsResponseClinicsItemPreventedBlocksValueMin).nullable().describe('Null when unavailable; observed zero remains numeric zero.'),
+  "units": zod.enum(['blocks', 'seconds']),
+  "sampleCount": zod.number().int().min(getAdoptionResultsResponseClinicsItemPreventedBlocksSampleCountMin),
+  "coverage": zod.string(),
+  "provenance": zod.string()
+}).strict(),
+  "medianLookupSeconds": zod.object({
+  "available": zod.boolean(),
+  "reason": zod.union([zod.literal(null),zod.literal('NO_PREVENTION_EVIDENCE'),zod.literal('NO_LOOKUP_SAMPLES')]).nullable(),
+  "value": zod.number().min(getAdoptionResultsResponseClinicsItemMedianLookupSecondsValueMin).nullable().describe('Null when unavailable; observed zero remains numeric zero.'),
+  "units": zod.enum(['blocks', 'seconds']),
+  "sampleCount": zod.number().int().min(getAdoptionResultsResponseClinicsItemMedianLookupSecondsSampleCountMin),
+  "coverage": zod.string(),
+  "provenance": zod.string()
+}).strict()
+}).strict()).max(getAdoptionResultsResponseClinicsMax).describe('Exactly two configured result clinics in configuration order when available; empty otherwise. Names are operational data, never used for resolution.')
+}).strict().describe('Intentionally published scalar summary only. Configuration authorizes disclosure independently of clinical sharing consent. available refers to configuration resolution; each metric has independent evidence availability. No trial clinic identity, event, patient or doctor detail. No clinical sharing permission or adoption mutation is implied.')
+
+
+/**
  * Implemented administrator-only aggregate endpoint. range is required; date defaults to today's Asia/Hebron date and must be a valid local date from 2000-01-01 through 2100-12-31. day is one local day; week is Monday through next Monday; month is the local calendar month. All UTC end instants are exclusive. Optional clinicId is a positive int32; no doctor filter/grouping/ranking. Fixed before window is 2026-09-08 through 2026-09-13 local dates, queried from untouched seeds; selected operational after exposure remains separate. Conflicts are exact-start all-status unordered pairs, not interval enforcement. Warnings/overrides and partial durable telemetry coverage are explicit; unavailable instrumentation/loss evidence is null with stable reasons, not fabricated zero. Current adoption is not historical. The response example is synthetic and does not state production baseline values.
  * @summary Get reproducible baseline and operational KPI aggregates
  */
