@@ -4,6 +4,8 @@ import {
   type ErrorInfo,
   type ReactNode,
 } from 'react';
+import { i18n } from '../i18n';
+import { useTranslation } from 'react-i18next';
 
 export interface ErrorFallbackProps {
   error: Error;
@@ -35,32 +37,26 @@ function toError(value: unknown): Error {
   }
 }
 
-function DefaultFallback({ error, resetError }: ErrorFallbackProps) {
+function DefaultFallback({ resetError }: ErrorFallbackProps) {
+  const { t } = useTranslation(undefined, { i18n });
   return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-gray-50 p-6">
-      <div className="max-w-lg w-full text-center">
-        <h1 className="text-xl font-semibold text-gray-900">
-          Something went wrong
+    <main className="shell-session">
+      <div className="shell-state">
+        <h1>
+          {t('shell.states.error.title')}
         </h1>
-        <p className="mt-2 text-sm text-gray-600">
-          This part of the app hit an error. The rest of the app is still
-          running.
+        <p>
+          {t('shell.states.error.desc')}
         </p>
-        {/* Dev only: messages can carry API responses and other internals. */}
-        {import.meta.env.DEV ? (
-          <pre className="mt-4 overflow-x-auto rounded bg-gray-100 p-3 text-left text-xs text-gray-800">
-            {error.message || String(error)}
-          </pre>
-        ) : null}
         <button
           type="button"
           onClick={resetError}
-          className="mt-4 rounded bg-gray-900 px-4 py-2 text-sm text-white hover:bg-gray-700"
+          className="amal-btn amal-btn--primary"
         >
-          Try again
+          {t('shell.states.error.retry')}
         </button>
       </div>
-    </div>
+    </main>
   );
 }
 

@@ -4,6 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "test:shell:unit": "tsx --test tests/shell.unit.test.ts",
+    "test:shell": "playwright test shell.spec.ts",
     "test:ui-kit": "playwright test",
     "dev": "vite --config vite.config.ts --host 0.0.0.0",
     "build": "vite build --config vite.config.ts",
@@ -79,5 +81,8 @@
     "vite": "catalog:",
     "wouter": "^3.3.5",
     "zod": "catalog:"
+  },
+  "dependencies": {
+    "date-fns-tz": "^3.2.0"
   }
 }

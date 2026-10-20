@@ -48,7 +48,7 @@ _Populate as you build — sharp edges, "always run X before Y" rules._
 
 ## Amal UI foundation
 
-- `artifacts/amal-network` serves `/ui-kit`; `/` redirects there. This is a frontend-only component showcase, not the booking application.
+- `artifacts/amal-network` retains `/ui-kit`; `/` now opens the session-aware role shell. Clinical destinations are localized placeholders, not implemented workflows.
 - `lib/amal-ui` owns shared tokens, localized components, preferences, fonts, and brand assets. Import reusable UI from `@workspace/amal-ui`.
 - `pnpm run typecheck:libs` builds shared declarations before the frontend typecheck.
 - `pnpm --filter @workspace/amal-network run typecheck` checks the showcase.
@@ -56,3 +56,10 @@ _Populate as you build — sharp edges, "always run X before Y" rules._
 - The existing UI-kit browser suite covers both languages and themes; its presence does not imply it was run during every implementation session.
 - Preserve source brand colors; use semantic text variants for contrast. Gold is restricted to logos and illustrations.
 - This UI kit does not read or modify any seed table.
+
+## Amal shell boundaries
+
+- `docs/frontend/app-shell.md` describes real identity integration, explicit development fixtures, display persistence and verification commands.
+- Client routing is presentation-only; it does not grant server permission. Admin routes never grant clinical access.
+- Keep development fixture identity opt-in and separate from real sessions. Do not silently replace missing clinic or session endpoints with synthetic data.
+- Browser account display settings deliberately do not inherit the anonymous UI-kit preferences or server profile defaults. First use is Arabic, Light and Latin digits. Profile synchronization needs a future supported contract.

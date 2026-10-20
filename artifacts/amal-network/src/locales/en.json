@@ -1,5 +1,9 @@
 {
-  "app": { "name": "Amal Network", "skip": "Skip to content", "kitTitle": "UI kit" },
+  "app": {
+    "name": "Amal Network",
+    "skip": "Skip to content",
+    "kitTitle": "UI kit"
+  },
   "kit": {
     "eyebrow": "Design foundation · v0.1",
     "title": "One calm language for connected care",
@@ -7,8 +11,14 @@
     "demoNotice": "Everything on this page is a local demonstration. Nothing is saved and no clinical data is read.",
     "toc": "On this page",
     "sections": {
-      "palette": "Palette", "type": "Typography", "buttons": "Buttons", "inputs": "Inputs",
-      "status": "Status badges", "cards": "Cards", "toasts": "Toasts", "empty": "Empty states"
+      "palette": "Palette",
+      "type": "Typography",
+      "buttons": "Buttons",
+      "inputs": "Inputs",
+      "status": "Status badges",
+      "cards": "Cards",
+      "toasts": "Toasts",
+      "empty": "Empty states"
     },
     "palette": {
       "intro": "Raw brand values are preserved exactly. Text always uses a measured pairing of at least 4.5:1.",
@@ -28,53 +38,212 @@
     },
     "buttons": {
       "intro": "Four variants, three sizes. Hover, pressed, focus, loading and disabled states all keep readable text.",
-      "primary": "Primary action", "secondary": "Secondary", "ghost": "Ghost", "danger": "Remove",
-      "disabled": "Unavailable", "small": "Small", "large": "Large reception button",
-      "loadingDemo": "Run a 2-second demo", "loadingDone": "Demo finished",
+      "primary": "Primary action",
+      "secondary": "Secondary",
+      "ghost": "Ghost",
+      "danger": "Remove",
+      "disabled": "Unavailable",
+      "small": "Small",
+      "large": "Large reception button",
+      "loadingDemo": "Run a 2-second demo",
+      "loadingDone": "Demo finished",
       "iconAdd": "Add example item"
     },
     "inputs": {
       "intro": "Labels are always visible. Errors are announced and never rely on colour alone.",
       "formTitle": "Example contact form",
       "formDesc": "Validates locally only.",
-      "name": "Full name", "namePh": "e.g. Layla Haddad",
-      "phone": "Mobile number", "phoneHint": "Digits only, 10 numbers starting with 05.", "phonePh": "05XXXXXXXX",
-      "note": "Note", "notePh": "Anything the team should know",
-      "disabledLabel": "Clinic code", "disabledValue": "Locked in this demo",
-      "errName": "Enter at least two characters.", "errPhone": "Use 10 digits starting with 05.",
-      "submit": "Check form", "reset": "Reset",
-      "valid": "Form looks good", "validDesc": "Validation passed. Nothing was saved."
+      "name": "Full name",
+      "namePh": "e.g. Layla Haddad",
+      "phone": "Mobile number",
+      "phoneHint": "Digits only, 10 numbers starting with 05.",
+      "phonePh": "05XXXXXXXX",
+      "note": "Note",
+      "notePh": "Anything the team should know",
+      "disabledLabel": "Clinic code",
+      "disabledValue": "Locked in this demo",
+      "errName": "Enter at least two characters.",
+      "errPhone": "Use 10 digits starting with 05.",
+      "submit": "Check form",
+      "reset": "Reset",
+      "valid": "Form looks good",
+      "validDesc": "Validation passed. Nothing was saved."
     },
     "status": {
       "intro": "Six appointment states. Each pairs an icon, a semantic colour and a localized label.",
-      "large": "Large size", "inline": "In context",
-      "rowTime": "09:30", "rowLabel": "Example visit"
+      "large": "Large size",
+      "inline": "In context",
+      "rowTime": "09:30",
+      "rowLabel": "Example visit"
     },
     "cards": {
       "intro": "Cards group related content on surface; radius 12 px. Dialogs use 16 px, controls 8 px.",
-      "a": { "title": "Today at a glance", "desc": "Generic example card", "stat": "14", "statLabel": "example visits", "action": "Show toast" },
-      "b": { "title": "Reception note", "desc": "Muted tone for secondary content", "body": "Keep the waiting area informed when a doctor is running late." },
-      "c": { "title": "Radii", "control": "Control 8", "card": "Card 12", "dialog": "Dialog 16" }
+      "a": {
+        "title": "Today at a glance",
+        "desc": "Generic example card",
+        "stat": "14",
+        "statLabel": "example visits",
+        "action": "Show toast"
+      },
+      "b": {
+        "title": "Reception note",
+        "desc": "Muted tone for secondary content",
+        "body": "Keep the waiting area informed when a doctor is running late."
+      },
+      "c": {
+        "title": "Radii",
+        "control": "Control 8",
+        "card": "Card 12",
+        "dialog": "Dialog 16"
+      }
     },
     "toasts": {
       "intro": "Polite announcements by default; warnings and errors interrupt. Hover or focus pauses auto-dismiss.",
-      "info": "Info toast", "success": "Success toast", "warning": "Warning toast", "danger": "Error toast",
-      "infoT": "Reminder", "infoD": "This is an example notification.",
-      "successT": "Example saved locally", "successD": "Demonstration only — nothing left this page.",
-      "warningT": "Connection is slow", "warningD": "Example message for degraded network.",
-      "dangerT": "Something went wrong", "dangerD": "Example error with a retry action.",
-      "retry": "Try again", "retried": "Retried"
+      "info": "Info toast",
+      "success": "Success toast",
+      "warning": "Warning toast",
+      "danger": "Error toast",
+      "infoT": "Reminder",
+      "infoD": "This is an example notification.",
+      "successT": "Example saved locally",
+      "successD": "Demonstration only — nothing left this page.",
+      "warningT": "Connection is slow",
+      "warningD": "Example message for degraded network.",
+      "dangerT": "Something went wrong",
+      "dangerD": "Example error with a retry action.",
+      "retry": "Try again",
+      "retried": "Retried"
     },
     "empty": {
       "intro": "Every empty state explains why and offers the next step.",
       "title": "No example items yet",
       "desc": "Items you add here live only in this page and disappear on refresh.",
-      "add": "Add example item", "learn": "Show a tip",
-      "tipT": "Tip", "tipD": "Empty states always offer a next step.",
-      "listTitle": "Example items", "item": "Example item {{n}}", "remove": "Remove {{name}}", "clear": "Clear all",
+      "add": "Add example item",
+      "learn": "Show a tip",
+      "tipT": "Tip",
+      "tipD": "Empty states always offer a next step.",
+      "listTitle": "Example items",
+      "item": "Example item {{n}}",
+      "remove": "Remove {{name}}",
+      "clear": "Clear all",
       "cleared": "List cleared"
     },
     "footer": "Amal Family Clinic Group · design foundation"
   },
-  "notFound": { "title": "Page not found", "desc": "This address does not exist yet.", "back": "Open the UI kit" }
+  "notFound": {
+    "title": "Page not found",
+    "desc": "This address does not exist yet.",
+    "back": "Open the UI kit"
+  },
+  "shell": {
+    "skip": "Skip to main content",
+    "brand": "Amal Network home",
+    "fixtureBanner": "Development fixture identity. This is not a real signed-in account.",
+    "nav": {
+      "label": "Main navigation",
+      "more": "More",
+      "moreLabel": "More destinations",
+      "today": "Today",
+      "week": "Week",
+      "newBooking": "New booking",
+      "patientLookup": "Patient lookup",
+      "sync": "Sync & conflicts",
+      "daySheet": "Print day sheet",
+      "myDay": "My day",
+      "networkSearch": "Network search",
+      "patientCard": "Patient card",
+      "privacy": "Privacy settings",
+      "kpi": "KPI dashboard",
+      "networkHealth": "Network health",
+      "usersDevices": "Users & devices",
+      "clinicsDoctors": "Clinics & doctors",
+      "duplicates": "Duplicate patients",
+      "audit": "Audit log",
+      "import": "Import wizard",
+      "developer": "Developer tools",
+      "uiKit": "UI kit"
+    },
+    "roles": {
+      "admin": "Administrator",
+      "doctor": "Doctor",
+      "front-desk": "Front desk",
+      "none": "No recognised role"
+    },
+    "clinic": {
+      "label": "Clinic",
+      "single": "Your clinic",
+      "none": "No clinic is assigned to this account.",
+      "error": "Clinic list is unavailable right now.",
+      "retry": "Retry loading clinics",
+      "loading": "Loading clinics"
+    },
+    "search": {
+      "label": "Global search",
+      "placeholder": "Search (preview)",
+      "submit": "Search",
+      "result": "Search is a placeholder in this version. Nothing was searched and no patient records were read.",
+      "empty": "Type something to try the search placeholder."
+    },
+    "connection": {
+      "label": "Connection: demo status",
+      "text": "Demo status",
+      "tooltip": "Static demonstration. Connectivity is not measured."
+    },
+    "user": {
+      "open": "Account and display settings for {{name}}",
+      "title": "Account and display",
+      "identity": "Signed in as",
+      "role": "Role",
+      "clinics": "Clinics",
+      "noClinics": "None",
+      "display": "Display settings",
+      "digits": "Digits",
+      "digitsLatn": "Latin 123",
+      "digitsArab": "Arabic-Indic ١٢٣",
+      "preview": "Preview",
+      "close": "Close",
+      "logout": "Sign out",
+      "logoutFixture": "Exit development fixture",
+      "logoutNote": "Development only: clears the fixture session in this tab.",
+      "logoutRetry": "Try sign out again",
+      "logoutError": "Sign out failed. You are still signed in."
+    },
+    "page": {
+      "announce": "{{title}} page",
+      "placeholder": "Placeholder screen",
+      "body": "This destination is reserved for a later task. No clinical data is shown or changed here.",
+      "clinic": "Clinic context: {{clinic}}",
+      "noClinic": "No clinic selected",
+      "clock": "Asia/Hebron time: {{time}}",
+      "landing": "Your landing screen",
+      "adminNote": "Administrative access does not grant patient-level clinical access."
+    },
+    "states": {
+      "loading": "Loading your workspace",
+      "forbidden": {
+        "title": "Access not permitted",
+        "desc": "Your role cannot open this page. Screen controls are not a substitute for server authorization.",
+        "back": "Go to my landing screen"
+      },
+      "noRole": {
+        "title": "Role not recognised",
+        "desc": "This account has no recognised role, so no destinations are available. Ask an administrator to review it."
+      },
+      "notFound": {
+        "title": "Page not found",
+        "desc": "This address does not exist in Amal Network.",
+        "back": "Go to my landing screen"
+      },
+      "signedOut": {
+        "title": "You are not signed in",
+        "desc": "Sign-in is not available in this version. Retry after signing in through your administrator.",
+        "retry": "Retry"
+      },
+      "error": {
+        "title": "Could not load your account",
+        "desc": "The identity service did not respond. Your previous settings were not applied.",
+        "retry": "Retry"
+      }
+    }
+  }
 }

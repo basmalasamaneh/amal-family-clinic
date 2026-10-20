@@ -5,6 +5,7 @@
  */
 export { createAmalI18n, amalUiResources, directionFor, AMAL_UI_NS, AMAL_LOCALES, DEFAULT_LOCALE, type AmalLocale } from './i18n';
 export { AmalPreferencesProvider, useAmalPreferences } from './preferences/PreferencesProvider';
+export { browserPreferenceStorage, DEFAULT_DISPLAY, type DisplayPreferences, type DigitPreference, type PreferenceStorage } from './preferences/account-storage';
 export { applyDocumentPreferences, readStoredLocale, readStoredTheme, LOCALE_KEY, THEME_KEY, type AmalTheme } from './preferences/storage';
 export { Button, type ButtonProps, type ButtonVariant, type ButtonSize } from './components/Button';
 export { TextField, type TextFieldProps } from './components/TextField';
