@@ -8,6 +8,8 @@ import { i18n } from './i18n';
 import UiKitPage from '@/pages/ui-kit/UiKitPage';
 import { ShellRoot } from '@/shell/ShellRoot';
 import { Route, Switch, useLocation, Router as WouterRouter } from 'wouter';
+import { PwaNotice } from '@/pwa/PwaNotice';
+import { PrivateStorageNotice } from '@/shell/private-cache-lifecycle';
 
 /** /ui-kit keeps its anonymous P2-00 preferences; every other path is the role-aware shell. */
 function Router() {
@@ -42,6 +44,8 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
     <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, '')}>
+      <PwaNotice />
+      <PrivateStorageNotice />
       <Router />
     </WouterRouter>
     </QueryClientProvider>

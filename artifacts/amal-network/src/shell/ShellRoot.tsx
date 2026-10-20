@@ -12,6 +12,10 @@ import { onUnauthorized, reportUnauthorized } from '@/auth/session-events';
 import { demoPath, identityAdapter, type ShellIdentity } from './identity';
 import { landingFor } from './routes';
 import { AppShell } from './AppShell';
+import { useOnlineStatus } from '@/hooks/use-online-status';
+import './offline-messages';
+import { localCache } from '@/offline';
+import { readCleanupTarget, rememberCleanupTarget, UNKNOWN_CLEANUP } from './cleanup-warning';
 
 type LoadState = { status: 'loading' } | { status: 'error' } | { status: 'ready'; identity: ShellIdentity | null; expired?: boolean };
 const MAX_TIMER = 2_147_000_000;
@@ -21,7 +25,10 @@ const MAX_TIMER = 2_147_000_000;
  * Preferences are mounted per identity so another account's settings never apply.
  */
 export function ShellRoot() {
+  const { t } = useTranslation();
   const [state, setState] = useState<LoadState>({ status: 'loading' });
+  const [cleanupTarget, setCleanupTarget] = useState<string | null>(readCleanupTarget);
+  const [cleaning, setCleaning] = useState(false);
   const [location, navigate] = useLocation();
   const search = useSearch();
   const qc = useQueryClient();
@@ -29,12 +36,13 @@ export function ShellRoot() {
   const locRef = useRef(location);
   locRef.current = location;
 
-  const clearPrivate = useCallback(() => { void qc.cancelQueries(); qc.clear(); setCsrfToken(null); }, [qc]);
+  const clearPrivate = useCallback(() => { void localCache.setContext(null); void qc.cancelQueries(); qc.clear(); setCsrfToken(null); }, [qc]);
   /** Every load gets a generation; logout/expiry bump it so stale in-flight loads can never restore a session. */
   const gen = useRef(0);
   const principal = useRef<string | null>(null);
   /** Applies a loaded identity; any change of account id or role drops all private cached queries. */
   const apply = useCallback((identity: ShellIdentity | null, extra?: { expired?: boolean }) => {
+    void localCache.setContext(null);
     const next = identity ? `${identity.id}|${identity.role ?? 'none'}` : null;
     if (principal.current !== null && principal.current !== next) { void qc.cancelQueries(); qc.clear(); }
     principal.current = next;
@@ -43,6 +51,7 @@ export function ShellRoot() {
   }, [qc]);
 
   const load = useCallback(() => {
+    void localCache.setContext(null);
     const g = ++gen.current;
     setState({ status: 'loading' });
     identityAdapter.load().then(
@@ -91,6 +100,26 @@ export function ShellRoot() {
   const path = location.replace(/\/+$/, '') || '/';
   const params = new URLSearchParams(search);
 
+  if (cleanupTarget) {
+    return <AmalPreferencesProvider key="cleanup" i18n={i18n} userId={null}>
+      <main className="shell-session" data-testid="state-cleanup-incomplete">
+        <AmalLogo />
+        <EmptyState headingLevel={1} title={t(cleanupTarget === UNKNOWN_CLEANUP ? 'offline:cleanupUnknownTitle' : 'offline:cleanupTitle')}
+          description={t(cleanupTarget === UNKNOWN_CLEANUP ? 'offline:cleanupUnknownDescription' : 'offline:cleanupDescription')}
+          actions={cleanupTarget === UNKNOWN_CLEANUP ? undefined : <Button disabled={cleaning} data-testid="button-retry-cleanup" onClick={async () => {
+            setCleaning(true);
+            const result = await localCache.logout({ userId: cleanupTarget, discardPending: true });
+            setCleaning(false);
+            if (result.ok) {
+              rememberCleanupTarget(null);
+              setCleanupTarget(null);
+              load();
+            }
+          }}>{t('offline:cleanupRetry')}</Button>} />
+      </main>
+    </AmalPreferencesProvider>;
+  }
+
   if (path === '/data') {
     const home = identity ? demoPath(landingFor(identity.role) ?? '/') : demoPath('/login');
     return (
@@ -111,13 +140,22 @@ export function ShellRoot() {
             fixture={identityAdapter.mode === 'fixture'}
             onRefresh={async () => { try { await refresh(); } catch { /* keep identity */ } }}
             onLogout={async () => {
+              // Explicit warning includes all clinics and runs before either destructive action.
+              // No workflow enqueues today; future callers must retain this acknowledgement.
+              if (!window.confirm(t('offline:pending'))) return;
               gen.current++;
+              void localCache.setContext(null);
               try { await identityAdapter.logout(); }
               catch (error) {
                 if (!(error && typeof error === 'object' && 'status' in error && error.status === 401)) throw error;
                 // Already-expired server sessions still clear the local identity.
               }
               principal.current = null;
+              // Persist before attempting deletion, so reload cannot hide a failed cleanup.
+              rememberCleanupTarget(id.id);
+              const cleanup = await localCache.logout({ userId: id.id, discardPending: true });
+              if (cleanup.ok) rememberCleanupTarget(null);
+              else setCleanupTarget(id.id);
               clearPrivate();
               if (mounted.current) { setState({ status: 'ready', identity: null }); navigate(demoPath('/login'), { replace: true }); }
             }}
@@ -154,14 +192,15 @@ function ShellLoading() {
 
 function SessionError({ onRetry }: { onRetry: () => void }) {
   const { t } = useTranslation();
+  const online = useOnlineStatus();
   useEffect(() => { document.title = `${t('shell.states.error.title')} · ${t('app.name')}`; }, [t]);
   return (
     <main className="shell-session" data-testid="state-error">
       <AmalLogo />
       <EmptyState
         headingLevel={1}
-        title={t('shell.states.error.title')}
-        description={t('shell.states.error.desc')}
+        title={t(online ? 'shell.states.error.title' : 'offline:lockedTitle')}
+        description={t(online ? 'shell.states.error.desc' : 'offline:lockedDescription')}
         actions={<Button onClick={onRetry} data-testid="button-retry-identity">{t('shell.states.error.retry')}</Button>}
       />
     </main>

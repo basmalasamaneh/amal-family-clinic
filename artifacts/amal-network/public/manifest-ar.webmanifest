@@ -1,0 +1,18 @@
+{
+  "id": "./",
+  "name": "شبكة أمل",
+  "short_name": "أمل",
+  "description": "شبكة أمل لمجموعة عيادات أمل العائلية",
+  "lang": "ar",
+  "dir": "rtl",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "theme_color": "#0B5F69",
+  "background_color": "#F7FAFC",
+  "icons": [
+    { "src": "icons/amal-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/amal-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/amal-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

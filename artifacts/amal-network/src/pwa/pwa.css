@@ -1,0 +1,30 @@
+.pwa-notice {
+  position: fixed;
+  inset-block-end: 1rem;
+  inset-inline: 1rem;
+  z-index: 100;
+  max-inline-size: 42rem;
+  margin-inline: auto;
+  padding-block: 1rem;
+  padding-inline: 1.25rem;
+  color: var(--amal-text);
+  background: var(--amal-surface);
+  border: 1px solid var(--amal-border);
+  border-radius: 0.75rem;
+  box-shadow: 0 4px 20px #0002;
+  text-align: start;
+}
+.pwa-notice p { margin-block: 0 0.75rem; margin-inline: 0; }
+.pwa-notice__actions { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.pwa-notice button {
+  min-block-size: 44px;
+  padding-block: 0.5rem;
+  padding-inline: 1rem;
+  color: inherit;
+  background: var(--amal-surface);
+  border: 1px solid var(--amal-border);
+  border-radius: 0.5rem;
+  font: inherit;
+  cursor: pointer;
+}
+.pwa-notice button:focus-visible { outline: 3px solid var(--amal-text); outline-offset: 3px; }

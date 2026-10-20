@@ -2,6 +2,7 @@ import path from 'path';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import { defineConfig } from 'vite';
+import { VitePWA } from 'vite-plugin-pwa';
 
 import runtimeErrorOverlay from '@replit/vite-plugin-runtime-error-modal';
 
@@ -27,11 +28,30 @@ if (!basePath) {
   );
 }
 
+if (!basePath.startsWith('/') || !basePath.endsWith('/') || basePath.includes('//') || /[?#]/.test(basePath)) {
+  throw new Error('BASE_PATH must be an absolute pathname with a trailing slash, for example "/" or "/amal/".');
+}
+
 export default defineConfig({
   base: basePath,
   plugins: [
     react(),
     tailwindcss(),
+    VitePWA({
+      strategies: 'injectManifest',
+      srcDir: 'src/pwa',
+      filename: 'sw.ts',
+      // Registration belongs to PwaNotice; never register a development worker.
+      injectRegister: null,
+      manifest: false,
+      scope: basePath,
+      devOptions: { enabled: false },
+      injectManifest: {
+        globPatterns: ['**/*.{html,js,css,woff,woff2,ttf,svg,png,webmanifest,json}'],
+        globIgnores: ['**/auth/**', '**/api/**', '**/docs/**', '**/__mockup/**', '**/*.map'],
+        maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
+      },
+    }),
     runtimeErrorOverlay(),
     ...(process.env.NODE_ENV !== 'production' &&
     process.env.REPL_ID !== undefined
@@ -61,7 +81,7 @@ export default defineConfig({
   },
   root: path.resolve(import.meta.dirname),
   build: {
-    outDir: path.resolve(import.meta.dirname, 'dist/public'),
+    outDir: path.resolve(import.meta.dirname, process.env.PWA_VERIFY === '1' ? 'dist/pwa-verification' : 'dist/public'),
     emptyOutDir: true,
   },
   server: {

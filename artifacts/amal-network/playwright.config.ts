@@ -3,7 +3,8 @@ import { existsSync } from 'node:fs';
 
 export default defineConfig({
   testDir: './tests',
-  testIgnore: '**/*.unit.test.ts',
+  // Production PWA checks own an isolated build/origin in playwright.pwa.config.ts.
+  testIgnore: ['**/*.unit.test.ts', '**/pwa.spec.ts'],
   outputDir: '../../generated-artifacts/amal-ui-tests',
   timeout: 60000,
   use: {

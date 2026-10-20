@@ -3,7 +3,11 @@ import { useTranslation } from 'react-i18next';
 import { Link, Redirect, useLocation } from 'wouter';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import * as Dialog from '@radix-ui/react-dialog';
-import { BookOpenText, CircleHelp, CircleUserRound, PlayCircle, ShieldCheck, FlaskConical, LogOut, MoreHorizontal, RotateCw, Search, WifiOff, X } from 'lucide-react';
+import { BookOpenText, CircleHelp, CircleUserRound, PlayCircle, ShieldCheck, FlaskConical, LogOut, MoreHorizontal, RotateCw, Search, Wifi, WifiOff, X } from 'lucide-react';
+import { useOnlineStatus } from '@/hooks/use-online-status';
+import './offline-messages';
+import { usePrivateCacheContext } from './private-cache-lifecycle';
+import { localCache } from '@/offline';
 import { AmalLogo, AmalMark, Button, EmptyState, LanguageSwitch, Segmented, ThemeSwitch, useAmalPreferences } from '@workspace/amal-ui';
 import { formatInstant, formatNumber } from './formatting';
 import { demoPath, type ShellClinic, type ShellIdentity } from './identity';
@@ -28,6 +32,7 @@ export function AppShell({ identity, fixture, onRefresh, onLogout }: Props) {
     if (clinicId === null || !clinics.some((c) => c.id === clinicId)) setClinicId(clinics[0]?.id ?? null);
   }, [clinics, clinicId]);
   const clinic = clinics.find((c) => c.id === clinicId) ?? null;
+  usePrivateCacheContext(identity, clinic?.id ?? null, fixture);
 
   const tour = useTour(identity.id, role);
   const title = titleFor(res, t);
@@ -70,7 +75,7 @@ export function AppShell({ identity, fixture, onRefresh, onLogout }: Props) {
         )}
         <header className="shell-top">
           <div className="shell-top__brand"><AmalLogo /></div>
-          <ClinicSwitcher clinics={clinics} state={identity.clinicsState} value={clinicId} onChange={setClinicId} onRetry={onRefresh} />
+          <ClinicSwitcher clinics={clinics} state={identity.clinicsState} value={clinicId} onChange={(id) => { void localCache.setContext(null); setClinicId(id); }} onRetry={onRefresh} />
           <GlobalSearch key={clinicId ?? 'none'} />
           <div className="shell-top__end">
             <ConnectionPill />
@@ -221,10 +226,12 @@ function GlobalSearch() {
 
 function ConnectionPill() {
   const { t } = useTranslation();
+  const online = useOnlineStatus();
+  const label = t(online ? 'offline:online' : 'offline:offline');
   return (
-    <span className="shell-pill" role="note" aria-label={`${t('shell.connection.label')}. ${t('shell.connection.tooltip')}`} title={t('shell.connection.tooltip')} data-testid="status-connection">
-      <WifiOff size={16} aria-hidden="true" />
-      <span aria-hidden="true">{t('shell.connection.text')}</span>
+    <span className="shell-pill" role="status" aria-live="polite" aria-label={`${label}. ${t('offline:connectivity')}`} title={t('offline:connectivity')} data-testid="status-connection">
+      {online ? <Wifi size={16} aria-hidden="true" /> : <WifiOff size={16} aria-hidden="true" />}
+      <span aria-hidden="true">{label}</span>
     </span>
   );
 }
@@ -235,7 +242,7 @@ function UserMenu({ identity, fixture, onLogout }: { identity: ShellIdentity; fi
   const [logoutState, setLogoutState] = useState<'idle' | 'pending' | 'error'>('idle');
   const doLogout = async () => {
     setLogoutState('pending');
-    try { await onLogout(); } catch { setLogoutState('error'); }
+    try { await onLogout(); setLogoutState('idle'); } catch { setLogoutState('error'); }
   };
   const roleLabel = t(`shell.roles.${isKnownRole(identity.role) ? identity.role : 'none'}`);
   return (

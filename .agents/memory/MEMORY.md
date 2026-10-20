@@ -6,3 +6,5 @@
 - [Prerequisite database availability](prerequisite-database-check.md) — merged code does not guarantee schema and fixtures exist in the current task database.
 - [Reception account selection](reception-account-selection.md) — device trust establishes clinic scope; email and PIN identify the individual shared-device user.
 - [Development auth origins](development-auth-origin.md) — task forks may inherit an outdated allowed origin; correct development configuration, not CSRF enforcement.
+- [Offline authorization](offline-authorization.md) — a cached shell or reconnect event must not unlock private records without verified authorization.
+- [Vite peer identity](vite-peer-deduplication.md) — Workbox build peers can duplicate Vite types; deduplicate before changing unrelated consumers.
