@@ -30,3 +30,9 @@ Administrative audit visibility must be explicitly allowlisted, not a raw audit-
 **Why:** Audit details and action text can contain clinical material, lookup input, or credentials. Even counts and patient identifiers can disclose private activity.
 
 **How to apply:** Review each new action before exposing it; omit patient-linked events and return only approved identifier context. Keep the doctor clinical audit endpoint separate.
+
+Do not interpret a failed post-save selector/session refresh as an uncertain clinic creation.
+
+**Why:** Clinic creation has no idempotent replay contract. Once the create response confirms persistence, offering creation again because a later read failed risks duplicates. A fresh listing also cannot prove an earlier in-flight write failed.
+
+**How to apply:** Keep confirmed persistence separate from refresh warnings. For transport-uncertain creation, reconcile stable returned IDs explicitly, never infer identity from a matching name, and disclose duplicate risk before any deliberate new attempt.

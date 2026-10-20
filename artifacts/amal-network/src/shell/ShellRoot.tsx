@@ -61,7 +61,7 @@ export function ShellRoot() {
     );
   }, [apply]);
 
-  const refresh = useCallback(async () => {
+  const refresh = useCallback(async (strict = false) => {
     if (!navigator.onLine) throw new Error('Online sign-in verification is required');
     // Login/account switching revokes every previous tab permit before issuing a new one.
     revokeOfflineAuthorization();
@@ -70,6 +70,12 @@ export function ShellRoot() {
     const identity = await identityAdapter.load();
     if (g !== gen.current || !mounted.current) throw new Error('Superseded identity load');
     if (!identity || identity.offlineRestored) { reportUnauthorized(); throw new Error('No online session after sign-in'); }
+    if (strict && identity.clinicsState === 'error') {
+      // Keep the confirmed wizard mounted when only selector loading failed.
+      // A real authority change still replaces the old identity immediately.
+      if (principal.current !== `${identity.id}|${identity.role ?? 'none'}`) apply(identity);
+      throw new Error('Clinic selector refresh failed');
+    }
     apply(identity);
   }, [apply]);
 
@@ -163,7 +169,7 @@ export function ShellRoot() {
           <AppShell
             identity={id}
             fixture={identityAdapter.mode === 'fixture'}
-            onRefresh={async () => { try { await refresh(); } catch { /* keep identity */ } }}
+            onRefresh={async (strict = false) => { try { await refresh(strict); } catch (e) { if (strict) throw e; /* keep identity */ } }}
             onLogout={async () => {
               // Warn about retained work, never offer to discard it.
               if (!window.confirm(t('offline:pending'))) return;

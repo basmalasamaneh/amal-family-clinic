@@ -27,6 +27,10 @@ import { PatientCardPage } from '@/network/PatientCardPage';
 import { MyDayPage } from '@/doctor/MyDayPage';
 import { PrivacyPage } from '@/doctor/PrivacyPage';
 import { KpiPage } from '@/kpi/KpiPage';
+import { NetworkHealthPage } from '@/admin/NetworkHealthPage';
+import { UsersDevicesPage } from '@/admin/UsersDevicesPage';
+import { ClinicsDoctorsPage } from '@/admin/ClinicsDoctorsPage';
+import { AuditPage } from '@/admin/AuditPage';
 import { clearSelection as clearNetworkSelection } from '@/network/model';
 import { clearConsentSelection } from '@/consent/model';
 import { ConsentPage } from '@/consent/ConsentPage';
@@ -37,7 +41,7 @@ import { isKnownRole, landingFor, resolve, routesFor, type Resolution, type Shel
 
 const BOTTOM_SLOTS = 4;
 
-interface Props { identity: ShellIdentity; fixture: boolean; onRefresh: () => Promise<void>; onLogout: () => Promise<void> }
+interface Props { identity: ShellIdentity; fixture: boolean; onRefresh: (strict?: boolean) => Promise<void>; onLogout: () => Promise<void> }
 
 export function AppShell({ identity, fixture, onRefresh, onLogout }: Props) {
   return <CancellationProvider key={identity.id} clinicNames={Object.fromEntries(identity.clinics.map((c) => [c.id, c.name]))}><AppShellContent identity={identity} fixture={fixture} onRefresh={onRefresh} onLogout={async () => {
@@ -117,8 +121,8 @@ function AppShellContent({ identity, fixture, onRefresh, onLogout }: Props) {
           </div>
         </header>
 
-        <main id="main" tabIndex={-1} className="shell-main" key={clinicId ?? 'none'}>
-          <PageContent res={res} title={title} clinic={clinic} clinics={clinics} fixture={fixture} landing={landingFor(role)} scope={`${identity.id}:${role ?? 'none'}:${clinic?.id ?? 'none'}`} />
+        <main id="main" tabIndex={-1} className="shell-main" key={role === 'admin' ? 'admin' : clinicId ?? 'none'}>
+          <PageContent res={res} title={title} clinic={clinic} clinics={clinics} fixture={fixture} landing={landingFor(role)} scope={`${identity.id}:${role ?? 'none'}:${role === 'admin' ? 'all' : clinic?.id ?? 'none'}`} onRefresh={onRefresh} />
         </main>
       </div>
 
@@ -373,7 +377,7 @@ function HelpMenu({ onReplay, canReplay }: { onReplay: () => void; canReplay: bo
   );
 }
 
-function PageContent({ res, title, clinic, clinics, fixture, landing, scope }: { res: Resolution; title: string; clinic: ShellClinic | null; clinics: ShellClinic[]; fixture: boolean; landing: string | null; scope: string }) {
+function PageContent({ res, title, clinic, clinics, fixture, landing, scope, onRefresh }: { res: Resolution; title: string; clinic: ShellClinic | null; clinics: ShellClinic[]; fixture: boolean; landing: string | null; scope: string; onRefresh: (strict?: boolean) => Promise<void> }) {
   const { t } = useTranslation();
   const { locale, digitPreference } = useAmalPreferences();
   const [now] = useState(() => new Date().toISOString());
@@ -390,6 +394,11 @@ function PageContent({ res, title, clinic, clinics, fixture, landing, scope }: {
   if (res.kind === 'page' && res.route.id === 'myDay') return <MyDayPage clinic={clinic} title={title} scope={scope} />;
   if (res.kind === 'page' && res.route.id === 'privacy') return <PrivacyPage clinic={clinic} title={title} scope={scope} />;
   if (res.kind === 'page' && res.route.id === 'kpi') return <KpiPage key={scope} title={title} clinics={clinics} />;
+  // Admin pages are keyed by account+role scope so late results never cross a logout or role change.
+  if (res.kind === 'page' && res.route.id === 'networkHealth') return <NetworkHealthPage key={scope} title={title} />;
+  if (res.kind === 'page' && res.route.id === 'usersDevices') return <UsersDevicesPage key={scope} title={title} />;
+  if (res.kind === 'page' && res.route.id === 'clinicsDoctors') return <ClinicsDoctorsPage key={scope} title={title} accountKey={scope.split(':').slice(0, -2).join(':')} onClinicsChanged={() => onRefresh(true)} />;
+  if (res.kind === 'page' && res.route.id === 'audit') return <AuditPage key={scope} title={title} />;
   if (res.kind === 'page' && res.route.id === 'newBooking') return <BookingHandoff clinic={clinic} fixture={fixture} title={title} />;
   if (res.kind === 'page') {
     const Icon = res.route.icon;

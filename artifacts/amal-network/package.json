@@ -24,7 +24,9 @@
     "test:doctor:unit": "tsx --test tests/doctor.unit.test.ts",
     "test:doctor": "playwright test --config playwright.doctor.config.ts",
     "test:kpi:unit": "tsx --test tests/kpi.unit.test.ts",
-    "test:kpi": "playwright test --config playwright.kpi.config.ts"
+    "test:kpi": "playwright test --config playwright.kpi.config.ts",
+    "test:admin:unit": "tsx --test tests/admin.unit.test.ts",
+    "test:admin": "playwright test --config playwright.admin.config.ts"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.14.0",
