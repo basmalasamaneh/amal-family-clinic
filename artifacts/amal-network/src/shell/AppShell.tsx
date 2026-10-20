@@ -3,8 +3,9 @@ import { useTranslation } from 'react-i18next';
 import { Link, Redirect, useLocation, useSearch } from 'wouter';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import * as Dialog from '@radix-ui/react-dialog';
-import { DoorOpen, BookOpenText, CircleHelp, CircleUserRound, PlayCircle, ShieldCheck, FlaskConical, LogOut, MoreHorizontal, RotateCw, Search, Wifi, WifiOff, X } from 'lucide-react';
-import { useOnlineStatus } from '@/hooks/use-online-status';
+import { DoorOpen, BookOpenText, CircleHelp, CircleUserRound, PlayCircle, ShieldCheck, FlaskConical, LogOut, MoreHorizontal, RotateCw, Search, X } from 'lucide-react';
+import { ConnectionStatus } from './ConnectionStatus';
+import { DaySheet } from '@/day-sheet/DaySheet';
 import './offline-messages';
 import { usePrivateCacheContext } from './private-cache-lifecycle';
 import { localCache } from '@/offline';
@@ -108,7 +109,7 @@ function AppShellContent({ identity, fixture, onRefresh, onLogout }: Props) {
           <WalkInButton />
           {!(res.kind === 'page' && (res.route.id === 'networkSearch' || res.route.id === 'patientCard')) && <GlobalSearch key={clinicId ?? 'none'} />}
           <div className="shell-top__end">
-            <ConnectionPill />
+            <ConnectionStatus userId={identity.id} clinicId={clinic?.id ?? null} queueAvailable={role === 'front-desk'} />
             <div className="shell-top__prefs"><LanguageSwitch /><ThemeSwitch /></div>
             <HelpMenu onReplay={tour.start} canReplay={tour.steps.length > 0} />
             <UserMenu identity={identity} fixture={fixture} onLogout={onLogout} />
@@ -261,18 +262,6 @@ function GlobalSearch() {
   );
 }
 
-function ConnectionPill() {
-  const { t } = useTranslation();
-  const online = useOnlineStatus();
-  const label = t(online ? 'offline:online' : 'offline:offline');
-  return (
-    <span className="shell-pill" role="status" aria-live="polite" aria-label={`${label}. ${t('offline:connectivity')}`} title={t('offline:connectivity')} data-testid="status-connection">
-      {online ? <Wifi size={16} aria-hidden="true" /> : <WifiOff size={16} aria-hidden="true" />}
-      <span aria-hidden="true">{label}</span>
-    </span>
-  );
-}
-
 function UserMenu({ identity, fixture, onLogout }: { identity: ShellIdentity; fixture: boolean; onLogout: () => Promise<void> }) {
   const { t } = useTranslation();
   const { locale, digitPreference, setDigitPreference } = useAmalPreferences();
@@ -393,6 +382,7 @@ function PageContent({ res, title, clinic, fixture, landing, scope }: { res: Res
   if (res.kind === 'page' && res.route.id === 'import') return <ImportPage clinic={clinic} title={title} scope={scope} />;
   if (res.kind === 'page' && res.route.id === 'duplicates') return <DuplicatesPage clinic={clinic} title={title} scope={scope} />;
   if (res.kind === 'page' && res.route.id === 'sync') return <SyncQueuePanel key={scope} clinic={clinic} title={title} scope={scope} />;
+  if (res.kind === 'page' && res.route.id === 'daySheet') return <DaySheet key={scope} clinic={clinic} title={title} scope={scope} />;
   if (res.kind === 'page' && res.route.id === 'consent') return <ConsentPage clinic={clinic} title={title} scope={scope} />;
   if (res.kind === 'page' && res.route.id === 'networkSearch') return <NetworkSearchPage clinic={clinic} title={title} scope={scope} />;
   if (res.kind === 'page' && res.route.id === 'patientCard') return <PatientCardPage clinic={clinic} title={title} scope={scope} />;

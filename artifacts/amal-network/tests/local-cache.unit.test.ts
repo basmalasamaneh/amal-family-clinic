@@ -61,6 +61,30 @@ test('14 Hebron calendar days use UTC boundaries, including both DST transitions
   assert.equal(appointmentWindow(new Date('2026-04-01T21:30:00Z')).localStartDate, '2026-04-02');
 });
 
+test('unchanged snapshot reads do not rewrite metadata and retrigger storage observers', async (t) => {
+  const { cache, db, ticket } = await setup(t);
+  value(await cache.replaceSnapshot(ticket, snapshot()));
+  let updates = 0;
+  db.metadata.hook('updating', () => { updates++; });
+  value(await cache.readSnapshot(ticket));
+  value(await cache.readSnapshot(ticket));
+  assert.equal(updates, 0);
+});
+
+test('missing supporting records mark full-range snapshots incomplete', async (t) => {
+  const { cache, db, ticket } = await setup(t);
+  value(await cache.replaceSnapshot(ticket, snapshot()));
+  const initial = value(await cache.readSnapshot(ticket));
+  assert.equal(initial.fullyCovered, true);
+  assert.ok(initial.appointments.length > 0);
+  // Simulate incomplete synchronization evidence, not a seed-table mutation.
+  await db.patients.clear();
+  const incomplete = value(await cache.readSnapshot(ticket));
+  assert.deepEqual(incomplete.metadata, initial.metadata);
+  assert.equal(incomplete.appointments.length, 0);
+  assert.equal(incomplete.fullyCovered, false);
+});
+
 test('allowlisted projections strip clinical data and credentials; instants normalize, DOB stays date-only', async (t) => {
   const { cache, db, ticket } = await setup(t);
   const input = snapshot();

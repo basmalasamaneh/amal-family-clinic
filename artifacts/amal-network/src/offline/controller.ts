@@ -293,7 +293,7 @@ export class LocalCacheController {
       .filter((row) => row.endsAt <= window.startUtc || row.startsAt >= window.endUtc).delete();
     const key: [string, number] = [scope.userId, scope.clinicId];
     const metadata = await this.db.metadata.get(key);
-    if (metadata) {
+    if (metadata && (metadata.windowStartUtc !== window.startUtc || metadata.windowEndUtc !== window.endUtc)) {
       await this.db.metadata.update(key, { windowStartUtc: window.startUtc, windowEndUtc: window.endUtc });
     }
     return window;

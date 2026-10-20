@@ -1,0 +1,80 @@
+import { useEffect, useState } from 'react';
+import Dexie from 'dexie';
+import { useTranslation } from 'react-i18next';
+import { Link } from 'wouter';
+import { AlertTriangle, LoaderCircle, LockKeyhole, Wifi, WifiOff } from 'lucide-react';
+import { useAmalPreferences } from '@workspace/amal-ui';
+import { localCache } from '../offline';
+import { useOnlineStatus } from '../hooks/use-online-status';
+import { connectionState, summarizeQueue, type QueueSummary } from './connection-model';
+import { formatNumber } from './formatting';
+import { demoPath } from './identity';
+import './connection-messages';
+
+type Load = { scope: string; state: 'loading' | 'locked' | 'error' | 'ready'; counts: QueueSummary | null };
+export function ConnectionStatus({ userId, clinicId, queueAvailable }: { userId: string; clinicId: number | null; queueAvailable: boolean }) {
+  const { t } = useTranslation('connection');
+  const { locale, digitPreference } = useAmalPreferences();
+  const online = useOnlineStatus();
+  const scope = `${userId}:${clinicId}`;
+  const [load, setLoad] = useState<Load>({ scope, state: 'loading', counts: null });
+  useEffect(() => {
+    let disposed = false;
+    let generation = 0;
+    let activeGeneration: number | undefined;
+    let subscription: { unsubscribe(): void } | undefined;
+    const restart = () => {
+      const run = ++generation;
+      subscription?.unsubscribe();
+      subscription = undefined;
+      activeGeneration = undefined;
+      const ticket = localCache.captureScope();
+      if (!ticket.ok || ticket.value.userId !== userId || ticket.value.clinicId !== clinicId) {
+        setLoad({ scope, state: 'locked', counts: null }); return;
+      }
+      setLoad({ scope, state: 'loading', counts: null });
+      activeGeneration = ticket.value.generation;
+      let readId = 0;
+      const refresh = async () => {
+        const request = ++readId;
+        try {
+        const [result, sync] = await Promise.all([localCache.listOutbox(ticket.value), localCache.readSyncState(ticket.value)]);
+        if (!result.ok) throw new Error(result.error);
+        if (!sync.ok) throw new Error(sync.error);
+        const counts = summarizeQueue(result.value);
+        counts.attention = Math.max(counts.attention, sync.value.conflicts.filter(c => c.status === 'open').length);
+        if (!disposed && run === generation && request === readId) setLoad({ scope, state: 'ready', counts });
+        } catch {
+          if (!disposed && run === generation && request === readId) setLoad({ scope, state: 'error', counts: null });
+        }
+      };
+      // The controller uses guarded rw transactions, which cannot run inside a
+      // Dexie liveQuery. Observe committed mutations, then use authorized reads.
+      const changed = () => { void refresh(); };
+      Dexie.on('storagemutated', changed);
+      subscription = { unsubscribe: () => { readId++; Dexie.on('storagemutated').unsubscribe(changed); } };
+      void refresh();
+    };
+    const unsubscribe = localCache.subscribeContext(restart);
+    const unsubscribeStorage = localCache.subscribeStorage(() => {
+      if (localCache.getStorageStatus().state !== 'ready') return;
+      const ticket = localCache.captureScope();
+      if (ticket.ok && ticket.value.generation !== activeGeneration) restart();
+    });
+    restart();
+    return () => { disposed = true; generation++; subscription?.unsubscribe(); unsubscribe(); unsubscribeStorage(); };
+  }, [scope, userId, clinicId]);
+  const current = load.scope === scope ? load : { state: 'loading' as const, counts: null };
+  const state = connectionState(online, current.state, current.counts);
+  const Icon = state === 'attention' || state === 'error' ? AlertTriangle : state === 'loading' ? LoaderCircle : state === 'locked' ? LockKeyhole : online ? Wifi : WifiOff;
+  const waiting = current.counts ? t('waiting', { count: current.counts.waiting, n: formatNumber(current.counts.waiting, locale, digitPreference) }) : null;
+  return <div className="connection-status">
+    <div className="shell-pill" role="status" aria-live="polite" data-testid="status-connection">
+      <Icon size={16} aria-hidden="true" /><span>{t(state)}{state !== 'online' && state !== 'offline' && ` · ${t(online ? 'online' : 'offline')}`}{waiting && ` · ${waiting}`}</span>
+    </div>
+    <small>{t('caveat')}</small>
+    {!online && <p>{t('cached')} {t('coverage')}</p>}
+    {queueAvailable && current.state === 'ready' && (!online || !!current.counts?.waiting || state === 'attention') &&
+      <Link href={demoPath('/desk/sync')}>{t('queue')}</Link>}
+  </div>;
+}

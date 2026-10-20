@@ -342,7 +342,7 @@ for (const locale of ['ar', 'en'] as const) for (const theme of ['light', 'dark'
 
     await api.goOffline();
     expect(await page.evaluate(() => navigator.onLine)).toBe(false);
-    await expect(page.getByTestId('status-connection')).toContainText(locale === 'ar' ? 'المتصفح غير متصل' : 'Browser offline');
+    await expect(page.getByTestId('status-connection')).toContainText(locale === 'ar' ? 'غير متصل' : 'Offline');
     let persisted: DeviceEvidence | undefined;
 
     for (const [index, patient] of patients.entries()) {
@@ -468,12 +468,72 @@ for (const locale of ['ar', 'en'] as const) for (const theme of ['light', 'dark'
       });
     });
 
+    await test.step('cached day sheet reloads offline and prints a stable minimal projection', async () => {
+      await page.goto('desk/day-sheet');
+      await expect(page.getByTestId('select-day-sheet-day')).toBeVisible();
+      await page.getByTestId('select-day-sheet-day').selectOption(day);
+      await expect(page.getByTestId('table-day-sheet').locator('tbody tr')).toHaveCount(4);
+      const response = await page.reload();
+      expect(response?.fromServiceWorker()).toBe(true);
+      await page.getByTestId('select-day-sheet-day').selectOption(day);
+      await expect(page.getByTestId('table-day-sheet').locator('tbody tr')).toHaveCount(4);
+      await expect(page.getByTestId('status-connection')).toContainText('3');
+      const axe = await new AxeBuilder({ page }).include('[data-testid="page-day-sheet"]')
+        .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze();
+      await testInfo.attach(`day-sheet-axe-${locale}-${theme}.json`, {
+        contentType: 'application/json', body: Buffer.from(JSON.stringify(axe.violations, null, 2)),
+      });
+      expect(axe.violations).toEqual([]);
+      await page.evaluate(() => { window.print = () => { document.documentElement.dataset.printInvoked = 'true'; }; });
+      await page.getByTestId('button-day-sheet-print').click();
+      await expect(page.locator('html')).toHaveAttribute('data-print-invoked', 'true');
+      await expect(page.getByTestId('text-day-sheet-generated')).toBeVisible();
+      await page.emulateMedia({ media: 'print' });
+      await expect(page.locator('.shell-top')).toBeHidden();
+      await page.pdf({ path: testInfo.outputPath(`sheet-${locale}-${theme}.pdf`), format: 'A4', printBackground: false });
+      await page.evaluate(() => window.dispatchEvent(new Event('afterprint')));
+      await page.emulateMedia({ media: 'screen' });
+
+      await test.step('synthetic 70-row paper layout only; cloned rows are not real records', async () => {
+        const layoutEvidence = await page.evaluate(() => {
+          const preview = document.querySelector<HTMLElement>('[data-testid="day-sheet-preview"]');
+          const table = document.querySelector<HTMLTableElement>('[data-testid="table-day-sheet"]');
+          const body = table?.tBodies[0];
+          if (!preview || !table || !body || body.rows.length === 0) throw new Error('Day sheet table unavailable for layout-only evidence');
+          const originalRows = body.rows.length;
+          const label = document.createElement('p');
+          label.textContent = 'SYNTHETIC PAPER-LAYOUT TEST ONLY — cloned rows; NOT real records.';
+          label.dataset.syntheticPaperLayoutOnly = 'true';
+          preview.insertBefore(label, table);
+          const template = body.rows[0];
+          while (body.rows.length < 70) {
+            const clone = template.cloneNode(true) as HTMLTableRowElement;
+            clone.removeAttribute('data-testid');
+            clone.dataset.syntheticPaperLayoutOnly = 'true';
+            body.appendChild(clone);
+          }
+          return { originalRows, tbodyRows: body.rows.length, syntheticRows: body.querySelectorAll('[data-synthetic-paper-layout-only="true"]').length };
+        });
+        expect(layoutEvidence).toEqual({ originalRows: 4, tbodyRows: 70, syntheticRows: 66 });
+        testInfo.annotations.push({
+          type: 'paper-layout-only-synthetic-evidence',
+          description: '70 tbody rows total: 4 application rows plus 66 DOM-cloned synthetic rows. Not real records.',
+        });
+        await page.emulateMedia({ media: 'print' });
+        await page.pdf({
+          path: testInfo.outputPath(`sheet-layout-only-synthetic-${locale}-${theme}.pdf`),
+          format: 'A4', printBackground: false,
+        });
+        await page.emulateMedia({ media: 'screen' });
+      });
+    });
     const forbidden = api.requests.filter(request =>
       /\/(?:check|holds?|availability)(?:\/|$)/.test(request.path) || request.path === '/api/sync/push');
     expect(forbidden, 'Local booking must not call remote checks, holds, quick availability or push').toEqual([]);
     // Chromium may incorrectly report online immediately after a SW navigation.
-    // A failed identity recheck is allowed; no operational read/write may depend on it.
-    expect(api.requests.filter(request => request.offline && !(request.method === 'GET' && request.path === '/api/me')),
+    // Failed identity/sync-state reachability probes are allowed; no operational
+    // read/write may depend on them, and fulfilledOffline must remain empty.
+    expect(api.requests.filter(request => request.offline && !(request.method === 'GET' && ['/api/me', '/api/sync/state'].includes(request.path))),
       'Offline booking must not attempt operational API access').toEqual([]);
     expect(api.fulfilledOffline, 'HTTP mocks must never bypass genuine offline networking').toEqual([]);
     expect(api.unhandled, 'Every authenticated HTTP read must have an explicit mock').toEqual([]);
