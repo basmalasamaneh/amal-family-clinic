@@ -57,7 +57,7 @@ export function WalkInProvider({ clinic, fixture, enabled, children }: { clinic:
 
   const close = (created: Appointment | null, doctorName?: string) => {
     setRun(null);
-    if (created) setDone(t(api.mode === 'fixture' ? 'rx.doneSim' : 'rx.done', { time: formatTime(created.startsAt, locale, dp), doctor: '\u2068' + (doctorName ?? t('rx.quick.doctor', { id: created.doctorId })) + '\u2069' }));
+    if (created) setDone(t(api.mode === 'fixture' ? 'rx.doneSim' : created.id < 0 ? 'localBookingUi.saved' : 'rx.done', { time: formatTime(created.startsAt, locale, dp), doctor: '\u2068' + (doctorName ?? t('rx.quick.doctor', { id: created.doctorId })) + '\u2069' }));
     setTimeout(() => {
       const el = returnTo.current;
       (el && el.isConnected ? el : document.getElementById('main'))?.focus();
@@ -83,10 +83,13 @@ function DrawerWithNames({ clinic, scheduling, patients, api, reception, patient
 }) {
   const names = useRef(new Map<number, string>());
   useEffect(() => {
+    // The real drawer owns cached doctor identities. This display-only lookup must
+    // not quietly send a remote request when a local walk-in is opened offline.
+    if (api.mode === 'real') return;
     const ctl = new AbortController();
     scheduling.listDoctors(clinic.id, ctl.signal).then((ds) => { for (const d of ds) names.current.set(d.id, d.name); }, () => undefined);
     return () => ctl.abort();
-  }, [scheduling, clinic.id]);
+  }, [scheduling, clinic.id, api.mode]);
   return (
     <BookingDrawer clinic={clinic} ctx={{ clinicId: clinic.id, source: 'walk-in' }} title={title} scheduling={scheduling} patients={patients} api={api}
       initialPatient={patient} preferDoctorId={doctorId} availability={reception.availability} onClose={(a) => onClose(a, a ? names.current.get(a.doctorId) : undefined)} />

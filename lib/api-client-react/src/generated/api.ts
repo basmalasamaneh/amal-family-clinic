@@ -47,6 +47,7 @@ import type {
   GetAppointmentAvailabilityParams,
   GetDoctorDayParams,
   GetKpisParams,
+  GetOfflinePermitParams,
   HealthStatus,
   Identity,
   ImportBatch,
@@ -76,6 +77,7 @@ import type {
   NetworkHealth,
   NetworkPatient,
   NetworkPatientPage,
+  OfflinePermit,
   OperationInput,
   PasswordCredentials,
   PatientAccessHistoryInput,
@@ -97,6 +99,7 @@ import type {
   ResolutionInput,
   SyncBatch,
   SyncConflictPage,
+  SyncDeviceState,
   SyncPullResult,
   SyncPushResult,
   SyncResolutionResult
@@ -1999,6 +2002,169 @@ export const useWithdrawConsent = <TError = ErrorType<ApiFailure>,
       > => {
       return useMutation(getWithdrawConsentMutationOptions(options));
     }
+
+export const getGetOfflinePermitUrl = (params: GetOfflinePermitParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/auth/offline-permit?${stringifiedParams}` : `/api/auth/offline-permit`
+}
+
+/**
+ * Authenticated doctor/front-desk only. Signs current user and single clinic scope with a caller-generated 256-bit tab nonce. Expires at the earlier of session expiry or 30 minutes. No-store; persist only in the already verified tab session, never Dexie. Not accepted by any server endpoint as login or credentials. Revocation is immediate in this browser via shell peer events; remote revocation is discovered on reconnect or bounded by expiry while offline.
+ * @summary Issue a bounded tab-session offline continuation permit
+ */
+export const getOfflinePermit = async (params: GetOfflinePermitParams, options?: Parameters<typeof customFetch>[1]): Promise<OfflinePermit> => {
+
+  return customFetch<OfflinePermit>(getGetOfflinePermitUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetOfflinePermitQueryKey = (params?: GetOfflinePermitParams,) => {
+    return [
+    `/api/auth/offline-permit`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetOfflinePermitQueryOptions = <TData = Awaited<ReturnType<typeof getOfflinePermit>>, TError = ErrorType<ApiFailure>>(params: GetOfflinePermitParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getOfflinePermit>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetOfflinePermitQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getOfflinePermit>>> = ({ signal }) => getOfflinePermit(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getOfflinePermit>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetOfflinePermitQueryResult = NonNullable<Awaited<ReturnType<typeof getOfflinePermit>>>
+export type GetOfflinePermitQueryError = ErrorType<ApiFailure>
+
+
+/**
+ * @summary Issue a bounded tab-session offline continuation permit
+ */
+
+export function useGetOfflinePermit<TData = Awaited<ReturnType<typeof getOfflinePermit>>, TError = ErrorType<ApiFailure>>(
+ params: GetOfflinePermitParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getOfflinePermit>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetOfflinePermitQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetSyncStateUrl = () => {
+
+
+
+
+  return `/api/sync/state`
+}
+
+/**
+ * Authenticated requireSyncDevice scope, same trusted-device/actor/clinic constraints as sync.push. Returns the next globally contiguous sequence for the authenticated device; never accepts a caller-selected device ID.
+ * @summary Read authenticated device ordering bootstrap
+ */
+export const getSyncState = async ( options?: Parameters<typeof customFetch>[1]): Promise<SyncDeviceState> => {
+
+  return customFetch<SyncDeviceState>(getGetSyncStateUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetSyncStateQueryKey = () => {
+    return [
+    `/api/sync/state`
+    ] as const;
+    }
+
+
+export const getGetSyncStateQueryOptions = <TData = Awaited<ReturnType<typeof getSyncState>>, TError = ErrorType<ApiFailure>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getSyncState>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetSyncStateQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getSyncState>>> = ({ signal }) => getSyncState({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getSyncState>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetSyncStateQueryResult = NonNullable<Awaited<ReturnType<typeof getSyncState>>>
+export type GetSyncStateQueryError = ErrorType<ApiFailure>
+
+
+/**
+ * @summary Read authenticated device ordering bootstrap
+ */
+
+export function useGetSyncState<TData = Awaited<ReturnType<typeof getSyncState>>, TError = ErrorType<ApiFailure>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getSyncState>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetSyncStateQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export const getPushSyncUrl = () => {
 

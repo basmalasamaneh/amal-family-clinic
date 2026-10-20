@@ -18,6 +18,8 @@
 .bk-step.is-current .bk-step__n { border-color: var(--amal-primary); background: var(--amal-primary); color: var(--amal-on-primary); }
 .bk-step.is-done .bk-step__n { border-color: var(--amal-primary); color: var(--amal-primary-text); }
 .bk-body { flex: 1; overflow-y: auto; padding-block: 20px; padding-inline: 24px; display: flex; flex-direction: column; gap: 18px; }
+.bk-fields { border: 0; padding: 0; margin: 0; min-inline-size: 0; display: flex; flex-direction: column; gap: 18px; }
+.bk-fields:disabled { opacity: .7; }
 .bk-stage-title { margin: 0; font-size: var(--amal-text-xl); color: var(--amal-navy); outline: none; }
 .bk-foot { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding-block: 14px calc(14px + env(safe-area-inset-bottom)); padding-inline: 24px; border-block-start: 1px solid var(--amal-border); background: var(--amal-surface); }
 .bk-foot__spacer { flex: 1; }

@@ -4,6 +4,7 @@ import bcrypt from "bcryptjs";
 import { pool } from "@workspace/db";
 import { authenticate, audit, cookies, cookieOptions, createSession, csrf, digest, enforceScope, forbidden, identity, newCredential, requireRoles, throttle, trustedDevice, unauthorized, verifyPin } from "../lib/auth";
 import { ApiError, fail } from "../lib/auth-errors";
+import { issueOfflinePermit } from "../lib/offline-permit";
 
 const router: IRouter = Router();
 const email = z.email().max(254).transform(v => v.toLowerCase());
@@ -51,6 +52,17 @@ router.post("/auth/pin", async (req, res, next) => {
 }, authenticate, (req, res) => { res.json(identity(req.auth!)); });
 
 router.get("/me", authenticate, (req, res) => { res.json(identity(req.auth!)); });
+// This permit is local continuation authority only; no server route accepts it as login.
+router.get("/auth/offline-permit", authenticate, requireRoles("doctor", "front-desk"), async (req, res) => {
+  const nonce = z.string().regex(/^[a-f0-9]{64}$/).parse(req.query.nonce);
+  const a = req.auth!;
+  const { rows: [clinic] } = await pool.query(
+    "SELECT clinic_id AS id, clinic_name AS name FROM operational.clinics WHERE clinic_id=$1", [a.clinicId],
+  );
+  if (!clinic) throw forbidden();
+  res.setHeader("Cache-Control", "no-store");
+  res.json(issueOfflinePermit(a, clinic, nonce));
+});
 router.post("/auth/logout", authenticate, csrf, async (req, res) => {
   await pool.query("UPDATE operational.auth_sessions SET revoked_at=now() WHERE token_digest=$1", [req.auth!.sessionDigest]);
   await audit("auth.logout", req.auth!.id, req.auth!.clinicId);

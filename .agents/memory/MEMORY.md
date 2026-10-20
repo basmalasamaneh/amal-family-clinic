@@ -7,6 +7,7 @@
 - [Reception account selection](reception-account-selection.md) — device trust establishes clinic scope; email and PIN identify the individual shared-device user.
 - [Development auth origins](development-auth-origin.md) — task forks may inherit an outdated allowed origin; correct development configuration, not CSRF enforcement.
 - [Offline authorization](offline-authorization.md) — a cached shell or reconnect event must not unlock private records without verified authorization.
+- [Offline booking scope](offline-booking-authorization.md) — approved bounded session continuation and reload; pending work must survive logout.
 - [Vite peer identity](vite-peer-deduplication.md) — Workbox build peers can duplicate Vite types; deduplicate before changing unrelated consumers.
 - [Test browser environment](test-browser-environment.md) — downloaded Playwright browsers may lack NixOS native libraries; screenshot baselines depend on browser and fonts.
 - [Scheduling coordination](scheduling-coordination.md) — future sync/import writes must share database locks; historical collisions prevent blanket exclusion constraints.

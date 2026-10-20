@@ -5,7 +5,7 @@ import { localCache } from '../offline';
 import type { ShellIdentity } from './identity';
 import './offline-messages';
 
-/** Only a freshly loaded identity can grant access; reconnect alone never unlocks records. */
+/** Online identity or a verified bounded continuation permit; reconnect itself grants nothing. */
 export function usePrivateCacheContext(identity: ShellIdentity, clinicId: number | null, fixture: boolean) {
   useEffect(() => {
     let disposed = false;
@@ -21,20 +21,22 @@ export function usePrivateCacheContext(identity: ShellIdentity, clinicId: number
       const midnight = fromZonedTime(`${next.toISOString().slice(0, 10)}T00:00:00`, 'Asia/Hebron');
       timer = setTimeout(() => { prune(); schedule(); }, Math.max(1000, midnight.getTime() - Date.now() + 100));
     };
-    const valid = !fixture && navigator.onLine && identity.role !== null &&
-      identity.clinicsState !== 'error' && identity.clinics.some(c => c.id === clinicId) && identity.expiresAt;
+    const authorizedUntil = identity.offlineAuthorizedUntil;
+    const valid = !fixture && (identity.role === 'doctor' || identity.role === 'front-desk') &&
+      identity.clinicsState !== 'error' && identity.clinics.some(c => c.id === clinicId) &&
+      authorizedUntil && Date.parse(authorizedUntil) > Date.now();
     void localCache.setContext(valid && clinicId !== null ? {
-      userId: identity.id, clinicId, authorizedUntil: identity.expiresAt!,
+      userId: identity.id, clinicId, authorizedUntil: authorizedUntil!,
     } : null).then(result => { if (!disposed && result.ok) prune(); });
     const lock = () => { void localCache.setContext(null); };
     const visible = () => { if (document.visibilityState === 'visible') prune(); };
-    window.addEventListener('offline', lock);
+    const expiry = valid ? setTimeout(lock, Math.max(0, Date.parse(authorizedUntil!) - Date.now())) : undefined;
     document.addEventListener('visibilitychange', visible);
     schedule();
     return () => {
       disposed = true;
       clearTimeout(timer);
-      window.removeEventListener('offline', lock);
+      clearTimeout(expiry);
       document.removeEventListener('visibilitychange', visible);
       void localCache.setContext(null);
     };

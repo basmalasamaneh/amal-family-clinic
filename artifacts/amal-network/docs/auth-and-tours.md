@@ -37,3 +37,40 @@ to the auth contract and generated client. Reception retains email plus PIN to d
 individual accounts on shared devices. `/clinics` remains an unimplemented authenticated
 domain service; the shell reports that explicitly. No clinical workflows, consent services,
 export generation, enrollment UI or doctor-performance analytics were introduced.
+
+## Approved P3-05 prerequisite: bounded offline continuation
+
+- Online credential sign-in still requires the server. The shell loads `/me` and clinics, then
+  requests authenticated `GET /auth/offline-permit?nonce=<256-bit tab nonce>` for doctor/front-desk.
+  The server signs the account ID, role, single authorized clinic ID/name, audience, nonce and
+  issuance/expiry with ECDSA P-256/SHA-256 (P1363). Expiry is the earlier of session expiry or
+  30 minutes. Admin receives no offline permit. No server endpoint accepts this permit as login.
+- The public SPKI key is pinned from that authenticated same-origin HTTPS exchange. The signed
+  permit/key/nonce and clock high-water mark live only in sessionStorage, never Dexie. CSRF,
+  cookie credentials, passwords and PINs are not persisted there. This protects against treating
+  editable cached identity as authority; it is not a defense against malicious same-origin script,
+  replacement of both the pinned key and proof, or a compromised device clock. Normal browser
+  sessionStorage tab isolation is the boundary (browser session duplication/restoration follows
+  browser session semantics). Process restart rotates the issuer key; existing permits remain
+  valid only until their signed expiry.
+- Offline reload/network transport failure can restore only a locally verified, unexpired
+  permit in that tab session. Expiry locks the shell/cache. An authenticated HTTP failure is not
+  an offline fallback. Reconnect rechecks server identity; it never replays the outbox.
+- `usePrivateCacheContext` bridges verified `offlineAuthorizedUntil` to the existing
+  `localCache.setContext({userId, clinicId, authorizedUntil})` contract, including while offline.
+  Consumers must wait for asynchronous context readiness before capturing scope. Controller
+  owns scope isolation, TTL enforcement and retention; no credential is written to its database.
+- Logout, credential reauthentication/account switch and 401 invalidate local permits and
+  notify peers via a shared revocation generation, storage events and BroadcastChannel.
+  Explicit logout also leaves a shared signed-out marker so a reload cannot silently reopen
+  the still-valid HttpOnly cookie when offline network logout was impossible. Only successful
+  online credential submission clears this marker. In-flight issuance cannot revive a revoked
+  permit because it must match its captured revocation generation.
+- Logout calls `localCache.logout({userId})`, never `discardPending`. `pending-outbox` is an
+  intentional retained-work state, not failed cleanup: sign-in remains available with a notice
+  to resume online under the original account/clinic. Other cleanup errors retain the blocking
+  non-destructive retry screen. Never instruct users to clear site data containing unsent work.
+- Narrow sequence bootstrap contract: authenticated `GET /sync/state` / `getSyncState` returns
+  strict `{deviceId, nextSequence}` positive integers under `requireSyncDevice` scope. It does
+  not allocate authority, select a device, or implement reconnect replay.
+- Focused unit check: `pnpm --filter @workspace/amal-network exec tsx --test tests/offline-session.unit.test.ts`.

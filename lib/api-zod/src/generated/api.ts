@@ -871,6 +871,38 @@ export const WithdrawConsentResponse = zod.object({
 
 
 /**
+ * Authenticated doctor/front-desk only. Signs current user and single clinic scope with a caller-generated 256-bit tab nonce. Expires at the earlier of session expiry or 30 minutes. No-store; persist only in the already verified tab session, never Dexie. Not accepted by any server endpoint as login or credentials. Revocation is immediate in this browser via shell peer events; remote revocation is discovered on reconnect or bounded by expiry while offline.
+ * @summary Issue a bounded tab-session offline continuation permit
+ */
+export const getOfflinePermitQueryNonceRegExp = new RegExp('^[a-f0-9]{64}$');
+
+
+export const GetOfflinePermitQueryParams = zod.object({
+  "nonce": zod.coerce.string().regex(getOfflinePermitQueryNonceRegExp)
+}).strict()
+
+export const GetOfflinePermitResponse = zod.object({
+  "payload": zod.string().describe('base64url JSON signed claims: version=1, audience=amal-offline-tab, tab nonce, account userId, display name, doctor/front-desk role, single clinic id/name, issuedAt/expiresAt UTC milliseconds. Maximum lifetime 30 minutes and never beyond authenticated session expiry.'),
+  "signature": zod.string().describe('base64url ECDSA P-256 SHA-256 signature, IEEE P1363 encoding, over UTF-8 payload.'),
+  "publicKey": zod.string().describe('base64url SPKI P-256 verification key pinned by this authenticated HTTPS exchange. Public, never a login credential.')
+}).strict()
+
+
+/**
+ * Authenticated requireSyncDevice scope, same trusted-device/actor/clinic constraints as sync.push. Returns the next globally contiguous sequence for the authenticated device; never accepts a caller-selected device ID.
+ * @summary Read authenticated device ordering bootstrap
+ */
+
+
+
+
+export const GetSyncStateResponse = zod.object({
+  "deviceId": zod.number().int().min(1),
+  "nextSequence": zod.number().int().min(1)
+}).strict()
+
+
+/**
  * Authenticated trusted-device appointment synchronization. Submit 1–50 consecutive positive sequences in declared order; ordering identity is the server-authenticated device. The next new sequence must follow the device's last accepted receipt. Replays use the shared appointment operation ledger and return the original recorded outcome, not a separate duplicate status. Changed payload, owner, target or sequence reuse is rejected. A rejected or unresolved conflicting predecessor blocks every later operation deterministically. Applied/conflict outcomes and recorded business rejections are durable receipts; blocked operations and pre-execution ordering/identity rejections do not consume new sequences. Retry the identical operation to recover its receipt; resolve an open conflict explicitly before proceeding. A durable rejected predecessor remains blocked rather than being silently skipped. Business failures return partial ordered outcomes; unexpected transient errors roll back the whole batch and are safely retryable. Current actor, clinic and doctor permissions are rechecked. CSRF is required.
  * @summary push sync
  */

@@ -51,13 +51,14 @@ export function projectSnapshot(input: AuthorizedSnapshot, scope: Scope): {
   });
   const doctorIds = new Set(doctors.map((row) => row.id));
   const patientIds = new Set(patients.map((row) => row.id));
-  const statuses: AppointmentProjection['status'][] = ['booked', 'arrived', 'completed', 'cancelled'];
+  const statuses: AppointmentProjection['status'][] = ['booked', 'arrived', 'completed', 'cancelled', 'no_show', 'double_booked'];
   const appointments = input.appointments.map((row) => {
     check(row);
     requireValid(doctorIds.has(row.doctorId) && patientIds.has(row.patientId));
     requireValid(statuses.includes(row.status) && validId(row.version));
     return {
       ...scope, id: row.id, doctorId: row.doctorId, patientId: row.patientId,
+      ...(typeof row.clientOpId === 'string' && /^[0-9a-f-]{36}$/i.test(row.clientOpId) ? { clientOpId: row.clientOpId } : {}),
       ...interval(row.startsAt, row.endsAt), status: row.status, version: row.version,
     };
   });
@@ -77,9 +78,12 @@ export function projectOperation(input: LocalOperation): LocalOperation {
   if (input.type === 'appointment.create') {
     requireValid(input.entityId === null && validId(input.payload.doctorId) && validId(input.payload.patientId));
     requireValid(['phone', 'walk-in', 'online', 'import'].includes(input.payload.source));
+    const reason = input.payload.overrideReason;
+    requireValid(reason === undefined || (typeof reason === 'string' && reason.trim().length > 0 && reason.length <= 2000));
     return {
       operationId: input.operationId, type: input.type, entityId: null,
-      payload: { ...times, doctorId: input.payload.doctorId, patientId: input.payload.patientId, source: input.payload.source },
+      payload: { ...times, doctorId: input.payload.doctorId, patientId: input.payload.patientId, source: input.payload.source,
+        ...(reason === undefined ? {} : { overrideReason: reason.trim() }) },
     };
   }
   requireValid(input.type === 'appointment.update' && validId(input.entityId) && validId(input.payload.expectedVersion));

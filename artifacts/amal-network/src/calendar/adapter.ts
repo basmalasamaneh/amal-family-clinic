@@ -4,6 +4,7 @@ import { addLocalDays, localDateOf, localToUtc } from './dates';
 export interface CalendarDoctor { id: number; clinicId: number; name: string }
 export type Lifecycle = 'booked' | 'double_booked' | 'completed' | 'no_show' | 'cancelled' | 'unknown';
 export interface CalendarAppointment {
+  clientOpId?: string;
   id: number; clinicId: number; doctorId: number;
   /** Display name only when the read contract supplies it; null renders a localized fallback. */
   patientName: string | null;
@@ -35,7 +36,7 @@ export function toLifecycle(v: unknown): Lifecycle {
 export function fromApiAppointment(a: Appointment): CalendarAppointment {
   const ext = a as Appointment & { patientName?: unknown; conflict?: unknown };
   return {
-    id: a.id, clinicId: a.clinicId, doctorId: a.doctorId,
+    id: a.id, clinicId: a.clinicId, doctorId: a.doctorId, clientOpId: a.clientOpId ?? undefined,
     patientName: typeof ext.patientName === 'string' && ext.patientName.trim() ? ext.patientName : null,
     startsAt: a.startsAt, endsAt: a.endsAt, lifecycle: toLifecycle(a.status),
     conflict: ext.conflict === true, syncPending: false,

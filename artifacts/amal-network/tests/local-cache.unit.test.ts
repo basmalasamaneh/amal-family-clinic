@@ -202,7 +202,7 @@ test('outbox is scoped, minimal, idempotent, ordered, and explicitly updated wit
   assert.equal(await db.outbox.count(), 2);
 });
 
-test('logout counts pending across all clinics, requires discard, clears all current-user scopes only', async (t) => {
+test('logout counts pending across all clinics and refuses destructive discard', async (t) => {
   const { cache, ticket, db } = await setup(t);
   value(await cache.replaceSnapshot(ticket, snapshot()));
   value(await cache.enqueue(ticket, operation()));
@@ -221,9 +221,9 @@ test('logout counts pending across all clinics, requires discard, clears all cur
   assert.equal(await db.outbox.count(), 3);
   error(cache.captureScope(), 'unauthorized');
   value(await cache.setContext(null));
-  value(await cache.logout({ discardPending: true }));
+  error(await cache.logout({ discardPending: true }), 'pending-outbox');
   for (const table of [db.appointments, db.doctors, db.patients, db.metadata, db.outbox]) {
-    assert.equal(await table.where('userId').equals(USER).count(), 0);
+    assert.equal(await table.where('userId').equals(USER).count(), 2);
     assert.equal(await table.where('userId').equals('synthetic-account-b').count(), 1);
   }
 });
@@ -258,7 +258,7 @@ test('storage probe/subscription surfaces sanitized errors and quota abort prese
   error(disabled.captureScope(), 'unauthorized');
 });
 
-test('v1 -> v2 nondestructive migration preserves patient/cache and pending operation', async (t) => {
+test('v1 -> v3 nondestructive migration preserves patient/cache and pending operation', async (t) => {
   const name = `synthetic-migration-${crypto.randomUUID()}`;
   const old = new Dexie(name);
   old.version(1).stores(SCHEMA_V1);
@@ -280,7 +280,7 @@ test('v1 -> v2 nondestructive migration preserves patient/cache and pending oper
   t.after(async () => { cache.close(); await Dexie.delete(name); });
   value(await cache.setContext(AUTH));
   const ticket = value(cache.captureScope());
-  assert.equal(db.verno, 2);
+  assert.equal(db.verno, 3);
   assert.equal(value(await cache.readSnapshot(ticket)).patients.length, 1);
   assert.equal(value(await cache.listOutbox(ticket)).length, 1);
   assert.ok(db.outbox.schema.indexes.some((index) => index.name === '[userId+clinicId+status+enqueuedAt]'));
@@ -366,8 +366,8 @@ test('explicit user cleanup works without a successful authorized clinic context
   error(await cleanup.setContext({ ...AUTH, authorizedUntil: '' }), 'unauthorized');
   error(await cleanup.logout({ userId: USER }), 'pending-outbox');
   assert.equal(await cleanupDb.patients.count(), 1);
-  value(await cleanup.logout({ userId: USER, discardPending: true }));
-  assert.equal(await cleanupDb.patients.count(), 0);
-  assert.equal(await cleanupDb.outbox.count(), 0);
+  error(await cleanup.logout({ userId: USER, discardPending: true }), 'pending-outbox');
+  assert.equal(await cleanupDb.patients.count(), 1);
+  assert.equal(await cleanupDb.outbox.count(), 1);
   error(cleanup.captureScope(), 'unauthorized');
 });

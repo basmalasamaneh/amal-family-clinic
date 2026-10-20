@@ -8,7 +8,7 @@ import { DEMO_DATE, resolveSchedulingAdapter, type CalendarAppointment, type Cal
 import { addLocalDays, dayRange, formatLocalDate, formatMinutes, isLocalDate, localDateOf, localMinutesOf, localToUtc, todayLocal, weekDates, weekRange } from './dates';
 import { placeOverlaps } from './layout';
 import { bookingQuery } from './booking';
-import { AppointmentCard, CalSkeleton, DateNavigator } from './components';
+import { AppointmentCard, CalSkeleton, DateNavigator, LocalCalendarNotice } from './components';
 import { setWalkInPageContext } from '@/reception/walkin-bus';
 import { useSchedule } from './use-schedule';
 
@@ -105,13 +105,14 @@ export function CalendarPage({ view, clinic, fixture, title }: { view: 'day' | '
         </div>
       </div>
 
+      {load.state === 'ready' && <LocalCalendarNotice cache={load.data.localCache} />}
       {!clinic ? (
         <EmptyState headingLevel={2} title={t('calendar.state.noClinic')} description={t('calendar.state.noClinicDesc')} />
       ) : load.state === 'loading' ? <CalSkeleton /> : load.state === 'error' ? (
         <div className="cal-state" role="alert" data-testid="state-calendar-error">
           <AlertTriangle size={28} aria-hidden="true" />
           <h2>{t('calendar.state.error')}</h2>
-          <p>{t('calendar.state.errorDesc')}</p>
+          <p>{t(adapter.mode === 'real' ? 'localBookingUi.notReady' : 'calendar.state.errorDesc')}</p>
           <button type="button" className="cal-btn cal-btn--primary" onClick={retry} data-testid="button-calendar-retry"><RotateCw size={18} aria-hidden="true" />{t('calendar.state.retry')}</button>
         </div>
       ) : load.data.doctors.length === 0 ? (

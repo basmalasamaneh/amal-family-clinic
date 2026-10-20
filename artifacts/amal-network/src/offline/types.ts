@@ -18,7 +18,8 @@ export interface ScopeTicket extends Readonly<Scope> {
 
 export type CacheErrorCode =
   | 'unauthorized' | 'stale-context' | 'invalid-data' | 'pending-outbox'
-  | 'storage-unavailable' | 'storage-quota' | 'storage-blocked' | 'storage-failed';
+  | 'storage-unavailable' | 'storage-quota' | 'storage-blocked' | 'storage-failed'
+  | 'coverage' | 'doctor-overlap' | 'identity-not-cached' | 'stream-not-ready';
 export type Result<T> = { ok: true; value: T } | { ok: false; error: CacheErrorCode };
 export type StorageStatus =
   | { state: 'idle' | 'checking' | 'ready' }
@@ -37,8 +38,9 @@ export interface PatientProjection {
   /** Date only. Must not be timezone-converted. */
   dateOfBirth: string;
 }
-export type AppointmentStatus = 'booked' | 'arrived' | 'completed' | 'cancelled';
+export type AppointmentStatus = 'booked' | 'arrived' | 'completed' | 'cancelled' | 'no_show' | 'double_booked';
 export interface AppointmentProjection {
+  clientOpId?: string | null;
   id: number;
   clinicId: number;
   doctorId: number;
@@ -90,7 +92,7 @@ export type LocalOperation =
     operationId: string;
     type: 'appointment.create';
     entityId: null;
-    payload: { doctorId: number; patientId: number; startsAt: string; endsAt: string; source: AppointmentSource };
+    payload: { doctorId: number; patientId: number; startsAt: string; endsAt: string; source: AppointmentSource; overrideReason?: string };
   }
   | {
     operationId: string;
@@ -101,6 +103,8 @@ export type LocalOperation =
 export type OutboxStatus = 'pending' | 'processing' | 'failed' | 'conflict' | 'succeeded';
 export type RetryCode = 'network' | 'rate-limited' | 'conflict' | 'rejected' | 'unknown';
 export type OutboxRecord = LocalOperation & Scope & {
+  /** Present only for atomic local-first booking commands; never changed on retry. */
+  booking?: { localId: number; deviceId: number; sequence: number };
   enqueuedAt: string;
   updatedAt: string;
   status: OutboxStatus;
@@ -108,6 +112,19 @@ export type OutboxRecord = LocalOperation & Scope & {
   retryAt: string | null;
   errorCode: RetryCode | null;
 };
+export interface BookingProposal extends Scope {
+  operationId: string;
+  localId: number;
+  deviceId: number;
+  sequence: number;
+  input: import('@workspace/api-client-react').AppointmentInput;
+  patient: PatientProjection;
+  doctor: DoctorProjection;
+  canonical: import('@workspace/api-client-react').Appointment | null;
+  outcome: 'pending' | 'applied' | 'conflict' | 'rejected' | 'blocked';
+  /** Allowlisted machine codes only, never cross-clinic conflict details. */
+  outcomeCode: string | null;
+}
 export interface OutboxUpdate {
   status: OutboxStatus;
   attempts: number;

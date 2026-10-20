@@ -20,8 +20,10 @@ IndexedDB in browsers; it has **no** initial private context.
    or `navigator.onLine`. The current session contract does not establish a
    cache-specific authorization lifetime: when expiry is unknown, leave context
    null and keep private records locked. An offline shell alone cannot unlock
-   records. The owning shell must call `setContext(null)` immediately on offline/
-   unknown authorization, 401, identity change, or lost clinic authorization.
+   records. The approved local-first extension now supplies a verified, bounded
+   offline permit (see `local-first-booking.md`). The shell locks on unknown or
+   expired authorization, 401, identity change, or lost clinic authorization;
+   disconnect alone does not revoke a still-valid permit.
 2. Call `captureScope()` **before** starting any asynchronous operational fetch.
    Pass that exact opaque ticket to `replaceSnapshot(ticket, projection)` when
    the fetch resolves. Capturing a fresh ticket after an old fetch defeats the
@@ -152,19 +154,19 @@ Before signout confirmation, call `pendingCount(ticket)`. This counts all
 non-succeeded operations in **all clinics** belonging to the current authorized
 user, not just the selected clinic. `logout()` immediately locks context/tickets
 and revokes peers. If any unsent work exists it returns `pending-outbox` without
-deleting data. Obtain explicit localized user confirmation before calling
-`logout({ discardPending: true })`; that atomically removes all appointments,
-doctors, patients, metadata, and outbox rows for that user across every clinic.
+deleting data. The legacy `discardPending` option no longer permits deletion.
+After acknowledgement, logout removes cached projections but retains booking
+proposals, outbox evidence and device ordering.
 Another account's rows remain inaccessible and untouched.
 
 Cleanup can follow `setContext(null)` because the last verified user is retained
 only in controller memory for cleanup, never used to unlock reads. A controller
 that has never established a verified user can receive
-`logout({ userId: verifiedIdentity.id, discardPending: true })` from the session
+`logout({ userId: verifiedIdentity.id })` from the session
 owner. That explicit identity is a **cleanup-only** capability: it never sets
 context, authorizes reads, or grants clinic access. This allows cleanup with no
 authorized clinic, missing expiry, or expired authorization. The normal pending
-check still applies if `discardPending` is absent. With neither a remembered nor
+check always applies. With neither a remembered nor
 an explicit identity, logout returns `unauthorized` rather than claiming it
 cleared unknown data. Account removal uses the same explicit cleanup path.
 

@@ -1,6 +1,8 @@
 import type { Transaction } from 'dexie';
 import { appointmentWindow } from './calendar';
 import { LocalCacheDatabase } from './database';
+import { acknowledgeBooking, bookingInput, BookingFailure, persistBooking, validateBooking } from './booking-command';
+import type { AppointmentInput, SyncOutcome } from '@workspace/api-client-react';
 import { InvalidProjection, projectOperation, projectSnapshot, requireValid, utcInstant, validId, validText } from './projections';
 import type {
   AuthorizedContext, AuthorizedSnapshot, CacheErrorCode, CacheMetadata, CachedSnapshot,
@@ -133,6 +135,7 @@ export class LocalCacheController {
     this.expiryTimer.unref?.();
   }
   private mapFailure(error: unknown): CacheErrorCode {
+    if (error instanceof BookingFailure) return error.code;
     if (error instanceof CacheFailure) return error.code;
     if (error instanceof InvalidProjection || error instanceof RangeError || error instanceof TypeError) return 'invalid-data';
     const name = (error && typeof error === 'object' && 'name' in error) ? String(error.name) : '';
@@ -285,7 +288,7 @@ export class LocalCacheController {
   private async prune(scope: Scope) {
     const window = appointmentWindow(this.now());
     await this.scopeRows(this.db.appointments, scope)
-      .filter((row) => row.startsAt < window.startUtc || row.startsAt >= window.endUtc).delete();
+      .filter((row) => row.endsAt <= window.startUtc || row.startsAt >= window.endUtc).delete();
     const key: [string, number] = [scope.userId, scope.clinicId];
     const metadata = await this.db.metadata.get(key);
     if (metadata) {
@@ -303,8 +306,8 @@ export class LocalCacheController {
       const window = appointmentWindow(this.now());
       // Rows outside source coverage are never accepted as authorized coverage.
       requireValid(projection.appointments.every((row) =>
-        row.startsAt >= projection.coverageStartUtc && row.startsAt < projection.coverageEndUtc));
-      const appointments = projection.appointments.filter((row) => row.startsAt >= window.startUtc && row.startsAt < window.endUtc);
+        row.endsAt > projection.coverageStartUtc && row.startsAt < projection.coverageEndUtc));
+      const appointments = projection.appointments.filter((row) => row.endsAt > window.startUtc && row.startsAt < window.endUtc);
       await this.scopeRows(this.db.appointments, scope).delete();
       await this.scopeRows(this.db.doctors, scope).delete();
       await this.scopeRows(this.db.patients, scope).delete();
@@ -371,6 +374,7 @@ export class LocalCacheController {
     requireValid(row.errorCode === null || ['network', 'rate-limited', 'conflict', 'rejected', 'unknown'].includes(row.errorCode));
     return {
       ...projectOperation(row), ...scope, enqueuedAt: utcInstant(row.enqueuedAt), updatedAt: utcInstant(row.updatedAt),
+      ...(row.booking ? { booking: { ...row.booking } } : {}),
       status: row.status, attempts: row.attempts, retryAt: row.retryAt === null ? null : utcInstant(row.retryAt), errorCode: row.errorCode,
     };
   }
@@ -388,6 +392,8 @@ export class LocalCacheController {
       const key: [string, number, string] = [scope.userId, scope.clinicId, operationId];
       const current = await this.db.outbox.get(key);
       requireValid(current && update && statuses.includes(update.status));
+      // Booking outcomes require the matching per-operation acknowledgement path.
+      requireValid(!current.booking);
       requireValid(Number.isSafeInteger(update.attempts) && update.attempts >= current.attempts);
       const row = this.safeOutbox({
         ...current, status: update.status, attempts: update.attempts,
@@ -401,9 +407,47 @@ export class LocalCacheController {
     return this.scoped(ticket, async (scope) =>
       this.db.outbox.where('userId').equals(scope.userId).filter((row) => row.status !== 'succeeded').count());
   }
+  prepareBookingStream(ticket: ScopeTicket, state: { deviceId: number; nextSequence: number }): Promise<Result<void>> {
+    return this.scoped(ticket, async scope => {
+      requireValid(validId(state.deviceId) && validId(state.nextSequence));
+      const existing = await this.db.streams.get(state.deviceId);
+      await this.db.streams.put({ deviceId: state.deviceId, nextSequence: Math.max(state.nextSequence, existing?.nextSequence ?? 1) });
+      await this.db.bookingScopes.put({ ...scope, deviceId: state.deviceId });
+    });
+  }
+  validateBooking(ticket: ScopeTicket, input: AppointmentInput): Promise<Result<void>> {
+    return this.scoped(ticket, async scope => { await validateBooking(this.db, scope, bookingInput(input, scope), this.now()); });
+  }
+  saveBooking(ticket: ScopeTicket, input: AppointmentInput) {
+    return this.scoped(ticket, scope => persistBooking(this.db, scope, input, this.now()));
+  }
+  listBookings(ticket: ScopeTicket) {
+    return this.scoped(ticket, scope => this.scopeRows(this.db.proposals, scope).toArray());
+  }
+  acknowledgeBooking(ticket: ScopeTicket, operationId: string, outcome: SyncOutcome): Promise<Result<void>> {
+    return this.scoped(ticket, scope => acknowledgeBooking(this.db, scope, operationId, outcome, this.now()));
+  }
+  /** One explicit attempt, never a drain loop. Unresolved predecessors block delivery. */
+  beginBookingDelivery(ticket: ScopeTicket, operationId: string) {
+    return this.scoped(ticket, async scope => {
+      const key: [string, number, string] = [scope.userId, scope.clinicId, operationId];
+      const proposal = await this.db.proposals.get(key);
+      const outbox = await this.db.outbox.get(key);
+      requireValid(proposal && outbox);
+      if (outbox.status === 'succeeded') return null;
+      // Boolean gate only; another scope's queue is never returned to the caller.
+      const earlier = await this.db.outbox.filter(row => row.booking?.deviceId === proposal.deviceId &&
+        row.booking.sequence < proposal.sequence && row.status !== 'succeeded').count();
+      if (earlier) return null;
+      const currentDevice = await this.db.bookingScopes.get([scope.userId, scope.clinicId]);
+      requireValid(currentDevice?.deviceId === proposal.deviceId);
+      await this.db.outbox.update(key, { attempts: outbox.attempts + 1, updatedAt: this.now().toISOString() });
+      return { sequence: proposal.sequence, type: 'create' as const, input: proposal.input };
+    });
+  }
   /**
-   * Explicit logout/account removal: clears ALL clinics for the last verified user, not only active clinic.
-   * Invalidate immediately even if a confirmation is required. Unsent rows require explicit discard.
+   * Explicit logout/account removal: revokes immediately; pending work blocks cache deletion.
+   * The legacy discardPending option is deliberately ignored. Booking evidence is never deleted.
    * Can run after setContext(null); no private records are returned through this cleanup path.
    */
   logout(options: { discardPending?: boolean; userId?: string } = {}): Promise<Result<void>> {
@@ -422,8 +466,9 @@ export class LocalCacheController {
       await this.db.transaction('rw', this.db.tables, async () => {
         if (!userId) fail('unauthorized');
         const pending = await this.db.outbox.where('userId').equals(userId).filter((row) => row.status !== 'succeeded').count();
-        if (pending && options.discardPending !== true) fail('pending-outbox');
-        for (const table of [this.db.appointments, this.db.doctors, this.db.patients, this.db.metadata, this.db.outbox]) {
+        if (pending) fail('pending-outbox');
+        // Acknowledged booking receipts and device ordering are retained too.
+        for (const table of [this.db.appointments, this.db.doctors, this.db.patients, this.db.metadata, this.db.bookingScopes]) {
           await table.where('userId').equals(userId).delete();
         }
       });

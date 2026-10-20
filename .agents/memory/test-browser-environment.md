@@ -13,3 +13,13 @@ NixOS. Baselines made with a wrapped browser also depend on its version and font
 **How to apply:** Keep browser selection explicit/documented and review screenshot
 baselines when changing the browser/OS/font environment. Do not treat resulting
 pixel differences as automatic product regressions or blindly accept updates.
+
+Chromium can report `navigator.onLine === true` after a service-worker-served
+reload even while network requests remain disconnected.
+
+**Why:** The offline booking test observed this with genuine context offline
+emulation and reproduced it without axe; uncached requests still failed.
+
+**How to apply:** Prove offline reload with a service-worker response and an
+uncached failing network probe. Do not fake navigator or weaken application
+authorization to satisfy the browser signal.

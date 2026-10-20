@@ -2,14 +2,32 @@ import { useTranslation } from 'react-i18next';
 import { ChevronLeft, ChevronRight, CalendarCheck, FlaskConical, HelpCircle } from 'lucide-react';
 import { StatusBadge, useAmalPreferences } from '@workspace/amal-ui';
 import type { CalendarAppointment, CalendarDoctor } from './adapter';
-import { formatLocalDate, formatNum, formatTime } from './dates';
+import { formatLocalDate, formatNum, formatTime, localDateOf } from './dates';
 import { displayStatus } from './status';
 import { useSyncExternalStore } from 'react';
 import { useCancellation } from './CancellationProvider';
+import type { Schedule } from './use-schedule';
+import '../booking/local-messages';
 
 const emptyEntries: never[] = [];
 const emptySubscribe = () => () => {};
 const emptySnapshot = () => emptyEntries;
+
+export function LocalCalendarNotice({ cache }: { cache: Schedule['localCache'] }) {
+  const { t } = useTranslation();
+  const { locale, digitPreference } = useAmalPreferences();
+  if (!cache) return null;
+  const metadata = cache.metadata;
+  return <div className="cal-state cal-cache-notice" role="note" data-testid="calendar-cache-coverage">
+    {metadata && <p>{t('localBookingUi.coverage', {
+      from: formatLocalDate(localDateOf(metadata.coverageStartUtc), locale, digitPreference),
+      to: formatLocalDate(localDateOf(new Date(Date.parse(metadata.coverageEndUtc) - 1).toISOString()), locale, digitPreference),
+      refreshed: `${formatLocalDate(localDateOf(metadata.refreshedAt), locale, digitPreference)} ${formatTime(metadata.refreshedAt, locale, digitPreference)}`,
+    })}</p>}
+    {cache.refreshFailed && <p>{t('localBookingUi.refreshFailed')}</p>}
+    {cache.incomplete && <p>{t('localBookingUi.incomplete')}</p>}
+  </div>;
+}
 
 export function DateNavigator({ view, date, today, demoDate, onChange }: {
   view: 'day' | 'week'; date: string; today: string; demoDate: string | null; onChange: (date: string, step?: number) => void;
@@ -47,18 +65,19 @@ export function AppointmentCard({ appt, doctor, showDoctor, compact }: { appt: C
   const entries = useSyncExternalStore(cancellation?.store.subscribe ?? emptySubscribe, cancellation?.store.getSnapshot ?? emptySnapshot);
   const pending = entries.some((item) => item.target.id === appt.id && item.state !== 'failed');
   const { locale, digitPreference } = useAmalPreferences();
-  const status = displayStatus(appt);
+  // Waiting for delivery is not a scheduling lifecycle (e.g. Booked or Cancelled).
+  const status = displayStatus({ ...appt, syncPending: false });
   const start = formatTime(appt.startsAt, locale, digitPreference);
   const end = formatTime(appt.endsAt, locale, digitPreference);
   const mins = Math.round((Date.parse(appt.endsAt) - Date.parse(appt.startsAt)) / 60000);
   const name = appt.patientName ?? t('calendar.card.noName');
-  const statusLabel = status ? t(`status.${status}`, { ns: 'amalUi' }) : appt.syncPending ? `${t('calendar.card.unknownStatus')}, ${t('status.sync', { ns: 'amalUi' })}` : t('calendar.card.unknownStatus');
+  const statusLabel = status ? t(`status.${status}`, { ns: 'amalUi' }) : t('calendar.card.unknownStatus');
   const doctorName = doctor?.name ?? t('calendar.card.noDoctor');
   return (
     <button
       type="button"
-      onClick={() => cancellation?.open(appt)}
-      disabled={pending}
+      onClick={() => { if (!appt.syncPending && appt.id > 0) cancellation?.open(appt); }}
+      disabled={pending || appt.syncPending || appt.id < 0}
       className={`cal-card cal-card--${status ?? 'unknown'}${compact ? ' cal-card--compact' : ''}`}
       data-testid={`card-appointment-${appt.id}`}
     >
@@ -70,7 +89,7 @@ export function AppointmentCard({ appt, doctor, showDoctor, compact }: { appt: C
         {status ? <StatusBadge status={status} /> : (
           <span className="amal-status cal-status-unknown" data-testid="status-unknown"><HelpCircle size={15} aria-hidden="true" /><span>{statusLabel}</span></span>
         )}
-        {!status && appt.syncPending && <StatusBadge status="sync" />}
+        {appt.syncPending && <StatusBadge status="sync" />}
       </span>
     </button>
   );

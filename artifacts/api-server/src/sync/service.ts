@@ -16,6 +16,16 @@ export async function requireSyncDevice(client: Pick<PoolClient, "query">, actor
 }
 const envelope = (e: ApiError) => ({ code: e.code, messageKey: `error.${e.key}`, params: e.params });
 
+/** Read-only sequence bootstrap; device identity comes from the trusted cookie. */
+export async function syncDeviceState(auth: Auth) {
+  return transaction(auth, async (client, actor) => {
+    const deviceId = await requireSyncDevice(client, actor);
+    const { rows: [stream] } = await client.query(
+      "SELECT COALESCE(max(sequence),0)::integer + 1 AS next FROM operational.sync_device_operations WHERE device_id=$1", [deviceId]);
+    return { deviceId, nextSequence: stream.next as number };
+  });
+}
+
 export async function pushSync(auth: Auth, raw: unknown) {
   const input = pushInput.parse(raw);
   return transaction(auth, async (client, actor, now) => {

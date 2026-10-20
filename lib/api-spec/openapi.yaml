@@ -32,6 +32,25 @@
       }
     },
     "schemas": {
+      "OfflinePermit": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["payload", "signature", "publicKey"],
+        "properties": {
+          "payload": { "type": "string", "description": "base64url JSON signed claims: version=1, audience=amal-offline-tab, tab nonce, account userId, display name, doctor/front-desk role, single clinic id/name, issuedAt/expiresAt UTC milliseconds. Maximum lifetime 30 minutes and never beyond authenticated session expiry." },
+          "signature": { "type": "string", "description": "base64url ECDSA P-256 SHA-256 signature, IEEE P1363 encoding, over UTF-8 payload." },
+          "publicKey": { "type": "string", "description": "base64url SPKI P-256 verification key pinned by this authenticated HTTPS exchange. Public, never a login credential." }
+        }
+      },
+      "SyncDeviceState": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["deviceId", "nextSequence"],
+        "properties": {
+          "deviceId": { "type": "integer", "minimum": 1 },
+          "nextSequence": { "type": "integer", "minimum": 1 }
+        }
+      },
       "ReceptionContext": {
         "type": "object",
         "additionalProperties": false,
@@ -8378,6 +8397,39 @@
               }
             }
           }
+        }
+      }
+    },
+    "/auth/offline-permit": {
+      "get": {
+        "operationId": "getOfflinePermit",
+        "tags": ["auth"],
+        "summary": "Issue a bounded tab-session offline continuation permit",
+        "description": "Authenticated doctor/front-desk only. Signs current user and single clinic scope with a caller-generated 256-bit tab nonce. Expires at the earlier of session expiry or 30 minutes. No-store; persist only in the already verified tab session, never Dexie. Not accepted by any server endpoint as login or credentials. Revocation is immediate in this browser via shell peer events; remote revocation is discovered on reconnect or bounded by expiry while offline.",
+        "security": [{ "sessionCookie": [] }],
+        "x-roles": ["doctor", "front-desk"],
+        "x-implementation": "operational",
+        "parameters": [{ "in": "query", "name": "nonce", "required": true, "schema": { "type": "string", "pattern": "^[a-f0-9]{64}$" } }],
+        "responses": {
+          "200": { "description": "Signed offline continuation permit", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/OfflinePermit" }, "example": { "payload": "eyJ2ZXJzaW9uIjoxfQ", "signature": "illustrative-signature-not-valid-authority", "publicKey": "illustrative-public-key" } } } },
+          "401": { "description": "UNAUTHORIZED", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ApiFailure" }, "example": { "code": "UNAUTHORIZED", "messageKey": "error.unauthorized", "params": {} } } } },
+          "403": { "description": "FORBIDDEN", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ApiFailure" }, "example": { "code": "FORBIDDEN", "messageKey": "error.forbidden", "params": {} } } } }
+        }
+      }
+    },
+    "/sync/state": {
+      "get": {
+        "operationId": "getSyncState",
+        "tags": ["sync"],
+        "summary": "Read authenticated device ordering bootstrap",
+        "description": "Authenticated requireSyncDevice scope, same trusted-device/actor/clinic constraints as sync.push. Returns the next globally contiguous sequence for the authenticated device; never accepts a caller-selected device ID.",
+        "security": [{ "sessionCookie": [], "deviceCookie": [] }],
+        "x-roles": ["doctor", "front-desk"],
+        "x-implementation": "operational",
+        "responses": {
+          "200": { "description": "Device ordering state", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SyncDeviceState" }, "example": { "deviceId": 1, "nextSequence": 1 } } } },
+          "401": { "description": "UNAUTHORIZED", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ApiFailure" }, "example": { "code": "UNAUTHORIZED", "messageKey": "error.unauthorized", "params": {} } } } },
+          "403": { "description": "FORBIDDEN", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ApiFailure" }, "example": { "code": "FORBIDDEN", "messageKey": "error.forbidden", "params": {} } } } }
         }
       }
     },

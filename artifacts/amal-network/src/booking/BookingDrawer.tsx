@@ -21,13 +21,17 @@ import type { PatientHit, PatientSearchAdapter } from './patients';
 import { QuickSlots } from '@/reception/QuickSlots';
 import { WalkInHandoff } from '@/reception/WalkInHandoff';
 import type { AvailabilityFn, AvailabilitySlot } from '@/reception/api';
+import { cachedPatientSearch, cachedSchedulingAdapter, getBookingSnapshot, localBookingErrorKey, prepareBookingCache, saveLocalBooking, validateLocalBooking } from '@/offline/booking-bridge';
+import { localCache } from '@/offline';
+import type { CachedSnapshot } from '@/offline/types';
+import './local-messages';
 import './booking.css';
 
 export const CHECK_DEBOUNCE_MS = 350;
 export const APPOINTMENTS_CHANGED = 'amal:appointments-changed';
 const DURATIONS = [10, 15, 20, 30, 45, 60, 90];
 type Stage = 0 | 1 | 2;
-type Check = { kind: 'incomplete' } | { kind: 'checking'; key: string } | { kind: 'done'; key: string; preview: ConflictPreview } | { kind: 'error'; key: string; failure: FailureKind };
+type Check = { kind: 'incomplete' } | { kind: 'checking'; key: string } | { kind: 'done'; key: string; preview: ConflictPreview } | { kind: 'error'; key: string; failure: FailureKind; localKey?: string };
 type Hold = { kind: 'none' } | { kind: 'getting'; key: string } | { kind: 'held'; key: string; token: string; expiresAt: string } | { kind: 'failed'; key: string; failure: FailureKind };
 
 export interface BookingDrawerProps {
@@ -46,6 +50,12 @@ export function BookingDrawer({ clinic, ctx, title, scheduling, patients, api, o
   const { t } = useTranslation();
   const { locale, digitPreference: dp } = useAmalPreferences();
   const qc = useQueryClient();
+  const local = api.mode === 'real';
+  const readScheduling: SchedulingReadAdapter = local ? cachedSchedulingAdapter : scheduling;
+  const readPatients: PatientSearchAdapter = local ? cachedPatientSearch : patients;
+  const [cache, setCache] = useState<{ kind: 'loading' } | { kind: 'error'; key: string | null } | { kind: 'ready'; snapshot: CachedSnapshot; refreshFailed: boolean }>({ kind: 'loading' });
+  const [cacheNonce, setCacheNonce] = useState(0);
+  const [localSubmitError, setLocalSubmitError] = useState<string | null>(null);
   const source = ctx?.source ?? 'phone';
   const walkIn = source === 'walk-in';
   const initial = useMemo(() => {
@@ -85,11 +95,48 @@ export function BookingDrawer({ clinic, ctx, title, scheduling, patients, api, o
   const mounted = useRef(false);
   const apiRef = useRef(api); apiRef.current = api;
 
+  // Real identities always come from the authorized operational snapshot, never a
+  // remote roster or a caller's potentially stale patient display data.
+  useEffect(() => {
+    if (!local) return;
+    let live = true;
+    let authorized = false;
+    setCache({ kind: 'loading' });
+    setDoctors({ kind: 'loading', list: [] });
+    const load = async () => {
+      let refreshFailed = false;
+      if (navigator.onLine) {
+        try { await prepareBookingCache(); } catch { refreshFailed = true; }
+      }
+      try {
+        const snapshot: CachedSnapshot = await getBookingSnapshot();
+        if (!live) return;
+        if (!snapshot.metadata || snapshot.metadata.clinicId !== clinic.id) throw new Error('cache-not-ready');
+        authorized = true;
+        setCache({ kind: 'ready', snapshot, refreshFailed });
+        setPatient((p) => p ? snapshot.patients.find((item) => item.id === p.id && item.clinicId === clinic.id) ?? null : null);
+      } catch (e) { if (live) setCache({ kind: 'error', key: localBookingErrorKey(e) }); }
+    };
+    void load();
+    // A revoked context must hide identities immediately, including a selected patient.
+    const unsubscribe = localCache.subscribeContext(() => {
+      // Initial shell context activation can happen while readyScope is waiting.
+      // There are no displayed cache identities to revoke until the read succeeds.
+      if (!live || !authorized) return;
+      live = false;
+      setPatient(null); setDoctorId(null); setDoctors({ kind: 'loading', list: [] });
+      setCache({ kind: 'error', key: null }); setCheck({ kind: 'incomplete' });
+      checkSeq.invalidate();
+    });
+    return () => { live = false; unsubscribe(); };
+  }, [local, clinic.id, cacheNonce, checkSeq]);
+
   // Doctors (clinic-scoped; another clinic's doctor is never accepted).
   useEffect(() => {
+    if (local && cache.kind !== 'ready') return;
     const ctl = new AbortController();
     setDoctors((d) => ({ kind: 'loading', list: d.list }));
-    scheduling.listDoctors(clinic.id, ctl.signal).then(
+    readScheduling.listDoctors(clinic.id, ctl.signal).then(
       (ds) => {
         if (ctl.signal.aborted) return;
         const list = ds.filter((d) => d.clinicId === clinic.id);
@@ -99,16 +146,16 @@ export function BookingDrawer({ clinic, ctx, title, scheduling, patients, api, o
       (e) => { if (!ctl.signal.aborted && !isAbort(e)) setDoctors({ kind: 'error', list: [] }); },
     );
     return () => ctl.abort();
-  }, [scheduling, clinic.id, docNonce]);
+  }, [readScheduling, clinic.id, docNonce, local, cache]);
   useEffect(() => {
-    if (initial.dur) return;
+    if (initial.dur || (local && cache.kind !== 'ready')) return;
     const ctl = new AbortController();
-    scheduling.clinicHours(clinic.id, ctl.signal).then((h) => { if (!ctl.signal.aborted && h?.slotMinutes) setDuration((d) => (d === 30 ? h.slotMinutes : d)); }, () => undefined);
+    readScheduling.clinicHours(clinic.id, ctl.signal).then((h) => { if (!ctl.signal.aborted && h?.slotMinutes) setDuration((d) => (d === 30 ? h.slotMinutes : d)); }, () => undefined);
     return () => ctl.abort();
-  }, [scheduling, clinic.id, initial.dur]);
+  }, [readScheduling, clinic.id, initial.dur, local, cache]);
 
   const interval = useMemo(() => effectiveInterval(exact, date, time, duration), [exact, date, time, duration]);
-  const checkInput = patient && doctorId && interval.ok
+  const checkInput = patient && doctorId && interval.ok && (!local || cache.kind === 'ready')
     ? { clinicId: clinic.id, doctorId, patientId: patient.id, startsAt: interval.startsAt, endsAt: interval.endsAt, source }
     : null;
   const checkKey = checkInput ? stableKey(checkInput) : null;
@@ -125,13 +172,16 @@ export function BookingDrawer({ clinic, ctx, title, scheduling, patients, api, o
     setCheck({ kind: 'checking', key: checkKey });
     const ctl = new AbortController();
     const timer = setTimeout(() => {
-      apiRef.current.check(input, ctl.signal).then(
+      const request: Promise<ConflictPreview> = local
+        ? validateLocalBooking(input).then(() => ({ ok: true, conflicts: [] }))
+        : apiRef.current.check(input, ctl.signal);
+      request.then(
         (preview) => { if (checkSeq.isCurrent(token)) setCheck({ kind: 'done', key: checkKey, preview }); },
-        (e) => { if (!isAbort(e) && checkSeq.isCurrent(token)) setCheck({ kind: 'error', key: checkKey, failure: classifyError(e).kind }); },
+        (e) => { if (!isAbort(e) && checkSeq.isCurrent(token)) setCheck({ kind: 'error', key: checkKey, failure: classifyError(e).kind, ...(local ? { localKey: localBookingErrorKey(e) } : {}) }); },
       );
     }, CHECK_DEBOUNCE_MS);
     return () => { clearTimeout(timer); ctl.abort(); };
-  }, [checkKey, checkNonce, checkSeq]);
+  }, [checkKey, checkNonce, checkSeq, local, cache]);
 
   const preview = check.kind === 'done' && check.key === checkKey ? check.preview : null;
   const summary = preview ? summarize(preview) : null;
@@ -144,7 +194,7 @@ export function BookingDrawer({ clinic, ctx, title, scheduling, patients, api, o
 
   // Soft hold at confirmation; released whenever the selection changes or the drawer closes.
   const releaseHold = () => { const tok = holdRef.current; holdRef.current = null; if (tok) apiRef.current.release(tok).catch(() => undefined); };
-  const holdKey = stage === 2 && canProceed && checkKey ? checkKey + '|' + cleanReason : null;
+  const holdKey = !local && stage === 2 && canProceed && checkKey ? checkKey + '|' + cleanReason : null;
   useEffect(() => {
     releaseHold();
     const token = holdSeq.next();
@@ -177,7 +227,7 @@ export function BookingDrawer({ clinic, ctx, title, scheduling, patients, api, o
 
   useEffect(() => { if (mounted.current) headingRef.current?.focus(); mounted.current = true; }, [stage]);
   const attemptContext = checkKey ? checkKey + '|' + cleanReason : null;
-  useEffect(() => { setSubmitErr(null); }, [checkKey, stage]);
+  useEffect(() => { setSubmitErr(null); setLocalSubmitError(null); }, [checkKey, stage]);
   useEffect(() => { attempts.clear(); }, [attemptContext, attempts]);
 
   const doctorName = doctors.list.find((d) => d.id === doctorId)?.name ?? (doctorId ? t('calendar.booking.doctorId', { id: doctorId }) : '');
@@ -199,14 +249,20 @@ export function BookingDrawer({ clinic, ctx, title, scheduling, patients, api, o
       const usable = hold.kind === 'held' && !holdExpired && hold.key === holdKey ? hold.token : undefined;
       return { ...checkInput!, ...(cleanReason ? { overrideReason: cleanReason } : {}), ...(usable ? { holdToken: usable } : {}) };
     });
-    submittingRef.current = true; setSubmitting(true); setSubmitErr(null);
+    submittingRef.current = true; setSubmitting(true); setSubmitErr(null); setLocalSubmitError(null);
     try {
-      const a = await api.create({ ...attempt.payload, clientOpId: attempt.clientOpId });
+      const input = { ...attempt.payload, clientOpId: attempt.clientOpId };
+      const a = await (local ? saveLocalBooking(input) : api.create(input));
       attempts.clear(); holdRef.current = null;
-      window.dispatchEvent(new CustomEvent(APPOINTMENTS_CHANGED, { detail: { kind: 'created', appointment: a, simulated: api.mode === 'fixture' } }));
+      if (!local) window.dispatchEvent(new CustomEvent(APPOINTMENTS_CHANGED, { detail: { kind: 'created', appointment: a, simulated: api.mode === 'fixture' } }));
       void qc.invalidateQueries({ predicate: (q) => typeof q.queryKey[0] === 'string' && q.queryKey[0].startsWith('/api/appointments') });
       onClose(a);
     } catch (e) {
+      if (local) {
+        // Nothing persisted: preserve all fields and the stable retry attempt.
+        setLocalSubmitError(localBookingErrorKey(e));
+        return;
+      }
       const f = classifyError(e);
       setSubmitErr(f);
       if (f.kind === 'conflict' || f.kind === 'validation' || f.kind === 'auth') {
@@ -215,7 +271,7 @@ export function BookingDrawer({ clinic, ctx, title, scheduling, patients, api, o
       }
     } finally { submittingRef.current = false; setSubmitting(false); }
   };
-  const close = () => { releaseHold(); onClose(null); };
+  const close = () => { if (submittingRef.current) return; releaseHold(); onClose(null); };
 
   // Quick walk-in tap 3: sets the exact server slot, then the normal check -> hold -> create
   // pipeline runs. Any conflict, warning, failed check or failed hold stops and hands the user
@@ -239,7 +295,7 @@ export function BookingDrawer({ clinic, ctx, title, scheduling, patients, api, o
   const next = () => setStage((s) => (s === 0 && patient ? 1 : s === 1 && canProceed ? 2 : s));
   const back = () => { setAuto(null); setStage((s) => (s > 0 ? ((s - 1) as Stage) : s)); };
   const Icon = walkIn ? DoorOpen : PhoneCall;
-  const quick = walkIn && !!availability;
+  const quick = !local && walkIn && !!availability;
   const steps = ['patient', 'slot', 'confirm'] as const;
   const reasonError = summary?.overrideable && ack && reasonTouched && !reason.trim();
   const durations = DURATIONS.includes(duration) ? DURATIONS : [...DURATIONS, duration].sort((a, b) => a - b);
@@ -248,7 +304,7 @@ export function BookingDrawer({ clinic, ctx, title, scheduling, patients, api, o
     if (!checkKey) return <Msg tone="muted" icon={Info} testId="status-check-incomplete">{t('bk.check.incomplete')}</Msg>;
     if (check.kind === 'checking' || (check.kind === 'done' && check.key !== checkKey)) return <Msg tone="muted" icon={Loader2} testId="status-check-checking">{t('bk.check.checking')}</Msg>;
     if (check.kind === 'error') return (
-      <Msg tone="block" icon={AlertTriangle} testId="status-check-error">{t('bk.check.error')}
+      <Msg tone="block" icon={AlertTriangle} testId="status-check-error">{local ? t(check.localKey ?? 'notReady', { ns: 'localBooking' }) : t('bk.check.error')}
         <button type="button" className="bk-btn bk-btn--sm" onClick={() => setCheckNonce((n) => n + 1)} data-testid="button-check-retry"><RotateCcw size={16} aria-hidden="true" />{t('bk.check.retry')}</button>
       </Msg>);
     if (!summary) return null;
@@ -257,7 +313,7 @@ export function BookingDrawer({ clinic, ctx, title, scheduling, patients, api, o
     if (summary.blocking.length) return <Msg tone="block" icon={Ban} testId="status-check-blocked">{t('bk.check.blocked')}{review}</Msg>;
     if (summary.warnings.length) return <Msg tone="warn" icon={TriangleAlert} testId="status-check-warning">{t('bk.check.warn')}{cleanReason && <span className="bk-hint">{t('bk.confirm.reason')}: <bdi dir="auto">{cleanReason}</bdi></span>}{review}</Msg>;
     if (summary.info.length) return <Msg tone="info" icon={Info} testId="status-check-info">{t('bk.check.okInfo')}{review}</Msg>;
-    return <Msg tone="ok" icon={CheckCircle2} testId="status-check-ok">{t('bk.check.ok')}</Msg>;
+    return <Msg tone="ok" icon={CheckCircle2} testId="status-check-ok">{t(local ? 'localBookingUi.checked' : 'bk.check.ok')}</Msg>;
   };
 
   return (
@@ -286,9 +342,24 @@ export function BookingDrawer({ clinic, ctx, title, scheduling, patients, api, o
             <p id="bk-stage-desc" className="bk-sr">{t('bk.stepOf', { n: stage + 1 })}</p>
             {patients.mode === 'fixture' && <p className="bk-fixture" data-testid="status-fixture-patients"><FlaskConical size={16} aria-hidden="true" />{t('bk.fixture.patients')}</p>}
             {api.mode === 'fixture' && <p className="bk-fixture" data-testid="status-fixture-writes"><FlaskConical size={16} aria-hidden="true" />{t('bk.fixture.writes')}</p>}
+            {local && <Msg tone="info" icon={Info} testId="status-local-booking-note">{t('localBookingUi.explanation')}</Msg>}
+            {local && cache.kind === 'loading' && <Msg tone="muted" icon={Loader2} testId="status-booking-cache-loading">{t('localBookingUi.loading')}</Msg>}
+            {local && cache.kind === 'error' && <Msg tone="block" icon={AlertTriangle} testId="status-booking-cache-error">
+              {t('localBookingUi.notReady')} {cache.key && t(cache.key, { ns: 'localBooking' })}
+              <button type="button" className="bk-btn bk-btn--sm" onClick={() => setCacheNonce((n) => n + 1)}>{t('bk.search.retry')}</button>
+            </Msg>}
+            {local && cache.kind === 'ready' && cache.snapshot.metadata && <div className="bk-hint" data-testid="text-booking-cache-coverage">
+              <p>{t('localBookingUi.coverage', {
+                from: formatLocalDate(localDateOf(cache.snapshot.metadata.coverageStartUtc), locale, dp),
+                to: formatLocalDate(localDateOf(new Date(Date.parse(cache.snapshot.metadata.coverageEndUtc) - 1).toISOString()), locale, dp),
+                refreshed: `${formatLocalDate(localDateOf(cache.snapshot.metadata.refreshedAt), locale, dp)} ${formatTime(cache.snapshot.metadata.refreshedAt, locale, dp)}`,
+              })}</p>
+              {cache.refreshFailed && <p role="status">{t('localBookingUi.refreshFailed')}</p>}
+            </div>}
             <h2 ref={headingRef} tabIndex={-1} className="bk-stage-title" data-testid="text-stage-title">{t(`bk.steps.${steps[stage]}`)}</h2>
 
-            {stage === 0 && (patient ? (
+            <fieldset className="bk-fields" disabled={submitting || (local && cache.kind !== 'ready')}>
+            {stage === 0 && (!local || cache.kind === 'ready') && (patient ? (
               <div className="bk-field">
                 <div className="bk-chosen" data-testid="card-selected-patient">
                   <span className="bk-opt__av" aria-hidden="true"><UserRound size={20} /></span>
@@ -299,7 +370,7 @@ export function BookingDrawer({ clinic, ctx, title, scheduling, patients, api, o
                 {quick && <QuickSlots clinicId={clinic.id} clinicName={clinic.name} patient={patient} doctors={doctors.list} doctorsKind={doctors.kind} onDoctorsRetry={() => setDocNonce((n) => n + 1)}
                   availability={availability!} preferDoctorId={preferDoctorId} busy={submitting || !!auto} onBook={quickBook} onOther={() => setStage(1)} />}
               </div>
-            ) : <PatientQuickSearch adapter={patients} clinicId={clinic.id} autoFocus paginate onSelect={(p) => { setPatient(p); if (!quick) setStage(1); }} />)}
+            ) : <PatientQuickSearch adapter={readPatients} clinicId={clinic.id} autoFocus paginate onSelect={(p) => { setPatient(p); if (!quick) setStage(1); }} />)}
 
             {stage === 1 && <>
               <div className="bk-field">
@@ -341,6 +412,7 @@ export function BookingDrawer({ clinic, ctx, title, scheduling, patients, api, o
               <div aria-live="polite">
                 {auto && <Msg tone="muted" icon={Loader2} testId="status-quick-committing">{auto.label}</Msg>}
                 {!canProceed ? checkPanel()
+                  : local ? <Msg tone="info" icon={Info} testId="status-local-no-hold">{t('localBookingUi.noHold')}</Msg>
                   : hold.kind === 'getting' ? <Msg tone="muted" icon={Loader2} testId="status-hold-getting">{t('bk.confirm.holdGetting')}</Msg>
                   : hold.kind === 'held' && !holdExpired ? (
                     <div className="bk-msg bk-msg--ok bk-hold" data-testid="status-hold-active">
@@ -353,6 +425,12 @@ export function BookingDrawer({ clinic, ctx, title, scheduling, patients, api, o
                   : null}
               </div>
             </>}
+            </fieldset>
+            {localSubmitError && <div className="bk-msg bk-msg--block" role="alert" data-testid="status-local-submit-error">
+              <AlertTriangle size={20} aria-hidden="true" /><div className="bk-msg__body">
+                <p>{t('localBookingUi.notSaved')} {t(localSubmitError, { ns: 'localBooking' })}</p>
+              </div>
+            </div>}
             {submitErr && (
               <div className="bk-msg bk-msg--block" role="alert" data-testid="status-submit-error">
                 <AlertTriangle size={20} aria-hidden="true" />
@@ -366,10 +444,10 @@ export function BookingDrawer({ clinic, ctx, title, scheduling, patients, api, o
           <footer className="bk-foot">
             {stage > 0 && <button type="button" className="bk-btn" onClick={back} disabled={submitting} data-testid="button-stage-back"><ArrowLeft size={18} className="bk-flip" aria-hidden="true" />{t('bk.back')}</button>}
             <span className="bk-foot__spacer" />
-            {stage < 2 && <button type="button" className="bk-btn bk-btn--primary" onClick={next} disabled={stage === 0 ? !patient : !canProceed} data-testid="button-stage-next">{t('bk.next')}<ArrowRight size={18} className="bk-flip" aria-hidden="true" /></button>}
+            {stage < 2 && <button type="button" className="bk-btn bk-btn--primary" onClick={next} disabled={submitting || (local && cache.kind !== 'ready') || (stage === 0 ? !patient : !canProceed)} data-testid="button-stage-next">{t('bk.next')}<ArrowRight size={18} className="bk-flip" aria-hidden="true" /></button>}
             {stage === 2 && <button type="button" className="bk-btn bk-btn--primary" onClick={() => void submit(false)}
               disabled={submitting || !canProceed || hold.kind === 'getting' || holdExpired || (hold.kind === 'failed' && hold.failure === 'conflict')} aria-busy={submitting} data-testid="button-confirm-booking">
-              {submitting ? <><Loader2 size={18} aria-hidden="true" />{t('bk.confirm.submitting')}</> : <><CheckCircle2 size={18} aria-hidden="true" />{t('bk.confirm.submit')}</>}
+               {submitting ? <><Loader2 size={18} aria-hidden="true" />{t(local ? 'localBookingUi.saving' : 'bk.confirm.submitting')}</> : <><CheckCircle2 size={18} aria-hidden="true" />{t(local ? 'localBookingUi.save' : 'bk.confirm.submit')}</>}
             </button>}
           </footer>
           {preview && interval.ok && (

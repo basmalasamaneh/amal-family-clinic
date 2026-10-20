@@ -1,5 +1,5 @@
 import Dexie, { type Table } from 'dexie';
-import type { CachedAppointment, CachedDoctor, CachedPatient, CacheMetadata, OutboxRecord } from './types';
+import type { BookingProposal, CachedAppointment, CachedDoctor, CachedPatient, CacheMetadata, OutboxRecord } from './types';
 
 export const DATABASE_NAME = 'amal-private-cache';
 export const SCHEMA_V1 = {
@@ -18,6 +18,9 @@ export class LocalCacheDatabase extends Dexie {
   outbox!: Table<OutboxRecord, [string, number, string]>;
   metadata!: Table<CacheMetadata, [string, number]>;
   lifecycle!: Table<{ key: string; epoch: number }, string>;
+  proposals!: Table<BookingProposal, [string, number, string]>;
+  streams!: Table<{ deviceId: number; nextSequence: number }, number>;
+  bookingScopes!: Table<{ userId: string; clinicId: number; deviceId: number }, [string, number]>;
 
   constructor(name = DATABASE_NAME) {
     super(name);
@@ -26,6 +29,11 @@ export class LocalCacheDatabase extends Dexie {
       ...SCHEMA_V1,
       outbox: `${SCHEMA_V1.outbox}, [userId+clinicId+status+enqueuedAt], [userId+clinicId+enqueuedAt]`,
       lifecycle: 'key',
+    });
+    this.version(3).stores({
+      proposals: '[userId+clinicId+operationId], userId, [userId+clinicId], [deviceId+sequence]',
+      streams: 'deviceId',
+      bookingScopes: '[userId+clinicId], userId',
     });
   }
 }

@@ -16,6 +16,7 @@ import { useOnlineStatus } from '@/hooks/use-online-status';
 import './offline-messages';
 import { localCache } from '@/offline';
 import { readCleanupTarget, rememberCleanupTarget, UNKNOWN_CLEANUP } from './cleanup-warning';
+import { allowSessionAfterLogin, markExplicitSignout, onPeerRevocation, revokeOfflineAuthorization } from '@/auth/offline-permit';
 
 type LoadState = { status: 'loading' } | { status: 'error' } | { status: 'ready'; identity: ShellIdentity | null; expired?: boolean };
 const MAX_TIMER = 2_147_000_000;
@@ -61,14 +62,19 @@ export function ShellRoot() {
   }, [apply]);
 
   const refresh = useCallback(async () => {
+    if (!navigator.onLine) throw new Error('Online sign-in verification is required');
+    // Login/account switching revokes every previous tab permit before issuing a new one.
+    revokeOfflineAuthorization();
+    allowSessionAfterLogin();
     const g = ++gen.current;
     const identity = await identityAdapter.load();
     if (g !== gen.current || !mounted.current) throw new Error('Superseded identity load');
-    if (!identity) { reportUnauthorized(); throw new Error('No session after sign-in'); }
+    if (!identity || identity.offlineRestored) { reportUnauthorized(); throw new Error('No online session after sign-in'); }
     apply(identity);
   }, [apply]);
 
   const expire = useCallback(() => {
+    revokeOfflineAuthorization();
     gen.current++;
     principal.current = null;
     clearPrivate();
@@ -79,28 +85,44 @@ export function ShellRoot() {
 
   useEffect(() => { mounted.current = true; load(); return () => { mounted.current = false; }; }, [load]);
   useEffect(() => onUnauthorized(expire), [expire]);
+  useEffect(() => onPeerRevocation(() => {
+    // Do not rebroadcast peer events (avoids a cross-tab revocation loop).
+    gen.current++;
+    principal.current = null;
+    clearPrivate();
+    setState({ status: 'ready', identity: null, expired: true });
+  }), [clearPrivate]);
 
   // One GET /me re-check at server expiry; a 401 ends the session, success slides it. Never loops on the same expiry.
   const identity = state.status === 'ready' ? state.identity : null;
-  const expiresAt = identity?.expiresAt ?? null;
+  const expiresAt = identity?.offlineAuthorizedUntil ?? identity?.expiresAt ?? null;
   useEffect(() => {
     if (!expiresAt) return;
     const at = Date.parse(expiresAt);
     if (!Number.isFinite(at)) return;
     const timer = window.setTimeout(() => {
+      if (!navigator.onLine) { expire(); return; }
       const g = ++gen.current;
       identityAdapter.load().then(
-        (next) => { if (!mounted.current || g !== gen.current) return; if (!next) expire(); else if (next.expiresAt !== expiresAt) apply(next); },
-        () => { /* transient; shell keeps working, next request will surface 401 */ },
+        (next) => { if (!mounted.current || g !== gen.current) return; if (!next || next.offlineRestored) expire(); else apply(next); },
+        () => { if (mounted.current && g === gen.current) expire(); },
       );
     }, Math.min(Math.max(at - Date.now() + 1000, 1000), MAX_TIMER));
     return () => window.clearTimeout(timer);
   }, [expiresAt, expire, apply]);
+  useEffect(() => {
+    const offline = () => { if (identity && !identity.offlineAuthorizedUntil) expire(); };
+    const online = () => { if (identity) load(); };
+    window.addEventListener('offline', offline);
+    window.addEventListener('online', online);
+    return () => { window.removeEventListener('offline', offline); window.removeEventListener('online', online); };
+  }, [identity, expire, load]);
 
   const path = location.replace(/\/+$/, '') || '/';
   const params = new URLSearchParams(search);
 
-  if (cleanupTarget) {
+  const retainedWork = cleanupTarget?.startsWith('pending:') ?? false;
+  if (cleanupTarget && !retainedWork) {
     return <AmalPreferencesProvider key="cleanup" i18n={i18n} userId={null}>
       <main className="shell-session" data-testid="state-cleanup-incomplete">
         <AmalLogo />
@@ -108,11 +130,12 @@ export function ShellRoot() {
           description={t(cleanupTarget === UNKNOWN_CLEANUP ? 'offline:cleanupUnknownDescription' : 'offline:cleanupDescription')}
           actions={cleanupTarget === UNKNOWN_CLEANUP ? undefined : <Button disabled={cleaning} data-testid="button-retry-cleanup" onClick={async () => {
             setCleaning(true);
-            const result = await localCache.logout({ userId: cleanupTarget, discardPending: true });
+            const result = await localCache.logout({ userId: cleanupTarget });
             setCleaning(false);
-            if (result.ok) {
-              rememberCleanupTarget(null);
-              setCleanupTarget(null);
+            if (result.ok || result.error === 'pending-outbox') {
+              const target = result.ok ? null : `pending:${cleanupTarget}`;
+              rememberCleanupTarget(target);
+              setCleanupTarget(target);
               load();
             }
           }}>{t('offline:cleanupRetry')}</Button>} />
@@ -135,28 +158,31 @@ export function ShellRoot() {
     return (
       <AmalPreferencesProvider key={`${id.id}|${id.role ?? 'none'}`} i18n={i18n} userId={id.id}>
         <ToastProvider>
+          {retainedWork && <p className="shell-fixture" role="status">{t('offline:retained')}</p>}
+          {id.offlineRestored && <p className="shell-fixture" role="status">{t('offline:continuation', { until: id.offlineAuthorizedUntil })}</p>}
           <AppShell
             identity={id}
             fixture={identityAdapter.mode === 'fixture'}
             onRefresh={async () => { try { await refresh(); } catch { /* keep identity */ } }}
             onLogout={async () => {
-              // Explicit warning includes all clinics and runs before either destructive action.
-              // No workflow enqueues today; future callers must retain this acknowledgement.
+              // Warn about retained work, never offer to discard it.
               if (!window.confirm(t('offline:pending'))) return;
               gen.current++;
               void localCache.setContext(null);
-              try { await identityAdapter.logout(); }
-              catch (error) {
-                if (!(error && typeof error === 'object' && 'status' in error && error.status === 401)) throw error;
-                // Already-expired server sessions still clear the local identity.
-              }
+              const request = navigator.onLine ? identityAdapter.logout() : Promise.resolve();
+              markExplicitSignout();
               principal.current = null;
+              clearPrivate();
+              // Local sign-out is immediate even if the network logout cannot finish.
+              if (mounted.current) setState({ status: 'ready', identity: null });
+              void request.catch(() => { /* No offline permit survives an unsuccessful network logout. */ });
               // Persist before attempting deletion, so reload cannot hide a failed cleanup.
               rememberCleanupTarget(id.id);
-              const cleanup = await localCache.logout({ userId: id.id, discardPending: true });
-              if (cleanup.ok) rememberCleanupTarget(null);
-              else setCleanupTarget(id.id);
-              clearPrivate();
+              setCleanupTarget(id.id);
+              const cleanup = await localCache.logout({ userId: id.id });
+              const target = cleanup.ok ? null : cleanup.error === 'pending-outbox' ? `pending:${id.id}` : id.id;
+              rememberCleanupTarget(target);
+              setCleanupTarget(target);
               if (mounted.current) { setState({ status: 'ready', identity: null }); navigate(demoPath('/login'), { replace: true }); }
             }}
           />
@@ -167,6 +193,7 @@ export function ShellRoot() {
 
   return (
     <AmalPreferencesProvider key="anonymous" i18n={i18n} userId={null}>
+      {retainedWork && <p className="shell-fixture" role="status">{t('offline:retained')}</p>}
       {state.status === 'loading' ? <ShellLoading />
         : state.status === 'error' ? <SessionError onRetry={load} />
         : path !== '/login' ? <Redirect to={demoPath(loginHref(path === '/' ? null : path))} replace />
