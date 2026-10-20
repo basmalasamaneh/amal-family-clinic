@@ -7,6 +7,8 @@
  */
 import type { Consent } from './consent';
 import type { ConsentStateEffectiveLevel } from './consentStateEffectiveLevel';
+import type { ConsentStateEligibility } from './consentStateEligibility';
+import type { ConsentStatePatient } from './consentStatePatient';
 
 /**
  * Current is the latest transition even when withdrawn, never an older grant. History is ordered newest first. Legacy evidence/recording clinic may be null.
@@ -15,4 +17,9 @@ export interface ConsentState {
   current: Consent | null;
   history: Consent[];
   effectiveLevel: ConsentStateEffectiveLevel;
+  patient: ConsentStatePatient;
+  /** Server-owned completed-birthday policy using current Asia/Hebron date. Missing, invalid or future DOB yields null/unknown; never infer adulthood in the browser. */
+  eligibility: ConsentStateEligibility;
+  /** True only for scoped front-desk and latest nonwithdrawn consent recorded in their current clinic. Mutation still requires fresh PIN and CSRF. */
+  canWithdraw: boolean;
 }

@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { once } from "node:events";
 import pg from "pg";
+import bcrypt from "bcryptjs";
 import type { PoolClient } from "pg";
 
 if (process.env.NODE_ENV === "production" || process.env.REPLIT_DEPLOYMENT === "1") {
@@ -91,6 +92,7 @@ async function request(a: Actor | null, path: string, method = "GET", body?: unk
   return {
     status: response.status, data: text ? JSON.parse(text) : null,
     requestId: response.headers.get("x-request-id"), cacheControl: response.headers.get("cache-control"),
+    setCookies: response.headers.getSetCookie(),
   };
 }
 
@@ -369,6 +371,213 @@ test("doctor reads: exact patient scope, My Day, privacy and source-clinic audit
   });
 });
 
+test("reception-assisted access history: authorization, confirmation, bounded projection and cursors", async t => {
+  const read = (a: Actor | null, p: Patient, body: unknown = { patientRequestConfirmed: true }, csrf = true) =>
+    request(a, `/patients/${p.id}/access-history`, "POST", body, csrf);
+  await t.test("every read requires reception, device, CSRF, fresh PIN, confirmation and clinic scope", async () => {
+    const p = await patient(), outside = await patient(remoteDesk);
+    assert.equal((await read(null, p)).status, 401);
+    for (const a of [localDoctor, remoteDoctor, manager]) assert.equal((await read(a, p)).status, 403);
+    assert.equal((await read(remoteDesk, p)).status, 404);
+    assert.equal((await read(desk, outside)).status, 404);
+    assert.equal((await read(desk, { id: 2147483647, name: "" })).status, 404);
+    assert.equal((await read({ ...desk, device: undefined }, p)).status, 401);
+    assert.equal((await read(desk, p, { patientRequestConfirmed: true }, false)).status, 403);
+    for (const body of [{}, { patientRequestConfirmed: false }, { patientRequestConfirmed: "true" },
+      { patientRequestConfirmed: true, patientId: outside.id }, { patientRequestConfirmed: true, clinicId: desk.clinic },
+      ...[0, 101, 1.5, "1", null].map(limit => ({ patientRequestConfirmed: true, limit })),
+      { patientRequestConfirmed: true, cursor: "garbage" }]) {
+      assert.equal((await read(desk, p, body)).status, 400, JSON.stringify(body));
+    }
+    await admin.query("UPDATE operational.auth_sessions SET pin_verified_at=now()-interval '6 minutes' WHERE token_digest=$1", [digest(desk.session)]);
+    try {
+      const stale = await read(desk, p);
+      assert.equal(stale.status, 403);
+      assert.equal(stale.data.code, "REAUTH_REQUIRED");
+    } finally {
+      await admin.query("UPDATE operational.auth_sessions SET pin_verified_at=now() WHERE token_digest=$1", [digest(desk.session)]);
+    }
+    const empty = await read(desk, p);
+    assert.equal(empty.status, 200);
+    assert.deepEqual(empty.data, { items: [], nextCursor: null });
+    assert.equal(empty.cacheControl, "private, no-store");
+    const merged = await patient();
+    await admin.query("UPDATE operational.patients SET merged_into_id=$1 WHERE patient_id=$2", [p.id, merged.id]);
+    assert.equal((await read(desk, merged)).status, 404);
+  });
+  await t.test("disclosed cross-clinic events only; verified viewers; stable descending paging and signed scope", async () => {
+    const p = await patient(), other = await patient();
+    const at = "2026-01-01T12:00:00.123456Z";
+    const event = async (patientId: number, a: Actor | null, source: number | null = desk.clinic,
+      outcome = "disclosed", action = "network.lookup", auditClinic = a?.clinic ?? remoteDoctor.clinic) =>
+      (await admin.query(`INSERT INTO operational.audit_log(user_id,clinic_id,action,patient_id,detail,at)
+        VALUES($1,$2,$3,$4,$5::jsonb,$6) RETURNING id`,
+      [a?.id ?? null, auditClinic, action, patientId,
+        JSON.stringify({ outcome, sourceClinicId: source, privateNotes: "NEVER EXPOSE", email: "private@example.invalid" }), at])).rows[0].id;
+    const verified = await event(p.id, remoteDoctor);
+    const unknown = await event(p.id, null);
+    const mismatched = await event(p.id, localDoctor, desk.clinic, "disclosed", "network.lookup", remoteDoctor.clinic);
+    await event(other.id, remoteDoctor);
+    await event(p.id, remoteDoctor, desk.clinic, "denied");
+    await event(p.id, remoteDoctor, desk.clinic, "no-result");
+    await event(p.id, remoteDoctor, desk.clinic, "disclosed", "consent.record");
+    await event(p.id, remoteDoctor, remoteDoctor.clinic); // Not cross-clinic.
+    await event(p.id, remoteDoctor, null); // No source attribution.
+    const collected: any[] = [];
+    let cursor: string | null = null;
+    do {
+      const r = await read(desk, p, { patientRequestConfirmed: true, limit: 1, ...(cursor ? { cursor } : {}) });
+      assert.equal(r.status, 200, JSON.stringify(r.data));
+      assert.equal(r.data.items.length, 1);
+      collected.push(...r.data.items);
+      cursor = r.data.nextCursor;
+      if (cursor) {
+        assert.equal((await read(desk, other, { patientRequestConfirmed: true, cursor })).status, 400);
+        assert.equal((await read(secondDesk, p, { patientRequestConfirmed: true, cursor })).status, 400);
+        assert.equal((await read(remoteDesk, p, { patientRequestConfirmed: true, cursor })).status, 404);
+        assert.equal((await read(desk, p, { cursor })).status, 400, "confirmation repeated on next page");
+        assert.equal((await read(desk, p, { patientRequestConfirmed: true, cursor }, false)).status, 403);
+        const forged = JSON.parse(Buffer.from(cursor, "base64url").toString());
+        forged.id++;
+        assert.equal((await read(desk, p, { patientRequestConfirmed: true,
+          cursor: Buffer.from(JSON.stringify(forged)).toString("base64url") })).status, 400);
+      }
+    } while (cursor);
+    assert.deepEqual(collected.map(row => row.id), [mismatched, unknown, verified]);
+    for (const row of collected) {
+      assert.deepEqual(Object.keys(row).sort(), ["action", "at", "id", "viewerClinicName", "viewerName", "viewerRole"]);
+      assert.equal(row.action, "patient-view");
+    }
+    for (const row of collected.slice(0, 2)) {
+      assert.equal(row.viewerName, null);
+      assert.equal(row.viewerRole, null);
+      assert.equal(row.viewerClinicName, null);
+    }
+    assert(collected[2].viewerName);
+    assert.equal(collected[2].viewerRole, "doctor");
+    assert(collected[2].viewerClinicName);
+    assert(!JSON.stringify(collected).includes("NEVER EXPOSE"));
+    assert(!JSON.stringify(collected).includes("@"));
+    const audits = (await admin.query(`SELECT user_id,clinic_id,patient_id,detail FROM operational.audit_log
+      WHERE patient_id=$1 AND action='patient.access-history.read'`, [p.id])).rows;
+    assert.equal(audits.length, 3);
+    for (const audit of audits) {
+      assert.equal(audit.user_id, desk.id);
+      assert.equal(audit.clinic_id, desk.clinic);
+      assert.equal(audit.patient_id, p.id);
+      assert.deepEqual(Object.keys(audit.detail).sort(), ["correlationId", "outcome"]);
+      assert.equal(audit.detail.outcome, "read");
+    }
+  });
+  await t.test("real disclosure survives withdrawal, never includes local reads or denied reads", async () => {
+    const p = await patient();
+    await trustedDoctor(p);
+    await visit(p);
+    await networkPatient(p, localDoctor);
+    assert.deepEqual((await read(desk, p)).data.items, []);
+    const grant = await record(p);
+    await networkPatient(p, remoteDoctor);
+    const before = await read(desk, p);
+    assert.equal(before.data.items.length, 1);
+    assert.equal((await request(desk, `/consent/${grant.id}/withdraw`, "POST", { clientOpId: randomUUID() })).status, 200);
+    assert.equal(await networkPatient(p, remoteDoctor), undefined);
+    assert((await networkPatient(p, localDoctor))!.visits.length);
+    assert.deepEqual((await read(desk, p)).data.items, before.data.items);
+  });
+  await t.test("default/max bounds, continuation PIN freshness and cross-clinic cursor binding", async () => {
+    const p = await patient();
+    await admin.query("INSERT INTO operational.patient_clinic_access(patient_id,clinic_id) VALUES($1,$2)", [p.id, remoteDesk.clinic]);
+    await admin.query(`INSERT INTO operational.audit_log(user_id,clinic_id,action,patient_id,detail,at)
+      SELECT $1,$2,'network.lookup',$3,jsonb_build_object('outcome','disclosed','sourceClinicId',$4::integer),
+        '2026-01-01T00:00:00Z'::timestamptz+(n * interval '1 second') FROM generate_series(1,103) n`,
+    [remoteDoctor.id, remoteDoctor.clinic, p.id, desk.clinic]);
+    const defaultPage = await read(desk, p);
+    assert.equal(defaultPage.data.items.length, 25);
+    assert(defaultPage.data.nextCursor);
+    const maxPage = await read(desk, p, { patientRequestConfirmed: true, limit: 100 });
+    assert.equal(maxPage.data.items.length, 100);
+    const cursor = maxPage.data.nextCursor;
+    assert(cursor);
+    assert.equal((await read(remoteDesk, p, { patientRequestConfirmed: true, cursor })).status, 400);
+    await admin.query("UPDATE operational.auth_sessions SET pin_verified_at=now()-interval '6 minutes' WHERE token_digest=$1", [digest(desk.session)]);
+    try {
+      const stale = await read(desk, p, { patientRequestConfirmed: true, cursor });
+      assert.equal(stale.status, 403);
+      assert.equal(stale.data.code, "REAUTH_REQUIRED");
+    } finally {
+      await admin.query("UPDATE operational.auth_sessions SET pin_verified_at=now() WHERE token_digest=$1", [digest(desk.session)]);
+    }
+    const next = await read(desk, p, { patientRequestConfirmed: true, cursor, limit: 100 });
+    assert.equal(next.data.items.length, 3);
+    assert.equal(next.data.nextCursor, null);
+    const events = [...maxPage.data.items, ...next.data.items];
+    assert.equal(new Set(events.map(row => row.id)).size, 103);
+    for (let i = 1; i < events.length; i++) assert(events[i - 1].at > events[i].at);
+  });
+  await t.test("real PIN reauth rotates credentials without invalidating a same-device continuation", async () => {
+    const a = await actor("receptionist", desk.clinic), p = await patient(a);
+    await admin.query("UPDATE operational.users SET pin_hash=$1 WHERE id=$2", [await bcrypt.hash("0123", 4), a.id]);
+    await visit(p);
+    await record(p, "clinical", a);
+    await networkPatient(p, remoteDoctor);
+    await networkPatient(p, remoteDoctor);
+    const first = await read(a, p, { patientRequestConfirmed: true, limit: 1 });
+    assert.equal(first.status, 200);
+    const cursor = first.data.nextCursor;
+    assert(cursor);
+    await admin.query("UPDATE operational.auth_sessions SET pin_verified_at=now()-interval '6 minutes' WHERE token_digest=$1", [digest(a.session)]);
+    const stale = await read(a, p, { patientRequestConfirmed: true, cursor, limit: 1 });
+    assert.equal(stale.status, 403);
+    assert.equal(stale.data.code, "REAUTH_REQUIRED");
+    const reauth = await request(a, "/auth/reauth", "POST", { pin: "0123" });
+    assert.equal(reauth.status, 200, JSON.stringify(reauth.data));
+    const cookie = reauth.setCookies.find(value => value.startsWith("amal_session="));
+    assert(cookie);
+    const session = cookie.split(";")[0]!.slice("amal_session=".length);
+    assert.notEqual(session, a.session);
+    assert.notEqual(reauth.data.csrfToken, a.csrf);
+    const rotated = { ...a, session, csrf: reauth.data.csrfToken };
+    assert.equal((await read(a, p, { patientRequestConfirmed: true, cursor })).status, 401, "revoked session cannot continue");
+    assert.equal((await read(rotated, p, { cursor })).status, 400, "confirmation still required");
+    const next = await read(rotated, p, { patientRequestConfirmed: true, cursor, limit: 1 });
+    assert.equal(next.status, 200, JSON.stringify(next.data));
+    assert.equal(next.data.items.length, 1);
+    assert.notEqual(next.data.items[0].id, first.data.items[0].id);
+    assert.equal(next.data.nextCursor, null);
+  });
+  await t.test("scope and verified viewer relationships recheck on every subsequent page", async () => {
+    const p = await patient(remoteDesk);
+    await admin.query("INSERT INTO operational.patient_clinic_access(patient_id,clinic_id) VALUES($1,$2)", [p.id, desk.clinic]);
+    await visit(p, remoteDoctor);
+    await record(p, "clinical", remoteDesk);
+    await networkPatient(p, localDoctor);
+    await networkPatient(p, localDoctor);
+    const first = await read(desk, p, { patientRequestConfirmed: true, limit: 1 });
+    assert(first.data.nextCursor);
+    await admin.query("DELETE FROM operational.patient_clinic_access WHERE patient_id=$1 AND clinic_id=$2", [p.id, desk.clinic]);
+    assert.equal((await read(desk, p, { patientRequestConfirmed: true, cursor: first.data.nextCursor })).status, 404);
+    await admin.query("BEGIN");
+    let doctor: Actor;
+    try {
+      doctor = await actor("doctor", remoteDoctor.clinic);
+      await admin.query("COMMIT");
+    } catch (error) { await admin.query("ROLLBACK"); throw error; }
+    await admin.query(`INSERT INTO operational.audit_log(user_id,clinic_id,action,patient_id,detail)
+      VALUES($1,$2,'network.lookup',$3,$4::jsonb)`, [doctor.id, doctor.clinic, p.id,
+      JSON.stringify({ outcome: "disclosed", sourceClinicId: desk.clinic })]);
+    await admin.query("BEGIN");
+    try {
+      await admin.query("UPDATE operational.users SET role='receptionist',doctor_id=NULL WHERE id=$1", [doctor.id]);
+      await admin.query("UPDATE operational.doctors SET user_id=NULL WHERE doctor_id=$1", [doctor.doctorId]);
+      await admin.query("COMMIT");
+    } catch (error) { await admin.query("ROLLBACK"); throw error; }
+    const redacted = await read(remoteDesk, p);
+    assert.equal(redacted.data.items[0].viewerName, null);
+    assert.equal(redacted.data.items[0].viewerRole, null);
+    assert.equal(redacted.data.items[0].viewerClinicName, null);
+  });
+});
+
 test("consent: role × scope × level, transactional history and network disclosure", async t => {
   await t.test("extracted chips keep evidence and metadata behind Clinical consent", async () => {
     const { extractVisit } = await import("../src/alerts/service");
@@ -402,10 +611,14 @@ test("consent: role × scope × level, transactional history and network disclos
   });
   await t.test("consent read/write roles, clinic isolation, fresh PIN, trusted device and CSRF", async () => {
     const p = await patient();
-    assert.deepEqual(await consent(p), { current: null, history: [], effectiveLevel: "none" });
+    const initial = await consent(p);
+    assert.deepEqual(initial, {
+      current: null, history: [], effectiveLevel: "none", patient: { id: p.id, name: p.name }, canWithdraw: false,
+      eligibility: { dateOfBirth: "1990-01-01", ageStatus: "adult", asOfDate: initial.eligibility.asOfDate },
+    });
     for (const a of [localDoctor, otherDoctor]) assert.equal((await request(a, `/patients/${p.id}/consent`)).status, 404);
     await trustedDoctor(p);
-    assert.deepEqual(await consent(p, localDoctor), { current: null, history: [], effectiveLevel: "none" });
+    assert.deepEqual(await consent(p, localDoctor), initial);
     assert.equal((await request(null, `/patients/${p.id}/consent`)).status, 401);
     assert.equal((await request(manager, `/patients/${p.id}/consent`)).status, 403);
     for (const a of [remoteDoctor, remoteDesk]) {
@@ -447,6 +660,29 @@ test("consent: role × scope × level, transactional history and network disclos
     }
     assert.equal((await consent(p)).history.length, 0);
     assert.equal((await request(desk, "/patients/not-a-number/consent")).status, 400);
+  });
+
+  await t.test("consent metadata is server-owned, scoped and latest recording-clinic withdrawal authority", async () => {
+    const p = await patient(), minor = await patient(desk, undefined, true);
+    const state = await consent(p);
+    assert.match(state.eligibility.asOfDate, /^\d{4}-\d{2}-\d{2}$/);
+    assert.deepEqual(state.patient, { id: p.id, name: p.name });
+    assert.equal((await consent(minor)).eligibility.ageStatus, "minor");
+    const first = await record(p);
+    assert.equal((await consent(p)).canWithdraw, true);
+    await trustedDoctor(p);
+    assert.equal((await consent(p, localDoctor)).canWithdraw, false);
+    await admin.query("INSERT INTO operational.patient_clinic_access(patient_id,clinic_id) VALUES($1,$2)", [p.id, remoteDesk.clinic]);
+    assert.equal((await consent(p, remoteDesk)).canWithdraw, false);
+    const replacement = await record(p, "basic", remoteDesk);
+    assert.equal((await consent(p)).current.id, replacement.id);
+    assert.equal((await consent(p)).canWithdraw, false);
+    assert.equal((await consent(p, remoteDesk)).canWithdraw, true);
+    assert.equal((await request(desk, `/consent/${first.id}/withdraw`, "POST", { clientOpId: randomUUID() })).status, 409);
+    assert.equal((await request(remoteDesk, `/consent/${replacement.id}/withdraw`, "POST", { clientOpId: randomUUID() })).status, 200);
+    assert.equal((await consent(p, remoteDesk)).canWithdraw, false);
+    // Operational DOB is currently NOT NULL; unknown/future/invalid date fallbacks
+    // are exercised directly in the pure eligibility policy tests, not by weakening DB constraints.
   });
 
   await t.test("minor consent needs its own guardian evidence, never merely registration guardian", async () => {
@@ -769,7 +1005,14 @@ test("consent: role × scope × level, transactional history and network disclos
       rejectAction = "network.lookup.denied";
       rejectUser = desk.id;
       assert.equal((await lookup(desk, p.name)).status, 500, "audit failures are not hidden by a normal authorization response");
-      assert.equal(rejected, 5);
+      rejectAction = "patient.access-history.read";
+      const failedHistory = await request(desk, `/patients/${p.id}/access-history`, "POST", { patientRequestConfirmed: true });
+      assert.equal(failedHistory.status, 500);
+      assert.deepEqual(failedHistory.data, { code: "INTERNAL", messageKey: "error.internal", params: {} });
+      assert.equal(failedHistory.data.items, undefined, "assisted history must not return if its audit cannot commit");
+      rejectAction = "patient.access-history.denied";
+      assert.equal((await request(desk, `/patients/${p.id}/access-history`, "POST", {})).status, 500);
+      assert.equal(rejected, 7);
     } finally {
       pool.removeListener("acquire", inject);
       for (const [client, original] of originals) client.query = original;

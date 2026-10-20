@@ -467,6 +467,30 @@ export const ConsentStateEffectiveLevel = {
   clinical: 'clinical',
 } as const;
 
+export type ConsentStatePatient = {
+  id: number;
+  name: string;
+};
+
+export type ConsentStateEligibilityAgeStatus = typeof ConsentStateEligibilityAgeStatus[keyof typeof ConsentStateEligibilityAgeStatus];
+
+
+export const ConsentStateEligibilityAgeStatus = {
+  adult: 'adult',
+  minor: 'minor',
+  unknown: 'unknown',
+} as const;
+
+/**
+ * Server-owned completed-birthday policy using current Asia/Hebron date. Missing, invalid or future DOB yields null/unknown; never infer adulthood in the browser.
+ */
+export type ConsentStateEligibility = {
+  /** @nullable */
+  dateOfBirth: string | null;
+  ageStatus: ConsentStateEligibilityAgeStatus;
+  asOfDate: string;
+};
+
 /**
  * Current is the latest transition even when withdrawn, never an older grant. History is ordered newest first. Legacy evidence/recording clinic may be null.
  */
@@ -474,6 +498,64 @@ export interface ConsentState {
   current: Consent | null;
   history: Consent[];
   effectiveLevel: ConsentStateEffectiveLevel;
+  patient: ConsentStatePatient;
+  /** Server-owned completed-birthday policy using current Asia/Hebron date. Missing, invalid or future DOB yields null/unknown; never infer adulthood in the browser. */
+  eligibility: ConsentStateEligibility;
+  /** True only for scoped front-desk and latest nonwithdrawn consent recorded in their current clinic. Mutation still requires fresh PIN and CSRF. */
+  canWithdraw: boolean;
+}
+
+export interface PatientAccessHistoryInput {
+  patientRequestConfirmed: true;
+  /**
+     * @minimum 1
+     * @maximum 100
+     */
+  limit?: number;
+  /**
+     * @minLength 1
+     * @maxLength 512
+     */
+  cursor?: string;
+}
+
+/**
+ * @nullable
+ */
+export type PatientAccessHistoryPageItemsItemViewerRole = typeof PatientAccessHistoryPageItemsItemViewerRole[keyof typeof PatientAccessHistoryPageItemsItemViewerRole] | null;
+
+
+export const PatientAccessHistoryPageItemsItemViewerRole = {
+  doctor: 'doctor',
+} as const;
+
+export type PatientAccessHistoryPageItemsItemAction = typeof PatientAccessHistoryPageItemsItemAction[keyof typeof PatientAccessHistoryPageItemsItemAction];
+
+
+export const PatientAccessHistoryPageItemsItemAction = {
+  'patient-view': 'patient-view',
+} as const;
+
+export type PatientAccessHistoryPageItemsItem = {
+  id: number;
+  at: string;
+  /** @nullable */
+  viewerName: string | null;
+  /** @nullable */
+  viewerRole: PatientAccessHistoryPageItemsItemViewerRole;
+  /** @nullable */
+  viewerClinicName: string | null;
+  action: PatientAccessHistoryPageItemsItemAction;
+};
+
+/**
+ * Selected-patient recorded successful cross-clinic network disclosures only, newest first (UTC time then ID). One event per disclosed source visit; repeated reads can appear separately. Verified current doctor/user/clinic joins provide names, otherwise null. No raw audit details, local-care coverage claim or other-patient identity.
+ */
+export interface PatientAccessHistoryPage {
+  /** @maxItems 100 */
+  items: PatientAccessHistoryPageItemsItem[];
+  /** @nullable */
+  nextCursor: string | null;
 }
 
 export type AlertChipKind = typeof AlertChipKind[keyof typeof AlertChipKind];

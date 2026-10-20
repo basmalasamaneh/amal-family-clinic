@@ -69,6 +69,8 @@ import type {
   NetworkPatientPage,
   OperationInput,
   PasswordCredentials,
+  PatientAccessHistoryInput,
+  PatientAccessHistoryPage,
   PatientBasic,
   PatientBasicPage,
   PatientInput,
@@ -1635,6 +1637,96 @@ export function useLookupNetwork<TData = Awaited<ReturnType<typeof lookupNetwork
 
 
 
+
+export const getReadPatientAccessHistoryUrl = (id: number,) => {
+
+
+
+
+  return `/api/patients/${id}/access-history`
+}
+
+/**
+ * Front-desk only. Requires authenticated trusted device, CSRF header and fresh PIN; repeats current server clinic patient scope and explicit patient-request confirmation on every page. Not a patient account or general reception audit feed. Only successful cross-clinic network.lookup disclosures for this selected operational patient are projected; no raw details or other patient data. Default 25, max 100, newest first. Signed cursor binds actor, clinic, patient and trusted device using a stable server-only secret, survives PIN reauthentication session rotation on the same device, and confers no authorization. Each successful read is itself minimally audited. Private no-store.
+ * @summary Read patient-requested access history with reception assistance
+ */
+export const readPatientAccessHistory = async (id: number,
+    patientAccessHistoryInput: PatientAccessHistoryInput, options?: Parameters<typeof customFetch>[1]): Promise<PatientAccessHistoryPage> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<PatientAccessHistoryPage>(getReadPatientAccessHistoryUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(patientAccessHistoryInput)
+  }
+);}
+
+
+
+
+
+export const getReadPatientAccessHistoryMutationKey = () => ['readPatientAccessHistory'] as const;
+
+export const getReadPatientAccessHistoryMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof readPatientAccessHistory>>, TError,ReadPatientAccessHistoryMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof readPatientAccessHistory>>, TError,ReadPatientAccessHistoryMutationVariables, TContext> => {
+
+const mutationKey = getReadPatientAccessHistoryMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof readPatientAccessHistory>>, ReadPatientAccessHistoryMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  readPatientAccessHistory(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ReadPatientAccessHistoryMutationResult = NonNullable<Awaited<ReturnType<typeof readPatientAccessHistory>>>
+    export type ReadPatientAccessHistoryMutationBody = BodyType<PatientAccessHistoryInput>
+    export type ReadPatientAccessHistoryMutationError = ErrorType<void>
+    export type ReadPatientAccessHistoryMutationVariables = {id: number;data: BodyType<PatientAccessHistoryInput>}
+
+    /**
+ * @summary Read patient-requested access history with reception assistance
+ */
+export const useReadPatientAccessHistory = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof readPatientAccessHistory>>, TError,ReadPatientAccessHistoryMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof readPatientAccessHistory>>,
+        TError,
+        ReadPatientAccessHistoryMutationVariables,
+        TContext
+      > => {
+      return useMutation(getReadPatientAccessHistoryMutationOptions(options));
+    }
 
 export const getListPatientConsentUrl = (id: number,) => {
 

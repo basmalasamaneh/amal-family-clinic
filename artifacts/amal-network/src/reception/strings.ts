@@ -13,7 +13,7 @@ export const receptionEn = {
   detail: {
     title: 'Selected patient', record: 'Record {{id}}', phone: 'Phone', dob: 'Date of birth', age: 'Age',
     ageYears_one: '{{count}} year', ageYears_other: '{{count}} years', minor: 'Minor', noDob: 'Not recorded', clear: 'Clear selection',
-    walkIn: 'Walk-in for this patient', phoneBooking: 'Phone booking',
+    walkIn: 'Walk-in for this patient', consent: 'Sharing consent', phoneBooking: 'Phone booking',
   },
   up: {
     title: 'Upcoming appointments', loading: 'Loading upcoming appointments', empty: 'No upcoming appointments in this clinic.',
@@ -80,7 +80,7 @@ export const receptionAr: ArabicReception = {
     ageYears_zero: 'أقل من سنة', ageYears_one: 'سنة واحدة', ageYears_two: 'سنتان',
     ageYears_few: '{{count}} سنوات', ageYears_many: '{{count}} سنة', ageYears_other: '{{count}} سنة',
     minor: 'قاصر', noDob: 'غير مسجّل', clear: 'إلغاء الاختيار',
-    walkIn: 'حضور مباشر لهذا المريض', phoneBooking: 'حجز هاتفي',
+    consent: 'موافقة المشاركة', walkIn: 'حضور مباشر لهذا المريض', phoneBooking: 'حجز هاتفي',
   },
   up: {
     title: 'المواعيد القادمة', loading: 'جارٍ تحميل المواعيد القادمة', empty: 'لا توجد مواعيد قادمة في هذه العيادة.',

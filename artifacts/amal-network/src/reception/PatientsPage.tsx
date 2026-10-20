@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useSearch } from 'wouter';
-import { AlertTriangle, CalendarClock, CalendarDays, DoorOpen, FlaskConical, IdCard, Lock, PhoneCall, RotateCcw, Search, UserPlus, UserRound, X } from 'lucide-react';
+import { ShieldCheck, AlertTriangle, CalendarClock, CalendarDays, DoorOpen, FlaskConical, IdCard, Lock, PhoneCall, RotateCcw, Search, UserPlus, UserRound, X } from 'lucide-react';
 import { useAmalPreferences } from '@workspace/amal-ui';
 import type { ShellClinic } from '@/shell/identity';
 import { demoPath } from '@/shell/identity';
@@ -18,6 +18,7 @@ import { createRegSession, EMPTY_DRAFT, serverFieldErrors, type NewPatientPayloa
 import { createFixtureReceptionApi, realReceptionApi, type ReceptionApi, type UpcomingItem } from './api';
 import { IDLE_STATUS, NewPatientDialog, startSave, type RegStatus } from './NewPatientDialog';
 import { useWalkIn } from './WalkIn';
+import { selectConsentPatient } from '@/consent/model';
 import '@/booking/i18n';
 import './i18n';
 import './reception.css';
@@ -181,6 +182,7 @@ function PatientDetail({ patient, clinic, api, doctorNames, headingRef, onClear,
       </dl>
       <div className="rx-actions">
         {onWalkIn && <button type="button" className="bk-btn bk-btn--primary" onClick={onWalkIn} data-testid="button-patient-walkin"><DoorOpen size={20} aria-hidden="true" />{t('rx.detail.walkIn')}</button>}
+        <Link href={demoPath(`/desk/consent?patientId=${patient.id}`)} onClick={() => selectConsentPatient(clinic.id, patient.id)} className="bk-btn" data-testid="link-patient-consent"><ShieldCheck size={18} aria-hidden="true" />{t('rx.detail.consent')}</Link>
         <Link href={demoPath(bookingQuery({ clinicId: clinic.id, source: 'phone' }))} className="bk-btn" data-testid="link-patient-phone-booking"><PhoneCall size={18} aria-hidden="true" />{t('rx.detail.phoneBooking')}</Link>
       </div>
 

@@ -1,0 +1,107 @@
+/* Consent ledger. Logical properties only; tokens from amal-ui so light/dark follow automatically. */
+.cs-back { align-self: flex-start; display: inline-flex; align-items: center; gap: 6px; min-block-size: 44px; color: var(--amal-primary-text); font-weight: 600; text-decoration: none; }
+.cs-back:hover { text-decoration: underline; }
+[dir='rtl'] .cs-flip { transform: scaleX(-1); }
+.cs-guard { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; padding: 28px; border-radius: var(--amal-radius-card); background: var(--amal-surface); border: 1px dashed var(--amal-border); max-inline-size: 560px; }
+.cs-msgslot { outline: none; display: contents; }
+.cs-grid { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); gap: 20px; align-items: start; }
+.cs-col { display: flex; flex-direction: column; gap: 16px; min-inline-size: 0; }
+.cs-skel-lg { block-size: 280px; }
+.cs-card { display: flex; flex-direction: column; gap: 12px; padding: 20px; border-radius: var(--amal-radius-card); background: var(--amal-surface); border: 1px solid var(--amal-border); }
+.cs-card .bk-hint { margin: 0; }
+.cs-who { display: flex; gap: 14px; align-items: flex-start; padding-block: 4px; }
+.cs-dob { margin: 4px 0 0; font-variant-numeric: tabular-nums; }
+.cs-age { display: inline-flex; padding-block: 2px; padding-inline: 10px; border-radius: 999px; font-size: var(--amal-text-sm); font-weight: 700; background: var(--amal-surface-2); color: var(--amal-text); }
+.cs-age--minor { background: var(--amal-primary-soft); color: var(--amal-primary-text); }
+.cs-age--unknown { background: color-mix(in srgb, var(--amal-warning) 18%, var(--amal-surface)); color: var(--amal-text); }
+
+/* The "seal": current effective state, the only place sharing is described as active */
+.cs-now { position: relative; overflow: hidden; border-block-start: 6px solid var(--amal-muted); }
+.cs-now--basic { border-block-start-color: var(--amal-info); }
+.cs-now--clinical { border-block-start-color: var(--amal-primary); }
+.cs-kicker { margin: 0; font-size: var(--amal-text-xs); letter-spacing: .12em; text-transform: uppercase; font-weight: 700; color: var(--amal-muted); }
+.cs-now__level { margin: 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: 10px; font-size: var(--amal-text-3xl); font-weight: 800; color: var(--amal-navy); line-height: 1.1; }
+.cs-now__level span { font-size: var(--amal-text-md); font-weight: 600; color: var(--amal-muted); }
+.cs-now__body { margin: 0; }
+.cs-meter { display: flex; gap: 6px; }
+.cs-meter i { flex: 1; block-size: 8px; border-radius: 999px; background: var(--amal-surface-2); border: 1px solid var(--amal-border); }
+.cs-meter i.on { background: var(--amal-primary); border-color: var(--amal-primary); }
+.cs-now--basic .cs-meter i.on { background: var(--amal-info); border-color: var(--amal-info); }
+.cs-attr { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 4px; color: var(--amal-muted); font-size: var(--amal-text-sm); }
+.cs-attr li { padding-inline-start: 12px; border-inline-start: 2px solid var(--amal-border); }
+
+.cs-withdraw { border-inline-start: 4px solid var(--amal-danger-strong); }
+.cs-btn-danger { align-self: flex-start; color: var(--amal-danger-strong); border-color: var(--amal-danger-strong); }
+.cs-btn-danger:hover:not(:disabled) { background: color-mix(in srgb, var(--amal-danger-strong) 8%, var(--amal-surface)); }
+.cs-dialog .cs-btn-danger { background: var(--amal-danger-strong); color: var(--amal-bg); }
+
+/* Ledger: past grants are stamped, never styled as active */
+.cs-ledger { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; }
+.cs-row { position: relative; display: flex; gap: 12px; padding-block: 10px; }
+.cs-row + .cs-row { border-block-start: 1px solid var(--amal-border); }
+.cs-row__dot { flex: none; inline-size: 12px; block-size: 12px; margin-block-start: 6px; border-radius: 50%; border: 2px solid var(--amal-border); background: var(--amal-surface); }
+.cs-row--inEffect .cs-row__dot { background: var(--amal-success); border-color: var(--amal-success); }
+/* Status text, not reduced opacity, distinguishes historical decisions.
+   Semantic muted tokens retain their tested contrast on both surfaces. */
+.cs-row--withdrawn .cs-row__main, .cs-row--superseded .cs-row__main { opacity: 1; }
+.cs-row__main { flex: 1; min-inline-size: 0; display: flex; flex-direction: column; gap: 2px; }
+.cs-row__main p { margin: 0; }
+.cs-row__top { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.cs-stamp { padding-block: 1px; padding-inline: 8px; border-radius: 6px; font-size: var(--amal-text-xs); font-weight: 700; letter-spacing: .04em; border: 1px dashed var(--amal-border); color: var(--amal-muted); }
+.cs-stamp--inEffect { border-style: solid; border-color: var(--amal-success); color: var(--amal-text); background: color-mix(in srgb, var(--amal-success) 12%, var(--amal-surface)); }
+.cs-stamp--withdrawn { border-color: var(--amal-danger-strong); color: var(--amal-danger-strong); text-decoration: line-through; text-decoration-thickness: 1px; }
+
+/* Form: the sharing ladder */
+.cs-form { border-block-start: 4px solid var(--amal-primary); }
+.cs-fs { margin: 0; padding: 0; border: 0; display: flex; flex-direction: column; gap: 8px; min-inline-size: 0; }
+.cs-fs legend { display: inline-flex; align-items: center; gap: 6px; margin-block-end: 6px; padding: 0; }
+.cs-ladder { display: flex; flex-direction: column; gap: 8px; }
+.cs-rung { position: relative; display: grid; grid-template-columns: auto auto 1fr auto; align-items: center; gap: 12px; padding: 12px 14px; border-radius: var(--amal-radius-control); border: 1px solid var(--amal-border); background: var(--amal-surface); cursor: pointer; transition: transform var(--amal-duration-fast, 140ms) ease, opacity var(--amal-duration-fast, 140ms) ease; }
+.cs-rung:hover:not(.is-off) { transform: translateY(-1px); }
+.cs-rung.is-on { border-color: var(--amal-primary-strong); box-shadow: inset 0 0 0 1px var(--amal-primary-strong); background: var(--amal-primary-soft); }
+.cs-rung.is-off { opacity: .5; cursor: not-allowed; }
+.cs-rung input { inline-size: 20px; block-size: 20px; margin: 0; accent-color: var(--amal-primary-strong); }
+.cs-rung:has(input:focus-visible) { outline: 3px solid var(--amal-focus-ring); outline-offset: 2px; }
+.cs-rung__steps { display: flex; gap: 3px; align-items: flex-end; }
+.cs-rung__steps i { inline-size: 6px; block-size: 18px; border-radius: 3px; background: var(--amal-surface-2); border: 1px solid var(--amal-border); }
+.cs-rung__steps i:nth-child(1) { block-size: 12px; }
+.cs-rung__steps i.on { background: var(--amal-primary); border-color: var(--amal-primary); }
+.cs-rung__txt { display: flex; flex-direction: column; gap: 2px; min-inline-size: 0; }
+.cs-rung__txt > span { font-size: var(--amal-text-sm); color: var(--amal-muted); }
+.cs-rung__short { font-weight: 500; color: var(--amal-muted); }
+.cs-now-chip { font-size: var(--amal-text-xs); font-weight: 700; padding-block: 2px; padding-inline: 8px; border-radius: 999px; background: var(--amal-surface-2); color: var(--amal-muted); }
+.cs-seg { display: flex; flex-wrap: wrap; gap: 8px; }
+.cs-seg label { display: inline-flex; align-items: center; gap: 8px; min-block-size: 48px; padding-inline: 14px; border-radius: var(--amal-radius-control); border: 1px solid var(--amal-border); cursor: pointer; font-weight: 600; }
+.cs-seg label.is-on { border-color: var(--amal-primary-strong); background: var(--amal-primary-soft); }
+.cs-seg label:has(input:focus-visible) { outline: 3px solid var(--amal-focus-ring); outline-offset: 2px; }
+.cs-guardian { padding: 14px; border-radius: var(--amal-radius-control); background: var(--amal-surface-2); }
+.cs-err { margin: 0; color: var(--amal-danger-strong); font-weight: 600; font-size: var(--amal-text-sm); }
+.cs-form > .bk-btn--primary { align-self: flex-start; }
+
+/* Who viewed */
+.cs-views { border-inline-start: 4px solid var(--amal-navy); }
+.cs-coverage { margin: 0; padding-block: 8px; padding-inline: 12px; border-radius: var(--amal-radius-control); background: var(--amal-surface-2); font-size: var(--amal-text-sm); }
+.cs-views__ask { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; }
+.cs-check { display: flex; align-items: flex-start; gap: 10px; cursor: pointer; font-weight: 600; }
+.cs-check input { inline-size: 20px; block-size: 20px; margin: 2px 0 0; accent-color: var(--amal-primary-strong); }
+.cs-views__list { display: flex; flex-direction: column; gap: 10px; }
+.cs-access { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; }
+.cs-access__item { display: grid; grid-template-columns: minmax(9em, auto) 1fr auto; gap: 12px; align-items: center; padding-block: 10px; animation: rx-in 220ms cubic-bezier(.2,.8,.2,1); }
+.cs-access__item + .cs-access__item { border-block-start: 1px solid var(--amal-border); }
+.cs-access__at { font-variant-numeric: tabular-nums; font-size: var(--amal-text-sm); color: var(--amal-muted); }
+.cs-access__who { display: flex; flex-direction: column; min-inline-size: 0; overflow-wrap: anywhere; }
+
+.cs-overlay { position: fixed; inset: 0; background: color-mix(in srgb, var(--amal-navy) 45%, transparent); z-index: 60; }
+.cs-dialog { position: fixed; inset-block-start: 50%; inset-inline-start: 50%; transform: translate(-50%, -50%); z-index: 61; inline-size: min(460px, calc(100vw - 32px)); display: flex; flex-direction: column; gap: 12px; padding: 24px; border-radius: var(--amal-radius-dialog, 16px); background: var(--amal-surface); color: var(--amal-text); border: 1px solid var(--amal-border); }
+[dir='rtl'] .cs-dialog { transform: translate(50%, -50%); }
+.cs-dialog__body { margin: 0; color: var(--amal-muted); }
+.cs-pin { font-size: var(--amal-text-2xl); letter-spacing: .5em; text-align: center; font-variant-numeric: tabular-nums; }
+.cs-spin { animation: cs-spin 900ms linear infinite; }
+@keyframes cs-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .cs-spin, .cs-access__item { animation: none; } .cs-rung { transition: none; } }
+@media (max-width: 767px) {
+  .cs-grid { grid-template-columns: 1fr; }
+  .cs-access__item { grid-template-columns: 1fr; gap: 4px; }
+  .cs-rung { grid-template-columns: auto 1fr; }
+  .cs-rung__steps, .cs-now-chip { display: none; }
+}

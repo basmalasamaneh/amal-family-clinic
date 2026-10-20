@@ -13,6 +13,7 @@ import {
 } from './model';
 import './i18n';
 import './network.css';
+import { clinicalDataBlocked } from './consent-invalidation';
 
 type State =
   | { kind: 'idle' }
@@ -46,9 +47,10 @@ export function NetworkSearchPage({ clinic, title, scope }: { clinic: ShellClini
     if (!q) { setState(raw.trim() ? { kind: 'short' } : { kind: 'idle' }); return; }
     const ac = new AbortController(); ctl.current = ac;
     setState({ kind: 'loading', q });
+    if (clinicalDataBlocked()) return;
     lookupNetwork(cursor ? { q, limit: PAGE_LIMIT, cursor } : { q, limit: PAGE_LIMIT }, { signal: ac.signal }).then(
       (page) => {
-        if (id !== seq.current) return; // superseded
+        if (id !== seq.current || clinicalDataBlocked()) return; // superseded
         // Replace pages: a newly authorized response must not retain old protected projections.
         setState({ kind: 'ok', q, items: page.items, next: page.nextCursor, more: false });
       },
@@ -74,7 +76,7 @@ export function NetworkSearchPage({ clinic, title, scope }: { clinic: ShellClini
 
   // Hidden tab: drop protected results. Focus/visible/consent change/interval: rerun page one (load-more pages are discarded).
   useEffect(() => {
-    const again = () => { const s = stateRef.current; if (s.kind === 'ok' || s.kind === 'fail' || s.kind === 'hidden') run(s.q); };
+    const again = () => { const s = stateRef.current; if (s.kind === 'ok' || s.kind === 'fail' || s.kind === 'hidden' || s.kind === 'loading') run(s.q); };
     const onVis = () => {
       const s = stateRef.current;
       if (document.visibilityState === 'hidden') {

@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import type { Auth } from "../src/lib/auth";
 import {
-  effectiveLevel, projectConsent, projectVisit, visitVisibility,
+  consentEligibility, effectiveLevel, projectConsent, projectVisit, visitVisibility,
   type ConsentLevel, type ConsentRow, type VisitSource,
 } from "../src/consent/policy";
 
@@ -12,6 +12,21 @@ const auth: Auth = {
   device: null, expiresAt: new Date("2099-01-01"), absoluteExpiresAt: null, pinVerifiedAt: null,
 };
 const levels: ConsentLevel[] = ["none", "basic", "clinical"];
+test("eligibility: server Hebron day, exact 18th birthday, leap day and unknown DOB fail closed", () => {
+  const now = new Date("2026-06-10T21:30:00Z");
+  assert.deepEqual(consentEligibility("2008-06-11", now), {
+    dateOfBirth: "2008-06-11", ageStatus: "adult", asOfDate: "2026-06-11",
+  });
+  assert.equal(consentEligibility("2008-06-12", now).ageStatus, "minor");
+  assert.equal(consentEligibility("2008-06-10", now).ageStatus, "adult");
+  for (const dob of [null, "", "2025-02-29", "1900-02-29", "2026-06-12", "2008", "2008-06-11T00:00:00Z"]) {
+    assert.deepEqual(consentEligibility(dob, now), { dateOfBirth: null, ageStatus: "unknown", asOfDate: "2026-06-11" });
+  }
+  assert.equal(consentEligibility("2008-02-29", new Date("2026-02-28T12:00:00Z")).ageStatus, "minor");
+  assert.equal(consentEligibility("2008-02-29", new Date("2026-03-01T12:00:00Z")).ageStatus, "adult");
+  assert.equal(consentEligibility("2008-01-02", new Date("2026-01-01T21:59:59Z")).ageStatus, "minor");
+  assert.equal(consentEligibility("2008-01-02", new Date("2026-01-01T22:00:00Z")).ageStatus, "adult");
+});
 const row: ConsentRow = {
   id: 900004, patient_id: 900005, level: "clinical", given_at: new Date("2025-01-01T10:00:00Z"),
   withdrawn_at: null, given_by: "patient", guardian_name: null, guardian_relation: null,

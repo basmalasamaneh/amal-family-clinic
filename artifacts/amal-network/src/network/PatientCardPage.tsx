@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { clinicalDataBlocked } from './consent-invalidation';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'wouter';
 import { ArrowLeft, Building2, FileText, IdCard, Lock, RotateCcw, ShieldAlert, ShieldX, Stethoscope, UserRound } from 'lucide-react';
@@ -42,10 +43,11 @@ export function PatientCardPage({ clinic, title, scope }: { clinic: ShellClinic 
     if (!sel) { setState({ kind: 'none' }); return; }
     const ac = new AbortController(); ctl.current = ac;
     setState({ kind: 'loading' });
+    if (clinicalDataBlocked()) return;
     const req = sel.q ? findPatient(lookupNetwork, sel.q, sel.id, ac.signal) : getDoctorPatient(sel.id, { signal: ac.signal, cache: 'no-store' });
     req.then(
       (p) => {
-        if (id !== seq.current) return;
+        if (id !== seq.current || clinicalDataBlocked()) return;
         if (!p) { setState({ kind: 'gone' }); return; }
         setState({ kind: 'ok', p, at: new Date() });
       },

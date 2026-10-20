@@ -10,6 +10,8 @@ export interface ShellRoute {
   path: string;
   roles: readonly ShellRole[];
   icon: LucideIcon;
+  /** Reachable only from an in-page entry (e.g. a selected patient), never listed in navigation. */
+  navHidden?: true;
 }
 
 /** Single source of truth for shell routes and navigation (master plan Section 11). */
@@ -18,6 +20,7 @@ export const SHELL_ROUTES: readonly ShellRoute[] = [
   { id: 'week', path: '/desk/week', roles: ['front-desk'], icon: CalendarRange },
   { id: 'newBooking', path: '/desk/new-booking', roles: ['front-desk'], icon: CalendarPlus },
   { id: 'patientLookup', path: '/desk/patients', roles: ['front-desk'], icon: Search },
+  { id: 'consent', path: '/desk/consent', roles: ['front-desk'], icon: ShieldCheck, navHidden: true },
   { id: 'sync', path: '/desk/sync', roles: ['front-desk'], icon: RefreshCcw },
   { id: 'daySheet', path: '/desk/day-sheet', roles: ['front-desk'], icon: Printer },
   { id: 'myDay', path: '/doctor/my-day', roles: ['doctor'], icon: Stethoscope },
@@ -46,7 +49,7 @@ export function routesFor(role: ShellRole | null): ShellRoute[] {
 }
 
 export function landingFor(role: ShellRole | null): string | null {
-  return routesFor(role)[0]?.path ?? null;
+  return routesFor(role).find((r) => !r.navHidden)?.path ?? null;
 }
 
 export type Resolution =

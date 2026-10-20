@@ -40,7 +40,15 @@ Current state is the highest consent ID, including none and withdrawn rows;
 older grants never become current again. IDs are allocated under the global
 exclusive lock. History is descending ID order and retains evidence, recording
 user/clinic/time and guardian attribution in operational persistence. The public
-Consent contract is unchanged; GET returns `{current, history, effectiveLevel}`.
+Consent mutation contract is unchanged; GET returns `{current, history, effectiveLevel,
+patient, eligibility, canWithdraw}`. `patient` is only the scoped `{id,name}`.
+`eligibility` contains verified date-only `dateOfBirth` (or null), `ageStatus`
+(`adult`, `minor`, `unknown`) and server Asia/Hebron `asOfDate`. Invalid, missing
+or future DOB returns null/unknown; clients must not calculate age or infer adult
+eligibility. `canWithdraw` is true only for front-desk with the latest nonwithdrawn
+consent recorded in their current clinic; writes still reauthorize and require
+CSRF/fresh PIN. Existing numeric recording attribution and timestamps remain;
+no display name is guessed for reception users without a verified name source.
 `current` is the newest record (possibly withdrawn), or null if no record exists.
 POST record returns 201 Consent; POST withdraw returns Consent. Mutation schemas
 are strict: caller attribution, clinic authority and timestamps are rejected.
@@ -119,6 +127,41 @@ their midnight as Asia/Hebron via date-fns-tz's IANA timezone conversion and
 returns UTC ISO instants; it never double-converts upstream UTC appointments.
 DOB remains date-only. Source names/notes remain original. Consumers handle
 localized display, RTL and themes.
+
+## Patient-requested reception-assisted access history
+
+`POST /patients/:id/access-history` is not patient authentication or a general
+reception audit feed. Every request, including each page, requires authenticated
+front-desk, trusted device, CSRF, fresh PIN and the current independent clinic
+patient scope (nonmerged operational patient). The strict body is
+`{patientRequestConfirmed:true,limit?:number,cursor?:string}`. Confirmation is
+required on every page. Limit defaults to 25 and is an integer in 1–100.
+
+The result is `{items,nextCursor}`. Each item contains only `id`, UTC `at`,
+`viewerName`, `viewerRole` (`doctor` or null), `viewerClinicName` and
+`action:'patient-view'`. Only selected-patient `network.lookup` events with
+`outcome:'disclosed'` and a recorded source clinic different from the requesting
+clinic qualify. This reflects recorded cross-clinic disclosures, not every local
+care access. There is one event per disclosed source visit, not necessarily per
+screen/session. Denials, consent changes and the assisted history reads themselves
+are excluded. Withdrawal does not erase past disclosures.
+
+Viewer identity comes only from current verified doctor/user/clinic joins bound
+to the audit actor's recorded clinic; missing or inconsistent links yield nulls.
+No raw details, patient identity, notes, email, search terms or security metadata
+are projected. Doctor-only `/audit` behavior remains unchanged.
+
+Newest-first keyset ordering uses millisecond UTC time then ID consistently, so
+submillisecond timestamp ties cannot skip rows. HMAC-signed cursors bind actor,
+clinic, patient and trusted device using the existing server-only `SESSION_SECRET`
+with a domain-separated signing payload. PIN reauthentication rotates session and
+CSRF credentials without invalidating continuation on the same device. Cursors
+confer no authority; server-secret rotation invalidates existing cursors. Each page rechecks scope,
+confirmation, PIN, CSRF and current viewer joins. Successful assisted reads append
+`patient.access-history.read` in the same transaction before returning, with
+only correlation ID and outcome `read`; denied reads append a separate minimal
+`patient.access-history.denied` without candidate patient ID. Audit failure fails
+the response closed. All responses use private/no-store.
 
 Migration writes operational structures only. All six public seed tables remain
 immutable; no calendar-export linking/import/reset is performed. Run the additive

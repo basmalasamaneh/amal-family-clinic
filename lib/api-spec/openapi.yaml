@@ -1076,13 +1076,57 @@
       "ConsentState": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["current", "history", "effectiveLevel"],
+        "required": ["current", "history", "effectiveLevel", "patient", "eligibility", "canWithdraw"],
         "properties": {
           "current": { "anyOf": [{ "$ref": "#/components/schemas/Consent" }, { "type": "null" }] },
           "history": { "type": "array", "items": { "$ref": "#/components/schemas/Consent" } },
-          "effectiveLevel": { "type": "string", "enum": ["none", "basic", "clinical"] }
+          "effectiveLevel": { "type": "string", "enum": ["none", "basic", "clinical"] },
+          "patient": {
+            "type": "object", "additionalProperties": false, "required": ["id", "name"],
+            "properties": { "id": { "type": "integer" }, "name": { "type": "string" } }
+          },
+          "eligibility": {
+            "type": "object", "additionalProperties": false, "required": ["dateOfBirth", "ageStatus", "asOfDate"],
+            "properties": {
+              "dateOfBirth": { "type": ["string", "null"], "format": "date" },
+              "ageStatus": { "type": "string", "enum": ["adult", "minor", "unknown"] },
+              "asOfDate": { "type": "string", "format": "date" }
+            },
+            "description": "Server-owned completed-birthday policy using current Asia/Hebron date. Missing, invalid or future DOB yields null/unknown; never infer adulthood in the browser."
+          },
+          "canWithdraw": { "type": "boolean", "description": "True only for scoped front-desk and latest nonwithdrawn consent recorded in their current clinic. Mutation still requires fresh PIN and CSRF." }
         },
         "description": "Current is the latest transition even when withdrawn, never an older grant. History is ordered newest first. Legacy evidence/recording clinic may be null."
+      },
+      "PatientAccessHistoryInput": {
+        "type": "object", "additionalProperties": false, "required": ["patientRequestConfirmed"],
+        "properties": {
+          "patientRequestConfirmed": { "type": "boolean", "enum": [true] },
+          "limit": { "type": "integer", "minimum": 1, "maximum": 100, "default": 25 },
+          "cursor": { "type": "string", "minLength": 1, "maxLength": 512 }
+        }
+      },
+      "PatientAccessHistoryPage": {
+        "type": "object", "additionalProperties": false, "required": ["items", "nextCursor"],
+        "properties": {
+          "items": {
+            "type": "array", "maxItems": 100,
+            "items": {
+              "type": "object", "additionalProperties": false,
+              "required": ["id", "at", "viewerName", "viewerRole", "viewerClinicName", "action"],
+              "properties": {
+                "id": { "type": "integer" },
+                "at": { "type": "string", "format": "date-time" },
+                "viewerName": { "type": ["string", "null"] },
+                "viewerRole": { "type": ["string", "null"], "enum": ["doctor", null] },
+                "viewerClinicName": { "type": ["string", "null"] },
+                "action": { "type": "string", "enum": ["patient-view"] }
+              }
+            }
+          },
+          "nextCursor": { "type": ["string", "null"] }
+        },
+        "description": "Selected-patient recorded successful cross-clinic network disclosures only, newest first (UTC time then ID). One event per disclosed source visit; repeated reads can appear separately. Verified current doctor/user/clinic joins provide names, otherwise null. No raw audit details, local-care coverage claim or other-patient identity."
       },
       "AlertChip": {
         "type": "object",
@@ -6228,6 +6272,41 @@
         }
       }
     },
+    "/patients/{id}/access-history": {
+      "post": {
+        "operationId": "readPatientAccessHistory",
+        "tags": ["patients"],
+        "summary": "Read patient-requested access history with reception assistance",
+        "description": "Front-desk only. Requires authenticated trusted device, CSRF header and fresh PIN; repeats current server clinic patient scope and explicit patient-request confirmation on every page. Not a patient account or general reception audit feed. Only successful cross-clinic network.lookup disclosures for this selected operational patient are projected; no raw details or other patient data. Default 25, max 100, newest first. Signed cursor binds actor, clinic, patient and trusted device using a stable server-only secret, survives PIN reauthentication session rotation on the same device, and confers no authorization. Each successful read is itself minimally audited. Private no-store.",
+        "security": [{ "sessionCookie": [] }],
+        "x-roles": ["front-desk"],
+        "x-implementation": "implemented",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer", "minimum": 1, "maximum": 2147483647 }, "example": 301 },
+          { "name": "X-CSRF-Token", "in": "header", "required": true, "schema": { "type": "string" }, "example": "session-csrf-token" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": {
+            "schema": { "$ref": "#/components/schemas/PatientAccessHistoryInput" },
+            "example": { "patientRequestConfirmed": true, "limit": 25 }
+          }}
+        },
+        "responses": {
+          "200": {
+            "description": "Minimal scoped access history",
+            "content": { "application/json": {
+              "schema": { "$ref": "#/components/schemas/PatientAccessHistoryPage" },
+              "example": { "items": [{ "id": 501, "at": "2026-06-11T10:00:00Z", "viewerName": null, "viewerRole": null, "viewerClinicName": null, "action": "patient-view" }], "nextCursor": null }
+            }}
+          },
+          "400": { "description": "Invalid body, missing confirmation or invalid/context-mismatched cursor" },
+          "401": { "description": "Authenticated trusted-device session required" },
+          "403": { "description": "Front-desk, CSRF and fresh PIN required (REAUTH_REQUIRED when PIN stale)" },
+          "404": { "description": "Patient absent, merged or outside current clinic scope" }
+        }
+      }
+    },
     "/patients/{id}/consent": {
       "get": {
         "operationId": "listPatientConsent",
@@ -6269,7 +6348,10 @@
                 "example": {
                   "current": null,
                   "history": [],
-                  "effectiveLevel": "none"
+                  "effectiveLevel": "none",
+                  "patient": { "id": 301, "name": "Synthetic patient" },
+                  "eligibility": { "dateOfBirth": "1990-01-01", "ageStatus": "adult", "asOfDate": "2026-06-11" },
+                  "canWithdraw": false
                 }
               }
             }

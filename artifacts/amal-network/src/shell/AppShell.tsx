@@ -26,6 +26,8 @@ import { PatientCardPage } from '@/network/PatientCardPage';
 import { MyDayPage } from '@/doctor/MyDayPage';
 import { PrivacyPage } from '@/doctor/PrivacyPage';
 import { clearSelection as clearNetworkSelection } from '@/network/model';
+import { clearConsentSelection } from '@/consent/model';
+import { ConsentPage } from '@/consent/ConsentPage';
 import { isKnownRole, landingFor, resolve, routesFor, type Resolution, type ShellRoute } from './routes';
 
 const BOTTOM_SLOTS = 4;
@@ -35,7 +37,7 @@ interface Props { identity: ShellIdentity; fixture: boolean; onRefresh: () => Pr
 export function AppShell({ identity, fixture, onRefresh, onLogout }: Props) {
   return <CancellationProvider key={identity.id} clinicNames={Object.fromEntries(identity.clinics.map((c) => [c.id, c.name]))}><AppShellContent identity={identity} fixture={fixture} onRefresh={onRefresh} onLogout={async () => {
     window.dispatchEvent(new Event('amal:discard-cancellations'));
-    clearNetworkSelection();
+    clearNetworkSelection(); clearConsentSelection();
     await onLogout();
   }} /></CancellationProvider>;
 }
@@ -45,8 +47,8 @@ function AppShellContent({ identity, fixture, onRefresh, onLogout }: Props) {
   const [location] = useLocation();
   const role = isKnownRole(identity.role) ? identity.role : null;
   // Expiry/unmount must also clear transient selections, not just explicit logout.
-  useEffect(() => () => clearNetworkSelection(), [identity.id, role]);
-  const items = useMemo(() => routesFor(role), [role]);
+  useEffect(() => () => { clearNetworkSelection(); clearConsentSelection(); }, [identity.id, role]);
+  const items = useMemo(() => routesFor(role).filter((r) => !r.navHidden), [role]);
   const res = resolve(location, role);
 
   const clinics = identity.clinics;
@@ -99,7 +101,7 @@ function AppShellContent({ identity, fixture, onRefresh, onLogout }: Props) {
         )}
         <header className="shell-top">
           <div className="shell-top__brand"><AmalLogo /></div>
-          <ClinicSwitcher clinics={clinics} state={identity.clinicsState} value={clinicId} onChange={(id) => { void localCache.setContext(null); clearNetworkSelection(); setClinicId(id); }} onRetry={onRefresh} />
+          <ClinicSwitcher clinics={clinics} state={identity.clinicsState} value={clinicId} onChange={(id) => { void localCache.setContext(null); clearNetworkSelection(); clearConsentSelection(); setClinicId(id); }} onRetry={onRefresh} />
           <WalkInButton />
           {!(res.kind === 'page' && (res.route.id === 'networkSearch' || res.route.id === 'patientCard')) && <GlobalSearch key={clinicId ?? 'none'} />}
           <div className="shell-top__end">
@@ -385,6 +387,7 @@ function PageContent({ res, title, clinic, fixture, landing, scope }: { res: Res
 
   if (res.kind === 'page' && (res.route.id === 'today' || res.route.id === 'week')) return <CalendarPage view={res.route.id === 'today' ? 'day' : 'week'} clinic={clinic} fixture={fixture} title={title} />;
   if (res.kind === 'page' && res.route.id === 'patientLookup') return <PatientsPage clinic={clinic} fixture={fixture} title={title} />;
+  if (res.kind === 'page' && res.route.id === 'consent') return <ConsentPage clinic={clinic} title={title} scope={scope} />;
   if (res.kind === 'page' && res.route.id === 'networkSearch') return <NetworkSearchPage clinic={clinic} title={title} scope={scope} />;
   if (res.kind === 'page' && res.route.id === 'patientCard') return <PatientCardPage clinic={clinic} title={title} scope={scope} />;
   if (res.kind === 'page' && res.route.id === 'myDay') return <MyDayPage clinic={clinic} title={title} scope={scope} />;

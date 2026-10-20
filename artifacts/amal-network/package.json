@@ -18,6 +18,7 @@
     "test:reception:unit": "tsx --test tests/reception.unit.test.ts",
     "test:network:unit": "tsx --test tests/network.unit.test.ts",
     "test:network": "playwright test --config playwright.network.config.ts",
+    "test:consent:unit": "tsx --test tests/consent.unit.test.ts",
     "test:doctor:unit": "tsx --test tests/doctor.unit.test.ts",
     "test:doctor": "playwright test --config playwright.doctor.config.ts"
   },

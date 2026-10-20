@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { CONSENT_CHANGED_EVENT, REVALIDATE_MS, classifyFailure, isAbortError, type Failure } from '@/network/model';
 import { createGate, fetchThrough } from './model';
+import { clinicalDataBlocked } from '@/network/consent-invalidation';
 
 type Item<P> = P extends { items: (infer I)[] } ? I : never;
 export type Paged<P> =
@@ -43,9 +44,10 @@ export function useProtectedPages<P extends { items: { id: number }[]; nextCurso
     const ac = new AbortController(); ctl.current = ac;
     pagesRef.current = target;
     setState({ kind: 'loading', pages: target });
+    if (clinicalDataBlocked()) return;
     fetchThrough(fetchRef.current, target, maxPages, ac.signal).then(
       (r) => {
-        if (!gate.current.isCurrent(tok)) return;
+        if (!gate.current.isCurrent(tok) || clinicalDataBlocked()) return;
         pagesRef.current = r.pages;
         setState({ kind: 'ok', first: r.first, items: r.items as Item<P>[], nextCursor: r.nextCursor, pages: r.pages, capped: r.capped });
       },
@@ -82,8 +84,9 @@ export function useProtected<T>(key: string, fetchOne: (signal: AbortSignal) => 
     const tok = gate.current.begin();
     const ac = new AbortController(); ctl.current = ac;
     setState({ kind: 'loading' });
+    if (clinicalDataBlocked()) return;
     fetchRef.current(ac.signal).then(
-      (data) => { if (gate.current.isCurrent(tok)) setState({ kind: 'ok', data }); },
+      (data) => { if (gate.current.isCurrent(tok) && !clinicalDataBlocked()) setState({ kind: 'ok', data }); },
       (e) => { if (gate.current.isCurrent(tok) && !isAbortError(e)) setState({ kind: 'fail', why: classifyFailure(e) }); },
     );
   }, []);

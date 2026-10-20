@@ -669,6 +669,52 @@ export const LookupNetworkResponse = zod.object({
 
 
 /**
+ * Front-desk only. Requires authenticated trusted device, CSRF header and fresh PIN; repeats current server clinic patient scope and explicit patient-request confirmation on every page. Not a patient account or general reception audit feed. Only successful cross-clinic network.lookup disclosures for this selected operational patient are projected; no raw details or other patient data. Default 25, max 100, newest first. Signed cursor binds actor, clinic, patient and trusted device using a stable server-only secret, survives PIN reauthentication session rotation on the same device, and confers no authorization. Each successful read is itself minimally audited. Private no-store.
+ * @summary Read patient-requested access history with reception assistance
+ */
+export const readPatientAccessHistoryPathIdMax = 2147483647;
+
+
+
+export const ReadPatientAccessHistoryParams = zod.object({
+  "id": zod.coerce.number().int().min(1).max(readPatientAccessHistoryPathIdMax)
+}).strict()
+
+export const ReadPatientAccessHistoryHeader = zod.object({
+  "X-CSRF-Token": zod.string()
+}).strict()
+
+export const readPatientAccessHistoryBodyLimitDefault = 25;
+export const readPatientAccessHistoryBodyLimitMax = 100;
+
+export const readPatientAccessHistoryBodyCursorMax = 512;
+
+
+
+export const ReadPatientAccessHistoryBody = zod.object({
+  "patientRequestConfirmed": zod.literal(true),
+  "limit": zod.number().int().min(1).max(readPatientAccessHistoryBodyLimitMax).default(readPatientAccessHistoryBodyLimitDefault),
+  "cursor": zod.string().min(1).max(readPatientAccessHistoryBodyCursorMax).optional()
+}).strict()
+
+export const readPatientAccessHistoryResponseItemsMax = 100;
+
+
+
+export const ReadPatientAccessHistoryResponse = zod.object({
+  "items": zod.array(zod.object({
+  "id": zod.number().int(),
+  "at": zod.coerce.date(),
+  "viewerName": zod.string().nullable(),
+  "viewerRole": zod.union([zod.literal('doctor'),zod.literal(null)]).nullable(),
+  "viewerClinicName": zod.string().nullable(),
+  "action": zod.enum(['patient-view'])
+}).strict()).max(readPatientAccessHistoryResponseItemsMax),
+  "nextCursor": zod.string().nullable()
+}).strict().describe('Selected-patient recorded successful cross-clinic network disclosures only, newest first (UTC time then ID). One event per disclosed source visit; repeated reads can appear separately. Verified current doctor/user/clinic joins provide names, otherwise null. No raw audit details, local-care coverage claim or other-patient identity.')
+
+
+/**
  * Implemented scoped consent state and ordered history. Server-derived local patient relationship required; admins denied. Effective level defaults to none; withdrawing the latest grant never revives an older grant. Current is distinct from history. Private no-store.
  * @summary list patient consent
  */
@@ -720,7 +766,17 @@ export const ListPatientConsentResponse = zod.object({
   "relationship": zod.string()
 }).strict().optional()
 }).strict()),
-  "effectiveLevel": zod.enum(['none', 'basic', 'clinical'])
+  "effectiveLevel": zod.enum(['none', 'basic', 'clinical']),
+  "patient": zod.object({
+  "id": zod.number().int(),
+  "name": zod.string()
+}).strict(),
+  "eligibility": zod.object({
+  "dateOfBirth": zod.coerce.date().nullable(),
+  "ageStatus": zod.enum(['adult', 'minor', 'unknown']),
+  "asOfDate": zod.coerce.date()
+}).strict().describe('Server-owned completed-birthday policy using current Asia/Hebron date. Missing, invalid or future DOB yields null/unknown; never infer adulthood in the browser.'),
+  "canWithdraw": zod.boolean().describe('True only for scoped front-desk and latest nonwithdrawn consent recorded in their current clinic. Mutation still requires fresh PIN and CSRF.')
 }).strict().describe('Current is the latest transition even when withdrawn, never an older grant. History is ordered newest first. Legacy evidence/recording clinic may be null.')
 
 

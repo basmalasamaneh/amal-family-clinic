@@ -1,4 +1,4 @@
-import { createHash, randomUUID } from "node:crypto";
+import { createHash, createHmac, randomUUID, timingSafeEqual } from "node:crypto";
 import type { PoolClient } from "pg";
 import { z } from "zod/v4";
 import { fromZonedTime } from "date-fns-tz";
@@ -8,7 +8,7 @@ import { forbidden, type Auth } from "../lib/auth";
 import { fail } from "../lib/auth-errors";
 import { patientScopeSql } from "../lib/patient-access";
 import { hebronDay, isMinor, validBirthDate } from "../patients/demographics";
-import { effectiveLevel, projectConsent, projectVisit, visitVisibility, type Consent, type ConsentRow, type NetworkVisit, type VisitSource } from "./policy";
+import { consentEligibility, effectiveLevel, projectConsent, projectVisit, visitVisibility, type Consent, type ConsentRow, type NetworkVisit, type VisitSource } from "./policy";
 
 // Global transaction lock, not a per-instance mutex. Readers share; transitions exclude.
 const consentLock = 160005;
@@ -40,7 +40,7 @@ export async function transaction<T>(exclusive: boolean, work: (client: PoolClie
   finally { client.release(); }
 }
 interface AuditDetail {
-  correlationId: string; outcome: "disclosed" | "no-result" | "denied" | "recorded" | "withdrawn";
+  correlationId: string; outcome: "disclosed" | "no-result" | "denied" | "recorded" | "withdrawn" | "read";
   sourceClinicId?: number; sourceVisitId?: number; effectiveLevel?: string; projection?: string; consentId?: number;
 }
 export async function appendAudit(client: Pick<PoolClient, "query">, auth: Auth | undefined, action: string, patientId: number | null, detail: AuditDetail) {
@@ -62,7 +62,7 @@ export async function requireDoctor(client: PoolClient, auth: Auth) {
 async function scopedPatient(client: PoolClient, auth: Auth, patientId: number, mutation: boolean) {
   if (!auth.clinicId || (mutation ? auth.role !== "front-desk" : !["front-desk", "doctor"].includes(auth.role))) throw forbidden();
   if (auth.role === "doctor") await requireDoctor(client, auth);
-  const { rows: [patient] } = await client.query<{ patient_id: number; dob: string }>(`SELECT p.patient_id,p.dob::text
+  const { rows: [patient] } = await client.query<{ patient_id: number; patient_name: string; dob: string | null }>(`SELECT p.patient_id,p.patient_name,p.dob::text
     FROM operational.patients p WHERE p.patient_id=$2 AND ${patientScopeSql("$1")}
     ${auth.role === "doctor" ? `AND EXISTS(SELECT 1 FROM operational.patient_doctor_access da
       WHERE da.patient_id=p.patient_id AND da.clinic_id=$1 AND da.doctor_id=$3)` : ""}
@@ -77,9 +77,74 @@ async function history(client: PoolClient, patientId: number) {
 }
 export async function getConsent(auth: Auth, patientId: number) {
   return transaction(false, async client => {
-    await scopedPatient(client, auth, patientId, false);
+    const patient = await scopedPatient(client, auth, patientId, false);
     const rows = await history(client, patientId);
-    return { current: rows[0] ? projectConsent(rows[0]) : null, history: rows.map(projectConsent), effectiveLevel: effectiveLevel(rows[0]) };
+    const { rows: [clock] } = await client.query<{ at: Date }>("SELECT clock_timestamp() AS at");
+    return {
+      current: rows[0] ? projectConsent(rows[0]) : null, history: rows.map(projectConsent), effectiveLevel: effectiveLevel(rows[0]),
+      patient: { id: patient.patient_id, name: patient.patient_name },
+      eligibility: consentEligibility(patient.dob, clock!.at),
+      canWithdraw: auth.role === "front-desk" && !!rows[0] && !rows[0].withdrawn_at && rows[0].recorded_clinic_id === auth.clinicId,
+    };
+  });
+}
+
+const accessHistorySchema = z.object({
+  patientRequestConfirmed: z.literal(true),
+  limit: z.number().int().min(1).max(100).optional(),
+  cursor: z.string().min(1).max(512).optional(),
+}).strict();
+const accessCursorSchema = z.object({
+  id: z.number().int().positive().max(2147483647), at: z.string().datetime(),
+  signature: z.string().regex(/^[a-f0-9]{64}$/),
+}).strict();
+function accessSignature(auth: Auth, patientId: number, id: number, at: string) {
+  // Existing stable server secret, domain separated from other uses. PIN reauth
+  // rotates session/CSRF credentials, not this actor/clinic/patient/device binding.
+  const secret = process.env.SESSION_SECRET;
+  if (!secret) throw new Error("SESSION_SECRET is required for access-history cursor signing");
+  return createHmac("sha256", secret)
+    .update(JSON.stringify(["amal:patient-access-history:v1", auth.id, auth.clinicId, patientId, auth.device?.id ?? null, id, at])).digest("hex");
+}
+export async function patientAccessHistory(auth: Auth, patientId: number, body: unknown, correlationId = randomUUID()) {
+  const input = accessHistorySchema.parse(body);
+  return transaction(false, async client => {
+    if (auth.role !== "front-desk" || !auth.clinicId) throw forbidden();
+    await scopedPatient(client, auth, patientId, false);
+    let cursor: z.infer<typeof accessCursorSchema> | null = null;
+    if (input.cursor) {
+      try {
+        cursor = accessCursorSchema.parse(JSON.parse(Buffer.from(input.cursor, "base64url").toString("utf8")));
+        if (!timingSafeEqual(Buffer.from(cursor.signature, "hex"),
+          Buffer.from(accessSignature(auth, patientId, cursor.id, cursor.at), "hex"))) throw new Error("Invalid cursor");
+      } catch { throw fail(400, "VALIDATION", "validation"); }
+    }
+    const limit = input.limit ?? 25;
+    const { rows } = await client.query<{ id: number; at: Date; viewer_name: string | null;
+      viewer_role: "doctor" | null; viewer_clinic_name: string | null }>(`
+      SELECT a.id,a.at,d.doctor_name AS viewer_name,
+        CASE WHEN d.doctor_id IS NOT NULL THEN 'doctor' ELSE NULL END AS viewer_role,
+        c.clinic_name AS viewer_clinic_name
+      FROM operational.audit_log a
+      JOIN operational.clinics source ON source.clinic_id::text=a.detail->>'sourceClinicId'
+      LEFT JOIN operational.users u ON u.id=a.user_id AND u.role='doctor' AND u.clinic_id=a.clinic_id
+      LEFT JOIN operational.doctors d ON d.doctor_id=u.doctor_id AND d.clinic_id=u.clinic_id AND d.user_id=u.id
+      LEFT JOIN operational.clinics c ON c.clinic_id=d.clinic_id
+      WHERE a.patient_id=$1 AND a.action='network.lookup' AND a.detail->>'outcome'='disclosed'
+        AND a.clinic_id IS NOT NULL AND a.clinic_id<>source.clinic_id
+        AND ($2::timestamptz IS NULL OR (date_trunc('milliseconds',a.at),a.id)<($2::timestamptz,$3::integer))
+      ORDER BY date_trunc('milliseconds',a.at) DESC,a.id DESC LIMIT $4`,
+    [patientId, cursor?.at ?? null, cursor?.id ?? null, limit + 1]);
+    const page = rows.slice(0, limit), last = page.at(-1);
+    // Audit only the assisted read, never the returned rows, request body or cursor.
+    await appendAudit(client, auth, "patient.access-history.read", patientId, { correlationId, outcome: "read" });
+    return {
+      items: page.map(row => ({ id: row.id, at: row.at.toISOString(), viewerName: row.viewer_name,
+        viewerRole: row.viewer_role, viewerClinicName: row.viewer_clinic_name, action: "patient-view" as const })),
+      nextCursor: rows.length > limit && last ? Buffer.from(JSON.stringify({
+        id: last.id, at: last.at.toISOString(), signature: accessSignature(auth, patientId, last.id, last.at.toISOString()),
+      })).toString("base64url") : null,
+    };
   });
 }
 async function replay(client: PoolClient, auth: Auth, opId: string, requestHash: string): Promise<Consent | null> {

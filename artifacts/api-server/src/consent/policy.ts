@@ -1,5 +1,14 @@
 import type { Auth } from "../lib/auth";
 import { renderAlert } from "../alerts/dictionary";
+import { hebronDay, isMinor, validBirthDate } from "../patients/demographics";
+
+/** The same date-only policy used by recording; never infer adulthood from missing DOB. */
+export function consentEligibility(dateOfBirth: string | null, now = new Date()) {
+  const verified = dateOfBirth && validBirthDate(dateOfBirth, now) ? dateOfBirth : null;
+  const asOfDate = hebronDay(now);
+  const ageStatus: "adult" | "minor" | "unknown" = verified ? (isMinor(verified, asOfDate) ? "minor" : "adult") : "unknown";
+  return { dateOfBirth: verified, ageStatus, asOfDate };
+}
 
 export interface AlertSource {
   kind: "medication" | "allergy" | "condition"; label: string;
