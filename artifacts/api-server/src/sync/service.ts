@@ -2,17 +2,18 @@ import { randomUUID } from "node:crypto";
 import type { PoolClient } from "pg";
 import { type Auth, forbidden } from "../lib/auth";
 import { ApiError, fail } from "../lib/auth-errors";
-import { bookingScope, createAppointment, existing, project, record, replay, transaction, updateAppointment } from "../appointments/service";
+import { bookingScope, createAppointment, currentAuth, existing, project, record, replay, transaction, updateAppointment } from "../appointments/service";
 import { pushInput, resolveInput } from "./validation";
 import { patientScopeSql } from "../lib/patient-access";
+import { lockNetworkDevice, recordSuccessfulSync } from "../network-health/service";
 
 export async function requireSyncDevice(client: Pick<PoolClient, "query">, actor: Auth) {
   if (!actor.device || !["doctor", "front-desk"].includes(actor.role)) throw forbidden();
-  const { rows: [device] } = await client.query(`SELECT d.id FROM operational.devices d
-    JOIN operational.auth_devices a ON a.device_id=d.id
-    WHERE d.id=$1 AND d.clinic_id=$2 AND a.revoked_at IS NULL`, [actor.device.id, actor.clinicId]);
-  if (!device) throw fail(403, "DEVICE_UNTRUSTED", "deviceUntrusted");
-  return device.id as number;
+  const deviceId = await lockNetworkDevice(client, actor);
+  const current = await currentAuth(client, actor);
+  if (!["doctor", "front-desk"].includes(current.role) || current.clinicId !== actor.clinicId ||
+    current.doctorId !== actor.doctorId) throw forbidden();
+  return deviceId;
 }
 const envelope = (e: ApiError) => ({ code: e.code, messageKey: `error.${e.key}`, params: e.params });
 
@@ -32,6 +33,7 @@ export async function pushSync(auth: Auth, raw: unknown) {
     const deviceId = await requireSyncDevice(client, actor);
     const outcomes: Record<string, unknown>[] = [];
     let blocked = false;
+    let appliedNewOperation = false;
     for (const operation of input.operations) {
       const base = { sequence: operation.sequence, clientOpId: operation.input.clientOpId };
       if (blocked) { outcomes.push({ ...base, status: "blocked", code: "PREDECESSOR_UNRESOLVED", messageKey: "error.conflict", params: {} }); continue; }
@@ -57,11 +59,22 @@ export async function pushSync(auth: Auth, raw: unknown) {
       }
       let outcome: Record<string, unknown>;
       try {
+        const { rows: [priorOperation] } = await client.query(
+          "SELECT 1 FROM operational.appointment_operations WHERE client_op_id=$1", [operation.input.clientOpId]);
+        const before = operation.type === "update" ? (await client.query(
+          "SELECT scheduled_at,duration_minutes,status,cancel_reason FROM operational.appointments WHERE appointment_id=$1",
+          [operation.appointmentId])).rows[0] : null;
         const context = { client, actor, now };
         const result = operation.type === "create"
           ? await createAppointment(actor, operation.input, context)
           : await updateAppointment(actor, operation.appointmentId, operation.input, context);
         outcome = { ...base, status: "applied", result };
+        if (!priorOperation) {
+          const after = operation.type === "update" ? (await client.query(
+            "SELECT scheduled_at,duration_minutes,status,cancel_reason FROM operational.appointments WHERE appointment_id=$1",
+            [operation.appointmentId])).rows[0] : null;
+          if (operation.type === "create" || JSON.stringify(before) !== JSON.stringify(after)) appliedNewOperation = true;
+        }
       } catch (error) {
         if (!(error instanceof ApiError)) throw error; // Transient errors roll back the batch, safe to retry.
         const { rows: [op] } = await client.query("SELECT * FROM operational.appointment_operations WHERE client_op_id=$1", [operation.input.clientOpId]);
@@ -84,6 +97,9 @@ export async function pushSync(auth: Auth, raw: unknown) {
       if (!receipt) await client.query(`INSERT INTO operational.sync_device_operations(device_id,sequence,client_op_id) VALUES($1,$2,$3)`,
         [deviceId, operation.sequence, operation.input.clientOpId]);
       outcomes.push(outcome);
+    }
+    if (appliedNewOperation && outcomes.every(outcome => outcome.status === "applied")) {
+      await recordSuccessfulSync(client, deviceId);
     }
     return { outcomes };
   });

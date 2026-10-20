@@ -72,7 +72,7 @@ export function bookingScope(auth: Auth, clinicId: number, doctorId: number) {
 export async function currentAuth(client: Pick<PoolClient, "query">, auth: Auth): Promise<Auth> {
   const { rows: [user] } = await client.query(`SELECT u.role,u.clinic_id,u.doctor_id,s.device_id
     FROM operational.users u JOIN operational.auth_sessions s ON s.user_id=u.id
-    WHERE u.id=$1 AND s.token_digest=$2 AND s.revoked_at IS NULL
+    WHERE u.id=$1 AND s.token_digest=$2 AND s.revoked_at IS NULL AND u.disabled_at IS NULL
       AND ((u.role='receptionist' AND s.device_id IS NOT NULL AND s.absolute_expires_at>clock_timestamp())
         OR (u.role IN ('doctor','administrator') AND s.last_seen_at>clock_timestamp()-interval '30 minutes'))
       AND (s.device_id IS NULL OR EXISTS(SELECT 1 FROM operational.auth_devices a

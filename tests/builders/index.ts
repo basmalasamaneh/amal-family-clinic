@@ -107,6 +107,7 @@ export function createDemoBuilders(input: ClinicContext, initialOptions: Builder
       password_hash: "!synthetic-test-only", pin_hash: assignedDoctor ? null : "!synthetic-test-only",
       role: assignedDoctor ? "doctor" : "receptionist", clinic_id: clinic.clinic_id,
       doctor_id: assignedDoctor?.doctor_id ?? null, locale: "ar", theme: "light", last_login: null,
+      disabled_at: null, auth_version: 1,
     };
     if (assignedDoctor) {
       if (assignedDoctor.user_id !== null) throw new Error("Doctor already has an actor");

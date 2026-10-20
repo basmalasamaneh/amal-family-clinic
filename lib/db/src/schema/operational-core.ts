@@ -60,6 +60,8 @@ export const operationalUsers = operational.table("users", {
   locale: locale("locale").notNull().default("ar"),
   theme: theme("theme").notNull().default("light"),
   last_login: instant("last_login"),
+  disabled_at: instant("disabled_at"),
+  auth_version: integer("auth_version").notNull().default(1),
 }, (t) => [
   check("users_role_assignment_check", sql`(${t.role} = 'administrator' AND ${t.doctor_id} IS NULL) OR (${t.role} = 'receptionist' AND ${t.clinic_id} IS NOT NULL AND ${t.doctor_id} IS NULL) OR (${t.role} = 'doctor' AND ${t.clinic_id} IS NOT NULL AND ${t.doctor_id} IS NOT NULL)`),
   check("users_email_check", sql`${t.email} ~ '^[^[:space:]@]+@[^[:space:]@]+[.][^[:space:]@]+$'`),

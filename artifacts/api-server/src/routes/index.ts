@@ -10,11 +10,17 @@ import patientMergeRouter from "./patient-merge";
 import importsRouter from "./imports";
 import syncRouter from "./sync";
 import kpisRouter from "./kpis";
+import adminUsersRouter from "./admin-users";
+import adminDirectoryRouter from "./admin-directory";
+import networkHealthRouter from "./network-health";
 
 const router: IRouter = Router();
 
 router.use(healthRouter);
 router.use(authRouter);
+router.use(adminUsersRouter);
+router.use(adminDirectoryRouter);
+router.use(networkHealthRouter);
 router.use(appointmentsRouter);
 router.use(syncRouter);
 router.use(kpisRouter);

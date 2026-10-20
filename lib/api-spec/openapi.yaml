@@ -3,7 +3,7 @@
   "info": {
     "title": "Api",
     "version": "0.2.0",
-    "description": "Amal Network Section 12. Authentication, appointments and clinic-local patient CRUD/search are implemented; other domain services remain contracts/mocks. UTC ISO instants, required date-only DOB, Asia/Hebron display. Local patient endpoints return demographics only to doctors/front-desk, never clinical history or admin patient access. Separate network services require consent and exclude Lite clinics. Lists use opaque cursor plus limit (1–100, default 25); null nextCursor ends pagination."
+    "description": "Amal Network Section 12. Authentication, appointments and clinic-local patient CRUD/search are implemented; other domain services remain contracts/mocks. UTC ISO instants, required date-only DOB, Asia/Hebron display. Local patient endpoints return demographics only to doctors/front-desk, never clinical history or admin patient access. Separate network services require consent and exclude Lite clinics. Lists use opaque cursor plus limit (1–100, default 25); null nextCursor ends pagination. Administration endpoints are implemented against operational tables, with account deactivation and transactional audit. Network health reports persisted receipt-time telemetry with explicit unknown queue coverage."
   },
   "servers": [
     {
@@ -184,9 +184,7 @@
           },
           "timezone": {
             "type": "string",
-            "enum": [
-              "Asia/Hebron"
-            ]
+            "description": "IANA timezone; source workbook instants interpreted as Asia/Hebron exactly once."
           }
         },
         "required": [
@@ -3664,62 +3662,26 @@
         "type": "object",
         "additionalProperties": false,
         "properties": {
+          "generatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "heartbeatTimeoutSeconds": {
+            "type": "integer",
+            "minimum": 10,
+            "maximum": 86400
+          },
           "clinics": {
             "type": "array",
             "items": {
-              "type": "object",
-              "additionalProperties": false,
-              "properties": {
-                "clinicId": {
-                  "type": "integer",
-                  "minimum": 1
-                },
-                "status": {
-                  "type": "string",
-                  "enum": [
-                    "online",
-                    "offline",
-                    "lite"
-                  ]
-                },
-                "lastSyncAt": {
-                  "type": "string",
-                  "format": "date-time"
-                },
-                "pendingOperations": {
-                  "type": "integer",
-                  "minimum": 0
-                }
-              },
-              "required": [
-                "clinicId",
-                "status",
-                "lastSyncAt",
-                "pendingOperations"
-              ]
+              "$ref": "#/components/schemas/NetworkClinicHealth"
             }
-          },
-          "measuredAt": {
-            "type": "string",
-            "format": "date-time"
           }
         },
         "required": [
-          "clinics",
-          "measuredAt"
-        ],
-        "examples": [
-          {
-            "clinics": [
-              {
-                "clinicId": 101,
-                "status": "online",
-                "lastSyncAt": "2026-09-09T07:00:00Z",
-                "pendingOperations": 0
-              }
-            ],
-            "measuredAt": "2026-09-09T07:00:00Z"
-          }
+          "generatedAt",
+          "heartbeatTimeoutSeconds",
+          "clinics"
         ]
       },
       "DuplicateCandidate": {
@@ -6295,6 +6257,927 @@
           "telemetry"
         ],
         "description": "Selected operational scheduled-at window; telemetry uses server event/receipt time within the same explicit window."
+      },
+      "AdminClinic": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "city": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "bookingMethod": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "slotMinutes": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1440
+          },
+          "workingDays": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 6
+            },
+            "minItems": 1,
+            "maxItems": 7,
+            "uniqueItems": true
+          },
+          "openTime": {
+            "type": "string",
+            "pattern": "^(?:[01]\\d|2[0-3]):[0-5]\\d$"
+          },
+          "closeTime": {
+            "type": "string",
+            "pattern": "^(?:[01]\\d|2[0-3]):[0-5]\\d$"
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "full",
+              "lite"
+            ]
+          },
+          "timezone": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100,
+            "description": "Valid IANA zone. Local openTime must precede closeTime; overnight hours unsupported."
+          },
+          "joinedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "city",
+          "bookingMethod",
+          "slotMinutes",
+          "workingDays",
+          "openTime",
+          "closeTime",
+          "mode",
+          "timezone",
+          "joinedAt"
+        ]
+      },
+      "AdminClinicInput": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "city": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "bookingMethod": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "slotMinutes": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1440
+          },
+          "workingDays": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 6
+            },
+            "minItems": 1,
+            "maxItems": 7,
+            "uniqueItems": true
+          },
+          "openTime": {
+            "type": "string",
+            "pattern": "^(?:[01]\\d|2[0-3]):[0-5]\\d$"
+          },
+          "closeTime": {
+            "type": "string",
+            "pattern": "^(?:[01]\\d|2[0-3]):[0-5]\\d$"
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "full",
+              "lite"
+            ]
+          },
+          "timezone": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100,
+            "description": "Valid IANA zone. Local openTime must precede closeTime; overnight hours unsupported."
+          }
+        },
+        "required": [
+          "name",
+          "city",
+          "bookingMethod"
+        ]
+      },
+      "AdminClinicUpdate": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "city": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "bookingMethod": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "slotMinutes": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1440
+          },
+          "workingDays": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 6
+            },
+            "minItems": 1,
+            "maxItems": 7,
+            "uniqueItems": true
+          },
+          "openTime": {
+            "type": "string",
+            "pattern": "^(?:[01]\\d|2[0-3]):[0-5]\\d$"
+          },
+          "closeTime": {
+            "type": "string",
+            "pattern": "^(?:[01]\\d|2[0-3]):[0-5]\\d$"
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "full",
+              "lite"
+            ]
+          },
+          "timezone": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100,
+            "description": "Valid IANA zone. Local openTime must precede closeTime; overnight hours unsupported."
+          }
+        },
+        "required": [],
+        "minProperties": 1
+      },
+      "AdminClinicPage": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AdminClinic"
+            }
+          },
+          "nextCursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor"
+        ]
+      },
+      "AdminDoctor": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "clinicId": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "specialty": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "maxLength": 254
+          },
+          "userId": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 1
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "clinicId",
+          "specialty",
+          "email",
+          "userId"
+        ]
+      },
+      "AdminDoctorInput": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "clinicId": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "specialty": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "maxLength": 254
+          }
+        },
+        "required": [
+          "name",
+          "clinicId",
+          "specialty",
+          "email"
+        ]
+      },
+      "AdminDoctorUpdate": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "clinicId": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "specialty": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "maxLength": 254
+          }
+        },
+        "required": [],
+        "minProperties": 1
+      },
+      "AdminDoctorPage": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AdminDoctor"
+            }
+          },
+          "nextCursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor"
+        ]
+      },
+      "AdminUser": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "maxLength": 254
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "admin",
+              "doctor",
+              "front-desk"
+            ]
+          },
+          "clinicId": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 1
+          },
+          "doctorId": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 1
+          },
+          "locale": {
+            "type": "string",
+            "enum": [
+              "ar",
+              "en"
+            ]
+          },
+          "theme": {
+            "type": "string",
+            "enum": [
+              "light",
+              "dark"
+            ]
+          },
+          "active": {
+            "type": "boolean"
+          },
+          "lastLogin": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "disabledAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "email",
+          "role",
+          "clinicId",
+          "doctorId",
+          "locale",
+          "theme",
+          "active",
+          "lastLogin",
+          "disabledAt"
+        ]
+      },
+      "AdminUserInput": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "maxLength": 254
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "admin",
+              "doctor",
+              "front-desk"
+            ]
+          },
+          "clinicId": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 1
+          },
+          "doctorId": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 1
+          },
+          "locale": {
+            "type": "string",
+            "enum": [
+              "ar",
+              "en"
+            ]
+          },
+          "theme": {
+            "type": "string",
+            "enum": [
+              "light",
+              "dark"
+            ]
+          },
+          "active": {
+            "type": "boolean"
+          },
+          "password": {
+            "type": "string",
+            "minLength": 12,
+            "maxLength": 72,
+            "writeOnly": true,
+            "description": "Maximum 72 UTF-8 bytes; required for admin/doctor creation or transition from front-desk."
+          },
+          "pin": {
+            "type": "string",
+            "pattern": "^[0-9]{4}$",
+            "writeOnly": true,
+            "description": "Required for front-desk creation or transition; prohibited for other roles."
+          }
+        },
+        "required": [
+          "email",
+          "role"
+        ]
+      },
+      "AdminUserUpdate": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "maxLength": 254
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "admin",
+              "doctor",
+              "front-desk"
+            ]
+          },
+          "clinicId": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 1
+          },
+          "doctorId": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 1
+          },
+          "locale": {
+            "type": "string",
+            "enum": [
+              "ar",
+              "en"
+            ]
+          },
+          "theme": {
+            "type": "string",
+            "enum": [
+              "light",
+              "dark"
+            ]
+          },
+          "active": {
+            "type": "boolean"
+          },
+          "password": {
+            "type": "string",
+            "minLength": 12,
+            "maxLength": 72,
+            "writeOnly": true,
+            "description": "Maximum 72 UTF-8 bytes; required for admin/doctor creation or transition from front-desk."
+          },
+          "pin": {
+            "type": "string",
+            "pattern": "^[0-9]{4}$",
+            "writeOnly": true,
+            "description": "Required for front-desk creation or transition; prohibited for other roles."
+          }
+        },
+        "required": [],
+        "minProperties": 1
+      },
+      "AdminPinInput": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "pin": {
+            "type": "string",
+            "pattern": "^[0-9]{4}$",
+            "writeOnly": true,
+            "description": "Required for front-desk creation or transition; prohibited for other roles."
+          }
+        },
+        "required": [
+          "pin"
+        ]
+      },
+      "AdminUserPage": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AdminUser"
+            }
+          },
+          "total": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "pageSize": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "page",
+          "pageSize"
+        ]
+      },
+      "AdminDevice": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "clinicId": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "label": {
+            "type": "string"
+          },
+          "registeredAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "revokedAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "clinicId",
+          "label",
+          "registeredAt",
+          "revokedAt"
+        ]
+      },
+      "AdminDevicePage": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AdminDevice"
+            }
+          },
+          "total": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "pageSize": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "page",
+          "pageSize"
+        ]
+      },
+      "NetworkQueueCoverage": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "registeredDeviceCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "trustedDeviceCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "freshDeviceCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "staleDeviceCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "unknownDeviceCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "revokedDeviceCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "complete": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "registeredDeviceCount",
+          "trustedDeviceCount",
+          "freshDeviceCount",
+          "staleDeviceCount",
+          "unknownDeviceCount",
+          "revokedDeviceCount",
+          "complete"
+        ]
+      },
+      "NetworkDeviceHealth": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "deviceId": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "label": {
+            "type": "string"
+          },
+          "trustStatus": {
+            "type": "string",
+            "enum": [
+              "trusted",
+              "revoked",
+              "untrusted"
+            ]
+          },
+          "connectivity": {
+            "type": "string",
+            "enum": [
+              "online",
+              "offline"
+            ]
+          },
+          "lastHeartbeatAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "lastSuccessfulSyncAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "heartbeatSequence": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 0
+          },
+          "unsubmittedOperationCount": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 0
+          }
+        },
+        "required": [
+          "deviceId",
+          "label",
+          "trustStatus",
+          "connectivity",
+          "lastHeartbeatAt",
+          "lastSuccessfulSyncAt",
+          "heartbeatSequence",
+          "unsubmittedOperationCount"
+        ]
+      },
+      "NetworkClinicHealth": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "clinicId": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "clinicName": {
+            "type": "string"
+          },
+          "networkMode": {
+            "type": "string",
+            "enum": [
+              "full",
+              "lite"
+            ]
+          },
+          "connectivity": {
+            "type": "string",
+            "enum": [
+              "online",
+              "offline"
+            ]
+          },
+          "lastHeartbeatAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "lastSuccessfulSyncAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "serverOpenConflictCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "unsubmittedOperationCount": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 0
+          },
+          "queueCoverage": {
+            "$ref": "#/components/schemas/NetworkQueueCoverage"
+          },
+          "devices": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/NetworkDeviceHealth"
+            }
+          }
+        },
+        "required": [
+          "clinicId",
+          "clinicName",
+          "networkMode",
+          "connectivity",
+          "lastHeartbeatAt",
+          "lastSuccessfulSyncAt",
+          "serverOpenConflictCount",
+          "unsubmittedOperationCount",
+          "queueCoverage",
+          "devices"
+        ]
+      },
+      "NetworkHeartbeatInput": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "sequence": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 9007199254740991
+          },
+          "unsubmittedOperationCount": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 1000000
+          }
+        },
+        "required": [
+          "sequence",
+          "unsubmittedOperationCount"
+        ]
+      },
+      "NetworkHeartbeat": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "deviceId": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "clinicId": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "sequence": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "receivedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "heartbeatTimeoutSeconds": {
+            "type": "integer",
+            "minimum": 10,
+            "maximum": 86400
+          }
+        },
+        "required": [
+          "deviceId",
+          "clinicId",
+          "sequence",
+          "receivedAt",
+          "heartbeatTimeoutSeconds"
+        ]
       }
     },
     "responses": {
@@ -6861,10 +7744,9 @@
       "post": {
         "operationId": "createClinic",
         "tags": [
-          "clinics"
+          "administration"
         ],
-        "summary": "create clinic",
-        "description": "Contract-only domain service; mock responses are simulated. Clinic scope comes from authenticated identity, not submitted identifiers. Admin has no implicit clinical access. Network visibility requires active consent and excludes Lite clinics. Mutations require CSRF; clientOpId is replay-safe per clinic, with changed payload returning 409.",
+        "description": "Administrator only; operational data only. Mutations require CSRF and commit safe audit records atomically.",
         "security": [
           {
             "sessionCookie": [],
@@ -6874,151 +7756,95 @@
         "x-roles": [
           "admin"
         ],
-        "x-implementation": "contract-only",
-        "parameters": [
-          {
-            "name": "X-CSRF-Token",
-            "in": "header",
-            "required": true,
-            "schema": {
-              "type": "string"
-            },
-            "description": "Session-bound CSRF value from Identity.csrfToken; never a session credential."
-          }
-        ],
+        "x-implementation": "real",
+        "parameters": [],
         "responses": {
           "201": {
-            "description": "Clinic",
+            "description": "AdminClinic",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Clinic"
-                },
-                "example": {
-                  "id": 101,
-                  "name": "Synthetic demonstration clinic",
-                  "mode": "network",
-                  "timezone": "Asia/Hebron"
+                  "$ref": "#/components/schemas/AdminClinic"
                 }
               }
             }
           },
           "400": {
-            "description": "VALIDATION",
+            "description": "ApiFailure",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ApiFailure"
-                },
-                "example": {
-                  "code": "VALIDATION",
-                  "messageKey": "error.validation",
-                  "params": {}
                 }
               }
             }
           },
           "401": {
-            "description": "UNAUTHORIZED",
+            "description": "ApiFailure",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ApiFailure"
-                },
-                "example": {
-                  "code": "UNAUTHORIZED",
-                  "messageKey": "error.unauthorized",
-                  "params": {}
                 }
               }
             }
           },
           "403": {
-            "description": "FORBIDDEN",
+            "description": "ApiFailure",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ApiFailure"
-                },
-                "example": {
-                  "code": "FORBIDDEN",
-                  "messageKey": "error.forbidden",
-                  "params": {}
                 }
               }
             }
           },
           "404": {
-            "description": "NOT_FOUND",
+            "description": "ApiFailure",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ApiFailure"
-                },
-                "example": {
-                  "code": "NOT_FOUND",
-                  "messageKey": "error.notFound",
-                  "params": {}
                 }
               }
             }
           },
           "409": {
-            "description": "CONFLICT",
+            "description": "ApiFailure",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ApiFailure"
-                },
-                "example": {
-                  "code": "CONFLICT",
-                  "messageKey": "error.conflict",
-                  "params": {}
                 }
               }
             }
           },
           "423": {
-            "description": "PIN_LOCKED",
+            "description": "ApiFailure",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ApiFailure"
-                },
-                "example": {
-                  "code": "PIN_LOCKED",
-                  "messageKey": "error.pinLocked",
-                  "params": {}
                 }
               }
             }
           },
           "429": {
-            "description": "RATE_LIMITED",
+            "description": "ApiFailure",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ApiFailure"
-                },
-                "example": {
-                  "code": "RATE_LIMITED",
-                  "messageKey": "error.rateLimited",
-                  "params": {}
                 }
               }
             }
           },
           "500": {
-            "description": "INTERNAL",
+            "description": "ApiFailure",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ApiFailure"
-                },
-                "example": {
-                  "code": "INTERNAL",
-                  "messageKey": "error.internal",
-                  "params": {}
                 }
               }
             }
@@ -7029,11 +7855,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/ClinicInput"
-              },
-              "example": {
-                "name": "Synthetic demonstration clinic",
-                "mode": "network"
+                "$ref": "#/components/schemas/AdminClinicInput"
               }
             }
           }
@@ -7047,18 +7869,17 @@
           "clinics"
         ],
         "summary": "get clinic",
-        "description": "Contract-only domain service; mock responses are simulated. Clinic scope comes from authenticated identity, not submitted identifiers. Admin has no implicit clinical access. Network visibility requires active consent and excludes Lite clinics. Mutations require CSRF; clientOpId is replay-safe per clinic, with changed payload returning 409.",
+        "description": "Safe scoped clinic detail for authenticated doctor/front-desk. Admin settings use /admin/clinics/{id}.",
         "security": [
           {
             "sessionCookie": []
           }
         ],
         "x-roles": [
-          "admin",
           "doctor",
           "front-desk"
         ],
-        "x-implementation": "contract-only",
+        "x-implementation": "real",
         "parameters": [
           {
             "name": "id",
@@ -7213,10 +8034,9 @@
       "patch": {
         "operationId": "updateClinic",
         "tags": [
-          "clinics"
+          "administration"
         ],
-        "summary": "update clinic",
-        "description": "Contract-only domain service; mock responses are simulated. Clinic scope comes from authenticated identity, not submitted identifiers. Admin has no implicit clinical access. Network visibility requires active consent and excludes Lite clinics. Mutations require CSRF; clientOpId is replay-safe per clinic, with changed payload returning 409.",
+        "description": "Administrator only; operational data only. Mutations require CSRF and commit safe audit records atomically.",
         "security": [
           {
             "sessionCookie": [],
@@ -7226,7 +8046,7 @@
         "x-roles": [
           "admin"
         ],
-        "x-implementation": "contract-only",
+        "x-implementation": "real",
         "parameters": [
           {
             "name": "id",
@@ -7234,153 +8054,98 @@
             "required": true,
             "schema": {
               "type": "integer",
-              "minimum": 1
-            },
-            "example": 301
-          },
-          {
-            "name": "X-CSRF-Token",
-            "in": "header",
-            "required": true,
-            "schema": {
-              "type": "string"
-            },
-            "description": "Session-bound CSRF value from Identity.csrfToken; never a session credential."
+              "minimum": 1,
+              "maximum": 2147483647
+            }
           }
         ],
         "responses": {
           "200": {
-            "description": "Clinic",
+            "description": "AdminClinic",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Clinic"
-                },
-                "example": {
-                  "id": 101,
-                  "name": "Synthetic demonstration clinic",
-                  "mode": "network",
-                  "timezone": "Asia/Hebron"
+                  "$ref": "#/components/schemas/AdminClinic"
                 }
               }
             }
           },
           "400": {
-            "description": "VALIDATION",
+            "description": "ApiFailure",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ApiFailure"
-                },
-                "example": {
-                  "code": "VALIDATION",
-                  "messageKey": "error.validation",
-                  "params": {}
                 }
               }
             }
           },
           "401": {
-            "description": "UNAUTHORIZED",
+            "description": "ApiFailure",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ApiFailure"
-                },
-                "example": {
-                  "code": "UNAUTHORIZED",
-                  "messageKey": "error.unauthorized",
-                  "params": {}
                 }
               }
             }
           },
           "403": {
-            "description": "FORBIDDEN",
+            "description": "ApiFailure",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ApiFailure"
-                },
-                "example": {
-                  "code": "FORBIDDEN",
-                  "messageKey": "error.forbidden",
-                  "params": {}
                 }
               }
             }
           },
           "404": {
-            "description": "NOT_FOUND",
+            "description": "ApiFailure",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ApiFailure"
-                },
-                "example": {
-                  "code": "NOT_FOUND",
-                  "messageKey": "error.notFound",
-                  "params": {}
                 }
               }
             }
           },
           "409": {
-            "description": "CONFLICT",
+            "description": "ApiFailure",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ApiFailure"
-                },
-                "example": {
-                  "code": "CONFLICT",
-                  "messageKey": "error.conflict",
-                  "params": {}
                 }
               }
             }
           },
           "423": {
-            "description": "PIN_LOCKED",
+            "description": "ApiFailure",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ApiFailure"
-                },
-                "example": {
-                  "code": "PIN_LOCKED",
-                  "messageKey": "error.pinLocked",
-                  "params": {}
                 }
               }
             }
           },
           "429": {
-            "description": "RATE_LIMITED",
+            "description": "ApiFailure",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ApiFailure"
-                },
-                "example": {
-                  "code": "RATE_LIMITED",
-                  "messageKey": "error.rateLimited",
-                  "params": {}
                 }
               }
             }
           },
           "500": {
-            "description": "INTERNAL",
+            "description": "ApiFailure",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ApiFailure"
-                },
-                "example": {
-                  "code": "INTERNAL",
-                  "messageKey": "error.internal",
-                  "params": {}
                 }
               }
             }
@@ -7391,10 +8156,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/ClinicUpdate"
-              },
-              "example": {
-                "mode": "lite"
+                "$ref": "#/components/schemas/AdminClinicUpdate"
               }
             }
           }
@@ -7590,6 +8352,126 @@
                   "messageKey": "error.internal",
                   "params": {}
                 }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "createDoctor",
+        "tags": [
+          "administration"
+        ],
+        "description": "Creates directory record only, never login access. Explicit admin user provisioning links its returned ID. No plaintext credentials returned.",
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfToken": []
+          }
+        ],
+        "x-roles": [
+          "admin"
+        ],
+        "x-implementation": "real",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "AdminDoctor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminDoctor"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "ApiFailure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "ApiFailure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "ApiFailure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "ApiFailure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "ApiFailure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "423": {
+            "description": "ApiFailure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "ApiFailure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "ApiFailure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminDoctorInput"
               }
             }
           }
@@ -12505,21 +13387,18 @@
       "get": {
         "operationId": "getNetworkHealth",
         "tags": [
-          "network"
+          "administration"
         ],
-        "summary": "get network health",
-        "description": "Contract-only domain service; mock responses are simulated. Clinic scope comes from authenticated identity, not submitted identifiers. Admin has no implicit clinical access. Network visibility requires active consent and excludes Lite clinics. Mutations require CSRF; clientOpId is replay-safe per clinic, with changed payload returning 409.",
+        "description": "Persisted telemetry for every operational clinic. Online iff a non-revoked trusted device has a server-received heartbeat within configurable NETWORK_HEARTBEAT_TIMEOUT_SECONDS (default120). Never observed clinics are offline; unknown/stale/incomplete local queue totals are null. Server open conflicts are separate from device UNSUBMITTED counts: never add overlapping submitted queues. generatedAt is observation time, not sync success. Last successful sync stays null until an actual committed successful sync; heartbeat cannot set it.",
         "security": [
           {
             "sessionCookie": []
           }
         ],
         "x-roles": [
-          "admin",
-          "doctor",
-          "front-desk"
+          "admin"
         ],
-        "x-implementation": "contract-only",
+        "x-implementation": "real",
         "parameters": [],
         "responses": {
           "200": {
@@ -12528,137 +13407,86 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/NetworkHealth"
-                },
-                "example": {
-                  "clinics": [
-                    {
-                      "clinicId": 101,
-                      "status": "online",
-                      "lastSyncAt": "2026-09-09T07:00:00Z",
-                      "pendingOperations": 0
-                    }
-                  ],
-                  "measuredAt": "2026-09-09T07:00:00Z"
                 }
               }
             }
           },
           "400": {
-            "description": "VALIDATION",
+            "description": "ApiFailure",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ApiFailure"
-                },
-                "example": {
-                  "code": "VALIDATION",
-                  "messageKey": "error.validation",
-                  "params": {}
                 }
               }
             }
           },
           "401": {
-            "description": "UNAUTHORIZED",
+            "description": "ApiFailure",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ApiFailure"
-                },
-                "example": {
-                  "code": "UNAUTHORIZED",
-                  "messageKey": "error.unauthorized",
-                  "params": {}
                 }
               }
             }
           },
           "403": {
-            "description": "FORBIDDEN",
+            "description": "ApiFailure",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ApiFailure"
-                },
-                "example": {
-                  "code": "FORBIDDEN",
-                  "messageKey": "error.forbidden",
-                  "params": {}
                 }
               }
             }
           },
           "404": {
-            "description": "NOT_FOUND",
+            "description": "ApiFailure",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ApiFailure"
-                },
-                "example": {
-                  "code": "NOT_FOUND",
-                  "messageKey": "error.notFound",
-                  "params": {}
                 }
               }
             }
           },
           "409": {
-            "description": "CONFLICT",
+            "description": "ApiFailure",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ApiFailure"
-                },
-                "example": {
-                  "code": "CONFLICT",
-                  "messageKey": "error.conflict",
-                  "params": {}
                 }
               }
             }
           },
           "423": {
-            "description": "PIN_LOCKED",
+            "description": "ApiFailure",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ApiFailure"
-                },
-                "example": {
-                  "code": "PIN_LOCKED",
-                  "messageKey": "error.pinLocked",
-                  "params": {}
                 }
               }
             }
           },
           "429": {
-            "description": "RATE_LIMITED",
+            "description": "ApiFailure",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ApiFailure"
-                },
-                "example": {
-                  "code": "RATE_LIMITED",
-                  "messageKey": "error.rateLimited",
-                  "params": {}
                 }
               }
             }
           },
           "500": {
-            "description": "INTERNAL",
+            "description": "ApiFailure",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ApiFailure"
-                },
-                "example": {
-                  "code": "INTERNAL",
-                  "messageKey": "error.internal",
-                  "params": {}
                 }
               }
             }
@@ -14000,6 +14828,156 @@
             }
           }
         }
+      },
+      "get": {
+        "operationId": "listAdminDevices",
+        "tags": [
+          "administration"
+        ],
+        "description": "Administrator only; operational data only. Mutations require CSRF and commit safe audit records atomically.",
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "x-roles": [
+          "admin"
+        ],
+        "x-implementation": "real",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000000,
+              "default": 1
+            }
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 25
+            }
+          },
+          {
+            "name": "clinicId",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 2147483647
+            }
+          },
+          {
+            "name": "revoked",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "AdminDevicePage",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminDevicePage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "ApiFailure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "ApiFailure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "ApiFailure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "ApiFailure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "ApiFailure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "423": {
+            "description": "ApiFailure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "ApiFailure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "ApiFailure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/auth/devices/{id}": {
@@ -14850,6 +15828,1562 @@
                   "messageKey": "error.notFound",
                   "params": {}
                 }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/clinics": {
+      "get": {
+        "operationId": "listAdminClinics",
+        "tags": [
+          "administration"
+        ],
+        "description": "Administrator only; operational data only. Mutations require CSRF and commit safe audit records atomically.",
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "x-roles": [
+          "admin"
+        ],
+        "x-implementation": "real",
+        "parameters": [
+          {
+            "name": "cursor",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 512
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 25
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "AdminClinicPage",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminClinicPage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "ApiFailure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "ApiFailure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "ApiFailure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "ApiFailure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "ApiFailure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "423": {
+            "description": "ApiFailure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "ApiFailure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "ApiFailure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/clinics/{id}": {
+      "get": {
+        "operationId": "getAdminClinic",
+        "tags": [
+          "administration"
+        ],
+        "description": "Administrator only; operational data only. Mutations require CSRF and commit safe audit records atomically.",
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "x-roles": [
+          "admin"
+        ],
+        "x-implementation": "real",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 2147483647
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "AdminClinic",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminClinic"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "ApiFailure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "ApiFailure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "ApiFailure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "ApiFailure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "ApiFailure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "423": {
+            "description": "ApiFailure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "ApiFailure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "ApiFailure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/doctors": {
+      "get": {
+        "operationId": "listAdminDoctors",
+        "tags": [
+          "administration"
+        ],
+        "description": "Administrator only; operational data only. Mutations require CSRF and commit safe audit records atomically.",
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "x-roles": [
+          "admin"
+        ],
+        "x-implementation": "real",
+        "parameters": [
+          {
+            "name": "cursor",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 512
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 25
+            }
+          },
+          {
+            "name": "clinicId",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 2147483647
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "AdminDoctorPage",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminDoctorPage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "ApiFailure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "ApiFailure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "ApiFailure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "ApiFailure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "ApiFailure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "423": {
+            "description": "ApiFailure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "ApiFailure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "ApiFailure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/doctors/{id}": {
+      "get": {
+        "operationId": "getAdminDoctor",
+        "tags": [
+          "administration"
+        ],
+        "description": "Administrator only; operational data only. Mutations require CSRF and commit safe audit records atomically.",
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "x-roles": [
+          "admin"
+        ],
+        "x-implementation": "real",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 2147483647
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "AdminDoctor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminDoctor"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "ApiFailure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "ApiFailure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "ApiFailure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "ApiFailure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "ApiFailure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "423": {
+            "description": "ApiFailure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "ApiFailure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "ApiFailure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/doctors/{id}": {
+      "patch": {
+        "operationId": "updateDoctor",
+        "tags": [
+          "administration"
+        ],
+        "description": "Admin-only update. Linked email updates revoke user sessions atomically. Clinic moves require an unlinked doctor without historical records; otherwise 409.",
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfToken": []
+          }
+        ],
+        "x-roles": [
+          "admin"
+        ],
+        "x-implementation": "real",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 2147483647
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "AdminDoctor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminDoctor"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "ApiFailure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "ApiFailure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "ApiFailure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "ApiFailure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "ApiFailure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "423": {
+            "description": "ApiFailure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "ApiFailure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "ApiFailure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminDoctorUpdate"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/users": {
+      "get": {
+        "operationId": "listAdminUsers",
+        "tags": [
+          "administration"
+        ],
+        "description": "Administrator only; operational data only. Mutations require CSRF and commit safe audit records atomically.",
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "x-roles": [
+          "admin"
+        ],
+        "x-implementation": "real",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000000,
+              "default": 1
+            }
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 25
+            }
+          },
+          {
+            "name": "role",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "admin",
+                "doctor",
+                "front-desk"
+              ]
+            }
+          },
+          {
+            "name": "clinicId",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 2147483647
+            }
+          },
+          {
+            "name": "active",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ]
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 254
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "AdminUserPage",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminUserPage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "ApiFailure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "ApiFailure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "ApiFailure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "ApiFailure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "ApiFailure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "423": {
+            "description": "ApiFailure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "ApiFailure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "ApiFailure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "createAdminUser",
+        "tags": [
+          "administration"
+        ],
+        "description": "Administrator only; operational data only. Mutations require CSRF and commit safe audit records atomically.",
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfToken": []
+          }
+        ],
+        "x-roles": [
+          "admin"
+        ],
+        "x-implementation": "real",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "AdminUser",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminUser"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "ApiFailure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "ApiFailure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "ApiFailure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "ApiFailure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "ApiFailure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "423": {
+            "description": "ApiFailure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "ApiFailure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "ApiFailure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminUserInput"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/users/{id}": {
+      "get": {
+        "operationId": "getAdminUser",
+        "tags": [
+          "administration"
+        ],
+        "description": "Administrator only; operational data only. Mutations require CSRF and commit safe audit records atomically.",
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "x-roles": [
+          "admin"
+        ],
+        "x-implementation": "real",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 2147483647
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "AdminUser",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminUser"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "ApiFailure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "ApiFailure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "ApiFailure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "ApiFailure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "ApiFailure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "423": {
+            "description": "ApiFailure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "ApiFailure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "ApiFailure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "operationId": "updateAdminUser",
+        "tags": [
+          "administration"
+        ],
+        "description": "Administrator only; operational data only. Mutations require CSRF and commit safe audit records atomically.",
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfToken": []
+          }
+        ],
+        "x-roles": [
+          "admin"
+        ],
+        "x-implementation": "real",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 2147483647
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "AdminUser",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminUser"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "ApiFailure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "ApiFailure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "ApiFailure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "ApiFailure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "ApiFailure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "423": {
+            "description": "ApiFailure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "ApiFailure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "ApiFailure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminUserUpdate"
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deactivateAdminUser",
+        "tags": [
+          "administration"
+        ],
+        "description": "Deactivates account without deleting audit or historical references. Revokes sessions immediately. Last active network administrator protected under concurrent requests. Repeated deactivation is safe.",
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfToken": []
+          }
+        ],
+        "x-roles": [
+          "admin"
+        ],
+        "x-implementation": "real",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 2147483647
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Completed; no content"
+          },
+          "400": {
+            "description": "ApiFailure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "ApiFailure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "ApiFailure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "ApiFailure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "ApiFailure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "423": {
+            "description": "ApiFailure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "ApiFailure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "ApiFailure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/users/{id}/reset-pin": {
+      "post": {
+        "operationId": "resetAdminUserPin",
+        "tags": [
+          "administration"
+        ],
+        "description": "Four-digit PIN reset for front-desk users only, bcrypt cost12; clears lockout and invalidates sessions. Existing device trust is retained; never returns PIN or hashes.",
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfToken": []
+          }
+        ],
+        "x-roles": [
+          "admin"
+        ],
+        "x-implementation": "real",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 2147483647
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Completed; no content"
+          },
+          "400": {
+            "description": "ApiFailure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "ApiFailure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "ApiFailure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "ApiFailure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "ApiFailure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "423": {
+            "description": "ApiFailure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "ApiFailure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "ApiFailure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminPinInput"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/network/heartbeat": {
+      "post": {
+        "operationId": "recordNetworkHeartbeat",
+        "tags": [
+          "administration"
+        ],
+        "description": "Authenticated device-bound front-desk session plus CSRF and opaque device cookie required. Clinic/device derived server-side, not supplied. Strictly increasing sequence rejects replay with 409. Count covers only operations not submitted to server. Server receipt time is authoritative. Does not mark sync completion.",
+        "security": [
+          {
+            "sessionCookie": [],
+            "deviceCookie": [],
+            "csrfToken": []
+          }
+        ],
+        "x-roles": [
+          "doctor",
+          "front-desk"
+        ],
+        "x-implementation": "real",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "NetworkHeartbeat",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NetworkHeartbeat"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "ApiFailure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "ApiFailure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "ApiFailure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "ApiFailure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "ApiFailure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "423": {
+            "description": "ApiFailure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "ApiFailure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "ApiFailure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NetworkHeartbeatInput"
               }
             }
           }
