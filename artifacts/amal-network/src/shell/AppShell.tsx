@@ -15,6 +15,7 @@ import { TourOverlay } from '@/tour/TourOverlay';
 import { useTour } from '@/tour/use-tour';
 import { CalendarPage } from '@/calendar/CalendarPage';
 import { BookingHandoff } from '@/calendar/BookingHandoff';
+import { CancellationProvider } from '@/calendar/CancellationProvider';
 import { bookingQuery } from '@/calendar/booking';
 import { withCarry } from '@/calendar/carry';
 import { isKnownRole, landingFor, resolve, routesFor, type Resolution, type ShellRoute } from './routes';
@@ -24,6 +25,13 @@ const BOTTOM_SLOTS = 4;
 interface Props { identity: ShellIdentity; fixture: boolean; onRefresh: () => Promise<void>; onLogout: () => Promise<void> }
 
 export function AppShell({ identity, fixture, onRefresh, onLogout }: Props) {
+  return <CancellationProvider key={identity.id}><AppShellContent identity={identity} fixture={fixture} onRefresh={onRefresh} onLogout={async () => {
+    window.dispatchEvent(new Event('amal:discard-cancellations'));
+    await onLogout();
+  }} /></CancellationProvider>;
+}
+
+function AppShellContent({ identity, fixture, onRefresh, onLogout }: Props) {
   const { t } = useTranslation();
   const [location] = useLocation();
   const search = useSearch();

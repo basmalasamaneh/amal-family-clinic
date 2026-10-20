@@ -13,7 +13,8 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test:auth:unit": "tsx --test tests/auth.unit.test.ts",
     "test:auth": "playwright test auth.spec.ts",
-    "test:calendar:unit": "tsx --test tests/calendar.unit.test.ts"
+    "test:calendar:unit": "tsx --test tests/calendar.unit.test.ts",
+    "test:booking:unit": "tsx --test tests/booking.unit.test.ts"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.14.0",

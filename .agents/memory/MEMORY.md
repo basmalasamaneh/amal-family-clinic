@@ -10,3 +10,4 @@
 - [Vite peer identity](vite-peer-deduplication.md) — Workbox build peers can duplicate Vite types; deduplicate before changing unrelated consumers.
 - [Test browser environment](test-browser-environment.md) — downloaded Playwright browsers may lack NixOS native libraries; screenshot baselines depend on browser and fonts.
 - [Scheduling coordination](scheduling-coordination.md) — future sync/import writes must share database locks; historical collisions prevent blanket exclusion constraints.
+- [Portal sizing](portal-sizing.md) — check modal bounds directly; page scroll width can hide portaled overflow.

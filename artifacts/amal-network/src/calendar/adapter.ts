@@ -13,6 +13,8 @@ export interface CalendarAppointment {
   conflict: boolean;
   /** Local outbox state, separate from lifecycle. */
   syncPending: boolean;
+  /** Real API version required for safe operational cancellation; absent in read-only fixtures. */
+  version?: number;
 }
 /** Local working hours in minutes from local midnight. null = not configured. */
 export interface ClinicHours { open: number; close: number; slotMinutes: number }
@@ -37,6 +39,7 @@ export function fromApiAppointment(a: Appointment): CalendarAppointment {
     patientName: typeof ext.patientName === 'string' && ext.patientName.trim() ? ext.patientName : null,
     startsAt: a.startsAt, endsAt: a.endsAt, lifecycle: toLifecycle(a.status),
     conflict: ext.conflict === true, syncPending: false,
+    version: a.version,
   };
 }
 const fromApiDoctor = (d: Doctor): CalendarDoctor => ({ id: d.id, clinicId: d.clinicId, name: d.name });

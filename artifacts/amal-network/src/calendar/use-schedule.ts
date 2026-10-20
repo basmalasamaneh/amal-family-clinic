@@ -42,5 +42,9 @@ export function useSchedule(adapter: SchedulingReadAdapter, clinicId: number | n
     return () => ctl.abort();
   }, [adapter, clinicId, from, to, attempt, scope]);
   const retry = useCallback(() => setAttempt((n) => n + 1), []);
+  useEffect(() => {
+    window.addEventListener('amal:appointments-changed', retry);
+    return () => window.removeEventListener('amal:appointments-changed', retry);
+  }, [retry]);
   return { load, retry };
 }

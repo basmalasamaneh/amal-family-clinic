@@ -1,0 +1,6 @@
+.cancel-notices { position: fixed; inset-block-end: 5rem; inset-inline-end: 1rem; z-index: 60; max-inline-size: min(30rem, calc(100vw - 2rem)); max-block-size: 40vh; overflow: auto; }
+.cancel-notice, .cancel-notices > p { background: var(--amal-surface); color: var(--amal-text); border: 2px solid var(--amal-warning); border-radius: 12px; padding: 1rem; margin-block: .5rem; box-shadow: 0 4px 16px #0002; }
+.cancel-dialog { max-inline-size: min(36rem, calc(100vw - 2rem)); font-size: 18px; }
+.cancel-actions { display: flex; flex-wrap: wrap; gap: .75rem; margin-block-start: 1rem; }
+.cancel-danger { color: var(--amal-danger); border-color: var(--amal-danger); }
+.cancel-pending { display: block; color: var(--amal-warning); font-weight: 600; }

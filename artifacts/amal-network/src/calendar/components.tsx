@@ -4,6 +4,12 @@ import { StatusBadge, useAmalPreferences } from '@workspace/amal-ui';
 import type { CalendarAppointment, CalendarDoctor } from './adapter';
 import { formatLocalDate, formatNum, formatTime } from './dates';
 import { displayStatus } from './status';
+import { useSyncExternalStore } from 'react';
+import { useCancellation } from './CancellationProvider';
+
+const emptyEntries: never[] = [];
+const emptySubscribe = () => () => {};
+const emptySnapshot = () => emptyEntries;
 
 export function DateNavigator({ view, date, today, demoDate, onChange }: {
   view: 'day' | 'week'; date: string; today: string; demoDate: string | null; onChange: (date: string, step?: number) => void;
@@ -37,6 +43,9 @@ export function DateNavigator({ view, date, today, demoDate, onChange }: {
 
 export function AppointmentCard({ appt, doctor, showDoctor, compact }: { appt: CalendarAppointment; doctor?: CalendarDoctor; showDoctor?: boolean; compact?: boolean }) {
   const { t } = useTranslation();
+  const cancellation = useCancellation();
+  const entries = useSyncExternalStore(cancellation?.store.subscribe ?? emptySubscribe, cancellation?.store.getSnapshot ?? emptySnapshot);
+  const pending = entries.some((item) => item.target.id === appt.id && item.state !== 'failed');
   const { locale, digitPreference } = useAmalPreferences();
   const status = displayStatus(appt);
   const start = formatTime(appt.startsAt, locale, digitPreference);
@@ -48,6 +57,8 @@ export function AppointmentCard({ appt, doctor, showDoctor, compact }: { appt: C
   return (
     <button
       type="button"
+      onClick={() => cancellation?.open(appt)}
+      disabled={pending}
       className={`cal-card cal-card--${status ?? 'unknown'}${compact ? ' cal-card--compact' : ''}`}
       aria-label={t('calendar.card.aria', { name, start, end, status: statusLabel, doctor: doctorName })}
       data-testid={`card-appointment-${appt.id}`}
@@ -56,6 +67,7 @@ export function AppointmentCard({ appt, doctor, showDoctor, compact }: { appt: C
       <bdi className={`cal-card__name${appt.patientName ? '' : ' is-missing'}`} dir="auto">{name}</bdi>
       {showDoctor && <bdi className="cal-card__doc" dir="auto">{doctorName}</bdi>}
       <span className="cal-card__badges">
+        {pending && <span className="cancel-pending">{t('pendingBadge', { ns: 'cancellation' })}</span>}
         {status ? <StatusBadge status={status} /> : (
           <span className="amal-status cal-status-unknown" data-testid="status-unknown"><HelpCircle size={15} aria-hidden="true" /><span>{statusLabel}</span></span>
         )}
