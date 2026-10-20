@@ -28,7 +28,7 @@ const BOTTOM_SLOTS = 4;
 interface Props { identity: ShellIdentity; fixture: boolean; onRefresh: () => Promise<void>; onLogout: () => Promise<void> }
 
 export function AppShell({ identity, fixture, onRefresh, onLogout }: Props) {
-  return <CancellationProvider key={identity.id}><AppShellContent identity={identity} fixture={fixture} onRefresh={onRefresh} onLogout={async () => {
+  return <CancellationProvider key={identity.id} clinicNames={Object.fromEntries(identity.clinics.map((c) => [c.id, c.name]))}><AppShellContent identity={identity} fixture={fixture} onRefresh={onRefresh} onLogout={async () => {
     window.dispatchEvent(new Event('amal:discard-cancellations'));
     await onLogout();
   }} /></CancellationProvider>;

@@ -327,6 +327,58 @@ test("appointment APIs: authenticated scope, transactions, idempotency, holds an
     assert.equal(booked.status, 201);
     assert.equal((await admin.query("SELECT count(*)::integer n FROM operational.appointment_holds WHERE token=$1", [first.data.token])).rows[0].n, 0);
   });
+  await t.test("rescheduling excludes itself, preserves identity, and atomically rejects competing moves", async () => {
+    const a = await request(doctor, "/appointments", "POST", booking(doctor, patientIds[12]!, 16));
+    const b = await request(doctor, "/appointments", "POST", booking(doctor, patientIds[13]!, 17));
+    assert.equal(a.status, 201); assert.equal(b.status, 201);
+    const snapshot = async (id: number) => (await admin.query(
+      "SELECT * FROM operational.appointments WHERE appointment_id=$1", [id])).rows[0];
+    const beforeA = await snapshot(a.data.id), beforeB = await snapshot(b.data.id);
+    const check = { ...booking(doctor, patientIds[12]!, 16), appointmentId: a.data.id, expectedVersion: 1 };
+    assert.deepEqual((await request(doctor, "/appointments/check", "POST", check)).data, { ok: true, conflicts: [] });
+    const noop = { clientOpId: randomUUID(), expectedVersion: 1, ...interval(16) };
+    const unchanged = await request(desk, `/appointments/${a.data.id}`, "PATCH", noop);
+    assert.equal(unchanged.status, 200);
+    assert.equal(unchanged.data.id, a.data.id);
+    assert.deepEqual((await request(desk, `/appointments/${a.data.id}`, "PATCH", noop)).data, unchanged.data);
+    const currentA = await snapshot(a.data.id);
+    const blocked = await request(desk, `/appointments/${a.data.id}`, "PATCH",
+      { clientOpId: randomUUID(), expectedVersion: 2, ...interval(17) });
+    assert.equal(blocked.status, 409);
+    assert.deepEqual(await snapshot(a.data.id), currentA, "Rejected move must preserve every persisted field");
+    const denied = await request(remoteDoctor, `/appointments/${a.data.id}`, "PATCH",
+      { clientOpId: randomUUID(), expectedVersion: 2, ...interval(18) });
+    assert.equal(denied.status, 403);
+    assert.deepEqual(await snapshot(a.data.id), currentA);
+    const [moveA, moveB] = await Promise.all([
+      request(desk, `/appointments/${a.data.id}`, "PATCH", { clientOpId: randomUUID(), expectedVersion: 2, ...interval(18) }),
+      request(desk2, `/appointments/${b.data.id}`, "PATCH", { clientOpId: randomUUID(), expectedVersion: 1, ...interval(18) }),
+    ]);
+    assert.deepEqual([moveA.status, moveB.status].sort(), [200, 409]);
+    const loserId = moveA.status === 409 ? a.data.id : b.data.id;
+    assert.deepEqual(await snapshot(loserId), moveA.status === 409 ? currentA : beforeB);
+    for (const [id, original] of [[a.data.id, beforeA], [b.data.id, beforeB]] as const) {
+      const persisted = await snapshot(id);
+      for (const key of ["appointment_id", "patient_id", "doctor_id", "clinic_id", "booking_method", "status", "client_op_id", "created_by"]) {
+        assert.deepEqual(persisted[key], original[key], `Rescheduling preserves ${key}`);
+      }
+    }
+  });
+  await t.test("edit holds retain target identity and a stale preview cannot bypass version checks", async () => {
+    const created = await request(doctor, "/appointments", "POST", booking(doctor, patientIds[14]!, 19));
+    assert.equal(created.status, 201);
+    const target = { clinicId: doctor.clinicId, doctorId: doctor.doctorId, patientId: patientIds[14], appointmentId: created.data.id, ...interval(19) };
+    const held = await request(desk, "/appointments/holds", "POST", { ...target, clientOpId: randomUUID() });
+    assert.equal(held.status, 201);
+    const body = { clientOpId: randomUUID(), expectedVersion: 1, ...interval(19), holdToken: held.data.token };
+    const moved = await request(desk, `/appointments/${created.data.id}`, "PATCH", body);
+    assert.equal(moved.status, 200);
+    assert.equal((await admin.query("SELECT count(*)::integer n FROM operational.appointment_holds WHERE token=$1", [held.data.token])).rows[0].n, 0);
+    const stale = await request(desk, "/appointments/check", "POST", { ...target, source: "phone", expectedVersion: 1 });
+    assert.equal(stale.status, 409);
+    assert.equal(stale.data.code, "VERSION_CONFLICT");
+    assert.deepEqual((await request(desk, `/appointments/${created.data.id}`, "PATCH", body)).data, moved.data);
+  });
   await t.test("expired holds reject supplied token without extension; token release is owner-bound and idempotent", async () => {
     const { source: _source, ...hold } = booking(doctor, patientIds[7]!, 11);
     const created = await request(desk, "/appointments/holds", "POST", hold);

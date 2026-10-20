@@ -1,6 +1,8 @@
 import { createContext, useContext, useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
-import { AlertTriangle, X } from 'lucide-react';
+import { AlertTriangle, CalendarClock, X } from 'lucide-react';
+import { EditAppointmentDrawer } from '@/booking/EditAppointmentDrawer';
+import '@/booking/edit-strings';
 import { useTranslation } from 'react-i18next';
 import { updateAppointment } from '@workspace/api-client-react';
 import { useQueryClient } from '@tanstack/react-query';
@@ -14,7 +16,8 @@ import './cancellation.css';
 
 const Context = createContext<{ store: CancellationStore; open: (appt: CalendarAppointment) => void } | null>(null);
 export const useCancellation = () => useContext(Context);
-export function CancellationProvider({ children }: { children: ReactNode }) {
+export function CancellationProvider({ children, clinicNames }: { children: ReactNode; clinicNames?: Record<number, string> }) {
+  const clinicNameOf = (id: number) => clinicNames?.[id] ?? `#${id}`;
   const { t } = useTranslation('cancellation');
   const queryClient = useQueryClient();
   const [success, setSuccess] = useState(false);
@@ -33,11 +36,14 @@ export function CancellationProvider({ children }: { children: ReactNode }) {
   }, refresh, () => setSuccess(true)));
   const entries = useSyncExternalStore(store.subscribe, store.getSnapshot);
   const [target, setTarget] = useState<CalendarAppointment | null>(null);
+  const [editing, setEditing] = useState<CalendarAppointment | null>(null);
+  const [updated, setUpdated] = useState(false);
+  const editTrigger = useRef<HTMLElement | null>(null);
   const trigger = useRef<HTMLElement | null>(null);
   const [now, setNow] = useState(Date.now);
   useEffect(() => {
     const timer = setInterval(() => setNow(Date.now()), 250);
-    const clear = () => { store.clear(); setTarget(null); setSuccess(false); setCreated(null); };
+    const clear = () => { store.clear(); setTarget(null); setEditing(null); setUpdated(false); setSuccess(false); setCreated(null); };
     const onCreated = (event: Event) => {
       const detail = (event as CustomEvent<{ kind?: string; simulated?: boolean }>).detail;
       if (detail?.kind === 'created') setCreated(detail.simulated ? 'simulated' : 'created');
@@ -58,6 +64,7 @@ export function CancellationProvider({ children }: { children: ReactNode }) {
     {children}
     <section className="cancel-notices" aria-label={t('region')}>
       {created && <p role="status">{t(created)} <button className="cal-btn" onClick={() => setCreated(null)}>{t('dismiss')}</button></p>}
+      {updated && <p role="status" data-testid="status-edit-saved">{t('ed.saved', { ns: 'translation' })} <button className="cal-btn" onClick={() => setUpdated(false)}>{t('dismiss')}</button></p>}
       {success && <p role="status">{t('success')} <button className="cal-btn" onClick={() => setSuccess(false)}>{t('dismiss')}</button></p>}
       {entries.map((item) => <div key={item.target.id} className="cancel-notice">
         <strong>{t('appointment', { id: item.target.id })}</strong>
@@ -71,6 +78,7 @@ export function CancellationProvider({ children }: { children: ReactNode }) {
         <Dialog.Overlay className="shell-overlay" />
         <Dialog.Content className="shell-dialog cancel-dialog" onCloseAutoFocus={(e) => {
           e.preventDefault();
+          if (editing) return;
           if (trigger.current?.isConnected && !trigger.current.matches(':disabled')) trigger.current.focus();
           else (document.querySelector<HTMLElement>('[data-cancellation-undo]') ?? document.getElementById('page-title'))?.focus();
         }}>
@@ -83,11 +91,22 @@ export function CancellationProvider({ children }: { children: ReactNode }) {
             {allowed && target && <button className="cal-btn cancel-danger" onClick={() => {
               store.schedule({ id: target.id, clinicId: target.clinicId, version: target.version! }); setSuccess(false); setTarget(null);
             }}>{t('confirm')}</button>}
+            {allowed && target && <button type="button" className="cal-btn" data-testid="button-edit-appointment" onClick={() => {
+              editTrigger.current = trigger.current; setUpdated(false); setEditing(target); setTarget(null);
+            }}><CalendarClock aria-hidden="true" />{t('ed.action', { ns: 'translation' })}</button>}
             <WalkInHandoff className="cal-btn" testId="button-cancel-walkin" />
             <Dialog.Close className="cal-btn" aria-label={t('close')}><X aria-hidden="true" /></Dialog.Close>
           </div>
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>
+    {editing && <EditAppointmentDrawer target={editing} clinicName={clinicNameOf(editing.clinicId)} onClose={(a) => {
+      setEditing(null); if (a) setUpdated(true);
+      requestAnimationFrame(() => {
+        const el = editTrigger.current;
+        if (el?.isConnected && !el.matches(':disabled')) el.focus();
+        else (document.querySelector<HTMLElement>(`[data-testid="card-appointment-${a?.id ?? editing.id}"]`) ?? document.getElementById('page-title'))?.focus();
+      });
+    }} />}
   </Context.Provider>;
 }
