@@ -153,6 +153,56 @@ support; do not use seed initialization or demo reset to install this service.
 Persistence tests use disposable operational fixtures, never seed edits.
 Backend-only changes need no visual/browser test.
 
+## Reception read adapters (Task 14)
+
+`GET /clinics` returns only the authenticated doctor/front-desk user's current
+operational clinic, in the existing `{items,nextCursor}` contract.
+`GET /doctors?clinicId=...` returns current-clinic doctors for front-desk and only
+the authenticated doctor's own ID for a doctor. Both support the existing
+`limit`/opaque `cursor` query fields (maximum 100), reject unknown query fields,
+and deny administrators. Directory cursors are actor/clinic/doctor-scope bound.
+Only existing scheduling identity projections are returned; doctor
+`networkVisible=false` explicitly grants no network visibility or patient consent.
+These adapters do not implement clinic mutation/detail or network directory work.
+
+`GET /appointments/availability?clinicId=...&patientId=...` requires **both**
+positive IDs and an independently authorized patient relationship. It returns:
+
+```json
+{
+  "items": [{"doctorId": 201, "startsAt": "2026-09-09T07:00:00Z", "endsAt": "2026-09-09T07:30:00Z"}],
+  "durationMinutes": 30,
+  "checkedAt": "2026-09-09T06:59:00Z"
+}
+```
+
+The example IDs/duration are illustrative, never application defaults. Actual
+duration is current operational `clinic.slot_minutes`. Each authorized local
+doctor contributes at most one nearest **strictly future** interval, ordered by
+doctor ID. The same engine generator used for conflict suggestions enforces grid,
+working days/hours, full interval fit, DST, the 30-local-date horizon, active
+doctor/patient bookings (including cross-clinic patient collisions) and all
+unexpired doctor holds, including the requester's own. No overlap warning is
+automatically overridden. Empty `items` means no eligible interval in the bounded
+horizon, not a fallback schedule. Auth/patient/scope/settings failures remain
+explicit errors. Only candidate local intervals leave the service, never remote
+appointment/clinical details. `checkedAt` is the transactional database clock.
+Availability is advisory: it creates no hold, and check/hold/create retain their
+existing authoritative conflict envelopes and idempotency semantics.
+
+`GET /appointments?clinicId=...&patientId=...&upcoming=true` requires an
+authorized patient ID and keeps the same appointment-page scheduling projection.
+It returns only `booked`/`double_booked` starts at or after the server's current
+instant, in `(scheduled_at,appointment_id)` ascending order. Cancelled, completed,
+no-show and already-started rows are excluded in SQL, before paging. Optional
+`from` (inclusive), `to` (exclusive), doctor and active-status filters narrow,
+never widen, this scope. `limit` defaults to 25 (maximum 100); opaque v2 keyset
+cursors bind to actor and all filters and preserve chronological same-time ties.
+Other patients and other clinics are never fetched to populate this list.
+Without `upcoming=true`, legacy behavior still requires `from` and `to` and
+retains ID-ordered v1 cursors. No conflict shapes, clinical services, sharing or
+seed records are changed.
+
 Verified in the task workspace: 26 engine tests, 12 API/persistence tests,
 85 contract/mock checks, 37 existing workspace tests, and workspace typechecking.
 The API workflow starts cleanly; health returns 200 and anonymous appointment

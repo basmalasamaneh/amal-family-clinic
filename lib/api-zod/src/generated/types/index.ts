@@ -9,6 +9,8 @@
 export * from './apiFailure';
 export * from './apiFailureParams';
 export * from './appointment';
+export * from './appointmentAvailability';
+export * from './appointmentAvailabilityItemsItem';
 export * from './appointmentCheckInput';
 export * from './appointmentCheckInputSource';
 export * from './appointmentHold';
@@ -55,6 +57,7 @@ export * from './duplicateCandidate';
 export * from './duplicateCandidateDecision';
 export * from './duplicateCandidatePage';
 export * from './duplicateCandidateReasonsItem';
+export * from './getAppointmentAvailabilityParams';
 export * from './getKpisParams';
 export * from './getKpisRange';
 export * from './healthStatus';

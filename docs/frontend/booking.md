@@ -7,12 +7,12 @@ without replacing the shell, implementing other backlog services, or changing se
 All writes use the generated appointment client and its existing session/CSRF handling.
 The wire operation identifier is `clientOpId` (the database stores `client_op_id`).
 
-**Live end-to-end booking/search is blocked upstream:** `GET /patients`,
-`GET /doctors`, and `GET /clinics` are published contracts, but are not mounted
-business services in the API router. The real shell reports its clinic-read failure;
-the drawer never substitutes fixture identities or creates a patient backend.
-Appointment check, hold, create, and PATCH cancellation services exist.
-No live write or live patient-search verification is claimed by this frontend task.
+**Current integration:** `GET /patients`, `GET /doctors`, and `GET /clinics`
+are mounted, authenticated operational services. Reception sees only its authorized
+clinic and demographic roster. Appointment check, hold, create, PATCH cancellation
+and the bounded quick-walk-in availability adapter use the shared scheduling engine.
+The original booking verification below was fixture-backed; subsequent real-service
+reception coverage is recorded in [reception verification](../reception-verification.md).
 
 ## Patient search contract handoff
 
@@ -99,5 +99,6 @@ restoration, and Arabic/English × light/dark at desktop/mobile.
 
 The matrix exposed a content-box sizing issue on the mobile conflict dialog.
 Explicit border-box sizing fixes the measured 46px overflow; the focused matrix
-regression passes for all eight language/theme/viewport combinations and is retained. Live clinic/doctor/patient integration remains blocked
-as described above; these browser results are fixture/contract-intercept evidence.
+regression passes for all eight language/theme/viewport combinations and is retained.
+These original browser results are fixture/contract-intercept evidence, not the
+later live-service reception verification linked above.

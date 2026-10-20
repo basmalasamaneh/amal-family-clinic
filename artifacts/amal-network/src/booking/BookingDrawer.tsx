@@ -18,6 +18,9 @@ import { classifyError, isAbort, type Failure, type FailureKind } from './errors
 import { effectiveInterval, localTimeOf, minutesBetween, nextLocalTime, type ExactSlot } from './time';
 import type { BookingApi } from './api';
 import type { PatientHit, PatientSearchAdapter } from './patients';
+import { QuickSlots } from '@/reception/QuickSlots';
+import { WalkInHandoff } from '@/reception/WalkInHandoff';
+import type { AvailabilityFn, AvailabilitySlot } from '@/reception/api';
 import './booking.css';
 
 export const CHECK_DEBOUNCE_MS = 350;
@@ -31,9 +34,15 @@ export interface BookingDrawerProps {
   clinic: ShellClinic; ctx: BookingContext | null; title: string;
   scheduling: SchedulingReadAdapter; patients: PatientSearchAdapter; api: BookingApi;
   onClose: (created: Appointment | null) => void;
+  /** Explicitly chosen patient handed in by the caller (still shown and changeable). */
+  initialPatient?: PatientHit | null;
+  /** Walk-in quick path: server nearest-slot lookup. Absent means the classic three-stage flow only. */
+  availability?: AvailabilityFn;
+  /** Walk-in hint only: ranked first if the doctor is on the live clinic roster; never auto-booked. */
+  preferDoctorId?: number | null;
 }
 
-export function BookingDrawer({ clinic, ctx, title, scheduling, patients, api, onClose }: BookingDrawerProps) {
+export function BookingDrawer({ clinic, ctx, title, scheduling, patients, api, onClose, initialPatient, availability, preferDoctorId = null }: BookingDrawerProps) {
   const { t } = useTranslation();
   const { locale, digitPreference: dp } = useAmalPreferences();
   const qc = useQueryClient();
@@ -46,7 +55,7 @@ export function BookingDrawer({ clinic, ctx, title, scheduling, patients, api, o
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const [stage, setStage] = useState<Stage>(0);
-  const [patient, setPatient] = useState<PatientHit | null>(null);
+  const [patient, setPatient] = useState<PatientHit | null>(initialPatient && initialPatient.clinicId === clinic.id ? initialPatient : null);
   const [doctorId, setDoctorId] = useState<number | null>(ctx?.doctorId ?? null);
   const [date, setDate] = useState(initial.date);
   const [time, setTime] = useState(initial.time);
@@ -64,6 +73,8 @@ export function BookingDrawer({ clinic, ctx, title, scheduling, patients, api, o
   const [now, setNow] = useState(() => Date.now());
   const [submitting, setSubmitting] = useState(false);
   const [submitErr, setSubmitErr] = useState<Failure | null>(null);
+  /** Quick walk-in: checkKey that should auto-commit once its check passes and its hold is held. */
+  const [auto, setAuto] = useState<{ key: string; label: string } | null>(null);
   const checkSeq = useRef(createLatest()).current;
   const holdSeq = useRef(createLatest()).current;
   const attempts = useRef(createAttemptKeeper<Omit<AppointmentInput, 'clientOpId'>>()).current;
@@ -206,9 +217,29 @@ export function BookingDrawer({ clinic, ctx, title, scheduling, patients, api, o
   };
   const close = () => { releaseHold(); onClose(null); };
 
+  // Quick walk-in tap 3: sets the exact server slot, then the normal check -> hold -> create
+  // pipeline runs. Any conflict, warning, failed check or failed hold stops and hands the user
+  // the existing conflict dialog / confirm step. Nothing is acknowledged on the user's behalf.
+  const quickBook = (s: AvailabilitySlot, docName: string) => {
+    if (!patient || submitting) return;
+    setDoctorId(s.doctorId); setExact({ startsAt: s.startsAt, endsAt: s.endsAt }); setDate(localDateOf(s.startsAt)); setTime(localTimeOf(s.startsAt)); setDuration(minutesBetween(s.startsAt, s.endsAt));
+    const key = stableKey({ clinicId: clinic.id, doctorId: s.doctorId, patientId: patient.id, startsAt: s.startsAt, endsAt: s.endsAt, source });
+    setAuto({ key, label: t('rx.quick.committing', { doctor: '\u2068' + docName + '\u2069', time: formatTime(s.startsAt, locale, dp) }) });
+    setStage(2);
+  };
+  useEffect(() => {
+    if (!auto || checkKey !== auto.key) return;
+    if (check.kind === 'error') { setAuto(null); return; }
+    if (preview && !canProceed) { setAuto(null); setStage(1); if (preview.conflicts.length) setConflictOpen(true); return; }
+    if (preview && summary?.warnings.length) { setAuto(null); setStage(1); setConflictOpen(true); return; }
+    if (hold.kind === 'failed') { setAuto(null); return; }
+    if (hold.kind === 'held' && hold.key === holdKey && !holdExpired && !submittingRef.current) { setAuto(null); void submit(false); }
+  }); // eslint-disable-line react-hooks/exhaustive-deps
+
   const next = () => setStage((s) => (s === 0 && patient ? 1 : s === 1 && canProceed ? 2 : s));
-  const back = () => setStage((s) => (s > 0 ? ((s - 1) as Stage) : s));
+  const back = () => { setAuto(null); setStage((s) => (s > 0 ? ((s - 1) as Stage) : s)); };
   const Icon = walkIn ? DoorOpen : PhoneCall;
+  const quick = walkIn && !!availability;
   const steps = ['patient', 'slot', 'confirm'] as const;
   const reasonError = summary?.overrideable && ack && reasonTouched && !reason.trim();
   const durations = DURATIONS.includes(duration) ? DURATIONS : [...DURATIONS, duration].sort((a, b) => a - b);
@@ -240,6 +271,7 @@ export function BookingDrawer({ clinic, ctx, title, scheduling, patients, api, o
               <p className="bk-eyebrow"><bdi>{clinic.name}</bdi> · {walkIn ? t('bk.srcWalkIn') : t('bk.srcPhone')}</p>
               <Dialog.Title className="bk-title"><Icon size={26} aria-hidden="true" />{walkIn ? t('bk.walkInTitle') : title}</Dialog.Title>
             </div>
+            {!walkIn && !submitting && <WalkInHandoff testId="button-drawer-walkin" context={{ clinicId: clinic.id, patient, doctorId }} />}
             <Dialog.Close className="bk-x" aria-label={t('bk.close')} disabled={submitting} data-testid="button-close-booking"><X size={22} aria-hidden="true" /></Dialog.Close>
           </header>
           <ol className="bk-steps" aria-label={t('bk.stepsLabel')}>
@@ -263,9 +295,11 @@ export function BookingDrawer({ clinic, ctx, title, scheduling, patients, api, o
                   <span className="bk-opt__main"><span className="bk-hint">{t('bk.search.selected')}</span><bdi className="bk-opt__name" dir="auto">{patient.name}</bdi>
                     <span className="bk-opt__meta">{patient.phone && <bdi dir="ltr">{patient.phone}</bdi>}<span>{t('bk.search.id', { id: patient.id })}</span></span></span>
                 </div>
-                <button type="button" className="bk-btn bk-btn--sm" onClick={() => setPatient(null)} data-testid="button-change-patient">{t('bk.search.change')}</button>
+                <button type="button" className="bk-btn bk-btn--sm" onClick={() => { setAuto(null); setPatient(null); }} data-testid="button-change-patient">{t('bk.search.change')}</button>
+                {quick && <QuickSlots clinicId={clinic.id} clinicName={clinic.name} patient={patient} doctors={doctors.list} doctorsKind={doctors.kind} onDoctorsRetry={() => setDocNonce((n) => n + 1)}
+                  availability={availability!} preferDoctorId={preferDoctorId} busy={submitting || !!auto} onBook={quickBook} onOther={() => setStage(1)} />}
               </div>
-            ) : <PatientQuickSearch adapter={patients} clinicId={clinic.id} autoFocus onSelect={(p) => { setPatient(p); setStage(1); }} />)}
+            ) : <PatientQuickSearch adapter={patients} clinicId={clinic.id} autoFocus paginate onSelect={(p) => { setPatient(p); if (!quick) setStage(1); }} />)}
 
             {stage === 1 && <>
               <div className="bk-field">
@@ -305,6 +339,7 @@ export function BookingDrawer({ clinic, ctx, title, scheduling, patients, api, o
                 {cleanReason && <><dt>{t('bk.confirm.reason')}</dt><dd><bdi dir="auto">{cleanReason}</bdi></dd></>}
               </dl>
               <div aria-live="polite">
+                {auto && <Msg tone="muted" icon={Loader2} testId="status-quick-committing">{auto.label}</Msg>}
                 {!canProceed ? checkPanel()
                   : hold.kind === 'getting' ? <Msg tone="muted" icon={Loader2} testId="status-hold-getting">{t('bk.confirm.holdGetting')}</Msg>
                   : hold.kind === 'held' && !holdExpired ? (

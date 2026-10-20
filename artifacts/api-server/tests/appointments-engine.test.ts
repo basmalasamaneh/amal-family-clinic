@@ -4,7 +4,7 @@ import { formatInTimeZone, fromZonedTime } from "date-fns-tz";
 import { readSource } from "../../../scripts/src/seed-source";
 import { ApiError } from "../src/lib/auth-errors";
 import {
-  ACTIVE_STATUSES, evaluate,
+  ACTIVE_STATUSES, evaluate, nearestAvailability,
   type Appointment, type EvaluationInput, type Hold, type Settings,
 } from "../src/appointments/engine";
 
@@ -28,6 +28,60 @@ function check(overrides: Partial<EvaluationInput> = {}) {
   });
 }
 const types = (result: ReturnType<typeof check>) => result.conflicts.map(c => c.type);
+
+test("reception availability shares grid/hours, excludes patient overlap and all active holds without overrides", () => {
+  const now = new Date(utc("2026-09-09T07:55:00"));
+  const input: EvaluationInput = {
+    appointment: appointment({ id: 0, startAt: now.toISOString() }),
+    appointments: [
+      other({ startAt: utc("2026-09-09T08:00:00") }),
+      other({ id: 3, doctorId: 9, clinicId: 9, patientId: 1, startAt: utc("2026-09-09T08:30:00") }),
+      other({ id: 4, startAt: utc("2026-09-09T09:30:00"), status: "cancelled" }),
+    ],
+    holds: [{ doctorId: 1, clinicId: 1, startAt: utc("2026-09-09T09:00:00"), durationMinutes: 30,
+      ownerId: 1, expiresAt: utc("2026-09-09T10:00:00") }],
+    settings, now, ownerId: 1, canOverride: false, visible: () => false,
+  };
+  assert.deepEqual(nearestAvailability(input), {
+    startsAt: utc("2026-09-09T09:30:00"), endsAt: utc("2026-09-09T10:00:00"),
+  });
+  assert.deepEqual(nearestAvailability({ ...input, holds: input.holds.map(h => ({ ...h, expiresAt: now.toISOString() })) }), {
+    startsAt: utc("2026-09-09T09:00:00"), endsAt: utc("2026-09-09T09:30:00"),
+  });
+  assert.equal(nearestAvailability({ ...input, appointments: [], holds: [],
+    now: new Date(utc("2026-09-09T08:00:00")) })!.startsAt, utc("2026-09-09T08:30:00"),
+  "starts strictly after checkedAt, never an already-started slot");
+});
+
+test("reception availability is bounded to 30 local dates and respects no-slot and invalid settings", () => {
+  const now = new Date(utc("2026-09-09T07:00:00"));
+  const input: EvaluationInput = {
+    appointment: appointment({ id: 0, startAt: now.toISOString(), durationMinutes: 30 }),
+    appointments: [], holds: [], settings: { ...settings, openTime: "08:00", closeTime: "08:30" },
+    now, ownerId: 1, canOverride: false, visible: () => false,
+  };
+  const busy = Array.from({ length: 30 }, (_, i) => {
+    const date = new Date(Date.UTC(2026, 8, 9 + i)).toISOString().slice(0, 10);
+    return other({ id: i + 2, startAt: utc(`${date}T08:00:00`) });
+  });
+  assert.equal(nearestAvailability({ ...input, appointments: busy }), null);
+  assert.equal(nearestAvailability({ ...input, appointment: { ...input.appointment, durationMinutes: 60 } }), null);
+  assert.throws(() => nearestAvailability({ ...input, settings: { ...settings, slotMinutes: 0 } }));
+});
+
+test("reception availability walks real DST instants and never fabricates a shifted opening boundary", () => {
+  for (const day of ["2026-03-28", "2026-10-24"]) {
+    const now = new Date(utc(`${day}T00:00:00`));
+    const slot = nearestAvailability({
+      appointment: appointment({ id: 0, startAt: now.toISOString(), durationMinutes: 15 }),
+      appointments: [], holds: [], settings: { ...settings, slotMinutes: 15 }, now,
+      ownerId: 1, canOverride: false, visible: () => false,
+    });
+    assert(slot);
+    assert.equal(formatInTimeZone(slot.startsAt, "Asia/Hebron", "yyyy-MM-dd HH:mm"), `${day} 08:00`);
+    assert.equal(Date.parse(slot.endsAt) - Date.parse(slot.startsAt), 15 * 60000);
+  }
+});
 
 test("half-open intervals permit adjacent starts and ends, and exclude the edited id", () => {
   const result = check({ appointments: [

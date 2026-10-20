@@ -1,8 +1,8 @@
 import { Router, type IRouter } from "express";
 import { z } from "zod/v4";
-import { AcquireAppointmentHoldResponse, CheckAppointmentsResponse, CreateAppointmentResponse, ListAppointmentsResponse, UpdateAppointmentResponse } from "@workspace/api-zod";
+import { AcquireAppointmentHoldResponse, CheckAppointmentsResponse, CreateAppointmentResponse, GetAppointmentAvailabilityResponse, ListAppointmentsResponse, UpdateAppointmentResponse } from "@workspace/api-zod";
 import { authenticate, csrf, requireRoles } from "../lib/auth";
-import { checkAppointment, createAppointment, createHold, listAppointments, releaseHold, updateAppointment } from "../appointments/service";
+import { checkAppointment, createAppointment, createHold, getAppointmentAvailability, listAppointments, releaseHold, updateAppointment } from "../appointments/service";
 
 const router: IRouter = Router();
 router.use("/appointments", authenticate);
@@ -10,6 +10,9 @@ router.use("/appointments", authenticate);
 function checked<T>(schema: { parse: (value: unknown) => unknown }, value: T): T { schema.parse(value); return value; }
 router.get("/appointments", requireRoles("doctor", "front-desk"), async (req, res) => {
   res.json(checked(ListAppointmentsResponse, await listAppointments(req.auth!, req.query)));
+});
+router.get("/appointments/availability", requireRoles("doctor", "front-desk"), async (req, res) => {
+  res.json(checked(GetAppointmentAvailabilityResponse, await getAppointmentAvailability(req.auth!, req.query)));
 });
 router.post("/appointments/check", csrf, requireRoles("doctor", "front-desk"), async (req, res) => {
   res.json(checked(CheckAppointmentsResponse, await checkAppointment(req.auth!, req.body)));

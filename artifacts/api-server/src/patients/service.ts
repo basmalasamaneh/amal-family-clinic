@@ -7,18 +7,35 @@ import { CreatePatientBody, ListPatientsQueryParams, UpdatePatientBody } from "@
 import { enforceScope, forbidden, type Auth } from "../lib/auth";
 import { fail } from "../lib/auth-errors";
 import { patientScopeSql } from "../lib/patient-access";
+import { hebronDay, isMinor, validBirthDate } from "./demographics";
 
 const positive = z.coerce.number().int().positive().max(2147483647);
 export const patientId = positive;
-const name = z.string().min(1).max(200).refine(v => normalizeName(v).length > 0);
-const phone = z.string().min(1).max(40).refine(v => canonicalPhone(v) !== null);
-const dob = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(v => {
-  const d = new Date(`${v}T00:00:00.000Z`);
-  return Number.isFinite(d.getTime()) && d.toISOString().slice(0, 10) === v &&
-    v >= "0001-01-01" && v <= new Date().toISOString().slice(0, 10);
-});
+const name = z.string().trim().min(1).max(200).refine(v => normalizeName(v).length > 0);
+const phone = z.string().trim().min(1).max(40).refine(v => canonicalPhone(v) !== null);
+const dob = z.string().refine(v => validBirthDate(v));
 const demographics = z.object({ name, phone, dateOfBirth: dob }).strict();
-const input = demographics.extend({ clientOpId: z.string().uuid() }).strict();
+function registrationInput(now: Date) {
+  const today = hebronDay(now);
+  return demographics.extend({
+    dateOfBirth: z.string().refine(v => validBirthDate(v, now)),
+    clientOpId: z.string().uuid(),
+    guardianName: z.string().optional(),
+    guardianRelation: z.string().optional(),
+  }).strict().superRefine((value, ctx) => {
+    if (!validBirthDate(value.dateOfBirth, now) || !isMinor(value.dateOfBirth, today)) return;
+    for (const [key, max] of [["guardianName", 200], ["guardianRelation", 100]] as const) {
+      if (!value[key]?.trim() || value[key]!.trim().length > max) {
+        ctx.addIssue({ code: "custom", path: [key], message: "Required guardian demographic" });
+      }
+    }
+  }).transform(value => {
+    const { guardianName, guardianRelation, ...rest } = value;
+    return isMinor(value.dateOfBirth, today)
+      ? { ...rest, guardianName: guardianName?.trim(), guardianRelation: guardianRelation?.trim() }
+      : rest;
+  });
+}
 const update = demographics.partial().refine(v => Object.keys(v).length > 0);
 const querySchema = z.object({
   q: z.string().max(200).optional(), cursor: z.string().max(512).optional(),
@@ -93,9 +110,27 @@ export async function getPatient(auth: Auth, id: number) {
 }
 export async function createPatient(auth: Auth, raw: unknown) {
   const clinicId = clinic(auth);
-  const data = input.parse(raw);
-  CreatePatientBody.parse(raw);
-  const requestHash = hash(data);
+  // Freeze one calendar reference through validation, guardian omission and persistence.
+  const now = new Date(), today = hebronDay(now);
+  const parsed = registrationInput(now).safeParse(raw);
+  if (!parsed.success) {
+    // Only a known field identifier crosses this boundary, never the submitted
+    // value or Zod's diagnostic text. Reception can associate its translated
+    // validation message with the field without leaking demographics to logs.
+    const field = parsed.error.issues[0]?.path[0];
+    const allowed = ["name", "phone", "dateOfBirth", "guardianName", "guardianRelation"];
+    throw fail(400, "VALIDATION", "validation",
+      typeof field === "string" && allowed.includes(field) ? { field } : {});
+  }
+  const data = parsed.data;
+  CreatePatientBody.parse(data);
+  // Fingerprint the validated request, not today's derived minor/adult
+  // projection. An identical lost-response retry across an 18th birthday must
+  // replay the same receipt even though hidden guardian fields are now omitted
+  // from a new adult record. Raw input's guardian values were type-checked above.
+  const guardians = raw as { guardianName?: string; guardianRelation?: string };
+  const requestHash = hash({ ...data, guardianName: guardians.guardianName?.trim(),
+    guardianRelation: guardians.guardianRelation?.trim() });
   return transaction(async client => {
     // Serialize a clinic's identical operation IDs; shared-device users cannot race a replay.
     await client.query("SELECT pg_advisory_xact_lock(hashtextextended($1,0))", [`patient:${clinicId}:${data.clientOpId}`]);
@@ -105,10 +140,11 @@ export async function createPatient(auth: Auth, raw: unknown) {
       // Do not recreate a deleted patient or return stale/inaccessible demographics.
       return projection(await local(client, clinicId, receipt.patient_id), clinicId);
     }
-    const { rows: [row] } = await client.query<Patient>(`INSERT INTO operational.patients(patient_name,phone,dob,name_normalized,created_clinic_id,minor_as_of)
-      VALUES($1,$2,$3,$4,$5,(now() AT TIME ZONE 'UTC')::date)
+    const { rows: [row] } = await client.query<Patient>(`INSERT INTO operational.patients(patient_name,phone,dob,name_normalized,created_clinic_id,minor_as_of,guardian_name,guardian_relation)
+      VALUES($1,$2,$3,$4,$5,$6,$7,$8)
       RETURNING patient_id,patient_name,phone,dob::text,name_normalized`,
-    [data.name, data.phone, data.dateOfBirth, normalizeName(data.name), clinicId]);
+    [data.name, data.phone, data.dateOfBirth, normalizeName(data.name), clinicId, today,
+      "guardianName" in data ? data.guardianName : null, "guardianRelation" in data ? data.guardianRelation : null]);
     await client.query(`INSERT INTO operational.patient_create_receipts(user_id,client_op_id,clinic_id,request_hash,patient_id)
       VALUES($1,$2,$3,$4,$5)`, [auth.id, data.clientOpId, clinicId, requestHash, row!.patient_id]);
     await record(client, auth, "patient.created", row!.patient_id);
@@ -122,7 +158,7 @@ export async function updatePatient(auth: Auth, id: number, raw: unknown) {
     const old = await local(client, clinicId, id);
     const next = { name: data.name ?? old.patient_name, phone: data.phone ?? old.phone, dateOfBirth: data.dateOfBirth ?? old.dob };
     const { rows: [row] } = await client.query<Patient>(`UPDATE operational.patients SET patient_name=$2,phone=$3,dob=$4,name_normalized=$5,
-      minor_as_of=(now() AT TIME ZONE 'UTC')::date WHERE patient_id=$1 RETURNING patient_id,patient_name,phone,dob::text,name_normalized`,
+      minor_as_of=(now() AT TIME ZONE 'Asia/Hebron')::date WHERE patient_id=$1 RETURNING patient_id,patient_name,phone,dob::text,name_normalized`,
     [id, next.name, next.phone, next.dateOfBirth, normalizeName(next.name)]);
     await record(client, auth, "patient.updated", id);
     return projection(row!, clinicId);

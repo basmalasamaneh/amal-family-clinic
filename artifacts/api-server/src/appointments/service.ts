@@ -5,7 +5,7 @@ import { z } from "zod/v4";
 import { pool } from "@workspace/db";
 import { enforceScope, forbidden, roles, type Auth } from "../lib/auth";
 import { fail } from "../lib/auth-errors";
-import { evaluate, type Appointment, type ConflictResult } from "./engine";
+import { evaluate, nearestAvailability, type Appointment, type ConflictResult } from "./engine";
 
 const positive = z.number().int().positive();
 const instant = z.iso.datetime({ offset: false }).refine(value => {
@@ -29,7 +29,13 @@ export const releaseInput = z.object({ clientOpId: operationId }).strict();
 export const listInput = z.object({
   clinicId: z.coerce.number().int().positive(), doctorId: z.coerce.number().int().positive().optional(),
   patientId: z.coerce.number().int().positive().optional(), status: z.enum(["booked", "double_booked", "completed", "no_show", "cancelled"]).optional(),
-  from: instant, to: instant, cursor: z.string().max(512).optional(), limit: z.coerce.number().int().min(1).max(100).default(25),
+  upcoming: z.enum(["true", "false"]).transform(v => v === "true").optional(),
+  from: instant.optional(), to: instant.optional(), cursor: z.string().max(512).optional(), limit: z.coerce.number().int().min(1).max(100).default(25),
+}).strict().refine(v => v.upcoming ? v.patientId !== undefined &&
+  (v.status === undefined || ["booked", "double_booked"].includes(v.status)) : v.from !== undefined && v.to !== undefined)
+  .refine(v => !v.from || !v.to || Date.parse(v.to) > Date.parse(v.from));
+export const availabilityInput = z.object({
+  clinicId: z.coerce.number().int().positive(), patientId: z.coerce.number().int().positive(),
 }).strict();
 type Booking = z.infer<typeof createInput>;
 type IntervalInput = z.infer<typeof holdInput>;
@@ -112,6 +118,46 @@ async function relationships(client: PoolClient, input: Pick<IntervalInput, "cli
     EXISTS(SELECT 1 FROM operational.doctors WHERE doctor_id=$1 AND clinic_id=$2) AS doctor,
     EXISTS(SELECT 1 FROM operational.patients p WHERE p.patient_id=$3 AND ${patientScopeSql("$2")}) AS patient`, [input.doctorId, input.clinicId, input.patientId]);
   if (!valid.doctor || !valid.patient) throw fail(422, "INVALID_BOOKING_REFERENCE", "validation");
+}
+async function authorizedPatient(client: Pick<PoolClient, "query">, clinicId: number, patientId: number) {
+  const { rows: [row] } = await client.query(
+    `SELECT p.patient_id FROM operational.patients p WHERE p.patient_id=$2 AND ${patientScopeSql("$1")}`, [clinicId, patientId]);
+  if (!row) throw missing();
+}
+
+export async function getAppointmentAvailability(auth: Auth, raw: unknown) {
+  const input = availabilityInput.parse(raw);
+  return transaction(auth, async (client, actor, now) => {
+    if (!["doctor", "front-desk"].includes(actor.role)) throw forbidden();
+    enforceScope(actor, input.clinicId);
+    await authorizedPatient(client, input.clinicId, input.patientId);
+    const { rows: [clinic] } = await client.query("SELECT slot_minutes,working_days,open_time,close_time,timezone FROM operational.clinics WHERE clinic_id=$1", [input.clinicId]);
+    if (!clinic) throw missing();
+    const { rows: doctors } = await client.query<{ doctor_id: number }>(
+      "SELECT doctor_id FROM operational.doctors WHERE clinic_id=$1 AND ($2::integer IS NULL OR doctor_id=$2) ORDER BY doctor_id",
+      [input.clinicId, actor.role === "doctor" ? actor.doctorId : null]);
+    // Patient collisions may be cross-clinic; only proposed local slots leave the service.
+    const { rows: appointments } = await client.query<Row>(
+      "SELECT * FROM operational.appointments WHERE (clinic_id=$1 OR patient_id=$2) AND status IN ('booked','double_booked')",
+      [input.clinicId, input.patientId]);
+    const { rows: holds } = await client.query<HoldRow>(
+      "SELECT * FROM operational.appointment_holds WHERE clinic_id=$1 AND expires_at>$2", [input.clinicId, now]);
+    const items = doctors.flatMap(doctor => {
+      bookingScope(actor, input.clinicId, doctor.doctor_id);
+      const slot = nearestAvailability({
+        appointment: { id: 0, clinicId: input.clinicId, doctorId: doctor.doctor_id, patientId: input.patientId,
+          startAt: now.toISOString(), durationMinutes: clinic.slot_minutes, status: "booked" },
+        appointments: appointments.map(engineRow),
+        holds: holds.map(h => ({ clinicId: h.clinic_id, doctorId: h.doctor_id, startAt: h.starts_at.toISOString(),
+          durationMinutes: h.duration_minutes, ownerId: h.owner_id, expiresAt: h.expires_at.toISOString() })),
+        settings: { workingDays: clinic.working_days, openTime: clinic.open_time, closeTime: clinic.close_time,
+          slotMinutes: clinic.slot_minutes, timezone: clinic.timezone },
+        now, ownerId: actor.id, canOverride: false, visible: () => false,
+      });
+      return slot ? [{ doctorId: doctor.doctor_id, ...slot }] : [];
+    });
+    return { items, durationMinutes: clinic.slot_minutes, checkedAt: now.toISOString() };
+  });
 }
 function exactHold(h: HoldRow, actor: Auth, input: { clinicId: number; doctorId: number; patientId: number; startsAt: string }, minutes: number, appointmentId?: number) {
   return h.owner_id === actor.id && h.clinic_id === input.clinicId && h.doctor_id === input.doctorId &&
@@ -244,10 +290,13 @@ export async function releaseHold(auth: Auth, token: string, raw: unknown) {
 }
 export async function listAppointments(auth: Auth, raw: unknown) {
   const input = listInput.parse(raw);
-  if (Date.parse(input.to) <= Date.parse(input.from)) throw fail(400, "VALIDATION", "validation");
   const actor = await currentAuth(pool, auth);
   if (actor.role !== "doctor" && actor.role !== "front-desk") throw forbidden();
   enforceScope(actor, input.clinicId, input.doctorId);
+  if (input.upcoming) {
+    await authorizedPatient(pool, input.clinicId, input.patientId!);
+    return listUpcoming(actor, input);
+  }
   const doctorId = actor.role === "doctor" ? actor.doctorId : input.doctorId;
   const filterHash = createHash("sha256").update(canonical({
     clinicId: input.clinicId, doctorId, patientId: input.patientId, status: input.status, from: input.from, to: input.to,
@@ -267,4 +316,34 @@ export async function listAppointments(auth: Auth, raw: unknown) {
     AND appointment_id>$7 ORDER BY appointment_id LIMIT $8`, [input.clinicId, input.from, input.to, doctorId ?? null, input.patientId ?? null, input.status ?? null, after, input.limit + 1]);
   const items = rows.slice(0, input.limit);
   return { items: items.map(project), nextCursor: rows.length > input.limit ? Buffer.from(JSON.stringify({ v: 1, after: items.at(-1)!.appointment_id, filterHash })).toString("base64url") : null };
+}
+
+async function listUpcoming(actor: Auth, input: z.infer<typeof listInput>) {
+  const doctorId = actor.role === "doctor" ? actor.doctorId : input.doctorId;
+  const filterHash = createHash("sha256").update(canonical({
+    actorId: actor.id, clinicId: input.clinicId, doctorId, patientId: input.patientId, status: input.status,
+    from: input.from, to: input.to, upcoming: true,
+  })).digest("hex");
+  let afterId = 0, afterTime: string | null = null;
+  if (input.cursor !== undefined) {
+    try {
+      if (!/^[A-Za-z0-9_-]+$/.test(input.cursor)) throw new Error();
+      const cursor = z.object({
+        v: z.literal(2), filterHash: z.literal(filterHash), afterId: positive, afterTime: instant,
+      }).strict().parse(JSON.parse(Buffer.from(input.cursor, "base64url").toString("utf8")));
+      afterId = cursor.afterId; afterTime = cursor.afterTime;
+    } catch { throw fail(400, "VALIDATION", "validation"); }
+  }
+  const { rows } = await pool.query<Row>(`SELECT * FROM operational.appointments
+    WHERE clinic_id=$1 AND patient_id=$2 AND status IN ('booked','double_booked') AND scheduled_at>=clock_timestamp()
+      AND ($3::integer IS NULL OR doctor_id=$3) AND ($4::text IS NULL OR status=$4)
+      AND ($5::timestamptz IS NULL OR scheduled_at>=$5) AND ($6::timestamptz IS NULL OR scheduled_at<$6)
+      AND ($7::timestamptz IS NULL OR (scheduled_at,appointment_id)>($7::timestamptz,$8::integer))
+    ORDER BY scheduled_at,appointment_id LIMIT $9`, [
+    input.clinicId, input.patientId, doctorId ?? null, input.status ?? null, input.from ?? null, input.to ?? null,
+    afterTime, afterId, input.limit + 1,
+  ]);
+  const items = rows.slice(0, input.limit), last = items.at(-1);
+  return { items: items.map(project), nextCursor: rows.length > input.limit && last ?
+    Buffer.from(JSON.stringify({ v: 2, filterHash, afterId: last.appointment_id, afterTime: last.scheduled_at.toISOString() })).toString("base64url") : null };
 }

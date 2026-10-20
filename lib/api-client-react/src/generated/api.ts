@@ -22,6 +22,7 @@ import type {
 import type {
   ApiFailure,
   Appointment,
+  AppointmentAvailability,
   AppointmentCheckInput,
   AppointmentHold,
   AppointmentHoldInput,
@@ -41,6 +42,7 @@ import type {
   DeviceInput,
   DoctorPage,
   DuplicateCandidatePage,
+  GetAppointmentAvailabilityParams,
   GetKpisParams,
   HealthStatus,
   Identity,
@@ -279,7 +281,7 @@ export const getListClinicsUrl = (params?: ListClinicsParams,) => {
 }
 
 /**
- * Contract-only domain service; mock responses are simulated. Clinic scope comes from authenticated identity, not submitted identifiers. Admin has no implicit clinical access. Network visibility requires active consent and excludes Lite clinics. Mutations require CSRF; clientOpId is replay-safe per clinic, with changed payload returning 409.
+ * Operational clinic directory for reception booking. Returns only the authenticated doctor's/front-desk user's current clinic, with scheduling identity fields only. Admin is not authorized by this reception adapter.
  * @summary list clinics
  */
 export const listClinics = async (params?: ListClinicsParams, options?: Parameters<typeof customFetch>[1]): Promise<ClinicPage> => {
@@ -621,7 +623,7 @@ export const getListDoctorsUrl = (params: ListDoctorsParams,) => {
 }
 
 /**
- * Contract-only domain service; mock responses are simulated. Clinic scope comes from authenticated identity, not submitted identifiers. Admin has no implicit clinical access. Network visibility requires active consent and excludes Lite clinics. Mutations require CSRF; clientOpId is replay-safe per clinic, with changed payload returning 409.
+ * Operational doctor directory within the authenticated current clinic. Doctors see only their own doctor ID; front-desk sees current-clinic doctors. networkVisible=false does not authorize network lookup or imply patient consent. Admin is not authorized by this reception adapter.
  * @summary list doctors
  */
 export const listDoctors = async (params: ListDoctorsParams, options?: Parameters<typeof customFetch>[1]): Promise<DoctorPage> => {
@@ -690,6 +692,91 @@ export function useListDoctors<TData = Awaited<ReturnType<typeof listDoctors>>, 
 
 
 
+export const getGetAppointmentAvailabilityUrl = (params: GetAppointmentAvailabilityParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/appointments/availability?${stringifiedParams}` : `/api/appointments/availability`
+}
+
+/**
+ * Requires an authorized current clinic and patient. Returns at most one strictly future slot per authorized doctor, ordered by doctor ID. Duration is clinic.slotMinutes. Reuses booking engine's 30-local-date horizon, working hours, grid, active bookings and holds (including own holds). Empty items means no eligible slots in that horizon, not a service failure. This is advisory: final check/hold/create remains authoritative; no warnings are acknowledged or conflicts reshaped.
+ * @summary Nearest eligible walk-in slot per authorized doctor
+ */
+export const getAppointmentAvailability = async (params: GetAppointmentAvailabilityParams, options?: Parameters<typeof customFetch>[1]): Promise<AppointmentAvailability> => {
+
+  return customFetch<AppointmentAvailability>(getGetAppointmentAvailabilityUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetAppointmentAvailabilityQueryKey = (params?: GetAppointmentAvailabilityParams,) => {
+    return [
+    `/api/appointments/availability`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetAppointmentAvailabilityQueryOptions = <TData = Awaited<ReturnType<typeof getAppointmentAvailability>>, TError = ErrorType<ApiFailure>>(params: GetAppointmentAvailabilityParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAppointmentAvailability>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetAppointmentAvailabilityQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getAppointmentAvailability>>> = ({ signal }) => getAppointmentAvailability(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getAppointmentAvailability>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetAppointmentAvailabilityQueryResult = NonNullable<Awaited<ReturnType<typeof getAppointmentAvailability>>>
+export type GetAppointmentAvailabilityQueryError = ErrorType<ApiFailure>
+
+
+/**
+ * @summary Nearest eligible walk-in slot per authorized doctor
+ */
+
+export function useGetAppointmentAvailability<TData = Awaited<ReturnType<typeof getAppointmentAvailability>>, TError = ErrorType<ApiFailure>>(
+ params: GetAppointmentAvailabilityParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAppointmentAvailability>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetAppointmentAvailabilityQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
 export const getListAppointmentsUrl = (params: ListAppointmentsParams,) => {
   const normalizedParams = new URLSearchParams();
 
@@ -706,7 +793,7 @@ export const getListAppointmentsUrl = (params: ListAppointmentsParams,) => {
 }
 
 /**
- * Operational appointments only. Doctor/front-desk within own clinic, doctor within own doctor scope. UTC instants, Asia/Hebron working hours. Cancel through PATCH status=cancelled; history is retained. All mutations require actor-bound clientOpId; edits require expectedVersion. See docs/appointments.md.
+ * Operational scheduling fields only; doctor/front-desk within own clinic, doctor within own doctor scope. With upcoming=true, authorized patientId is required, from/to are optional, only booked/double_booked starts at or after server now are returned chronologically using stable (startsAt,id) cursors. Otherwise from/to are required and legacy ID ordering is retained. Cancel through PATCH; existing conflict shapes remain unchanged. See docs/appointments.md.
  * @summary list appointments
  */
 export const listAppointments = async (params: ListAppointmentsParams, options?: Parameters<typeof customFetch>[1]): Promise<AppointmentPage> => {

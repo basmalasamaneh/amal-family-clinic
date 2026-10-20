@@ -33,7 +33,7 @@ export const HealthCheckResponse = zod.object({
 
 
 /**
- * Contract-only domain service; mock responses are simulated. Clinic scope comes from authenticated identity, not submitted identifiers. Admin has no implicit clinical access. Network visibility requires active consent and excludes Lite clinics. Mutations require CSRF; clientOpId is replay-safe per clinic, with changed payload returning 409.
+ * Operational clinic directory for reception booking. Returns only the authenticated doctor's/front-desk user's current clinic, with scheduling identity fields only. Admin is not authorized by this reception adapter.
  * @summary list clinics
  */
 export const listClinicsQueryLimitMax = 100;
@@ -143,7 +143,7 @@ export const UpdateClinicResponse = zod.object({
 
 
 /**
- * Contract-only domain service; mock responses are simulated. Clinic scope comes from authenticated identity, not submitted identifiers. Admin has no implicit clinical access. Network visibility requires active consent and excludes Lite clinics. Mutations require CSRF; clientOpId is replay-safe per clinic, with changed payload returning 409.
+ * Operational doctor directory within the authenticated current clinic. Doctors see only their own doctor ID; front-desk sees current-clinic doctors. networkVisible=false does not authorize network lookup or imply patient consent. Admin is not authorized by this reception adapter.
  * @summary list doctors
  */
 
@@ -173,11 +173,41 @@ export const ListDoctorsResponse = zod.object({
 
 
 /**
- * Operational appointments only. Doctor/front-desk within own clinic, doctor within own doctor scope. UTC instants, Asia/Hebron working hours. Cancel through PATCH status=cancelled; history is retained. All mutations require actor-bound clientOpId; edits require expectedVersion. See docs/appointments.md.
+ * Requires an authorized current clinic and patient. Returns at most one strictly future slot per authorized doctor, ordered by doctor ID. Duration is clinic.slotMinutes. Reuses booking engine's 30-local-date horizon, working hours, grid, active bookings and holds (including own holds). Empty items means no eligible slots in that horizon, not a service failure. This is advisory: final check/hold/create remains authoritative; no warnings are acknowledged or conflicts reshaped.
+ * @summary Nearest eligible walk-in slot per authorized doctor
+ */
+
+
+
+
+export const GetAppointmentAvailabilityQueryParams = zod.object({
+  "clinicId": zod.coerce.number().int().min(1),
+  "patientId": zod.coerce.number().int().min(1)
+}).strict()
+
+
+export const getAppointmentAvailabilityResponseDurationMinutesMax = 1440;
+
+
+
+export const GetAppointmentAvailabilityResponse = zod.object({
+  "items": zod.array(zod.object({
+  "doctorId": zod.number().int().min(1),
+  "startsAt": zod.coerce.date(),
+  "endsAt": zod.coerce.date()
+}).strict()),
+  "durationMinutes": zod.number().int().min(1).max(getAppointmentAvailabilityResponseDurationMinutesMax),
+  "checkedAt": zod.coerce.date()
+}).strict()
+
+
+/**
+ * Operational scheduling fields only; doctor/front-desk within own clinic, doctor within own doctor scope. With upcoming=true, authorized patientId is required, from/to are optional, only booked/double_booked starts at or after server now are returned chronologically using stable (startsAt,id) cursors. Otherwise from/to are required and legacy ID ordering is retained. Cancel through PATCH; existing conflict shapes remain unchanged. See docs/appointments.md.
  * @summary list appointments
  */
 
 
+export const listAppointmentsQueryUpcomingDefault = false;
 export const listAppointmentsQueryLimitMax = 100;
 
 
@@ -185,9 +215,10 @@ export const listAppointmentsQueryLimitMax = 100;
 
 export const ListAppointmentsQueryParams = zod.object({
   "clinicId": zod.coerce.number().int().min(1),
-  "from": zod.date(),
-  "to": zod.date(),
+  "from": zod.date().optional(),
+  "to": zod.date().optional(),
   "doctorId": zod.coerce.number().int().min(1).optional(),
+  "upcoming": zod.coerce.boolean().default(listAppointmentsQueryUpcomingDefault).describe('Requires authorized patientId. Active future bookings only, chronologically paginated.'),
   "cursor": zod.coerce.string().optional(),
   "limit": zod.coerce.number().int().min(1).max(listAppointmentsQueryLimitMax).optional(),
   "patientId": zod.coerce.number().int().min(1).optional(),
@@ -423,6 +454,14 @@ export const CreatePatientHeader = zod.object({
   "X-CSRF-Token": zod.string().describe('Session-bound CSRF value from Identity.csrfToken; never a session credential.')
 }).strict()
 
+export const createPatientBodyGuardianNameMax = 200;
+
+
+export const createPatientBodyGuardianNameRegExp = new RegExp('\\S');
+export const createPatientBodyGuardianRelationMax = 100;
+
+
+export const createPatientBodyGuardianRelationRegExp = new RegExp('\\S');
 export const createPatientBodyNameMax = 200;
 
 export const createPatientBodyPhoneMax = 40;
@@ -430,11 +469,13 @@ export const createPatientBodyPhoneMax = 40;
 
 
 export const CreatePatientBody = zod.object({
+  "guardianName": zod.string().min(1).max(createPatientBodyGuardianNameMax).regex(createPatientBodyGuardianNameRegExp).optional(),
+  "guardianRelation": zod.string().min(1).max(createPatientBodyGuardianRelationMax).regex(createPatientBodyGuardianRelationRegExp).optional(),
   "name": zod.string().min(1).max(createPatientBodyNameMax),
   "dateOfBirth": zod.coerce.date(),
   "phone": zod.string().min(1).max(createPatientBodyPhoneMax),
   "clientOpId": zod.string().uuid()
-}).strict()
+}).strict().describe('Registration uses completed birthdays on the current Asia/Hebron calendar date. Under 18 requires both guardian fields. Adult guardian values are discarded; guardian demographics never grant consent.')
 
 
 

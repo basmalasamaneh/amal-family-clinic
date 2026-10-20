@@ -2,6 +2,7 @@ import * as Dialog from '@radix-ui/react-dialog';
 import { useTranslation } from 'react-i18next';
 import { Ban, CalendarClock, Info, ShieldAlert, TriangleAlert, X } from 'lucide-react';
 import type { ConflictItem, ConflictItemSuggestedSlotsItem, ConflictPreview } from '@workspace/api-client-react';
+import { WalkInHandoff } from '@/reception/WalkInHandoff';
 import { summarize } from './conflicts';
 
 export interface ConflictDialogProps {
@@ -31,6 +32,7 @@ export function ConflictDialog(p: ConflictDialogProps) {
           }}>
           <div className="bk-dialog__head">
             <Dialog.Title className="bk-dialog__title">{t('bk.conflict.title')}</Dialog.Title>
+            <WalkInHandoff testId="button-conflict-walkin" />
             <Dialog.Close className="bk-x" aria-label={t('bk.conflict.close')} data-testid="button-close-conflicts"><X size={20} aria-hidden="true" /></Dialog.Close>
           </div>
           <p className="bk-hint"><bdi dir="auto">{t('bk.conflict.intro', { doctor: p.doctorName, when: p.whenLabel })}</bdi></p>

@@ -22,17 +22,35 @@ return 404; remote records never enter candidate scoring or pagination.
 claim. Existing shared patients have one demographic record; authorized local
 updates affect that record, not a separate clinic copy.
 
-Create accepts only `name`, `phone`, `dateOfBirth`, `clientOpId`. PATCH accepts
-only the first three and requires at least one. Unknown fields (including scope,
-normalized name, merge, guardian/consent and audit fields) are rejected.
+Create accepts `name`, `phone`, `dateOfBirth`, `clientOpId` and optional
+`guardianName`/`guardianRelation`. PATCH accepts only the first three and requires
+at least one; patient editing is not extended by the reception task. Unknown
+fields (including scope, normalized name, merge, consent and audit fields) are rejected.
 Name is required, 1–200 UTF-16 code units, nonblank after normalization. Phone is
 required, at most 40 code units and must canonicalize to optional `+` and 3–20
-ASCII digits. Original name and phone strings are retained. DOB is **required**
+ASCII digits. Outer whitespace is trimmed; original spelling and phone leading
+zeroes remain intact. DOB is **required**
 by the existing operational schema/contract: a real, nonfuture `YYYY-MM-DD` date.
 Missing/unknown DOB is rejected, never fabricated. DOB never becomes an instant;
 raw input is checked before generated validators can coerce dates. New timestamps
-are `timestamptz` UTC instants; the internal age reference is the current UTC date.
+are `timestamptz` UTC instants; the internal age reference is the current
+**Asia/Hebron calendar date**, never UTC today.
 Consumers display instants in Asia/Hebron. No workbook instants are imported here.
+
+### Guardian registration policy (Task 14)
+
+The default minor policy is **under 18 completed birthdays** against today's
+Asia/Hebron date. A February 29 birthday completes on March 1 in non-leap years.
+Calendar components are compared, not elapsed milliseconds or a fixed birth year.
+Both trimmed guardian name (1–200 characters) and relationship (1–100 characters)
+are required for minors. Adults' hidden/stale guardian strings are discarded
+from persistence. The receipt hashes the normalized request independently of the
+current age classification, so an identical retry across an 18th birthday still
+replays the original patient rather than conflicting or creating another record.
+Guardian columns already exist in operational patients; no seed/schema change is
+needed. Guardian fields never create consent, sharing rights or access grants.
+The response stays the existing demographic-only whitelist, without guardian
+fields, visit/history/alerts/counts, or clinical links.
 
 Create operation IDs are serialized per clinic. The same ID and payload returns
 the current still-accessible patient; changed payload conflicts. After deletion,
@@ -110,3 +128,7 @@ validation, role/clinic/device/CSRF denial, projection safety, idempotency,
 protected deletion, guessed-ID booking followed by GET/PATCH denial, and immutable
 six-table seed snapshots. Appointment regression fixtures explicitly grant access
 before exercising cross-clinic conflict checks.
+The additional `tests/demographics.test.ts` covers Hebron/UTC midnight differences,
+invalid dates, leap years and completed-birthday boundaries. Registration tests
+cover required guardian fields, safe adult omission, unchanged consent and
+idempotent uncertain retries.

@@ -12,7 +12,7 @@
     "appointments:migrate": "tsx scripts/appointments-migrate.ts",
     "appointments:test": "tsx --test tests/appointments-api.test.ts",
     "patients:migrate": "tsx scripts/patients-migrate.ts",
-    "patients:test": "tsx --test tests/patient-search.test.ts tests/patients-api.test.ts",
+    "patients:test": "tsx --test tests/demographics.test.ts tests/patient-search.test.ts tests/patients-api.test.ts",
     "auth:test": "tsx --test tests/auth.test.ts",
     "auth:browser": "tsx scripts/login-browser-test.ts",
     "mock": "node src/mock/server.mjs",

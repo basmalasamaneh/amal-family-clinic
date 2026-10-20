@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useLocation } from 'wouter';
 import { X } from 'lucide-react';
 import { Button } from '@workspace/amal-ui';
+import { WalkInHandoff } from '@/reception/WalkInHandoff';
 import type { TourStep } from './tours';
 
 interface Box { top: number; start: number; inline: number; block: number }
@@ -101,6 +102,7 @@ export function TourOverlay({ steps, onFinish }: { steps: TourStep[]; onFinish: 
         <p id="tour-body" className="tour-card__body">{t(step.bodyKey)}</p>
         <ol className="tour-card__dots" aria-hidden="true">{steps.map((s, i) => <li key={s.id} className={i === index ? 'is-on' : ''} />)}</ol>
         <div className="tour-card__foot">
+          <WalkInHandoff className="amal-btn amal-btn--secondary amal-btn--sm" before={() => finish('dismissed')} testId="button-tour-walkin" />
           <Button variant="ghost" size="sm" onClick={() => finish('dismissed')} data-testid="button-tour-skip">{t('tour.skip')}</Button>
           <span className="tour-card__spacer" />
           {index > 0 && <Button variant="secondary" size="sm" onClick={() => setIndex(index - 1)} data-testid="button-tour-back">{t('tour.back')}</Button>}

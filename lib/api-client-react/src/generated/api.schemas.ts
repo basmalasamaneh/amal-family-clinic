@@ -177,7 +177,39 @@ export interface PatientUpdate {
   dateOfBirth?: string;
 }
 
+export type AppointmentAvailabilityItemsItem = {
+  /** @minimum 1 */
+  doctorId: number;
+  startsAt: string;
+  endsAt: string;
+};
+
+export interface AppointmentAvailability {
+  items: AppointmentAvailabilityItemsItem[];
+  /**
+     * @minimum 1
+     * @maximum 1440
+     */
+  durationMinutes: number;
+  checkedAt: string;
+}
+
+/**
+ * Registration uses completed birthdays on the current Asia/Hebron calendar date. Under 18 requires both guardian fields. Adult guardian values are discarded; guardian demographics never grant consent.
+ */
 export interface PatientInput {
+  /**
+     * @minLength 1
+     * @maxLength 200
+     * @pattern \S
+     */
+  guardianName?: string;
+  /**
+     * @minLength 1
+     * @maxLength 100
+     * @pattern \S
+     */
+  guardianRelation?: string;
   /**
      * @minLength 1
      * @maxLength 200
@@ -1004,17 +1036,32 @@ cursor?: string;
 limit?: number;
 };
 
+export type GetAppointmentAvailabilityParams = {
+/**
+ * @minimum 1
+ */
+clinicId: number;
+/**
+ * @minimum 1
+ */
+patientId: number;
+};
+
 export type ListAppointmentsParams = {
 /**
  * @minimum 1
  */
 clinicId: number;
-from: string;
-to: string;
+from?: string;
+to?: string;
 /**
  * @minimum 1
  */
 doctorId?: number;
+/**
+ * Requires authorized patientId. Active future bookings only, chronologically paginated.
+ */
+upcoming?: boolean;
 cursor?: string;
 /**
  * @minimum 1

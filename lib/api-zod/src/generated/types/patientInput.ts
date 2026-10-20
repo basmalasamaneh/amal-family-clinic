@@ -6,7 +6,22 @@
  * OpenAPI spec version: 0.2.0
  */
 
+/**
+ * Registration uses completed birthdays on the current Asia/Hebron calendar date. Under 18 requires both guardian fields. Adult guardian values are discarded; guardian demographics never grant consent.
+ */
 export interface PatientInput {
+  /**
+     * @minLength 1
+     * @maxLength 200
+     * @pattern \S
+     */
+  guardianName?: string;
+  /**
+     * @minLength 1
+     * @maxLength 100
+     * @pattern \S
+     */
+  guardianRelation?: string;
   /**
      * @minLength 1
      * @maxLength 200

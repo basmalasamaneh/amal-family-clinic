@@ -7,16 +7,19 @@ import { MIN_QUERY, type PatientHit, type PatientSearchAdapter } from './patient
 import { classifyError, isAbort, type FailureKind } from './errors';
 import { createLatest } from './ops';
 import { normalizeForSearch } from './normalize';
+import '@/reception/i18n';
 
 type State =
   | { kind: 'idle' }
   | { kind: 'loading' }
-  | { kind: 'ok'; q: string; items: PatientHit[]; more: boolean }
+  | { kind: 'ok'; q: string; items: PatientHit[]; more: boolean; cursor: string | null; page: 'idle' | 'loading' | 'error' }
   | { kind: 'error'; failure: FailureKind };
 export const SEARCH_DEBOUNCE_MS = 300;
 
-export function PatientQuickSearch({ adapter, clinicId, onSelect, autoFocus }: {
+export function PatientQuickSearch({ adapter, clinicId, onSelect, autoFocus, paginate, refreshKey = 0, selectedId }: {
   adapter: PatientSearchAdapter; clinicId: number; onSelect: (p: PatientHit) => void; autoFocus?: boolean;
+  /** Show "load more" using the server's opaque cursor instead of only asking to refine. */
+  paginate?: boolean; /** Bump to re-run the current query (e.g. after registration). */ refreshKey?: number; selectedId?: number | null;
 }) {
   const { t } = useTranslation();
   const { locale, digitPreference } = useAmalPreferences();
@@ -37,12 +40,32 @@ export function PatientQuickSearch({ adapter, clinicId, onSelect, autoFocus }: {
     const ctl = new AbortController();
     const timer = setTimeout(() => {
       adapter.search(query, clinicId, ctl.signal).then(
-        (r) => { if (latest.isCurrent(token)) { setState({ kind: 'ok', q: query, items: r.items, more: r.more }); setActive(0); } },
+        (r) => { if (latest.isCurrent(token)) { setState({ kind: 'ok', q: query, items: r.items, more: r.more, cursor: r.nextCursor ?? null, page: 'idle' }); setActive(0); } },
         (e) => { if (!isAbort(e) && latest.isCurrent(token)) setState({ kind: 'error', failure: classifyError(e).kind }); },
       );
     }, SEARCH_DEBOUNCE_MS);
     return () => { clearTimeout(timer); ctl.abort(); latest.invalidate(); };
-  }, [q, nonce, adapter, clinicId, latest]);
+  }, [q, nonce, adapter, clinicId, latest, refreshKey]);
+
+  const pageCtl = useRef<AbortController | null>(null);
+  useEffect(() => () => pageCtl.current?.abort(), [q, clinicId]);
+  const loadMore = () => {
+    if (state.kind !== 'ok' || !state.cursor || state.page === 'loading') return;
+    const { q: query, cursor } = state; const mine = latest.next();
+    pageCtl.current?.abort(); const ctl = new AbortController(); pageCtl.current = ctl;
+    setState({ ...state, page: 'loading' });
+    adapter.search(query, clinicId, ctl.signal, cursor).then(
+      (r) => {
+        if (!latest.isCurrent(mine)) return;
+        setState((s) => {
+          if (s.kind !== 'ok' || s.q !== query) return s;
+          const seen = new Set(s.items.map((p) => p.id));
+          return { ...s, items: [...s.items, ...r.items.filter((p) => !seen.has(p.id))], more: r.more, cursor: r.nextCursor ?? null, page: 'idle' };
+        });
+      },
+      (e) => { if (!isAbort(e) && latest.isCurrent(mine)) setState((s) => (s.kind === 'ok' ? { ...s, page: 'error' } : s)); },
+    );
+  };
 
   const items = state.kind === 'ok' && state.q === q.trim() ? state.items : [];
   const dupNames = useMemo(() => {
@@ -99,7 +122,7 @@ export function PatientQuickSearch({ adapter, clinicId, onSelect, autoFocus }: {
       <ul id={listId} role="listbox" aria-label={t('bk.search.label')} className="bk-list" hidden={!items.length}>
         {items.map((p, i) => (
           <li key={p.id} id={`${id}-o-${p.id}`} role="option" aria-selected={i === active}
-            className={'bk-opt' + (i === active ? ' is-active' : '')}
+            className={'bk-opt' + (i === active ? ' is-active' : '') + (p.id === selectedId ? ' is-chosen' : '')}
             onMouseDown={(e) => e.preventDefault()} onMouseEnter={() => setActive(i)} onClick={() => onSelect(p)}
             data-testid={`option-patient-${p.id}`}>
             <span className="bk-opt__av" aria-hidden="true"><UserRound size={20} /></span>
@@ -116,6 +139,14 @@ export function PatientQuickSearch({ adapter, clinicId, onSelect, autoFocus }: {
         ))}
       </ul>
       {state.kind === 'ok' && state.more && <p className="bk-hint" data-testid="text-patient-more">{t('bk.search.more')}</p>}
+      {paginate && state.kind === 'ok' && state.cursor && state.q === q.trim() && (
+        <div className="bk-field">
+          {state.page === 'error' && <p className="bk-err" role="alert" data-testid="status-patient-more-error">{t('rx.loadMoreError')}</p>}
+          <button type="button" className="bk-btn bk-btn--sm" onClick={loadMore} disabled={state.page === 'loading'} aria-busy={state.page === 'loading'} data-testid="button-patient-more">
+            {state.page === 'loading' ? t('rx.loadingMore') : state.page === 'error' ? t('bk.search.retry') : t('rx.loadMore')}
+          </button>
+        </div>
+      )}
     </div>
   );
 }

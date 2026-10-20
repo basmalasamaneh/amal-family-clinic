@@ -9,6 +9,7 @@ import type { CalendarAppointment } from './adapter';
 import { isUnauthorized } from '@/auth/errors';
 import { reportUnauthorized } from '@/auth/session-events';
 import './cancellation-messages';
+import { WalkInHandoff } from '@/reception/WalkInHandoff';
 import './cancellation.css';
 
 const Context = createContext<{ store: CancellationStore; open: (appt: CalendarAppointment) => void } | null>(null);
@@ -82,6 +83,7 @@ export function CancellationProvider({ children }: { children: ReactNode }) {
             {allowed && target && <button className="cal-btn cancel-danger" onClick={() => {
               store.schedule({ id: target.id, clinicId: target.clinicId, version: target.version! }); setSuccess(false); setTarget(null);
             }}>{t('confirm')}</button>}
+            <WalkInHandoff className="cal-btn" testId="button-cancel-walkin" />
             <Dialog.Close className="cal-btn" aria-label={t('close')}><X aria-hidden="true" /></Dialog.Close>
           </div>
         </Dialog.Content>

@@ -6,6 +6,7 @@ import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { normalizeName } from "@workspace/db/patient-search";
 import pg from "pg";
+import { hebronDay } from "../src/patients/demographics";
 
 if (process.env.NODE_ENV === "production" || process.env.REPLIT_DEPLOYMENT === "1") throw new Error("Patient tests prohibited in deployment");
 process.env.AUTH_ALLOWED_ORIGINS = "http://patients-test.local";
@@ -152,6 +153,36 @@ test("patients: CRUD, deterministic ranking, authorization and protected data", 
     assert.equal((await request(doctor, "", "POST", { ...b, name: "Changed" })).status, 409);
     const duplicate = await create(doctor, b.name, b.phone);
     assert.notEqual(duplicate.id, results[0]!.data.id);
+  });
+  await t.test("minor registration requires guardian demographics; adults discard hidden values; neither grants consent", async () => {
+    const today = hebronDay(), birthYear = Number(today.slice(0, 4));
+    const minor = { ...body("  Reception minor  ", "  0591234567  "), dateOfBirth: `${birthYear - 17}${today.slice(4)}` };
+    const missingGuardian = await request(desk, "", "POST", minor);
+    assert.deepEqual(missingGuardian.data, {
+      code: "VALIDATION", messageKey: "error.validation", params: { field: "guardianName" },
+    });
+    for (const guardians of [{}, { guardianName: "Parent" }, { guardianRelation: "mother" },
+      { guardianName: " ", guardianRelation: "mother" }, { guardianName: "Parent", guardianRelation: " " },
+      { guardianName: "x".repeat(201), guardianRelation: "mother" }]) {
+      assert.equal((await request(desk, "", "POST", { ...minor, ...guardians })).status, 400);
+    }
+    const input = { ...minor, guardianName: "  Parent  ", guardianRelation: "  mother  " };
+    const made = await request(desk, "", "POST", input);
+    assert.equal(made.status, 201, JSON.stringify(made.data));
+    assert.equal(made.data.name, "Reception minor");
+    assert.equal(made.data.phone, "0591234567");
+    assert.equal(made.data.guardianName, undefined, "response remains demographic whitelist");
+    const saved = (await admin.query("SELECT guardian_name,guardian_relation,minor_as_of::text FROM operational.patients WHERE patient_id=$1", [made.data.id])).rows[0];
+    assert.deepEqual(saved, { guardian_name: "Parent", guardian_relation: "mother", minor_as_of: today });
+    assert.equal((await request(desk, "", "POST", input)).data.id, made.data.id, "uncertain retry reuses receipt");
+    assert.equal((await request(desk, "", "POST", { ...input, guardianRelation: "father" })).status, 409);
+    const adult = await request(desk, "", "POST", { ...body("Adult"), dateOfBirth: `${birthYear - 18}${today.slice(4)}`,
+      guardianName: "Hidden stale parent", guardianRelation: "Hidden stale relationship" });
+    assert.equal(adult.status, 201);
+    const adultSaved = (await admin.query("SELECT guardian_name,guardian_relation FROM operational.patients WHERE patient_id=$1", [adult.data.id])).rows[0];
+    assert.deepEqual(adultSaved, { guardian_name: null, guardian_relation: null });
+    assert.equal((await admin.query("SELECT count(*)::integer n FROM operational.patient_consents WHERE patient_id=ANY($1::integer[])", [[made.data.id, adult.data.id]])).rows[0].n, 0);
+    for (const key of ["visits", "history", "keyAlerts", "consents", "historyCount"]) assert.equal(made.data[key], undefined);
   });
   await t.test("ranking happens before pagination; updates refresh names and leading-zero phone search", async () => {
     const fuzzy = await create(doctor, "احمر"), partial = await create(doctor, "محمد احمد");

@@ -4,19 +4,20 @@ import { withAuthReport } from './errors';
 
 /** Identity fields only — enough to tell people apart, no clinical data. */
 export interface PatientHit { id: number; name: string; phone: string | null; dateOfBirth: string | null; clinicId: number }
-export interface PatientSearchResult { items: PatientHit[]; /** Server has more pages: user should refine, never assume roster complete. */ more: boolean }
-export interface PatientSearchAdapter { mode: 'real' | 'fixture'; search(q: string, clinicId: number, signal?: AbortSignal): Promise<PatientSearchResult> }
+export interface PatientSearchResult { items: PatientHit[]; /** Server has more pages: user should refine, never assume roster complete. */ more: boolean; /** Opaque server cursor for the next page (real pagination). */ nextCursor?: string | null }
+export interface PatientSearchAdapter { mode: 'real' | 'fixture'; search(q: string, clinicId: number, signal?: AbortSignal, cursor?: string): Promise<PatientSearchResult> }
 export const MIN_QUERY = 2;
 export const PAGE = 25;
 
 /** Real contract (GET /api/patients?q=). Server normalizes; no client fallback when absent. */
 export const realPatientSearch: PatientSearchAdapter = {
   mode: 'real',
-  async search(q, _clinicId, signal) {
-    const page = await withAuthReport(listPatients({ q, limit: PAGE }, { signal }));
+  async search(q, _clinicId, signal, cursor) {
+    const page = await withAuthReport(listPatients({ q, limit: PAGE, ...(cursor ? { cursor } : {}) }, { signal }));
     return {
       items: page.items.map((p) => ({ id: p.id, name: p.name, phone: p.phone || null, dateOfBirth: p.dateOfBirth || null, clinicId: p.clinicId })),
       more: page.nextCursor !== null,
+      nextCursor: page.nextCursor,
     };
   },
 };
@@ -39,11 +40,13 @@ const wait = (ms: number, signal?: AbortSignal) => new Promise<void>((res, rej) 
 export function createFixturePatientSearch(latency: (q: string) => number = () => 220): PatientSearchAdapter {
   return {
     mode: 'fixture',
-    async search(q, clinicId, signal) {
+    async search(q, clinicId, signal, cursor) {
       await wait(latency(q), signal);
       if (q.trim().toLowerCase() === 'error') throw Object.assign(new Error('fixture failure'), { status: 500 });
-      const items = FIXTURE_ROSTER.filter((p) => matchesPatient(p, q)).map((p) => ({ ...p, clinicId }));
-      return { items, more: false };
+      const all = FIXTURE_ROSTER.filter((p) => matchesPatient(p, q)).map((p) => ({ ...p, clinicId }));
+      // Fixture pages of 5 so pagination is exercised; cursor is the offset.
+      const off = cursor ? Number(cursor) || 0 : 0; const items = all.slice(off, off + 5); const next = off + 5 < all.length ? String(off + 5) : null;
+      return { items, more: next !== null, nextCursor: next };
     },
   };
 }

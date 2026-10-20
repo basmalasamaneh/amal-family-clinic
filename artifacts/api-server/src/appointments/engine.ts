@@ -176,6 +176,46 @@ function fits(value: Interval, settings: Settings): boolean {
   return true;
 }
 
+/** Shared bounded slot search for conflict suggestions and reception availability. */
+function* eligibleStarts(
+  appointment: Appointment, settings: Settings, now: Date, firstDay: string,
+  occupied: Interval[], holds: Interval[],
+): Generator<number> {
+  for (let dayIndex = 0; dayIndex < 30; dayIndex++) {
+    const day = addLocalDays(firstDay, dayIndex);
+    const window = windowFor(day, settings);
+    if (!window) continue;
+    // Walk UTC minutes so DST gaps disappear and repeated clocks stay distinct.
+    for (let start = window.start; start + appointment.durationMinutes * MINUTE <= window.end; start += MINUTE) {
+      if (start <= now.getTime()) continue;
+      const offset = localClock(start, settings.timezone) - clockMilliseconds(settings.openTime);
+      if (offset < 0 || offset % (settings.slotMinutes * MINUTE) !== 0) continue;
+      const candidate = { start, end: start + appointment.durationMinutes * MINUTE };
+      if (occupied.some(value => overlaps(candidate, value)) || holds.some(value => overlaps(candidate, value))) continue;
+      if (fits(candidate, settings)) yield start;
+    }
+  }
+}
+
+/** Earliest future eligible interval, with no patient-overlap override or hold exemption. */
+export function nearestAvailability(input: EvaluationInput): SuggestedSlot | null {
+  validateSettings(input.settings);
+  if (!(input.now instanceof Date) || !Number.isFinite(input.now.getTime())) throw fail(400, "VALIDATION", "validation");
+  interval(input.appointment);
+  const occupied = input.appointments
+    .filter(a => ACTIVE_STATUSES.has(a.status) &&
+      (a.doctorId === input.appointment.doctorId || a.patientId === input.appointment.patientId))
+    .map(interval);
+  const holds = input.holds.filter(h => h.doctorId === input.appointment.doctorId &&
+    instant(h.expiresAt) > input.now.getTime()).map(interval);
+  const firstDay = formatInTimeZone(input.now, input.settings.timezone, "yyyy-MM-dd");
+  const start = eligibleStarts(input.appointment, input.settings, input.now, firstDay, occupied, holds).next().value;
+  return start === undefined ? null : {
+    startsAt: new Date(start).toISOString(),
+    endsAt: new Date(start + input.appointment.durationMinutes * MINUTE).toISOString(),
+  };
+}
+
 /**
  * Pure and deterministic; callers own persistence, locking, audit and relationship authorization.
  * Search covers 30 local dates starting at max(today, requested-day minus 15 days).
@@ -229,23 +269,9 @@ export function evaluate(input: EvaluationInput): ConflictResult {
     const today = formatInTimeZone(now, settings.timezone, "yyyy-MM-dd");
     const centered = addLocalDays(requestedDay, -15);
     const firstDay = centered > today ? centered : today;
-    const candidates: number[] = [];
     const occupied = active.filter(a => a.appointment.doctorId === appointment.doctorId ||
       a.appointment.patientId === appointment.patientId).map(a => a.interval);
-    for (let dayIndex = 0; dayIndex < 30; dayIndex++) {
-      const day = addLocalDays(firstDay, dayIndex);
-      const window = windowFor(day, settings);
-      if (!window) continue;
-      // Walk actual UTC minutes: spring gaps vanish and fall-back occurrences stay distinct.
-      for (let start = window.start; start + appointment.durationMinutes * MINUTE <= window.end; start += MINUTE) {
-        if (start <= now.getTime()) continue;
-        const offset = localClock(start, settings.timezone) - clockMilliseconds(settings.openTime);
-        if (offset < 0 || offset % (settings.slotMinutes * MINUTE) !== 0) continue;
-        const candidate = { start, end: start + appointment.durationMinutes * MINUTE };
-        if (occupied.some(value => overlaps(candidate, value)) || holds.some(value => overlaps(candidate, value))) continue;
-        if (fits(candidate, settings)) candidates.push(start);
-      }
-    }
+    const candidates = [...eligibleStarts(appointment, settings, now, firstDay, occupied, holds)];
     candidates.sort((a, b) => Math.abs(a - requested.start) - Math.abs(b - requested.start) || a - b);
     const slots = candidates.slice(0, 3).map(start => ({
       startsAt: new Date(start).toISOString(),

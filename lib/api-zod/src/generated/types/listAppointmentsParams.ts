@@ -12,12 +12,16 @@ export type ListAppointmentsParams = {
  * @minimum 1
  */
 clinicId: number;
-from: Date;
-to: Date;
+from?: Date;
+to?: Date;
 /**
  * @minimum 1
  */
 doctorId?: number;
+/**
+ * Requires authorized patientId. Active future bookings only, chronologically paginated.
+ */
+upcoming?: boolean;
 cursor?: string;
 /**
  * @minimum 1

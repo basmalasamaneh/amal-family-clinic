@@ -123,6 +123,114 @@ after(async () => {
 });
 
 test("appointment APIs: authenticated scope, transactions, idempotency, holds and audit", async t => {
+  await t.test("reception directories require auth and preserve clinic/doctor scope with minimal projections", async () => {
+    for (const path of ["/clinics", `/doctors?clinicId=${doctor.clinicId}`]) {
+      assert.equal((await request(null, path)).status, 401);
+      assert.equal((await request(manager, path)).status, 403);
+    }
+    const clinics = await request(desk, "/clinics");
+    assert.equal(clinics.status, 200, JSON.stringify(clinics.data));
+    assert.deepEqual(clinics.data.items.map((c: { id: number }) => c.id), [desk.clinicId]);
+    assert.deepEqual(Object.keys(clinics.data.items[0]).sort(), ["id", "name", "mode", "timezone"].sort());
+    assert.equal((await request(desk, `/doctors?clinicId=${remoteDoctor.clinicId}`)).status, 403);
+    assert.equal((await request(desk, `/doctors?clinicId=${desk.clinicId}&patientId=1`)).status, 400);
+    const own = await request(doctor, `/doctors?clinicId=${doctor.clinicId}`);
+    assert.deepEqual(own.data.items.map((d: { id: number }) => d.id), [doctor.doctorId]);
+    const first = await request(desk, `/doctors?clinicId=${desk.clinicId}&limit=1`);
+    assert.equal(first.status, 200);
+    assert(first.data.nextCursor);
+    assert.deepEqual(Object.keys(first.data.items[0]).sort(), ["id", "clinicId", "name", "networkVisible"].sort());
+    assert.equal(first.data.items[0].networkVisible, false, "scheduling directory never grants network access");
+    const second = await request(desk, `/doctors?clinicId=${desk.clinicId}&limit=1&cursor=${first.data.nextCursor}`);
+    assert.equal(second.status, 200);
+    assert.notEqual(first.data.items[0].id, second.data.items[0].id);
+    assert.equal(second.data.nextCursor, null);
+    assert.equal((await request(doctor, `/doctors?clinicId=${doctor.clinicId}&cursor=${first.data.nextCursor}`)).status, 400);
+  });
+  await t.test("availability is authenticated, patient-scoped and configured, and never returns clinical/collision details", async () => {
+    const path = `/appointments/availability?clinicId=${desk.clinicId}&patientId=${patientIds[22]}`;
+    assert.equal((await request(null, path)).status, 401);
+    assert.equal((await request(manager, path)).status, 403);
+    assert.equal((await request(remoteDoctor, path)).status, 403);
+    for (const query of [`?clinicId=${desk.clinicId}`, `?patientId=${patientIds[22]}`,
+      `?clinicId=${desk.clinicId}&patientId=0`, `?clinicId=${desk.clinicId}&patientId=${patientIds[22]}&durationMinutes=5`]) {
+      assert.equal((await request(desk, "/appointments/availability" + query)).status, 400);
+    }
+    const got = await request(desk, path);
+    assert.equal(got.status, 200, JSON.stringify(got.data));
+    assert.deepEqual(Object.keys(got.data).sort(), ["items", "durationMinutes", "checkedAt"].sort());
+    assert.equal(got.data.durationMinutes, 30);
+    assert.deepEqual(got.data.items.map((s: { doctorId: number }) => s.doctorId), doctorIds.slice(0, 2));
+    for (const slot of got.data.items) {
+      assert.deepEqual(Object.keys(slot).sort(), ["doctorId", "startsAt", "endsAt"].sort());
+      assert(Date.parse(slot.startsAt) > Date.parse(got.data.checkedAt));
+      assert.equal(Date.parse(slot.endsAt) - Date.parse(slot.startsAt), got.data.durationMinutes * 60000);
+    }
+    const own = await request(doctor, path);
+    assert.deepEqual(own.data.items.map((s: { doctorId: number }) => s.doctorId), [doctor.doctorId]);
+    const slot = own.data.items[0];
+    const held = await request(doctor, "/appointments/holds", "POST", {
+      clientOpId: randomUUID(), clinicId: doctor.clinicId, patientId: patientIds[22], ...slot,
+    });
+    assert.equal(held.status, 201, JSON.stringify(held.data));
+    const after = await request(doctor, path);
+    assert.equal(after.status, 200);
+    assert(Date.parse(after.data.items[0].startsAt) >= Date.parse(slot.endsAt), "even own active hold blocks adapter");
+    await admin.query("UPDATE operational.appointment_holds SET expires_at=now()-interval '1 second' WHERE token=$1", [held.data.token]);
+    const expired = await request(doctor, path);
+    assert.equal(expired.data.items[0].startsAt, slot.startsAt);
+    await admin.query("UPDATE operational.clinics SET open_time='00:00',close_time='00:01' WHERE clinic_id=$1", [desk.clinicId]);
+    try {
+      const empty = await request(desk, path);
+      assert.equal(empty.status, 200);
+      assert.deepEqual(empty.data.items, []);
+    } finally { await admin.query("UPDATE operational.clinics SET close_time='23:59' WHERE clinic_id=$1", [desk.clinicId]); }
+    await admin.query("DELETE FROM operational.patient_clinic_access WHERE patient_id=$1 AND clinic_id=$2", [patientIds[23], desk.clinicId]);
+    const unauthorized = `/appointments/availability?clinicId=${desk.clinicId}&patientId=${patientIds[23]}`;
+    assert.equal((await request(desk, unauthorized)).status, 404);
+  });
+  await t.test("upcoming requires an authorized patient, excludes historical statuses/past and uses chronological stable cursors", async () => {
+    const patientId = patientIds[20]!;
+    const add = async (doctor: Actor, p: number, at: string, status: string) =>
+      (await admin.query(`INSERT INTO operational.appointments(clinic_id,doctor_id,patient_id,scheduled_at,booking_method,status)
+        VALUES($1,$2,$3,$4,'phone',$5) RETURNING appointment_id`, [doctor.clinicId, doctor.doctorId, p, at, status])).rows[0].appointment_id;
+    const late = await add(doctor, patientId, "2092-01-02T10:00:00Z", "booked");
+    const early = await add(doctor, patientId, "2092-01-01T10:00:00Z", "booked");
+    const tied = await add(otherDoctor, patientId, "2092-01-01T10:00:00Z", "double_booked");
+    for (const status of ["cancelled", "completed", "no_show"]) await add(doctor, patientId, "2092-01-01T09:00:00Z", status);
+    await add(doctor, patientId, "2000-01-01T10:00:00Z", "booked");
+    await add(doctor, patientId, new Date(Date.now() - 60000).toISOString(), "booked");
+    await add(remoteDoctor, patientId, "2092-01-01T09:30:00Z", "booked");
+    await add(doctor, patientIds[21]!, "2092-01-01T09:45:00Z", "booked");
+    await add(doctor, patientIds[23]!, "2092-01-01T09:50:00Z", "booked");
+    await admin.query("DELETE FROM operational.patient_clinic_access WHERE patient_id=$1 AND clinic_id=$2", [patientIds[23], desk.clinicId]);
+    const path = `/appointments?clinicId=${desk.clinicId}&patientId=${patientId}&upcoming=true&limit=1`;
+    const ids: number[] = [];
+    let cursor: string | null = null, firstCursor = "";
+    do {
+      const page = await request(desk, path + (cursor ? `&cursor=${cursor}` : ""));
+      assert.equal(page.status, 200, JSON.stringify(page.data));
+      for (const row of page.data.items) {
+        ids.push(row.id);
+        assert.equal(row.patientId, patientId);
+        assert.equal(row.clinicId, desk.clinicId);
+        assert.deepEqual(Object.keys(row).sort(), ["id", "clinicId", "doctorId", "patientId", "startsAt", "endsAt", "source", "clientOpId", "status", "version"].sort());
+      }
+      cursor = page.data.nextCursor;
+      if (!firstCursor && cursor) firstCursor = cursor;
+    } while (cursor);
+    assert.deepEqual(ids, [early, tied, late], "time order wins over insertion ID; same-time ties use ID");
+    const own = await request(doctor, path);
+    assert.deepEqual(own.data.items.map((a: { id: number }) => a.id), [early]);
+    assert.equal((await request(desk, `/appointments?clinicId=${desk.clinicId}&upcoming=true`)).status, 400);
+    assert.equal((await request(desk, `/appointments?clinicId=${desk.clinicId}&patientId=${patientId}&upcoming=true&status=cancelled`)).status, 400);
+    assert.equal((await request(desk, `/appointments?clinicId=${desk.clinicId}&patientId=${patientIds[23]}&upcoming=true`)).status, 404);
+    assert.equal((await request(desk, `/appointments?clinicId=${desk.clinicId}&patientId=${patientIds[21]}&upcoming=true&cursor=${firstCursor}`)).status, 400);
+    assert.equal((await request(remoteDoctor, path)).status, 403);
+    const filtered = await request(desk, `/appointments?clinicId=${desk.clinicId}&patientId=${patientId}&upcoming=true&from=2092-01-02T00:00:00Z&to=2092-01-03T00:00:00Z`);
+    assert.deepEqual(filtered.data.items.map((a: { id: number }) => a.id), [late]);
+    assert.equal((await request(desk, `/appointments?clinicId=${desk.clinicId}&patientId=${patientIds[22]}&upcoming=true`)).data.items.length, 0);
+  });
   await t.test("anonymous, CSRF, admin, doctor and clinic denials do not write", async () => {
     const body = booking(doctor, patientIds[0]!, 5);
     assert.equal((await request(null, "/appointments", "POST", body)).status, 401);

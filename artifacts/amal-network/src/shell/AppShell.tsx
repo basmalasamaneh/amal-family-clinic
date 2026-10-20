@@ -16,7 +16,10 @@ import { useTour } from '@/tour/use-tour';
 import { CalendarPage } from '@/calendar/CalendarPage';
 import { BookingHandoff } from '@/calendar/BookingHandoff';
 import { CancellationProvider } from '@/calendar/CancellationProvider';
-import { bookingQuery } from '@/calendar/booking';
+import { PatientsPage } from '@/reception/PatientsPage';
+import { WalkInButton, WalkInProvider, useWalkIn } from '@/reception/WalkIn';
+import { WalkInHandoff } from '@/reception/WalkInHandoff';
+import { requestWalkIn, useWalkInAvailable } from '@/reception/walkin-bus';
 import { withCarry } from '@/calendar/carry';
 import { isKnownRole, landingFor, resolve, routesFor, type Resolution, type ShellRoute } from './routes';
 
@@ -34,7 +37,6 @@ export function AppShell({ identity, fixture, onRefresh, onLogout }: Props) {
 function AppShellContent({ identity, fixture, onRefresh, onLogout }: Props) {
   const { t } = useTranslation();
   const [location] = useLocation();
-  const search = useSearch();
   const role = isKnownRole(identity.role) ? identity.role : null;
   const items = useMemo(() => routesFor(role), [role]);
   const res = resolve(location, role);
@@ -62,6 +64,7 @@ function AppShellContent({ identity, fixture, onRefresh, onLogout }: Props) {
   if (res.kind === 'landing') return <Redirect to={demoPath(res.to)} replace />;
 
   return (
+    <WalkInProvider key={clinic?.id ?? 'none'} clinic={clinic} fixture={fixture} enabled={role === 'front-desk'}>
     <div className="shell" data-testid="app-shell" data-role={identity.role ?? 'none'}>
       <a href="#main" className="shell-skip" data-testid="link-skip">{t('shell.skip')}</a>
       <div className="shell-sr" role="status" aria-live="polite" data-testid="status-route-announce">{announce}</div>
@@ -89,11 +92,7 @@ function AppShellContent({ identity, fixture, onRefresh, onLogout }: Props) {
         <header className="shell-top">
           <div className="shell-top__brand"><AmalLogo /></div>
           <ClinicSwitcher clinics={clinics} state={identity.clinicsState} value={clinicId} onChange={(id) => { void localCache.setContext(null); setClinicId(id); }} onRetry={onRefresh} />
-          {role === 'front-desk' && clinic && (
-            <Link href={demoPath(withCarry(bookingQuery({ clinicId: clinic.id, source: 'walk-in' }), search))} className="shell-walkin" data-testid="link-walk-in">
-              <DoorOpen size={22} aria-hidden="true" /><span>{t('calendar.actions.walkIn')}</span>
-            </Link>
-          )}
+          <WalkInButton />
           <GlobalSearch key={clinicId ?? 'none'} />
           <div className="shell-top__end">
             <ConnectionPill />
@@ -111,6 +110,7 @@ function AppShellContent({ identity, fixture, onRefresh, onLogout }: Props) {
       {items.length > 0 && <BottomNav items={items} location={location} />}
       {tour.open && <TourOverlay key={tour.run} steps={tour.steps} onFinish={tour.finish} />}
     </div>
+    </WalkInProvider>
   );
 }
 
@@ -152,6 +152,7 @@ function BottomNav({ items, location }: { items: ShellRoute[]; location: string 
   const visible = needsMore ? items.slice(0, BOTTOM_SLOTS) : items;
   const overflow = needsMore ? items.slice(BOTTOM_SLOTS) : [];
   const overflowActive = overflow.some((r) => r.path === location);
+  const walkInOk = useWalkInAvailable();
   return (
     <nav className="shell-bottom" aria-label={t('shell.nav.label')} data-testid="nav-bottom" data-tour="nav-bottom">
       <ul>
@@ -165,6 +166,7 @@ function BottomNav({ items, location }: { items: ShellRoute[]; location: string 
               </DropdownMenu.Trigger>
               <DropdownMenu.Portal>
                 <DropdownMenu.Content className="shell-menu" side="top" align="end" sideOffset={8} collisionPadding={8}>
+                  {walkInOk && <DropdownMenu.Item className="shell-menu__item" onSelect={() => setTimeout(requestWalkIn, 0)} data-testid="menuitem-more-walkin"><DoorOpen size={18} aria-hidden="true" />{t('calendar.actions.walkIn')}</DropdownMenu.Item>}
                   {overflow.map((r) => {
                     const Icon = r.icon;
                     return (
@@ -309,6 +311,7 @@ function UserMenu({ identity, fixture, onLogout }: { identity: ShellIdentity; fi
             </div>
           </section>
           <div className="shell-dialog__foot">
+            <WalkInHandoff className="amal-btn amal-btn--secondary" testId="button-user-walkin" />
             <Button variant="secondary" onClick={() => void doLogout()} disabled={logoutState === 'pending'} data-testid="button-logout">
               <LogOut size={18} aria-hidden="true" className="shell-dir-icon" />
               {logoutState === 'error' ? t('shell.user.logoutRetry') : fixture ? t('shell.user.logoutFixture') : t('shell.user.logout')}
@@ -325,6 +328,7 @@ function UserMenu({ identity, fixture, onLogout }: { identity: ShellIdentity; fi
 function HelpMenu({ onReplay, canReplay }: { onReplay: () => void; canReplay: boolean }) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
+  const walkIn = useWalkIn();
   return (
     <Dialog.Root open={open} onOpenChange={setOpen}>
       <Dialog.Trigger className="shell-user shell-help" data-tour="help" aria-label={t('help.open')} data-testid="button-help">
@@ -340,6 +344,12 @@ function HelpMenu({ onReplay, canReplay }: { onReplay: () => void; canReplay: bo
           </div>
           <p id="help-desc" className="shell-dialog__preview">{t('help.desc')}</p>
           <ul className="help-list">
+            {walkIn.enabled && <li>
+              <button type="button" className="help-item" onClick={() => { setOpen(false); setTimeout(() => walkIn.open(), 0); }} data-testid="button-help-walkin">
+                <DoorOpen size={22} aria-hidden="true" />
+                <span><strong>{t('calendar.actions.walkIn')}</strong></span>
+              </button>
+            </li>}
             <li>
               <button type="button" className="help-item" disabled={!canReplay} onClick={() => { setOpen(false); setTimeout(onReplay, 0); }} data-testid="button-replay-tour">
                 <PlayCircle size={22} aria-hidden="true" />
@@ -366,6 +376,7 @@ function PageContent({ res, title, clinic, fixture, landing }: { res: Resolution
   const [now] = useState(() => new Date().toISOString());
 
   if (res.kind === 'page' && (res.route.id === 'today' || res.route.id === 'week')) return <CalendarPage view={res.route.id === 'today' ? 'day' : 'week'} clinic={clinic} fixture={fixture} title={title} />;
+  if (res.kind === 'page' && res.route.id === 'patientLookup') return <PatientsPage clinic={clinic} fixture={fixture} title={title} />;
   if (res.kind === 'page' && res.route.id === 'newBooking') return <BookingHandoff clinic={clinic} fixture={fixture} title={title} />;
   if (res.kind === 'page') {
     const Icon = res.route.icon;

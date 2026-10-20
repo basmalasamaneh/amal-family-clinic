@@ -532,10 +532,40 @@
         },
         "examples": [{ "name": "Synthetic patient updated" }]
       },
+      "AppointmentAvailability": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["items", "durationMinutes", "checkedAt"],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["doctorId", "startsAt", "endsAt"],
+              "properties": {
+                "doctorId": { "type": "integer", "minimum": 1 },
+                "startsAt": { "type": "string", "format": "date-time" },
+                "endsAt": { "type": "string", "format": "date-time" }
+              }
+            }
+          },
+          "durationMinutes": { "type": "integer", "minimum": 1, "maximum": 1440 },
+          "checkedAt": { "type": "string", "format": "date-time" }
+        },
+        "examples": [{
+          "items": [{"doctorId": 201, "startsAt": "2026-09-09T07:00:00Z", "endsAt": "2026-09-09T07:15:00Z"}],
+          "durationMinutes": 15,
+          "checkedAt": "2026-09-09T06:59:00Z"
+        }]
+      },
       "PatientInput": {
         "type": "object",
         "additionalProperties": false,
+        "description": "Registration uses completed birthdays on the current Asia/Hebron calendar date. Under 18 requires both guardian fields. Adult guardian values are discarded; guardian demographics never grant consent.",
         "properties": {
+          "guardianName": { "type": "string", "minLength": 1, "maxLength": 200, "pattern": "\\S" },
+          "guardianRelation": { "type": "string", "minLength": 1, "maxLength": 100, "pattern": "\\S" },
           "name": {
             "type": "string",
             "minLength": 1,
@@ -3434,18 +3464,17 @@
           "clinics"
         ],
         "summary": "list clinics",
-        "description": "Contract-only domain service; mock responses are simulated. Clinic scope comes from authenticated identity, not submitted identifiers. Admin has no implicit clinical access. Network visibility requires active consent and excludes Lite clinics. Mutations require CSRF; clientOpId is replay-safe per clinic, with changed payload returning 409.",
+        "description": "Operational clinic directory for reception booking. Returns only the authenticated doctor's/front-desk user's current clinic, with scheduling identity fields only. Admin is not authorized by this reception adapter.",
         "security": [
           {
             "sessionCookie": []
           }
         ],
         "x-roles": [
-          "admin",
           "doctor",
           "front-desk"
         ],
-        "x-implementation": "contract-only",
+        "x-implementation": "real",
         "parameters": [
           {
             "name": "cursor",
@@ -4162,18 +4191,17 @@
           "doctors"
         ],
         "summary": "list doctors",
-        "description": "Contract-only domain service; mock responses are simulated. Clinic scope comes from authenticated identity, not submitted identifiers. Admin has no implicit clinical access. Network visibility requires active consent and excludes Lite clinics. Mutations require CSRF; clientOpId is replay-safe per clinic, with changed payload returning 409.",
+        "description": "Operational doctor directory within the authenticated current clinic. Doctors see only their own doctor ID; front-desk sees current-clinic doctors. networkVisible=false does not authorize network lookup or imply patient consent. Admin is not authorized by this reception adapter.",
         "security": [
           {
             "sessionCookie": []
           }
         ],
         "x-roles": [
-          "admin",
           "doctor",
           "front-desk"
         ],
-        "x-implementation": "contract-only",
+        "x-implementation": "real",
         "parameters": [
           {
             "name": "clinicId",
@@ -4351,6 +4379,30 @@
         }
       }
     },
+    "/appointments/availability": {
+      "get": {
+        "operationId": "getAppointmentAvailability",
+        "tags": ["appointments"],
+        "summary": "Nearest eligible walk-in slot per authorized doctor",
+        "description": "Requires an authorized current clinic and patient. Returns at most one strictly future slot per authorized doctor, ordered by doctor ID. Duration is clinic.slotMinutes. Reuses booking engine's 30-local-date horizon, working hours, grid, active bookings and holds (including own holds). Empty items means no eligible slots in that horizon, not a service failure. This is advisory: final check/hold/create remains authoritative; no warnings are acknowledged or conflicts reshaped.",
+        "security": [{"sessionCookie": []}],
+        "x-roles": ["doctor", "front-desk"],
+        "x-implementation": "real",
+        "parameters": [
+          {"name": "clinicId", "in": "query", "required": true, "schema": {"type": "integer", "minimum": 1}, "example": 101},
+          {"name": "patientId", "in": "query", "required": true, "schema": {"type": "integer", "minimum": 1}, "example": 301}
+        ],
+        "responses": {
+          "200": {"description": "AppointmentAvailability", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/AppointmentAvailability"}, "example": {"items": [{"doctorId": 201, "startsAt": "2026-09-09T07:00:00Z", "endsAt": "2026-09-09T07:15:00Z"}], "durationMinutes": 15, "checkedAt": "2026-09-09T06:59:00Z"}}}},
+          "400": {"description": "VALIDATION", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ApiFailure"}, "example": {"code": "VALIDATION", "messageKey": "error.validation", "params": {}}}}},
+          "401": {"description": "UNAUTHORIZED", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ApiFailure"}, "example": {"code": "UNAUTHORIZED", "messageKey": "error.unauthorized", "params": {}}}}},
+          "403": {"description": "FORBIDDEN", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ApiFailure"}, "example": {"code": "FORBIDDEN", "messageKey": "error.forbidden", "params": {}}}}},
+          "404": {"description": "NOT_FOUND", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ApiFailure"}, "example": {"code": "NOT_FOUND", "messageKey": "error.notFound", "params": {}}}}},
+          "422": {"description": "INVALID_CLINIC_SETTINGS", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ApiFailure"}, "example": {"code": "INVALID_CLINIC_SETTINGS", "messageKey": "error.invalidClinicSettings", "params": {}}}}},
+          "500": {"description": "INTERNAL", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ApiFailure"}, "example": {"code": "INTERNAL", "messageKey": "error.internal", "params": {}}}}}
+        }
+      }
+    },
     "/appointments": {
       "get": {
         "operationId": "listAppointments",
@@ -4358,7 +4410,7 @@
           "appointments"
         ],
         "summary": "list appointments",
-        "description": "Operational appointments only. Doctor/front-desk within own clinic, doctor within own doctor scope. UTC instants, Asia/Hebron working hours. Cancel through PATCH status=cancelled; history is retained. All mutations require actor-bound clientOpId; edits require expectedVersion. See docs/appointments.md.",
+        "description": "Operational scheduling fields only; doctor/front-desk within own clinic, doctor within own doctor scope. With upcoming=true, authorized patientId is required, from/to are optional, only booked/double_booked starts at or after server now are returned chronologically using stable (startsAt,id) cursors. Otherwise from/to are required and legacy ID ordering is retained. Cancel through PATCH; existing conflict shapes remain unchanged. See docs/appointments.md.",
         "security": [
           {
             "sessionCookie": []
@@ -4383,7 +4435,7 @@
           {
             "name": "from",
             "in": "query",
-            "required": true,
+            "required": false,
             "schema": {
               "type": "string",
               "format": "date-time"
@@ -4393,7 +4445,7 @@
           {
             "name": "to",
             "in": "query",
-            "required": true,
+            "required": false,
             "schema": {
               "type": "string",
               "format": "date-time"
@@ -4409,6 +4461,13 @@
               "minimum": 1
             },
             "example": 201
+          },
+          {
+            "name": "upcoming",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "boolean", "default": false },
+            "description": "Requires authorized patientId. Active future bookings only, chronologically paginated."
           },
           {
             "name": "cursor",

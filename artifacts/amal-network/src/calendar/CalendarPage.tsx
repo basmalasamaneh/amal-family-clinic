@@ -9,6 +9,7 @@ import { addLocalDays, dayRange, formatLocalDate, formatMinutes, isLocalDate, lo
 import { placeOverlaps } from './layout';
 import { bookingQuery } from './booking';
 import { AppointmentCard, CalSkeleton, DateNavigator } from './components';
+import { setWalkInPageContext } from '@/reception/walkin-bus';
 import { useSchedule } from './use-schedule';
 
 /** Keeps explicit dev demo params (calendarDemo) on calendar links; shellDemo is added by demoPath. */
@@ -34,6 +35,9 @@ export function CalendarPage({ view, clinic, fixture, title }: { view: 'day' | '
 
   const doctors = load.state === 'ready' ? load.data.doctors : [];
   const doctorId = doctorParam && doctors.some((d) => d.id === doctorParam) ? doctorParam : null;
+
+  // Publish the validated doctor filter as a Walk-in hint (cleared on leave or clinic change).
+  useEffect(() => { setWalkInPageContext(clinic && doctorId ? { clinicId: clinic.id, doctorId } : null); return () => setWalkInPageContext(null); }, [clinic, doctorId]);
 
   const qs = (next: { date?: string; doctor?: number | null }) => {
     const p = new URLSearchParams();
