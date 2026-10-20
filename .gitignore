@@ -50,3 +50,4 @@ Thumbs.db
 .cache/
 .local/
 /generated-artifacts/
+/attached_assets/testing_screenshot/
