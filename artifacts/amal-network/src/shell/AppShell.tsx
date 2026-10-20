@@ -26,6 +26,7 @@ import { NetworkSearchPage } from '@/network/NetworkSearchPage';
 import { PatientCardPage } from '@/network/PatientCardPage';
 import { MyDayPage } from '@/doctor/MyDayPage';
 import { PrivacyPage } from '@/doctor/PrivacyPage';
+import { KpiPage } from '@/kpi/KpiPage';
 import { clearSelection as clearNetworkSelection } from '@/network/model';
 import { clearConsentSelection } from '@/consent/model';
 import { ConsentPage } from '@/consent/ConsentPage';
@@ -388,6 +389,7 @@ function PageContent({ res, title, clinic, fixture, landing, scope }: { res: Res
   if (res.kind === 'page' && res.route.id === 'patientCard') return <PatientCardPage clinic={clinic} title={title} scope={scope} />;
   if (res.kind === 'page' && res.route.id === 'myDay') return <MyDayPage clinic={clinic} title={title} scope={scope} />;
   if (res.kind === 'page' && res.route.id === 'privacy') return <PrivacyPage clinic={clinic} title={title} scope={scope} />;
+  if (res.kind === 'page' && res.route.id === 'kpi') return <KpiPage key={scope} title={title} />;
   if (res.kind === 'page' && res.route.id === 'newBooking') return <BookingHandoff clinic={clinic} fixture={fixture} title={title} />;
   if (res.kind === 'page') {
     const Icon = res.route.icon;
