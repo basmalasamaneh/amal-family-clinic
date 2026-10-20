@@ -6,15 +6,29 @@
     "preinstall": "sh -c 'rm -f package-lock.json yarn.lock; case \"$npm_config_user_agent\" in pnpm/*) ;; *) echo \"Use pnpm instead\" >&2; exit 1 ;; esac'",
     "build": "pnpm run typecheck && pnpm -r --if-present run build",
     "typecheck:libs": "tsc --build",
-    "typecheck": "pnpm run typecheck:libs && pnpm -r --filter \"./artifacts/**\" --filter \"./scripts\" --if-present run typecheck"
+    "typecheck": "pnpm run typecheck:libs && pnpm -r --filter \"./artifacts/**\" --filter \"./scripts\" --if-present run typecheck && pnpm run typecheck:harness",
+    "typecheck:harness": "tsc -p tests/tsconfig.json --noEmit",
+    "test": "vitest run --config vitest.config.mts",
+    "e2e": "playwright test --config playwright.config.ts",
+    "test:a11y": "pnpm run e2e --grep @axe",
+    "test:screenshots": "pnpm run e2e --grep @screenshot",
+    "test:screenshots:update": "pnpm run test:screenshots --update-snapshots"
   },
   "private": true,
   "dependencies": {
     "@replit/connectors-sdk": "^0.4.3"
   },
   "devDependencies": {
+    "@axe-core/playwright": "4.14.0",
+    "@playwright/test": "1.64.1",
+    "@types/node": "catalog:",
+    "@workspace/db": "workspace:*",
+    "date-fns": "^3.6.0",
+    "date-fns-tz": "^3.2.0",
     "prettier": "^3.9.6",
     "terser": "^5.51.2",
-    "typescript": "~5.9.3"
+    "tsx": "catalog:",
+    "typescript": "~5.9.3",
+    "vitest": "^4.1.12"
   }
 }

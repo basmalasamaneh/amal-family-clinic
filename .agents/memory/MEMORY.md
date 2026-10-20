@@ -8,3 +8,4 @@
 - [Development auth origins](development-auth-origin.md) — task forks may inherit an outdated allowed origin; correct development configuration, not CSRF enforcement.
 - [Offline authorization](offline-authorization.md) — a cached shell or reconnect event must not unlock private records without verified authorization.
 - [Vite peer identity](vite-peer-deduplication.md) — Workbox build peers can duplicate Vite types; deduplicate before changing unrelated consumers.
+- [Test browser environment](test-browser-environment.md) — downloaded Playwright browsers may lack NixOS native libraries; screenshot baselines depend on browser and fonts.
