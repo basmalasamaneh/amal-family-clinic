@@ -999,7 +999,7 @@ test("consent: role × scope × level, transactional history and network disclos
       const deniedDisclosure = await lookup(remoteDoctor, p.name);
       assert.equal(deniedDisclosure.status, 500);
       assert.deepEqual(deniedDisclosure.data, { code: "INTERNAL", messageKey: "error.internal", params: {} });
-      assert.equal(deniedDisclosure.data.items, undefined, "never return data if its audit cannot commit");
+      assert.equal("items" in deniedDisclosure.data, false, "never return data if its audit cannot commit");
       const failedNoResult = await lookup(remoteDoctor, `No result ${randomUUID()}`);
       assert.equal(failedNoResult.status, 500, "no-result responses also require a committed audit");
       rejectAction = "network.lookup.denied";
@@ -1009,7 +1009,7 @@ test("consent: role × scope × level, transactional history and network disclos
       const failedHistory = await request(desk, `/patients/${p.id}/access-history`, "POST", { patientRequestConfirmed: true });
       assert.equal(failedHistory.status, 500);
       assert.deepEqual(failedHistory.data, { code: "INTERNAL", messageKey: "error.internal", params: {} });
-      assert.equal(failedHistory.data.items, undefined, "assisted history must not return if its audit cannot commit");
+      assert.equal("items" in failedHistory.data, false, "assisted history must not return if its audit cannot commit");
       rejectAction = "patient.access-history.denied";
       assert.equal((await request(desk, `/patients/${p.id}/access-history`, "POST", {})).status, 500);
       assert.equal(rejected, 7);
@@ -1076,3 +1076,12 @@ test("consent: role × scope × level, transactional history and network disclos
     assert.equal((await consent(minor)).history.length, 0);
   });
 });
+
+// Register after prerequisite tests so their local scheduling fixtures stay isolated.
+if (process.env.PRIVACY_TEST_DATABASE_URL) {
+  const { registerPrivacyRegression } = await import("./privacy/regression");
+  registerPrivacyRegression({
+    admin, pool, patient, actor, clinic, visit, trustedDoctor, request, record, input,
+    actors: () => ({ localDoctor, remoteDoctor, desk, manager }),
+  });
+}

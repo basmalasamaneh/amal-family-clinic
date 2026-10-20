@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "tsBuildInfoFile": ".privacy.tsbuildinfo"
+  },
+  "include": ["src", "tests/privacy/**/*.ts", "tests/privacy-api.test.ts", "tests/consent-api.test.ts", "tests/consent-policy.test.ts"],
+  "references": [
+    { "path": "../../lib/db" },
+    { "path": "../../lib/api-zod" }
+  ]
+}

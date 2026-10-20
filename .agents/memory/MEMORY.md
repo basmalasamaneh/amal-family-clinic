@@ -18,3 +18,4 @@
 - [Source-note extraction](alert-conservatism.md) — uncertain clause scope favors suppression, not inferred clinical claims.
 - [Assisted patient history](assisted-patient-history.md) — approved staff-assisted patient requests, not patient accounts or general reception audit access.
 - [Import and merge authority](import-merge-boundaries.md) — filenames cannot reset event identity; exact demographics cannot transfer consent or visibility rights.
+- [Disposable PostgreSQL tools](disposable-postgres-tools.md) — libpq environment parsing differs from Node connection-string parsing.
