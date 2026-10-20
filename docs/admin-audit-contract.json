@@ -1,0 +1,40 @@
+{
+  "paths": {
+    "/admin/audit": {
+      "get": {
+        "operationId": "listAdminAudit",
+        "tags": ["Admin"],
+        "x-roles": ["admin"],
+        "security": [{"sessionCookie": []}],
+        "description": "Privacy-safe administrative audit feed. Only explicitly allowlisted admin/auth actions with no patient subject are visible. Unknown and clinical actions are excluded. Actor is an ID, never an email/name; target is only a bounded administrative ID extracted for known admin/device actions. No clinical text, patient IDs, detail JSON, lookup queries, changed field values or credentials. Outcome is derived from the allowlisted event action, not arbitrary detail. Clinic-limited admins see only their clinic and cannot request another clinic; network admins may filter across clinics. Null-clinic events are visible only to network admins. Descending event ID keyset pagination: pass nextBeforeId as beforeId, keeping all filters fixed. New higher-ID events do not shift subsequent pages; this is not a frozen cross-request snapshot. No total count. No-store response. Existing doctor-only /audit is unchanged.",
+        "parameters": [
+          {"in":"query","name":"limit","description":"Page size; default 25, maximum 100.","schema":{"type":"integer","minimum":1,"maximum":100,"default":25}},
+          {"in":"query","name":"beforeId","description":"Exclusive event ID boundary returned as nextBeforeId.","schema":{"type":"integer","minimum":1,"maximum":2147483647}},
+          {"in":"query","name":"clinicId","description":"Exact event clinic, constrained by administrator scope.","schema":{"type":"integer","minimum":1,"maximum":2147483647}},
+          {"in":"query","name":"actorId","description":"Exact recorded actor user ID.","schema":{"type":"integer","minimum":1,"maximum":2147483647}},
+          {"in":"query","name":"action","schema":{"$ref":"#/components/schemas/AdminAuditAction"}},
+          {"in":"query","name":"outcome","schema":{"type":"string","enum":["success","denied"]}},
+          {"in":"query","name":"from","description":"Inclusive event time, ISO 8601 timestamp with timezone; must precede to.","schema":{"type":"string","format":"date-time"}},
+          {"in":"query","name":"to","description":"Exclusive event time, ISO 8601 timestamp with timezone.","schema":{"type":"string","format":"date-time"}}
+        ],
+        "responses": {
+          "200":{"description":"Safe paginated events","content":{"application/json":{"schema":{"$ref":"#/components/schemas/AdminAuditPage"},"example":{"items":[],"nextBeforeId":null}}}},
+          "400":{"description":"Invalid, unsupported or repeated query parameter, invalid range or action","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ApiFailure"},"example":{"code":"VALIDATION","messageKey":"error.validation","params":{}}}}},
+          "401":{"description":"Missing, expired, revoked or disabled administrator session","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ApiFailure"},"example":{"code":"UNAUTHORIZED","messageKey":"error.unauthorized","params":{}}}}},
+          "403":{"description":"Non-admin or clinic scope denied","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ApiFailure"},"example":{"code":"FORBIDDEN","messageKey":"error.forbidden","params":{}}}}}
+      }
+    }
+    }
+  },
+  "components":{"schemas":{
+    "AdminAuditAction":{"type":"string","enum":["admin.clinic.created","admin.clinic.updated","admin.doctor.created","admin.doctor.updated","admin.user.created","admin.user.updated","admin.user.deactivated","admin.user.pin_reset","auth.device.enrolled","auth.device.revoked","auth.login","auth.logout","auth.password.denied","auth.pin.denied","auth.pin.reauthenticated"]},
+    "AdminAuditEvent":{"type":"object","additionalProperties":false,"required":["id","actorId","action","clinicId","targetType","targetId","outcome","eventTime"],"properties":{
+      "id":{"type":"integer"},"actorId":{"type":["integer","null"]},"action":{"$ref":"#/components/schemas/AdminAuditAction"},
+      "clinicId":{"type":["integer","null"]},"targetType":{"type":["string","null"],"enum":["clinic","doctor","user","device",null]},
+      "targetId":{"type":["integer","null"]},"outcome":{"type":"string","enum":["success","denied"]},"eventTime":{"type":"string","format":"date-time"}
+    }},
+    "AdminAuditPage":{"type":"object","additionalProperties":false,"required":["items","nextBeforeId"],"properties":{
+      "items":{"type":"array","items":{"$ref":"#/components/schemas/AdminAuditEvent"}},"nextBeforeId":{"type":["integer","null"]}
+    }}
+  }}
+}

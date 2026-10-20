@@ -6,6 +6,11 @@
  * OpenAPI spec version: 0.2.0
  */
 
+export * from './adminAuditAction';
+export * from './adminAuditEvent';
+export * from './adminAuditEventOutcome';
+export * from './adminAuditEventTargetType';
+export * from './adminAuditPage';
 export * from './adminClinic';
 export * from './adminClinicInput';
 export * from './adminClinicInputMode';
@@ -197,6 +202,8 @@ export * from './kpiScope';
 export * from './kpiSourceCounts';
 export * from './kpiTelemetryAggregate';
 export * from './kpiWeekdayAppointmentAggregate';
+export * from './listAdminAuditOutcome';
+export * from './listAdminAuditParams';
 export * from './listAdminClinicsParams';
 export * from './listAdminDevicesParams';
 export * from './listAdminDevicesRevoked';

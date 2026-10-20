@@ -3772,3 +3772,43 @@ export const RecordLookupDurationBody = zod.object({
 export const RecordLookupDurationResponse = zod.void()
 
 
+/**
+ * Privacy-safe administrative audit feed. Only explicitly allowlisted admin/auth actions with no patient subject are visible. Unknown and clinical actions are excluded. Actor is an ID, never an email/name; target is only a bounded administrative ID extracted for known admin/device actions. No clinical text, patient IDs, detail JSON, lookup queries, changed field values or credentials. Outcome is derived from the allowlisted event action, not arbitrary detail. Clinic-limited admins see only their clinic and cannot request another clinic; network admins may filter across clinics. Null-clinic events are visible only to network admins. Descending event ID keyset pagination: pass nextBeforeId as beforeId, keeping all filters fixed. New higher-ID events do not shift subsequent pages; this is not a frozen cross-request snapshot. No total count. No-store response. Existing doctor-only /audit is unchanged.
+ */
+export const listAdminAuditQueryLimitDefault = 25;
+export const listAdminAuditQueryLimitMax = 100;
+
+export const listAdminAuditQueryBeforeIdMax = 2147483647;
+
+export const listAdminAuditQueryClinicIdMax = 2147483647;
+
+export const listAdminAuditQueryActorIdMax = 2147483647;
+
+
+
+export const ListAdminAuditQueryParams = zod.object({
+  "limit": zod.coerce.number().int().min(1).max(listAdminAuditQueryLimitMax).default(listAdminAuditQueryLimitDefault).describe('Page size; default 25, maximum 100.'),
+  "beforeId": zod.coerce.number().int().min(1).max(listAdminAuditQueryBeforeIdMax).optional().describe('Exclusive event ID boundary returned as nextBeforeId.'),
+  "clinicId": zod.coerce.number().int().min(1).max(listAdminAuditQueryClinicIdMax).optional().describe('Exact event clinic, constrained by administrator scope.'),
+  "actorId": zod.coerce.number().int().min(1).max(listAdminAuditQueryActorIdMax).optional().describe('Exact recorded actor user ID.'),
+  "action": zod.enum(['admin.clinic.created', 'admin.clinic.updated', 'admin.doctor.created', 'admin.doctor.updated', 'admin.user.created', 'admin.user.updated', 'admin.user.deactivated', 'admin.user.pin_reset', 'auth.device.enrolled', 'auth.device.revoked', 'auth.login', 'auth.logout', 'auth.password.denied', 'auth.pin.denied', 'auth.pin.reauthenticated']).optional(),
+  "outcome": zod.enum(['success', 'denied']).optional(),
+  "from": zod.date().optional().describe('Inclusive event time, ISO 8601 timestamp with timezone; must precede to.'),
+  "to": zod.date().optional().describe('Exclusive event time, ISO 8601 timestamp with timezone.')
+}).strict()
+
+export const ListAdminAuditResponse = zod.object({
+  "items": zod.array(zod.object({
+  "id": zod.number().int(),
+  "actorId": zod.number().int().nullable(),
+  "action": zod.enum(['admin.clinic.created', 'admin.clinic.updated', 'admin.doctor.created', 'admin.doctor.updated', 'admin.user.created', 'admin.user.updated', 'admin.user.deactivated', 'admin.user.pin_reset', 'auth.device.enrolled', 'auth.device.revoked', 'auth.login', 'auth.logout', 'auth.password.denied', 'auth.pin.denied', 'auth.pin.reauthenticated']),
+  "clinicId": zod.number().int().nullable(),
+  "targetType": zod.union([zod.literal('clinic'),zod.literal('doctor'),zod.literal('user'),zod.literal('device'),zod.literal(null)]).nullable(),
+  "targetId": zod.number().int().nullable(),
+  "outcome": zod.enum(['success', 'denied']),
+  "eventTime": zod.coerce.date()
+}).strict()),
+  "nextBeforeId": zod.number().int().nullable()
+}).strict()
+
+

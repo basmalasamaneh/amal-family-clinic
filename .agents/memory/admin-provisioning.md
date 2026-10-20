@@ -24,3 +24,9 @@ mirrors and server conflicts overcounts the same work.
 future health screens must preserve null/coverage distinctions and show server
 conflicts separately. A successful push timestamp is not evidence of a completed
 full push-and-pull cycle.
+
+Administrative audit visibility must be explicitly allowlisted, not a raw audit-log browser. Demographic or administrative authority does not grant clinical audit access.
+
+**Why:** Audit details and action text can contain clinical material, lookup input, or credentials. Even counts and patient identifiers can disclose private activity.
+
+**How to apply:** Review each new action before exposing it; omit patient-linked events and return only approved identifier context. Keep the doctor clinical audit endpoint separate.

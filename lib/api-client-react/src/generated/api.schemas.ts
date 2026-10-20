@@ -2998,6 +2998,69 @@ export interface LookupDurationInput {
   durationMs: number;
 }
 
+export type AdminAuditAction = typeof AdminAuditAction[keyof typeof AdminAuditAction];
+
+
+export const AdminAuditAction = {
+  admincliniccreated: 'admin.clinic.created',
+  adminclinicupdated: 'admin.clinic.updated',
+  admindoctorcreated: 'admin.doctor.created',
+  admindoctorupdated: 'admin.doctor.updated',
+  adminusercreated: 'admin.user.created',
+  adminuserupdated: 'admin.user.updated',
+  adminuserdeactivated: 'admin.user.deactivated',
+  adminuserpin_reset: 'admin.user.pin_reset',
+  authdeviceenrolled: 'auth.device.enrolled',
+  authdevicerevoked: 'auth.device.revoked',
+  authlogin: 'auth.login',
+  authlogout: 'auth.logout',
+  authpassworddenied: 'auth.password.denied',
+  authpindenied: 'auth.pin.denied',
+  authpinreauthenticated: 'auth.pin.reauthenticated',
+} as const;
+
+/**
+ * @nullable
+ */
+export type AdminAuditEventTargetType = typeof AdminAuditEventTargetType[keyof typeof AdminAuditEventTargetType] | null;
+
+
+export const AdminAuditEventTargetType = {
+  clinic: 'clinic',
+  doctor: 'doctor',
+  user: 'user',
+  device: 'device',
+} as const;
+
+export type AdminAuditEventOutcome = typeof AdminAuditEventOutcome[keyof typeof AdminAuditEventOutcome];
+
+
+export const AdminAuditEventOutcome = {
+  success: 'success',
+  denied: 'denied',
+} as const;
+
+export interface AdminAuditEvent {
+  id: number;
+  /** @nullable */
+  actorId: number | null;
+  action: AdminAuditAction;
+  /** @nullable */
+  clinicId: number | null;
+  /** @nullable */
+  targetType: AdminAuditEventTargetType;
+  /** @nullable */
+  targetId: number | null;
+  outcome: AdminAuditEventOutcome;
+  eventTime: string;
+}
+
+export interface AdminAuditPage {
+  items: AdminAuditEvent[];
+  /** @nullable */
+  nextBeforeId: number | null;
+}
+
 /**
  * Invalid input or unsupported file format
  */
@@ -3365,5 +3428,50 @@ export type ListAdminUsersActive = typeof ListAdminUsersActive[keyof typeof List
 export const ListAdminUsersActive = {
   true: 'true',
   false: 'false',
+} as const;
+
+export type ListAdminAuditParams = {
+/**
+ * Page size; default 25, maximum 100.
+ * @minimum 1
+ * @maximum 100
+ */
+limit?: number;
+/**
+ * Exclusive event ID boundary returned as nextBeforeId.
+ * @minimum 1
+ * @maximum 2147483647
+ */
+beforeId?: number;
+/**
+ * Exact event clinic, constrained by administrator scope.
+ * @minimum 1
+ * @maximum 2147483647
+ */
+clinicId?: number;
+/**
+ * Exact recorded actor user ID.
+ * @minimum 1
+ * @maximum 2147483647
+ */
+actorId?: number;
+action?: AdminAuditAction;
+outcome?: ListAdminAuditOutcome;
+/**
+ * Inclusive event time, ISO 8601 timestamp with timezone; must precede to.
+ */
+from?: string;
+/**
+ * Exclusive event time, ISO 8601 timestamp with timezone.
+ */
+to?: string;
+};
+
+export type ListAdminAuditOutcome = typeof ListAdminAuditOutcome[keyof typeof ListAdminAuditOutcome];
+
+
+export const ListAdminAuditOutcome = {
+  success: 'success',
+  denied: 'denied',
 } as const;
 

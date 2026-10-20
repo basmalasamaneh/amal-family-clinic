@@ -13,12 +13,14 @@ import kpisRouter from "./kpis";
 import adminUsersRouter from "./admin-users";
 import adminDirectoryRouter from "./admin-directory";
 import networkHealthRouter from "./network-health";
+import adminAuditRouter from "./admin-audit";
 
 const router: IRouter = Router();
 
 router.use(healthRouter);
 router.use(authRouter);
 router.use(adminUsersRouter);
+router.use(adminAuditRouter);
 router.use(adminDirectoryRouter);
 router.use(networkHealthRouter);
 router.use(appointmentsRouter);

@@ -20,6 +20,7 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  AdminAuditPage,
   AdminClinic,
   AdminClinicInput,
   AdminClinicPage,
@@ -78,6 +79,7 @@ import type {
   ImportUpload,
   ImportValidationResponse,
   KpiResult,
+  ListAdminAuditParams,
   ListAdminClinicsParams,
   ListAdminDevicesParams,
   ListAdminDoctorsParams,
@@ -5650,4 +5652,85 @@ export const useRecordLookupDuration = <TError = ErrorType<ApiFailure>,
       > => {
       return useMutation(getRecordLookupDurationMutationOptions(options));
     }
+
+export const getListAdminAuditUrl = (params?: ListAdminAuditParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/admin/audit?${stringifiedParams}` : `/api/admin/audit`
+}
+
+/**
+ * Privacy-safe administrative audit feed. Only explicitly allowlisted admin/auth actions with no patient subject are visible. Unknown and clinical actions are excluded. Actor is an ID, never an email/name; target is only a bounded administrative ID extracted for known admin/device actions. No clinical text, patient IDs, detail JSON, lookup queries, changed field values or credentials. Outcome is derived from the allowlisted event action, not arbitrary detail. Clinic-limited admins see only their clinic and cannot request another clinic; network admins may filter across clinics. Null-clinic events are visible only to network admins. Descending event ID keyset pagination: pass nextBeforeId as beforeId, keeping all filters fixed. New higher-ID events do not shift subsequent pages; this is not a frozen cross-request snapshot. No total count. No-store response. Existing doctor-only /audit is unchanged.
+ */
+export const listAdminAudit = async (params?: ListAdminAuditParams, options?: Parameters<typeof customFetch>[1]): Promise<AdminAuditPage> => {
+
+  return customFetch<AdminAuditPage>(getListAdminAuditUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListAdminAuditQueryKey = (params?: ListAdminAuditParams,) => {
+    return [
+    `/api/admin/audit`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListAdminAuditQueryOptions = <TData = Awaited<ReturnType<typeof listAdminAudit>>, TError = ErrorType<ApiFailure>>(params?: ListAdminAuditParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAdminAudit>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListAdminAuditQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listAdminAudit>>> = ({ signal }) => listAdminAudit(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listAdminAudit>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListAdminAuditQueryResult = NonNullable<Awaited<ReturnType<typeof listAdminAudit>>>
+export type ListAdminAuditQueryError = ErrorType<ApiFailure>
+
+
+
+export function useListAdminAudit<TData = Awaited<ReturnType<typeof listAdminAudit>>, TError = ErrorType<ApiFailure>>(
+ params?: ListAdminAuditParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAdminAudit>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListAdminAuditQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 

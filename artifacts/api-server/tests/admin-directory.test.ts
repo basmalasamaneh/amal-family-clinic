@@ -126,6 +126,83 @@ test("administration auth, CSRF, and existing directory scope remain separate", 
   assert.equal((await request("/doctors?clinicId=" + secondClinic, "GET", undefined, doctorSession)).status, 403);
 });
 
+test("admin audit denies other roles, scopes events and excludes sensitive payloads with keyset pagination", async () => {
+  assert.equal((await request("/admin/audit", "GET", undefined, null)).status, 401);
+  assert.equal((await request("/admin/audit", "GET", undefined, doctorSession)).status, 403);
+  assert.equal((await request("/audit", "GET", undefined, adminSession)).status, 403);
+  const actor = users[0]!;
+  const marker = "PRIVATE-query-clinical-password-token";
+  const ids: number[] = [];
+  for (const [action, clinicId, targetId] of [
+    ["admin.user.updated", originalClinic, actor],
+    ["auth.password.denied", originalClinic, actor],
+    ["admin.user.updated", secondClinic, actor],
+    ["admin.user.updated", originalClinic, marker],
+    ["network.lookup", originalClinic, actor],
+    [`unknown.${marker}`, originalClinic, actor],
+    ["auth.login", null, actor],
+  ] as const) {
+    const { rows: [row] } = await admin.query(`INSERT INTO operational.audit_log(user_id,clinic_id,action,detail,at)
+      VALUES($1,$2,$3,$4::jsonb,'2020-01-01T12:00:00Z') RETURNING id`,
+    [actor, clinicId, action, JSON.stringify({ targetId, query: marker, diagnosis: marker, token: marker, password: marker, outcome: marker })]);
+    ids.push(row.id);
+  }
+  const patient = (await admin.query("SELECT patient_id FROM operational.patients LIMIT 1")).rows[0].patient_id;
+  await admin.query(`INSERT INTO operational.audit_log(user_id,clinic_id,action,patient_id,detail,at)
+    VALUES($1,$2,'admin.user.updated',$3,'{}','2020-01-01T12:00:00Z')`, [actor, originalClinic, patient]);
+  const filter = `actorId=${actor}&from=2020-01-01T00:00:00Z&to=2020-01-02T00:00:00Z`;
+  const result = await request(`/admin/audit?${filter}`);
+  assert.equal(result.status, 200);
+  assert.deepEqual(result.body.items.map((r: any) => r.id), [ids[6], ids[3], ids[2], ids[1], ids[0]]);
+  assert(!JSON.stringify(result.body).includes(marker));
+  for (const row of result.body.items) {
+    assert.deepEqual(Object.keys(row).sort(), ["action", "actorId", "clinicId", "eventTime", "id", "outcome", "targetId", "targetType"]);
+  }
+  assert.equal(result.body.items.find((r: any) => r.id === ids[3]).targetId, null);
+  assert.equal(result.body.items.find((r: any) => r.id === ids[1]).outcome, "denied");
+  const first = await request(`/admin/audit?${filter}&limit=2`);
+  assert.equal(first.body.nextBeforeId, ids[3]);
+  // A newer event must not shift or duplicate the next page.
+  await admin.query(`INSERT INTO operational.audit_log(user_id,clinic_id,action,at)
+    VALUES($1,$2,'auth.login','2020-01-01T13:00:00Z')`, [actor, originalClinic]);
+  const next = await request(`/admin/audit?${filter}&limit=2&beforeId=${first.body.nextBeforeId}`);
+  assert.deepEqual(next.body.items.map((r: any) => r.id), [ids[2], ids[1]]);
+  const last = await request(`/admin/audit?${filter}&limit=2&beforeId=${next.body.nextBeforeId}`);
+  assert.deepEqual(last.body.items.map((r: any) => r.id), [ids[0]]);
+  assert.equal(last.body.nextBeforeId, null);
+  const scoped = await request(`/admin/audit?${filter}`, "GET", undefined, clinicAdmin);
+  assert(scoped.body.items.every((r: any) => r.clinicId === originalClinic));
+  assert(!scoped.body.items.some((r: any) => [ids[2], ids[6]].includes(r.id)));
+  assert.equal((await request(`/admin/audit?clinicId=${secondClinic}`, "GET", undefined, clinicAdmin)).status, 403);
+  const denied = await request(`/admin/audit?${filter}&outcome=denied&clinicId=${originalClinic}&action=auth.password.denied`);
+  assert.deepEqual(denied.body.items.map((r: any) => r.id), [ids[1]]);
+  assert.deepEqual((await request("/admin/audit?actorId=2147483647")).body, { items: [], nextBeforeId: null });
+  for (const bad of ["limit=101", "beforeId=-1", "patientId=1", "action=network.lookup", "query=secret",
+    "actorId=1&actorId=2", "from=bad", "from=2020-01-02T00:00:00Z&to=2020-01-01T00:00:00Z"]) {
+    assert.equal((await request(`/admin/audit?${bad}`)).status, 400, bad);
+  }
+  // Valid front-desk session must still be rejected by the admin-only route.
+  const { rows: [reception] } = await admin.query(`INSERT INTO operational.users(email,password_hash,role,clinic_id)
+    VALUES($1,'unused','receptionist',$2) RETURNING id`, [`${randomUUID()}@audit.test`, originalClinic]);
+  users.push(reception.id);
+  const { rows: [device] } = await admin.query("INSERT INTO operational.devices(clinic_id,label) VALUES($1,'audit-test') RETURNING id", [originalClinic]);
+  const deviceToken = randomUUID(), token = randomUUID();
+  try {
+    await admin.query("INSERT INTO operational.auth_devices(device_id,credential_digest) VALUES($1,$2)", [device.id, digest(deviceToken)]);
+    await admin.query(`INSERT INTO operational.auth_sessions(token_digest,user_id,device_id,csrf_token,absolute_expires_at)
+      VALUES($1,$2,$3,'unused',now()+interval '1 hour')`, [digest(token), reception.id, device.id]);
+    const response = await fetch(`${base}/admin/audit`, { headers: { cookie: `amal_session=${token}; amal_device=${deviceToken}` } });
+    assert.equal(response.status, 403);
+  } finally {
+    await admin.query("DELETE FROM operational.auth_sessions WHERE user_id=$1", [reception.id]);
+    await admin.query("DELETE FROM operational.auth_devices WHERE device_id=$1", [device.id]);
+    await admin.query("DELETE FROM operational.devices WHERE id=$1", [device.id]);
+  }
+  await admin.query("UPDATE operational.auth_sessions SET revoked_at=now() WHERE token_digest=$1", [digest(secondAdmin.token)]);
+  assert.equal((await request("/admin/audit", "GET", undefined, secondAdmin)).status, 401);
+  await admin.query("UPDATE operational.auth_sessions SET revoked_at=NULL WHERE token_digest=$1", [digest(secondAdmin.token)]);
+});
+
 test("clinic settings roundtrip, full/lite, IANA zone, bounded partial and overnight validation", async () => {
   const clinic = await createClinic();
   assert.equal(clinic.mode, "full");
