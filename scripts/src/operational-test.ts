@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
+import { randomUUID } from "node:crypto";
 import pg from "pg";
 import { compare } from "bcryptjs";
 import { formatInTimeZone, fromZonedTime } from "date-fns-tz";
@@ -130,7 +131,41 @@ try {
     SELECT clinic_id,id,'test.unique.operation','appointment.create','{}','pending' FROM operational.devices ORDER BY id LIMIT 1`, ["23505"]);
   await client.query(`INSERT INTO operational.audit_log(action,detail) VALUES ('demo.test','{}')`);
   await rejects(client, "DELETE FROM operational.audit_log", ["42501"]);
+  const { rows: [syncInstalled] } = await client.query("SELECT to_regclass('operational.sync_device_operations') IS NOT NULL AS ready");
+  if (syncInstalled.ready) {
+    // Exercise reset with real FK-linked evidence, not only empty sync tables.
+    // Everything here is inside the existing rollback-only test transaction.
+    const { rows: [fixture] } = await client.query(`SELECT u.id AS actor_id,d.id AS device_id,a.*
+      FROM operational.appointments a
+      JOIN operational.users u ON u.clinic_id=a.clinic_id
+      JOIN operational.devices d ON d.clinic_id=a.clinic_id
+      ORDER BY a.appointment_id,u.id,d.id LIMIT 1`);
+    assert(fixture, "Reset sync fixture requires populated appointments/users/devices");
+    const operationId = randomUUID(), resolutionId = randomUUID(), conflictId = randomUUID();
+    for (const id of [operationId, resolutionId]) {
+      await client.query(`INSERT INTO operational.appointment_operations
+        (client_op_id,actor_id,clinic_id,doctor_id,payload_hash,result)
+        VALUES($1,$2,$3,$4,'reset-fixture','{}')`,
+      [id, fixture.actor_id, fixture.clinic_id, fixture.doctor_id]);
+    }
+    await client.query(`INSERT INTO operational.sync_conflicts
+      (id,client_op_id,actor_id,device_id,clinic_id,doctor_id,operation,target_id,base_version,server_state,reasons)
+      VALUES($1,$2,$3,$4,$5,$6,'{}',$7,1,'{}','[]')`,
+    [conflictId, operationId, fixture.actor_id, fixture.device_id, fixture.clinic_id, fixture.doctor_id, fixture.appointment_id]);
+    await client.query(`UPDATE operational.appointment_operations SET status='conflict',conflict_id=$2
+      WHERE client_op_id=$1`, [operationId, conflictId]);
+    await client.query(`INSERT INTO operational.sync_device_operations(device_id,sequence,client_op_id)
+      VALUES($1,1,$2)`, [fixture.device_id, operationId]);
+    await client.query(`INSERT INTO operational.sync_resolution_history(conflict_id,client_op_id,actor_id,action,result)
+      VALUES($1,$2,$3,'call','{"status":"follow-up","called":false}')`, [conflictId, resolutionId, fixture.actor_id]);
+    assert(Number((await client.query("SELECT count(*) n FROM operational.sync_changes")).rows[0].n) > 0);
+  }
   await clearOperational(client);
+  if (syncInstalled.ready) {
+    for (const table of ["sync_resolution_history", "sync_device_operations", "sync_conflicts", "sync_changes", "appointment_operations"]) {
+      assert.equal((await client.query(`SELECT count(*) n FROM operational.${table}`)).rows[0].n, "0", `Reset retained ${table}`);
+    }
+  }
   await populate(client);
   await client.query("SET CONSTRAINTS ALL IMMEDIATE");
   assert.deepEqual(await operationalCounts(client), expectedCounts, "Reset failed to restore initial fixture counts");

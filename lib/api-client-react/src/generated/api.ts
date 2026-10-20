@@ -97,9 +97,9 @@ import type {
   ResolutionInput,
   SyncBatch,
   SyncConflictPage,
-  SyncOutcome,
   SyncPullResult,
-  SyncPushResult
+  SyncPushResult,
+  SyncResolutionResult
 } from './api.schemas';
 
 import { customFetch } from '../custom-fetch';
@@ -2009,7 +2009,7 @@ export const getPushSyncUrl = () => {
 }
 
 /**
- * Contract-only domain service; mock responses are simulated. Clinic scope comes from authenticated identity, not submitted identifiers. Admin has no implicit clinical access. Network visibility requires active consent and excludes Lite clinics. Mutations require CSRF; clientOpId is replay-safe per clinic, with changed payload returning 409. Ordered outcomes correlate by clientOpId: applied, duplicate, conflict, rejected. Atomic per operation, not per batch. A conflict is retained for explicit resolution; no operation is silently dropped.
+ * Authenticated trusted-device appointment synchronization. Submit 1–50 consecutive positive sequences in declared order; ordering identity is the server-authenticated device. The next new sequence must follow the device's last accepted receipt. Replays use the shared appointment operation ledger and return the original recorded outcome, not a separate duplicate status. Changed payload, owner, target or sequence reuse is rejected. A rejected or unresolved conflicting predecessor blocks every later operation deterministically. Applied/conflict outcomes and recorded business rejections are durable receipts; blocked operations and pre-execution ordering/identity rejections do not consume new sequences. Retry the identical operation to recover its receipt; resolve an open conflict explicitly before proceeding. A durable rejected predecessor remains blocked rather than being silently skipped. Business failures return partial ordered outcomes; unexpected transient errors roll back the whole batch and are safely retryable. Current actor, clinic and doctor permissions are rechecked. CSRF is required.
  * @summary push sync
  */
 export const pushSync = async (syncBatch: SyncBatch, options?: Parameters<typeof customFetch>[1]): Promise<SyncPushResult> => {
@@ -2089,7 +2089,7 @@ export const usePushSync = <TError = ErrorType<ApiFailure>,
       return useMutation(getPushSyncMutationOptions(options));
     }
 
-export const getPullSyncUrl = (params: PullSyncParams,) => {
+export const getPullSyncUrl = (params?: PullSyncParams,) => {
   const normalizedParams = new URLSearchParams();
 
   Object.entries(params || {}).forEach(([key, value]) => {
@@ -2105,10 +2105,10 @@ export const getPullSyncUrl = (params: PullSyncParams,) => {
 }
 
 /**
- * Contract-only domain service; mock responses are simulated. Clinic scope comes from authenticated identity, not submitted identifiers. Admin has no implicit clinical access. Network visibility requires active consent and excludes Lite clinics. Mutations require CSRF; clientOpId is replay-safe per clinic, with changed payload returning 409. since is an opaque server cursor, never a local timestamp. Return cursor only after applying the page; hasMore signals additional pages. Invalid/expired cursor returns 400; clients must perform a full authenticated re-bootstrap.
+ * Pull the authorized operational scheduling change feed, including direct appointment writes, cancellations/tombstones and conflict resolution changes. Omit since to bootstrap. since is an opaque server cursor, never a timestamp or a client-selected scope. The response since always identifies the last delivered change; persist it only after applying the page. nextCursor is non-null only when more changes remain and is passed as the next request's since. Stable commit-ordered pagination cannot advance past undelivered changes. Invalid or scope-invalidated cursors require a fresh authenticated bootstrap. No clinical notes, credentials or unrestricted cross-clinic records are returned.
  * @summary pull sync
  */
-export const pullSync = async (params: PullSyncParams, options?: Parameters<typeof customFetch>[1]): Promise<SyncPullResult> => {
+export const pullSync = async (params?: PullSyncParams, options?: Parameters<typeof customFetch>[1]): Promise<SyncPullResult> => {
 
   return customFetch<SyncPullResult>(getPullSyncUrl(params),
   {
@@ -2130,7 +2130,7 @@ export const getPullSyncQueryKey = (params?: PullSyncParams,) => {
     }
 
 
-export const getPullSyncQueryOptions = <TData = Awaited<ReturnType<typeof pullSync>>, TError = ErrorType<ApiFailure>>(params: PullSyncParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof pullSync>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export const getPullSyncQueryOptions = <TData = Awaited<ReturnType<typeof pullSync>>, TError = ErrorType<ApiFailure>>(params?: PullSyncParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof pullSync>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
@@ -2157,7 +2157,7 @@ export type PullSyncQueryError = ErrorType<ApiFailure>
  */
 
 export function usePullSync<TData = Awaited<ReturnType<typeof pullSync>>, TError = ErrorType<ApiFailure>>(
- params: PullSyncParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof pullSync>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+ params?: PullSyncParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof pullSync>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
@@ -2190,7 +2190,7 @@ export const getListSyncConflictsUrl = (params?: ListSyncConflictsParams,) => {
 }
 
 /**
- * Contract-only domain service; mock responses are simulated. Clinic scope comes from authenticated identity, not submitted identifiers. Admin has no implicit clinical access. Network visibility requires active consent and excludes Lite clinics. Mutations require CSRF; clientOpId is replay-safe per clinic, with changed payload returning 409.
+ * List durable conflicts owned by the authenticated actor within current clinic, doctor and trusted-device scope. Defaults to open conflicts; status=resolved or all explicitly includes retained resolution history. Original proposals and safe detection evidence are preserved. Cursors do not grant scope.
  * @summary list sync conflicts
  */
 export const listSyncConflicts = async (params?: ListSyncConflictsParams, options?: Parameters<typeof customFetch>[1]): Promise<SyncConflictPage> => {
@@ -2268,10 +2268,10 @@ export const getResolveSyncUrl = () => {
 }
 
 /**
- * Contract-only domain service; mock responses are simulated. Clinic scope comes from authenticated identity, not submitted identifiers. Admin has no implicit clinical access. Network visibility requires active consent and excludes Lite clinics. Mutations require CSRF; clientOpId is replay-safe per clinic, with changed payload returning 409.
+ * Resolve an owned conflict using a trusted device, current authorization, CSRF and optimistic expectedVersion. move-self requires explicit UTC target times. move-other atomically moves the authorized other appointment and retries the original proposal, with fresh versions and conflict checks for both. Existing-target proposals require targetExpectedVersion. Offline holds confer no guarantee. call returns only the authorized phone projection, records follow-up, always reports called=false and leaves the scheduling conflict open. Failed revalidation returns status=open with a typed error and retained history. Every recorded result includes the incremented conflict version; retries with the same clientOpId return the recorded result.
  * @summary resolve sync
  */
-export const resolveSync = async (resolutionInput: ResolutionInput, options?: Parameters<typeof customFetch>[1]): Promise<SyncOutcome> => {
+export const resolveSync = async (resolutionInput: ResolutionInput, options?: Parameters<typeof customFetch>[1]): Promise<SyncResolutionResult> => {
 
     const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
@@ -2287,7 +2287,7 @@ export const resolveSync = async (resolutionInput: ResolutionInput, options?: Pa
     }
     return headers;
   };
-return customFetch<SyncOutcome>(getResolveSyncUrl(),
+return customFetch<SyncResolutionResult>(getResolveSyncUrl(),
   {
     ...options,
     method: 'POST',

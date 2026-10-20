@@ -6,10 +6,9 @@
  * OpenAPI spec version: 0.2.0
  */
 
-export type ResolutionInputDecision = typeof ResolutionInputDecision[keyof typeof ResolutionInputDecision];
+export type SyncOpenResultStatus = typeof SyncOpenResultStatus[keyof typeof SyncOpenResultStatus];
 
 
-export const ResolutionInputDecision = {
-  discard: 'discard',
-  reschedule: 'reschedule',
+export const SyncOpenResultStatus = {
+  open: 'open',
 } as const;

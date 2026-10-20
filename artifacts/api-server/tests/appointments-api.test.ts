@@ -103,12 +103,19 @@ after(async () => {
   try {
     await admin.query("ROLLBACK");
     await admin.query("BEGIN");
+    await admin.query("DELETE FROM operational.sync_resolution_history WHERE actor_id=ANY($1::integer[])", [userIds]);
+    await admin.query(`DELETE FROM operational.sync_device_operations WHERE client_op_id IN
+      (SELECT client_op_id FROM operational.appointment_operations WHERE actor_id=ANY($1::integer[]))`, [userIds]);
+    await admin.query("DELETE FROM operational.sync_conflicts WHERE actor_id=ANY($1::integer[])", [userIds]);
+    await admin.query("DELETE FROM operational.sync_changes WHERE clinic_id=ANY($1::integer[])", [clinicIds]);
     await admin.query("DELETE FROM operational.appointment_operations WHERE actor_id=ANY($1::integer[])", [userIds]);
     await admin.query("DELETE FROM operational.appointment_holds WHERE owner_id=ANY($1::integer[])", [userIds]);
     await admin.query("SET LOCAL ROLE amal_demo_reset");
     await admin.query("DELETE FROM operational.audit_log WHERE patient_id=ANY($1::integer[]) OR user_id=ANY($2::integer[])", [patientIds, userIds]);
     await admin.query("RESET ROLE");
     await admin.query("DELETE FROM operational.appointments WHERE patient_id=ANY($1::integer[])", [patientIds]);
+    // Deletes emit tombstones; remove only this fixture's newly emitted changes.
+    await admin.query("DELETE FROM operational.sync_changes WHERE clinic_id=ANY($1::integer[])", [clinicIds]);
     await admin.query("DELETE FROM operational.patient_clinic_access WHERE patient_id=ANY($1::integer[])", [patientIds]);
     await admin.query("DELETE FROM operational.auth_sessions WHERE user_id=ANY($1::integer[])", [userIds]);
     await admin.query("DELETE FROM operational.auth_devices WHERE device_id=ANY($1::integer[])", [deviceIds]);

@@ -5,10 +5,11 @@
  * Amal Network Section 12. Authentication, appointments and clinic-local patient CRUD/search are implemented; other domain services remain contracts/mocks. UTC ISO instants, required date-only DOB, Asia/Hebron display. Local patient endpoints return demographics only to doctors/front-desk, never clinical history or admin patient access. Separate network services require consent and exclude Lite clinics. Lists use opaque cursor plus limit (1–100, default 25); null nextCursor ends pagination.
  * OpenAPI spec version: 0.2.0
  */
+import type { SyncFollowUpHistoryResult } from './syncFollowUpHistoryResult';
+import type { SyncOpenResult } from './syncOpenResult';
+import type { SyncResolvedResult } from './syncResolvedResult';
 
-export type SyncChangeEntity = typeof SyncChangeEntity[keyof typeof SyncChangeEntity];
-
-
-export const SyncChangeEntity = {
-  appointment: 'appointment',
-} as const;
+/**
+ * Safe recorded resolution projection. Follow-up history deliberately excludes the phone returned only by the authorized call action.
+ */
+export type SyncResolutionHistoryResult = SyncFollowUpHistoryResult | SyncResolvedResult | SyncOpenResult;

@@ -6,9 +6,9 @@
  * OpenAPI spec version: 0.2.0
  */
 
-export type SyncOperationEntity = typeof SyncOperationEntity[keyof typeof SyncOperationEntity];
+export type SyncMoveSelfInputAction = typeof SyncMoveSelfInputAction[keyof typeof SyncMoveSelfInputAction];
 
 
-export const SyncOperationEntity = {
-  appointment: 'appointment',
+export const SyncMoveSelfInputAction = {
+  'move-self': 'move-self',
 } as const;

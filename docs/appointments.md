@@ -1,7 +1,7 @@
 # Operational appointments
 
-This service implements appointment scheduling only. It does not implement sync,
-network lookup, consent capture, import, patient search, or a booking UI.
+This service implements appointment scheduling. Offline sync shares its mutation
+service and operation ledger; see [sync guarantees](sync.md).
 The six original seed tables remain read-only. Historical operational copies
 are not repaired and no blanket overlap constraint is installed.
 

@@ -5,15 +5,9 @@
  * Amal Network Section 12. Authentication, appointments and clinic-local patient CRUD/search are implemented; other domain services remain contracts/mocks. UTC ISO instants, required date-only DOB, Asia/Hebron display. Local patient endpoints return demographics only to doctors/front-desk, never clinical history or admin patient access. Separate network services require consent and exclude Lite clinics. Lists use opaque cursor plus limit (1–100, default 25); null nextCursor ends pagination.
  * OpenAPI spec version: 0.2.0
  */
-import type { ApiFailure } from './apiFailure';
-import type { SyncOutcomeOutcome } from './syncOutcomeOutcome';
+import type { SyncAppliedOutcome } from './syncAppliedOutcome';
+import type { SyncBlockedOutcome } from './syncBlockedOutcome';
+import type { SyncConflictOutcome } from './syncConflictOutcome';
+import type { SyncRejectedOutcome } from './syncRejectedOutcome';
 
-export interface SyncOutcome {
-  clientOpId: string;
-  outcome: SyncOutcomeOutcome;
-  /** @minimum 1 */
-  entityId?: number;
-  /** @minimum 1 */
-  conflictId?: number;
-  error?: ApiFailure;
-}
+export type SyncOutcome = SyncAppliedOutcome | SyncConflictOutcome | SyncRejectedOutcome | SyncBlockedOutcome;

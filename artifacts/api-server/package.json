@@ -11,6 +11,8 @@
     "auth:migrate": "tsx scripts/auth-migrate.ts",
     "appointments:migrate": "tsx scripts/appointments-migrate.ts",
     "appointments:test": "tsx --test tests/appointments-api.test.ts",
+    "sync:migrate": "tsx scripts/sync-migrate.ts",
+    "sync:test": "tsx --test --test-concurrency=1 tests/sync-api.test.ts",
     "patients:migrate": "tsx scripts/patients-migrate.ts",
     "imports:migrate": "tsx scripts/imports-migrate.ts",
     "merge:migrate": "tsx scripts/merge-migrate.ts",

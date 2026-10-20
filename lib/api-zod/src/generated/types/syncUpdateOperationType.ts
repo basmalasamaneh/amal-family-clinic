@@ -6,12 +6,9 @@
  * OpenAPI spec version: 0.2.0
  */
 
-export type SyncOutcomeOutcome = typeof SyncOutcomeOutcome[keyof typeof SyncOutcomeOutcome];
+export type SyncUpdateOperationType = typeof SyncUpdateOperationType[keyof typeof SyncUpdateOperationType];
 
 
-export const SyncOutcomeOutcome = {
-  applied: 'applied',
-  duplicate: 'duplicate',
-  conflict: 'conflict',
-  rejected: 'rejected',
+export const SyncUpdateOperationType = {
+  update: 'update',
 } as const;

@@ -4,7 +4,7 @@ import type { PoolClient } from "pg";
 import { z } from "zod/v4";
 import { pool } from "@workspace/db";
 import { enforceScope, forbidden, roles, type Auth } from "../lib/auth";
-import { fail } from "../lib/auth-errors";
+import { ApiError, fail } from "../lib/auth-errors";
 import { evaluate, nearestAvailability, type Appointment, type ConflictResult } from "./engine";
 
 const positive = z.number().int().positive();
@@ -65,16 +65,25 @@ export function project(row: Row) {
     clientOpId: row.client_op_id, status: row.status, version: row.version,
   };
 }
-function bookingScope(auth: Auth, clinicId: number, doctorId: number) {
+export function bookingScope(auth: Auth, clinicId: number, doctorId: number) {
   if (auth.role !== "doctor" && auth.role !== "front-desk") throw forbidden();
   enforceScope(auth, clinicId, doctorId);
 }
-async function currentAuth(client: Pick<PoolClient, "query">, auth: Auth): Promise<Auth> {
-  const { rows: [user] } = await client.query("SELECT role,clinic_id,doctor_id FROM operational.users WHERE id=$1", [auth.id]);
+export async function currentAuth(client: Pick<PoolClient, "query">, auth: Auth): Promise<Auth> {
+  const { rows: [user] } = await client.query(`SELECT u.role,u.clinic_id,u.doctor_id,s.device_id
+    FROM operational.users u JOIN operational.auth_sessions s ON s.user_id=u.id
+    WHERE u.id=$1 AND s.token_digest=$2 AND s.revoked_at IS NULL
+      AND ((u.role='receptionist' AND s.device_id IS NOT NULL AND s.absolute_expires_at>clock_timestamp())
+        OR (u.role IN ('doctor','administrator') AND s.last_seen_at>clock_timestamp()-interval '30 minutes'))
+      AND (s.device_id IS NULL OR EXISTS(SELECT 1 FROM operational.auth_devices a
+        JOIN operational.devices d ON d.id=a.device_id WHERE a.device_id=s.device_id
+          AND a.revoked_at IS NULL AND d.clinic_id=u.clinic_id))`, [auth.id, auth.sessionDigest]);
   if (!user || !Object.hasOwn(roles, user.role)) throw forbidden();
+  if ((user.device_id ?? null) !== (auth.device?.id ?? null) ||
+    (auth.device && auth.device.clinicId !== user.clinic_id)) throw forbidden();
   return { ...auth, role: roles[user.role as keyof typeof roles], clinicId: user.clinic_id, doctorId: user.doctor_id };
 }
-async function transaction<T>(auth: Auth, work: (client: PoolClient, actor: Auth, now: Date) => Promise<T>): Promise<T> {
+export async function transaction<T>(auth: Auth, work: (client: PoolClient, actor: Auth, now: Date) => Promise<T>): Promise<T> {
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
@@ -88,26 +97,28 @@ async function transaction<T>(auth: Auth, work: (client: PoolClient, actor: Auth
   } catch (error) { await client.query("ROLLBACK"); throw error; }
   finally { client.release(); }
 }
-function canonical(value: unknown): string {
+export function canonical(value: unknown): string {
   if (Array.isArray(value)) return `[${value.map(canonical).join(",")}]`;
   if (value && typeof value === "object") return `{${Object.entries(value).filter(([, v]) => v !== undefined).sort(([a], [b]) => a.localeCompare(b)).map(([k, v]) => `${JSON.stringify(k)}:${canonical(v)}`).join(",")}}`;
   return JSON.stringify(value);
 }
-async function replay(client: PoolClient, actor: Auth, clientOpId: string, target: string, payload: unknown) {
+export async function replay(client: PoolClient, actor: Auth, clientOpId: string, target: string, payload: unknown) {
   const hash = createHash("sha256").update(canonical({ target, payload })).digest("hex");
   const { rows: [op] } = await client.query("SELECT * FROM operational.appointment_operations WHERE client_op_id=$1", [clientOpId]);
   if (op) {
     // Reauthorization precedes returning a stored response, never trust recorded scope alone.
     bookingScope(actor, op.clinic_id, op.doctor_id);
     if (op.actor_id !== actor.id || op.payload_hash !== hash) throw conflict("IDEMPOTENCY_CONFLICT");
+    if (op.device_id !== null && op.device_id !== actor.device?.id) throw conflict("IDEMPOTENCY_CONFLICT");
+    if (op.status === "conflict" || op.status === "rejected") throw fail(op.result.httpStatus ?? 409, op.result.code, "conflict", op.result.params);
   }
   return { hash, op };
 }
-async function record(client: PoolClient, actor: Auth, clientOpId: string, clinicId: number, doctorId: number, hash: string, result: unknown) {
+export async function record(client: PoolClient, actor: Auth, clientOpId: string, clinicId: number, doctorId: number, hash: string, result: unknown) {
   await client.query(`INSERT INTO operational.appointment_operations(client_op_id,actor_id,clinic_id,doctor_id,payload_hash,result) VALUES($1,$2,$3,$4,$5,$6)`,
     [clientOpId, actor.id, clinicId, doctorId, hash, JSON.stringify(result)]);
 }
-async function existing(client: PoolClient, actor: Auth, id: number): Promise<Row> {
+export async function existing(client: PoolClient, actor: Auth, id: number): Promise<Row> {
   const { rows: [row] } = await client.query<Row>("SELECT * FROM operational.appointments WHERE appointment_id=$1", [id]);
   if (!row) throw missing();
   bookingScope(actor, row.clinic_id, row.doctor_id);
@@ -197,7 +208,7 @@ async function preview(client: PoolClient, actor: Auth, now: Date, input: z.infe
 }
 function requireEligible(result: ConflictResult) {
   // ApiFailure params are scalars; the exact structured preview is obtained from /check.
-  if (!result.ok) throw conflict("APPOINTMENT_CONFLICT", { conflictCount: result.conflicts.length });
+  if (!result.ok) throw Object.assign(conflict("APPOINTMENT_CONFLICT", { conflictCount: result.conflicts.length }), { evidence: result.conflicts });
 }
 async function auditOverride(client: PoolClient, actor: Auth, input: { clinicId: number; patientId: number; overrideReason?: string }, appointmentId: number, clientOpId: string, result: ConflictResult, operation: "create" | "update", affectedAppointments: { appointmentId: number; clinicId: number; doctorId: number }[]) {
   if (!result.conflicts.some(c => c.type === "patient-overlap")) return;
@@ -212,9 +223,66 @@ export async function checkAppointment(auth: Auth, raw: unknown) {
   const input = checkInput.parse(raw);
   return transaction(auth, async (client, actor, now) => (await preview(client, actor, now, input)).result);
 }
-export async function createAppointment(auth: Auth, raw: unknown) {
+export type AppointmentContext = { client: PoolClient; actor: Auth; now: Date };
+// A savepoint separates rollback of business work from durable conflict evidence.
+async function mutation<T>(auth: Auth, target: string, input: Booking | z.infer<typeof updateInput>,
+  context: AppointmentContext | undefined, work: (client: PoolClient, actor: Auth, now: Date) => Promise<T>): Promise<T> {
+  const run = async (client: PoolClient, actor: Auth, now: Date) => {
+    const row = target === "create" ? null : await existing(client, actor, Number(target.split(":")[1]));
+    const scope = row ? { clinicId: row.clinic_id, doctorId: row.doctor_id } : input as Booking;
+    bookingScope(actor, scope.clinicId, scope.doctorId);
+    const hash = createHash("sha256").update(canonical({ target, payload: input })).digest("hex");
+    const { rows: [prior] } = await client.query("SELECT * FROM operational.appointment_operations WHERE client_op_id=$1", [input.clientOpId]);
+    if (prior) {
+      bookingScope(actor, prior.clinic_id, prior.doctor_id);
+      if (prior.actor_id !== actor.id || prior.payload_hash !== hash) throw conflict("IDEMPOTENCY_CONFLICT");
+      if (prior.device_id !== null && prior.device_id !== actor.device?.id) throw conflict("IDEMPOTENCY_CONFLICT");
+      if (prior.status === "conflict" || prior.status === "rejected") return {
+        error: Object.assign(fail(prior.result.httpStatus ?? 409, prior.result.code,
+          String(prior.result.messageKey).replace(/^error\./, ""), prior.result.params),
+        { operationId: input.clientOpId, operationHash: hash }),
+      };
+      return { value: prior.result as T };
+    }
+    await client.query("SAVEPOINT appointment_mutation");
+    try {
+      const value = await work(client, actor, now);
+      await client.query("UPDATE operational.appointment_operations SET request=$2,device_id=$3 WHERE client_op_id=$1",
+        [input.clientOpId, JSON.stringify({ target, payload: input }), actor.device?.id ?? null]);
+      await client.query("RELEASE SAVEPOINT appointment_mutation");
+      return { value };
+    } catch (error) {
+      await client.query("ROLLBACK TO SAVEPOINT appointment_mutation");
+      if (!(error instanceof ApiError) || ![400, 409, 422].includes(error.status) || error.code === "IDEMPOTENCY_CONFLICT") throw error;
+      // Invalid intervals/references are validation failures, not accepted operations.
+      if (error.key === "validation") throw error;
+      // Auth/not-found failures are not accepted; authorized business failures retain their identity.
+      const status = error.status === 409 ? "conflict" : "rejected";
+      const id = randomUUID();
+      const result = { code: error.code, messageKey: `error.${error.key}`, params: error.params,
+        httpStatus: error.status, ...(status === "conflict" ? { conflictId: id } : {}) };
+      await client.query(`INSERT INTO operational.appointment_operations
+        (client_op_id,actor_id,clinic_id,doctor_id,payload_hash,result,request,device_id,status,conflict_id)
+        VALUES($1,$2,$3,$4,$5,$6,$7,$8,$10,$9)`,
+      [input.clientOpId, actor.id, scope.clinicId, scope.doctorId, hash, JSON.stringify(result),
+        JSON.stringify({ target, payload: input }), actor.device?.id ?? null, status === "conflict" ? id : null, status]);
+      if (status === "conflict") await client.query(`INSERT INTO operational.sync_conflicts
+        (id,client_op_id,actor_id,device_id,clinic_id,doctor_id,operation,target_id,base_version,server_state,reasons)
+        VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
+      [id, input.clientOpId, actor.id, actor.device?.id ?? null, scope.clinicId, scope.doctorId,
+        JSON.stringify({ target, payload: input }), row?.appointment_id ?? null,
+        "expectedVersion" in input ? input.expectedVersion : null, JSON.stringify(row ? project(row) : null),
+        JSON.stringify("evidence" in error ? error.evidence : [result])]);
+      return { error: Object.assign(error, { operationId: input.clientOpId, operationHash: hash }) };
+    }
+  };
+  const result = context ? await run(context.client, context.actor, context.now) : await transaction(auth, run);
+  if ("error" in result) throw result.error;
+  return result.value;
+}
+export async function createAppointment(auth: Auth, raw: unknown, context?: AppointmentContext) {
   const input = createInput.parse(raw);
-  return transaction(auth, async (client, actor, now) => {
+  return mutation(auth, "create", input, context, async (client, actor, now) => {
     bookingScope(actor, input.clinicId, input.doctorId);
     const { hash, op } = await replay(client, actor, input.clientOpId, "create", input);
     if (op) return op.result;
@@ -229,9 +297,9 @@ export async function createAppointment(auth: Auth, raw: unknown) {
     return response;
   });
 }
-export async function updateAppointment(auth: Auth, id: number, raw: unknown) {
+export async function updateAppointment(auth: Auth, id: number, raw: unknown, context?: AppointmentContext) {
   const input = updateInput.parse(raw);
-  return transaction(auth, async (client, actor, now) => {
+  return mutation(auth, `update:${id}`, input, context, async (client, actor, now) => {
     const row = await existing(client, actor, id);
     const { hash, op } = await replay(client, actor, input.clientOpId, `update:${id}`, input);
     if (op) return op.result;

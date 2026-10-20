@@ -871,7 +871,7 @@ export const WithdrawConsentResponse = zod.object({
 
 
 /**
- * Contract-only domain service; mock responses are simulated. Clinic scope comes from authenticated identity, not submitted identifiers. Admin has no implicit clinical access. Network visibility requires active consent and excludes Lite clinics. Mutations require CSRF; clientOpId is replay-safe per clinic, with changed payload returning 409. Ordered outcomes correlate by clientOpId: applied, duplicate, conflict, rejected. Atomic per operation, not per batch. A conflict is retained for explicit resolution; no operation is silently dropped.
+ * Authenticated trusted-device appointment synchronization. Submit 1–50 consecutive positive sequences in declared order; ordering identity is the server-authenticated device. The next new sequence must follow the device's last accepted receipt. Replays use the shared appointment operation ledger and return the original recorded outcome, not a separate duplicate status. Changed payload, owner, target or sequence reuse is rejected. A rejected or unresolved conflicting predecessor blocks every later operation deterministically. Applied/conflict outcomes and recorded business rejections are durable receipts; blocked operations and pre-execution ordering/identity rejections do not consume new sequences. Retry the identical operation to recover its receipt; resolve an open conflict explicitly before proceeding. A durable rejected predecessor remains blocked rather than being silently skipped. Business failures return partial ordered outcomes; unexpected transient errors roll back the whole batch and are safely retryable. Current actor, clinic and doctor permissions are rechecked. CSRF is required.
  * @summary push sync
  */
 export const PushSyncHeader = zod.object({
@@ -881,30 +881,31 @@ export const PushSyncHeader = zod.object({
 
 
 
-export const pushSyncBodyOperationsItemPayloadOneOverrideReasonMax = 2000;
+
+export const pushSyncBodyOperationsItemOneInputOverrideReasonMax = 2000;
 
 
-export const pushSyncBodyOperationsItemPayloadOneOverrideReasonRegExp = new RegExp('\\S');
-
-export const pushSyncBodyOperationsItemPayloadTwoOverrideReasonMax = 2000;
+export const pushSyncBodyOperationsItemOneInputOverrideReasonRegExp = new RegExp('\\S');
 
 
-export const pushSyncBodyOperationsItemPayloadTwoOverrideReasonRegExp = new RegExp('\\S');
-export const pushSyncBodyOperationsItemPayloadTwoCancelReasonMax = 2000;
+
+export const pushSyncBodyOperationsItemTwoInputOverrideReasonMax = 2000;
 
 
-export const pushSyncBodyOperationsItemPayloadTwoCancelReasonRegExp = new RegExp('\\S');
+export const pushSyncBodyOperationsItemTwoInputOverrideReasonRegExp = new RegExp('\\S');
+export const pushSyncBodyOperationsItemTwoInputCancelReasonMax = 2000;
 
-export const pushSyncBodyOperationsMax = 100;
+
+export const pushSyncBodyOperationsItemTwoInputCancelReasonRegExp = new RegExp('\\S');
+export const pushSyncBodyOperationsMax = 50;
 
 
 
 export const PushSyncBody = zod.object({
-  "operations": zod.array(zod.object({
-  "clientOpId": zod.string().uuid(),
-  "entity": zod.enum(['appointment']),
-  "action": zod.enum(['create', 'update']),
-  "payload": zod.union([zod.object({
+  "operations": zod.array(zod.union([zod.object({
+  "sequence": zod.number().int().min(1),
+  "type": zod.enum(['create']),
+  "input": zod.object({
   "clientOpId": zod.string().uuid(),
   "clinicId": zod.number().int().min(1),
   "doctorId": zod.number().int().min(1),
@@ -912,54 +913,106 @@ export const PushSyncBody = zod.object({
   "startsAt": zod.coerce.date().describe('UTC ISO 8601 instant ending in Z; enforced by the appointment service before coercion.'),
   "endsAt": zod.coerce.date().describe('UTC ISO 8601 instant ending in Z; enforced by the appointment service before coercion.'),
   "source": zod.enum(['phone', 'walk-in', 'online', 'import']),
-  "overrideReason": zod.string().min(1).max(pushSyncBodyOperationsItemPayloadOneOverrideReasonMax).regex(pushSyncBodyOperationsItemPayloadOneOverrideReasonRegExp).optional(),
+  "overrideReason": zod.string().min(1).max(pushSyncBodyOperationsItemOneInputOverrideReasonMax).regex(pushSyncBodyOperationsItemOneInputOverrideReasonRegExp).optional(),
   "holdToken": zod.string().uuid().optional()
+}).strict()
 }).strict(),zod.object({
+  "sequence": zod.number().int().min(1),
+  "type": zod.enum(['update']),
+  "appointmentId": zod.number().int().min(1),
+  "input": zod.object({
   "clientOpId": zod.string().uuid(),
   "expectedVersion": zod.number().int().min(1),
   "startsAt": zod.coerce.date().optional().describe('UTC ISO 8601 instant ending in Z; enforced by the appointment service before coercion.'),
   "endsAt": zod.coerce.date().optional().describe('UTC ISO 8601 instant ending in Z; enforced by the appointment service before coercion.'),
   "status": zod.enum(['booked', 'double_booked', 'completed', 'no_show', 'cancelled']).optional(),
-  "overrideReason": zod.string().min(1).max(pushSyncBodyOperationsItemPayloadTwoOverrideReasonMax).regex(pushSyncBodyOperationsItemPayloadTwoOverrideReasonRegExp).optional(),
+  "overrideReason": zod.string().min(1).max(pushSyncBodyOperationsItemTwoInputOverrideReasonMax).regex(pushSyncBodyOperationsItemTwoInputOverrideReasonRegExp).optional(),
   "holdToken": zod.string().uuid().optional(),
-  "cancelReason": zod.string().min(1).max(pushSyncBodyOperationsItemPayloadTwoCancelReasonMax).regex(pushSyncBodyOperationsItemPayloadTwoCancelReasonRegExp).optional()
-}).strict()]),
-  "entityId": zod.number().int().min(1).optional()
-}).strict()).min(1).max(pushSyncBodyOperationsMax)
+  "cancelReason": zod.string().min(1).max(pushSyncBodyOperationsItemTwoInputCancelReasonMax).regex(pushSyncBodyOperationsItemTwoInputCancelReasonRegExp).optional()
 }).strict()
+}).strict()])).min(1).max(pushSyncBodyOperationsMax)
+}).strict().describe('One to fifty operations in consecutive positive device sequence order. The server rejects sequence gaps and blocks all successors after an unresolved or rejected predecessor. Only appointment create and update are supported.')
+
+
+
+
+
+
+
+
+
 
 
 
 
 
 export const PushSyncResponse = zod.object({
-  "outcomes": zod.array(zod.object({
+  "outcomes": zod.array(zod.union([zod.object({
+  "sequence": zod.number().int().min(1),
   "clientOpId": zod.string().uuid(),
-  "outcome": zod.enum(['applied', 'duplicate', 'conflict', 'rejected']),
-  "entityId": zod.number().int().min(1).optional(),
-  "conflictId": zod.number().int().min(1).optional(),
+  "status": zod.enum(['applied']),
+  "result": zod.object({
+  "clientOpId": zod.string().nullable(),
+  "clinicId": zod.number().int().min(1),
+  "doctorId": zod.number().int().min(1),
+  "patientId": zod.number().int().min(1),
+  "startsAt": zod.coerce.date(),
+  "endsAt": zod.coerce.date(),
+  "source": zod.string(),
+  "id": zod.number().int().min(1),
+  "status": zod.enum(['booked', 'double_booked', 'completed', 'no_show', 'cancelled']),
+  "version": zod.number().int().min(1)
+}).strict()
+}).strict(),zod.object({
+  "sequence": zod.number().int().min(1),
+  "clientOpId": zod.string().uuid(),
+  "status": zod.enum(['conflict']),
+  "code": zod.string(),
+  "messageKey": zod.string(),
+  "params": zod.record(zod.string(), zod.union([zod.string(),zod.number(),zod.boolean()])),
+  "conflictId": zod.string().uuid()
+}).strict(),zod.object({
+  "sequence": zod.number().int().min(1),
+  "clientOpId": zod.string().uuid(),
+  "status": zod.enum(['rejected']),
   "error": zod.object({
   "code": zod.string(),
   "messageKey": zod.string(),
   "params": zod.record(zod.string(), zod.union([zod.string(),zod.number(),zod.boolean()]))
-}).strict().optional()
-}).strict()),
-  "cursor": zod.string()
+}).strict()
+}).strict(),zod.union([zod.object({
+  "sequence": zod.number().int().min(1),
+  "clientOpId": zod.string().uuid(),
+  "status": zod.enum(['blocked']),
+  "code": zod.enum(['PREDECESSOR_UNRESOLVED']),
+  "messageKey": zod.string(),
+  "params": zod.record(zod.string(), zod.union([zod.string(),zod.number(),zod.boolean()]))
+}).strict(),zod.object({
+  "sequence": zod.number().int().min(1),
+  "clientOpId": zod.string().uuid(),
+  "status": zod.enum(['blocked']),
+  "code": zod.enum(['SEQUENCE_GAP']),
+  "messageKey": zod.string(),
+  "params": zod.record(zod.string(), zod.union([zod.string(),zod.number(),zod.boolean()])),
+  "expectedSequence": zod.number().int().min(1)
+}).strict()])]))
 }).strict()
 
 
 /**
- * Contract-only domain service; mock responses are simulated. Clinic scope comes from authenticated identity, not submitted identifiers. Admin has no implicit clinical access. Network visibility requires active consent and excludes Lite clinics. Mutations require CSRF; clientOpId is replay-safe per clinic, with changed payload returning 409. since is an opaque server cursor, never a local timestamp. Return cursor only after applying the page; hasMore signals additional pages. Invalid/expired cursor returns 400; clients must perform a full authenticated re-bootstrap.
+ * Pull the authorized operational scheduling change feed, including direct appointment writes, cancellations/tombstones and conflict resolution changes. Omit since to bootstrap. since is an opaque server cursor, never a timestamp or a client-selected scope. The response since always identifies the last delivered change; persist it only after applying the page. nextCursor is non-null only when more changes remain and is passed as the next request's since. Stable commit-ordered pagination cannot advance past undelivered changes. Invalid or scope-invalidated cursors require a fresh authenticated bootstrap. No clinical notes, credentials or unrestricted cross-clinic records are returned.
  * @summary pull sync
  */
+export const pullSyncQuerySinceMax = 2048;
+
+export const pullSyncQueryLimitDefault = 25;
 export const pullSyncQueryLimitMax = 100;
 
 
 
 export const PullSyncQueryParams = zod.object({
-  "since": zod.coerce.string(),
-  "cursor": zod.coerce.string().optional(),
-  "limit": zod.coerce.number().int().min(1).max(pullSyncQueryLimitMax).optional()
+  "since": zod.coerce.string().max(pullSyncQuerySinceMax).optional().describe('Opaque server-issued continuation cursor; omit for initial synchronization. Never supply a timestamp.'),
+  "limit": zod.coerce.number().int().min(1).max(pullSyncQueryLimitMax).default(pullSyncQueryLimitDefault)
 }).strict()
 
 
@@ -972,42 +1025,57 @@ export const PullSyncQueryParams = zod.object({
 
 
 export const PullSyncResponse = zod.object({
-  "changes": zod.array(zod.object({
-  "entity": zod.enum(['appointment']),
-  "action": zod.enum(['upsert', 'delete']),
+  "changes": zod.array(zod.union([zod.object({
+  "id": zod.string(),
+  "kind": zod.enum(['appointment']),
+  "entityId": zod.string(),
+  "payload": zod.object({
   "id": zod.number().int().min(1),
-  "version": zod.number().int().min(1),
-  "value": zod.object({
-  "clientOpId": zod.string().nullable(),
   "clinicId": zod.number().int().min(1),
   "doctorId": zod.number().int().min(1),
   "patientId": zod.number().int().min(1),
   "startsAt": zod.coerce.date(),
   "endsAt": zod.coerce.date(),
   "source": zod.string(),
-  "id": zod.number().int().min(1),
+  "clientOpId": zod.string().nullable(),
   "status": zod.enum(['booked', 'double_booked', 'completed', 'no_show', 'cancelled']),
-  "version": zod.number().int().min(1)
-}).strict().optional()
-}).strict()),
-  "cursor": zod.string(),
-  "hasMore": zod.boolean()
+  "version": zod.number().int().min(1),
+  "deleted": zod.boolean()
+}).strict()
+}).strict(),zod.object({
+  "id": zod.string(),
+  "kind": zod.enum(['conflict']),
+  "entityId": zod.string(),
+  "payload": zod.object({
+  "id": zod.string().uuid(),
+  "actorId": zod.number().int().min(1),
+  "status": zod.enum(['open', 'resolved']),
+  "version": zod.number().int().min(1),
+  "clientOpId": zod.string().uuid()
+}).strict()
+}).strict()])),
+  "nextCursor": zod.string().nullable(),
+  "since": zod.string()
 }).strict()
 
 
 /**
- * Contract-only domain service; mock responses are simulated. Clinic scope comes from authenticated identity, not submitted identifiers. Admin has no implicit clinical access. Network visibility requires active consent and excludes Lite clinics. Mutations require CSRF; clientOpId is replay-safe per clinic, with changed payload returning 409.
+ * List durable conflicts owned by the authenticated actor within current clinic, doctor and trusted-device scope. Defaults to open conflicts; status=resolved or all explicitly includes retained resolution history. Original proposals and safe detection evidence are preserved. Cursors do not grant scope.
  * @summary list sync conflicts
  */
+export const listSyncConflictsQueryStatusDefault = `open`;
+export const listSyncConflictsQueryCursorMax = 2048;
+
+export const listSyncConflictsQueryLimitDefault = 25;
 export const listSyncConflictsQueryLimitMax = 100;
 
 
 
 export const ListSyncConflictsQueryParams = zod.object({
-  "cursor": zod.coerce.string().optional(),
-  "limit": zod.coerce.number().int().min(1).max(listSyncConflictsQueryLimitMax).optional()
+  "status": zod.enum(['open', 'resolved', 'all']).default(listSyncConflictsQueryStatusDefault),
+  "cursor": zod.coerce.string().max(listSyncConflictsQueryCursorMax).optional(),
+  "limit": zod.coerce.number().int().min(1).max(listSyncConflictsQueryLimitMax).default(listSyncConflictsQueryLimitDefault)
 }).strict()
-
 
 
 
@@ -1030,13 +1098,28 @@ export const listSyncConflictsResponseItemsItemOperationPayloadTwoCancelReasonRe
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 export const ListSyncConflictsResponse = zod.object({
   "items": zod.array(zod.object({
-  "id": zod.number().int().min(1),
-  "operation": zod.object({
+  "id": zod.string().uuid(),
   "clientOpId": zod.string().uuid(),
-  "entity": zod.enum(['appointment']),
-  "action": zod.enum(['create', 'update']),
+  "operation": zod.object({
+  "target": zod.string(),
   "payload": zod.union([zod.object({
   "clientOpId": zod.string().uuid(),
   "clinicId": zod.number().int().min(1),
@@ -1056,12 +1139,23 @@ export const ListSyncConflictsResponse = zod.object({
   "overrideReason": zod.string().min(1).max(listSyncConflictsResponseItemsItemOperationPayloadTwoOverrideReasonMax).regex(listSyncConflictsResponseItemsItemOperationPayloadTwoOverrideReasonRegExp).optional(),
   "holdToken": zod.string().uuid().optional(),
   "cancelReason": zod.string().min(1).max(listSyncConflictsResponseItemsItemOperationPayloadTwoCancelReasonMax).regex(listSyncConflictsResponseItemsItemOperationPayloadTwoCancelReasonRegExp).optional()
-}).strict()]),
-  "entityId": zod.number().int().min(1).optional()
+}).strict()])
 }).strict(),
-  "preview": zod.object({
-  "ok": zod.boolean(),
-  "conflicts": zod.array(zod.object({
+  "targetId": zod.number().int().min(1).nullable(),
+  "baseVersion": zod.number().int().min(1).nullable(),
+  "serverState": zod.union([zod.object({
+  "clientOpId": zod.string().nullable(),
+  "clinicId": zod.number().int().min(1),
+  "doctorId": zod.number().int().min(1),
+  "patientId": zod.number().int().min(1),
+  "startsAt": zod.coerce.date(),
+  "endsAt": zod.coerce.date(),
+  "source": zod.string(),
+  "id": zod.number().int().min(1),
+  "status": zod.enum(['booked', 'double_booked', 'completed', 'no_show', 'cancelled']),
+  "version": zod.number().int().min(1)
+}).strict(),zod.null()]),
+  "reasons": zod.array(zod.union([zod.object({
   "type": zod.enum(['doctor-overlap', 'patient-overlap', 'same-day-other-clinic', 'outside-hours', 'slot-held']),
   "with": zod.union([zod.object({
   "appointmentId": zod.number().int().min(1),
@@ -1072,15 +1166,61 @@ export const ListSyncConflictsResponse = zod.object({
   "startsAt": zod.coerce.date(),
   "endsAt": zod.coerce.date()
 }).strict())
+}).strict(),zod.object({
+  "code": zod.string(),
+  "messageKey": zod.string(),
+  "params": zod.record(zod.string(), zod.union([zod.string(),zod.number(),zod.boolean()])),
+  "conflictId": zod.string().uuid()
+}).strict()])),
+  "status": zod.enum(['open', 'resolved']),
+  "version": zod.number().int().min(1),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date(),
+  "history": zod.array(zod.object({
+  "id": zod.string(),
+  "clientOpId": zod.string().uuid(),
+  "action": zod.enum(['call', 'move-self', 'move-other']),
+  "result": zod.union([zod.object({
+  "status": zod.enum(['follow-up']),
+  "conflictId": zod.string().uuid(),
+  "patientId": zod.number().int().min(1),
+  "called": zod.literal(false),
+  "version": zod.number().int().min(1)
+}).strict(),zod.object({
+  "status": zod.enum(['resolved']),
+  "conflictId": zod.string().uuid(),
+  "appointment": zod.object({
+  "clientOpId": zod.string().nullable(),
+  "clinicId": zod.number().int().min(1),
+  "doctorId": zod.number().int().min(1),
+  "patientId": zod.number().int().min(1),
+  "startsAt": zod.coerce.date(),
+  "endsAt": zod.coerce.date(),
+  "source": zod.string(),
+  "id": zod.number().int().min(1),
+  "status": zod.enum(['booked', 'double_booked', 'completed', 'no_show', 'cancelled']),
+  "version": zod.number().int().min(1)
+}).strict(),
+  "version": zod.number().int().min(1)
+}).strict(),zod.object({
+  "status": zod.enum(['open']),
+  "conflictId": zod.string().uuid(),
+  "error": zod.object({
+  "code": zod.string(),
+  "messageKey": zod.string(),
+  "params": zod.record(zod.string(), zod.union([zod.string(),zod.number(),zod.boolean()]))
+}).strict(),
+  "version": zod.number().int().min(1)
+}).strict()]).describe('Safe recorded resolution projection. Follow-up history deliberately excludes the phone returned only by the authorized call action.'),
+  "createdAt": zod.coerce.date()
 }).strict())
-}).strict().describe('Exactly {ok, conflicts}. ok means committing is permitted by current rules, not a reservation. Blocking conflicts always prevent writes. Patient warnings require an authorized nonblank overrideReason. Information alone never blocks. Preview has no appointment/audit writes.')
 }).strict()),
   "nextCursor": zod.string().nullable()
 }).strict()
 
 
 /**
- * Contract-only domain service; mock responses are simulated. Clinic scope comes from authenticated identity, not submitted identifiers. Admin has no implicit clinical access. Network visibility requires active consent and excludes Lite clinics. Mutations require CSRF; clientOpId is replay-safe per clinic, with changed payload returning 409.
+ * Resolve an owned conflict using a trusted device, current authorization, CSRF and optimistic expectedVersion. move-self requires explicit UTC target times. move-other atomically moves the authorized other appointment and retries the original proposal, with fresh versions and conflict checks for both. Existing-target proposals require targetExpectedVersion. Offline holds confer no guarantee. call returns only the authorized phone projection, records follow-up, always reports called=false and leaves the scheduling conflict open. Failed revalidation returns status=open with a typed error and retained history. Every recorded result includes the incremented conflict version; retries with the same clientOpId return the recorded result.
  * @summary resolve sync
  */
 export const ResolveSyncHeader = zod.object({
@@ -1090,31 +1230,91 @@ export const ResolveSyncHeader = zod.object({
 
 
 
-export const ResolveSyncBody = zod.object({
-  "conflictId": zod.number().int().min(1),
-  "decision": zod.enum(['discard', 'reschedule']),
+export const resolveSyncBodyTwoOverrideReasonMax = 2000;
+
+
+export const resolveSyncBodyTwoOverrideReasonRegExp = new RegExp('\\S');
+
+
+
+
+export const resolveSyncBodyThreeOverrideReasonMax = 2000;
+
+
+export const resolveSyncBodyThreeOverrideReasonRegExp = new RegExp('\\S');
+
+
+export const ResolveSyncBody = zod.union([zod.object({
   "clientOpId": zod.string().uuid(),
-  "slot": zod.object({
+  "conflictId": zod.string().uuid(),
+  "expectedVersion": zod.number().int().min(1),
+  "action": zod.enum(['call'])
+}).strict(),zod.object({
+  "clientOpId": zod.string().uuid(),
+  "conflictId": zod.string().uuid(),
+  "expectedVersion": zod.number().int().min(1),
+  "action": zod.enum(['move-self']),
+  "startsAt": zod.coerce.date().describe('UTC ISO 8601 instant ending in Z; enforced by the service before coercion.'),
+  "endsAt": zod.coerce.date().describe('UTC ISO 8601 instant ending in Z; enforced by the service before coercion.'),
+  "targetExpectedVersion": zod.number().int().min(1).optional().describe('Required by the service when the original proposal updates an existing appointment.'),
+  "overrideReason": zod.string().min(1).max(resolveSyncBodyTwoOverrideReasonMax).regex(resolveSyncBodyTwoOverrideReasonRegExp).optional()
+}).strict(),zod.object({
+  "clientOpId": zod.string().uuid(),
+  "conflictId": zod.string().uuid(),
+  "expectedVersion": zod.number().int().min(1),
+  "action": zod.enum(['move-other']),
+  "startsAt": zod.coerce.date().describe('UTC ISO 8601 instant ending in Z; enforced by the service before coercion.'),
+  "endsAt": zod.coerce.date().describe('UTC ISO 8601 instant ending in Z; enforced by the service before coercion.'),
+  "otherAppointmentId": zod.number().int().min(1),
+  "otherExpectedVersion": zod.number().int().min(1),
+  "targetExpectedVersion": zod.number().int().min(1).optional().describe('Required by the service when the original proposal updates an existing appointment.'),
+  "overrideReason": zod.string().min(1).max(resolveSyncBodyThreeOverrideReasonMax).regex(resolveSyncBodyThreeOverrideReasonRegExp).optional()
+}).strict()])
+
+
+
+
+
+
+
+
+
+
+
+
+export const ResolveSyncResponse = zod.union([zod.object({
+  "status": zod.enum(['follow-up']),
+  "conflictId": zod.string().uuid(),
+  "patientId": zod.number().int().min(1),
+  "phone": zod.string().nullable(),
+  "called": zod.literal(false),
+  "version": zod.number().int().min(1)
+}).strict(),zod.object({
+  "status": zod.enum(['resolved']),
+  "conflictId": zod.string().uuid(),
+  "appointment": zod.object({
+  "clientOpId": zod.string().nullable(),
+  "clinicId": zod.number().int().min(1),
+  "doctorId": zod.number().int().min(1),
+  "patientId": zod.number().int().min(1),
   "startsAt": zod.coerce.date(),
-  "endsAt": zod.coerce.date()
-}).strict().optional()
-}).strict()
-
-
-
-
-
-export const ResolveSyncResponse = zod.object({
-  "clientOpId": zod.string().uuid(),
-  "outcome": zod.enum(['applied', 'duplicate', 'conflict', 'rejected']),
-  "entityId": zod.number().int().min(1).optional(),
-  "conflictId": zod.number().int().min(1).optional(),
+  "endsAt": zod.coerce.date(),
+  "source": zod.string(),
+  "id": zod.number().int().min(1),
+  "status": zod.enum(['booked', 'double_booked', 'completed', 'no_show', 'cancelled']),
+  "version": zod.number().int().min(1)
+}).strict(),
+  "version": zod.number().int().min(1)
+}).strict(),zod.object({
+  "status": zod.enum(['open']),
+  "conflictId": zod.string().uuid(),
   "error": zod.object({
   "code": zod.string(),
   "messageKey": zod.string(),
   "params": zod.record(zod.string(), zod.union([zod.string(),zod.number(),zod.boolean()]))
-}).strict().optional()
-}).strict()
+}).strict(),
+  "version": zod.number().int().min(1)
+}).strict()])
 
 
 /**

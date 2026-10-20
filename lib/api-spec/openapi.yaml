@@ -1766,63 +1766,32 @@
         ]
       },
       "SyncOperation": {
+        "oneOf": [
+          { "$ref": "#/components/schemas/SyncCreateOperation" },
+          { "$ref": "#/components/schemas/SyncUpdateOperation" }
+        ],
+        "discriminator": { "propertyName": "type" }
+      },
+      "SyncCreateOperation": {
         "type": "object",
         "additionalProperties": false,
         "properties": {
-          "clientOpId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "entity": {
-            "type": "string",
-            "enum": [
-              "appointment"
-            ]
-          },
-          "action": {
-            "type": "string",
-            "enum": [
-              "create",
-              "update"
-            ]
-          },
-          "payload": {
-            "oneOf": [
-              {
-                "$ref": "#/components/schemas/AppointmentInput"
-              },
-              {
-                "$ref": "#/components/schemas/AppointmentUpdate"
-              }
-            ]
-          },
-          "entityId": {
-            "type": "integer",
-            "minimum": 1
-          }
+          "sequence": { "type": "integer", "minimum": 1 },
+          "type": { "type": "string", "enum": ["create"] },
+          "input": { "$ref": "#/components/schemas/AppointmentInput" }
         },
-        "required": [
-          "clientOpId",
-          "entity",
-          "action",
-          "payload"
-        ],
-        "examples": [
-          {
-            "clientOpId": "00000000-0000-4000-8000-000000000001",
-            "entity": "appointment",
-            "action": "create",
-            "payload": {
-              "clientOpId": "00000000-0000-4000-8000-000000000001",
-              "clinicId": 101,
-              "doctorId": 201,
-              "patientId": 301,
-              "startsAt": "2026-09-09T07:00:00Z",
-              "endsAt": "2026-09-09T07:15:00Z",
-              "source": "walk-in"
-            }
-          }
-        ]
+        "required": ["sequence", "type", "input"]
+      },
+      "SyncUpdateOperation": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "sequence": { "type": "integer", "minimum": 1 },
+          "type": { "type": "string", "enum": ["update"] },
+          "appointmentId": { "type": "integer", "minimum": 1 },
+          "input": { "$ref": "#/components/schemas/AppointmentUpdate" }
+        },
+        "required": ["sequence", "type", "appointmentId", "input"]
       },
       "SyncBatch": {
         "type": "object",
@@ -1834,99 +1803,91 @@
               "$ref": "#/components/schemas/SyncOperation"
             },
             "minItems": 1,
-            "maxItems": 100
+            "maxItems": 50
           }
         },
         "required": [
           "operations"
         ],
-        "examples": [
-          {
-            "operations": [
-              {
-                "clientOpId": "00000000-0000-4000-8000-000000000001",
-                "entity": "appointment",
-                "action": "create",
-                "payload": {
-                  "clientOpId": "00000000-0000-4000-8000-000000000001",
-                  "clinicId": 101,
-                  "doctorId": 201,
-                  "patientId": 301,
-                  "startsAt": "2026-09-09T07:00:00Z",
-                  "endsAt": "2026-09-09T07:15:00Z",
-                  "source": "walk-in"
-                }
-              },
-              {
-                "clientOpId": "00000000-0000-4000-8000-000000000002",
-                "entity": "appointment",
-                "action": "create",
-                "payload": {
-                  "clientOpId": "00000000-0000-4000-8000-000000000002",
-                  "clinicId": 101,
-                  "doctorId": 201,
-                  "patientId": 301,
-                  "startsAt": "2026-09-09T07:00:00Z",
-                  "endsAt": "2026-09-09T07:15:00Z",
-                  "source": "walk-in"
-                }
-              },
-              {
-                "clientOpId": "00000000-0000-4000-8000-000000000003",
-                "entity": "appointment",
-                "action": "create",
-                "payload": {
-                  "clientOpId": "00000000-0000-4000-8000-000000000003",
-                  "clinicId": 101,
-                  "doctorId": 201,
-                  "patientId": 301,
-                  "startsAt": "2026-09-09T07:00:00Z",
-                  "endsAt": "2026-09-09T07:15:00Z",
-                  "source": "walk-in"
-                }
-              }
-            ]
-          }
-        ]
+        "description": "One to fifty operations in consecutive positive device sequence order. The server rejects sequence gaps and blocks all successors after an unresolved or rejected predecessor. Only appointment create and update are supported."
       },
       "SyncOutcome": {
+        "oneOf": [
+          { "$ref": "#/components/schemas/SyncAppliedOutcome" },
+          { "$ref": "#/components/schemas/SyncConflictOutcome" },
+          { "$ref": "#/components/schemas/SyncRejectedOutcome" },
+          { "$ref": "#/components/schemas/SyncBlockedOutcome" }
+        ],
+        "discriminator": { "propertyName": "status" }
+      },
+      "SyncAppliedOutcome": {
         "type": "object",
         "additionalProperties": false,
         "properties": {
-          "clientOpId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "outcome": {
-            "type": "string",
-            "enum": [
-              "applied",
-              "duplicate",
-              "conflict",
-              "rejected"
-            ]
-          },
-          "entityId": {
-            "type": "integer",
-            "minimum": 1
-          },
-          "conflictId": {
-            "type": "integer",
-            "minimum": 1
-          },
-          "error": {
-            "$ref": "#/components/schemas/ApiFailure"
-          }
+          "sequence": { "type": "integer", "minimum": 1 },
+          "clientOpId": { "type": "string", "format": "uuid" },
+          "status": { "type": "string", "enum": ["applied"] },
+          "result": { "$ref": "#/components/schemas/Appointment" }
         },
-        "required": [
-          "clientOpId",
-          "outcome"
-        ],
-        "examples": [
+        "required": ["sequence", "clientOpId", "status", "result"]
+      },
+      "SyncConflictOutcome": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "sequence": { "type": "integer", "minimum": 1 },
+          "clientOpId": { "type": "string", "format": "uuid" },
+          "status": { "type": "string", "enum": ["conflict"] },
+          "code": { "type": "string" },
+          "messageKey": { "type": "string" },
+          "params": { "$ref": "#/components/schemas/SyncErrorParams" },
+          "conflictId": { "type": "string", "format": "uuid" }
+        },
+        "required": ["sequence", "clientOpId", "status", "code", "messageKey", "params", "conflictId"]
+      },
+      "SyncErrorParams": {
+        "type": "object",
+        "additionalProperties": { "oneOf": [{ "type": "string" }, { "type": "number" }, { "type": "boolean" }] }
+      },
+      "SyncRejectedOutcome": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "sequence": { "type": "integer", "minimum": 1 },
+          "clientOpId": { "type": "string", "format": "uuid" },
+          "status": { "type": "string", "enum": ["rejected"] },
+          "error": { "$ref": "#/components/schemas/ApiFailure" }
+        },
+        "required": ["sequence", "clientOpId", "status", "error"]
+      },
+      "SyncBlockedOutcome": {
+        "oneOf": [
           {
-            "clientOpId": "00000000-0000-4000-8000-000000000001",
-            "outcome": "applied",
-            "entityId": 401
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "sequence": { "type": "integer", "minimum": 1 },
+              "clientOpId": { "type": "string", "format": "uuid" },
+              "status": { "type": "string", "enum": ["blocked"] },
+              "code": { "type": "string", "enum": ["PREDECESSOR_UNRESOLVED"] },
+              "messageKey": { "type": "string" },
+              "params": { "$ref": "#/components/schemas/SyncErrorParams" }
+            },
+            "required": ["sequence", "clientOpId", "status", "code", "messageKey", "params"]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "sequence": { "type": "integer", "minimum": 1 },
+              "clientOpId": { "type": "string", "format": "uuid" },
+              "status": { "type": "string", "enum": ["blocked"] },
+              "code": { "type": "string", "enum": ["SEQUENCE_GAP"] },
+              "messageKey": { "type": "string" },
+              "params": { "$ref": "#/components/schemas/SyncErrorParams" },
+              "expectedSequence": { "type": "integer", "minimum": 1 }
+            },
+            "required": ["sequence", "clientOpId", "status", "code", "messageKey", "params", "expectedSequence"]
           }
         ]
       },
@@ -1939,93 +1900,68 @@
             "items": {
               "$ref": "#/components/schemas/SyncOutcome"
             }
-          },
-          "cursor": {
-            "type": "string"
           }
         },
         "required": [
-          "outcomes",
-          "cursor"
-        ],
-        "examples": [
-          {
-            "outcomes": [
-              {
-                "clientOpId": "00000000-0000-4000-8000-000000000001",
-                "outcome": "applied",
-                "entityId": 401
-              },
-              {
-                "clientOpId": "00000000-0000-4000-8000-000000000002",
-                "outcome": "duplicate",
-                "entityId": 401
-              },
-              {
-                "clientOpId": "00000000-0000-4000-8000-000000000003",
-                "outcome": "conflict",
-                "conflictId": 601
-              }
-            ],
-            "cursor": "demo:1"
-          }
+          "outcomes"
         ]
       },
       "SyncChange": {
+        "oneOf": [
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "id": { "type": "string" },
+              "kind": { "type": "string", "enum": ["appointment"] },
+              "entityId": { "type": "string" },
+              "payload": { "$ref": "#/components/schemas/SyncAppointmentPayload" }
+            },
+            "required": ["id", "kind", "entityId", "payload"]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "id": { "type": "string" },
+              "kind": { "type": "string", "enum": ["conflict"] },
+              "entityId": { "type": "string" },
+              "payload": { "$ref": "#/components/schemas/SyncConflictPayload" }
+            },
+            "required": ["id", "kind", "entityId", "payload"]
+          }
+        ],
+        "discriminator": { "propertyName": "kind" }
+      },
+      "SyncAppointmentPayload": {
         "type": "object",
         "additionalProperties": false,
         "properties": {
-          "entity": {
-            "type": "string",
-            "enum": [
-              "appointment"
-            ]
-          },
-          "action": {
-            "type": "string",
-            "enum": [
-              "upsert",
-              "delete"
-            ]
-          },
-          "id": {
-            "type": "integer",
-            "minimum": 1
-          },
-          "version": {
-            "type": "integer",
-            "minimum": 1
-          },
-          "value": {
-            "$ref": "#/components/schemas/Appointment"
-          }
+          "id": { "type": "integer", "minimum": 1 },
+          "clinicId": { "type": "integer", "minimum": 1 },
+          "doctorId": { "type": "integer", "minimum": 1 },
+          "patientId": { "type": "integer", "minimum": 1 },
+          "startsAt": { "type": "string", "format": "date-time" },
+          "endsAt": { "type": "string", "format": "date-time" },
+          "source": { "type": "string" },
+          "clientOpId": { "type": ["string", "null"] },
+          "status": { "type": "string", "enum": ["booked", "double_booked", "completed", "no_show", "cancelled"] },
+          "version": { "type": "integer", "minimum": 1 },
+          "deleted": { "type": "boolean" }
         },
-        "required": [
-          "entity",
-          "action",
-          "id",
-          "version"
-        ],
-        "examples": [
-          {
-            "entity": "appointment",
-            "action": "upsert",
-            "id": 401,
-            "version": 1,
-            "value": {
-              "clientOpId": "00000000-0000-4000-8000-000000000001",
-              "clinicId": 101,
-              "doctorId": 201,
-              "patientId": 301,
-              "startsAt": "2026-09-09T07:00:00Z",
-              "endsAt": "2026-09-09T07:15:00Z",
-              "source": "walk-in",
-              "id": 401,
-              "status": "booked",
-              "version": 1
-            }
-          }
-        ]
+        "required": ["id", "clinicId", "doctorId", "patientId", "startsAt", "endsAt", "source", "clientOpId", "status", "version", "deleted"]
+      },
+      "SyncConflictPayload": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "actorId": { "type": "integer", "minimum": 1 },
+          "status": { "type": "string", "enum": ["open", "resolved"] },
+          "version": { "type": "integer", "minimum": 1 },
+          "clientOpId": { "type": "string", "format": "uuid" }
+        },
+        "required": ["id", "actorId", "status", "version", "clientOpId"]
       },
       "SyncPullResult": {
         "type": "object",
@@ -2037,154 +1973,183 @@
               "$ref": "#/components/schemas/SyncChange"
             }
           },
-          "cursor": {
-            "type": "string"
-          },
-          "hasMore": {
-            "type": "boolean"
-          }
+          "nextCursor": { "type": ["string", "null"] },
+          "since": { "type": "string" }
         },
         "required": [
           "changes",
-          "cursor",
-          "hasMore"
-        ],
-        "examples": [
-          {
-            "changes": [
-              {
-                "entity": "appointment",
-                "action": "upsert",
-                "id": 401,
-                "version": 1,
-                "value": {
-                  "clientOpId": "00000000-0000-4000-8000-000000000001",
-                  "clinicId": 101,
-                  "doctorId": 201,
-                  "patientId": 301,
-                  "startsAt": "2026-09-09T07:00:00Z",
-                  "endsAt": "2026-09-09T07:15:00Z",
-                  "source": "walk-in",
-                  "id": 401,
-                  "status": "booked",
-                  "version": 1
-                }
-              }
-            ],
-            "cursor": "demo:1",
-            "hasMore": false
-          }
+          "nextCursor",
+          "since"
         ]
       },
       "SyncConflict": {
         "type": "object",
         "additionalProperties": false,
         "properties": {
-          "id": {
-            "type": "integer",
-            "minimum": 1
+          "id": { "type": "string", "format": "uuid" },
+          "clientOpId": { "type": "string", "format": "uuid" },
+          "operation": { "$ref": "#/components/schemas/SyncConflictOperation" },
+          "targetId": { "type": ["integer", "null"], "minimum": 1 },
+          "baseVersion": { "type": ["integer", "null"], "minimum": 1 },
+          "serverState": { "oneOf": [{ "$ref": "#/components/schemas/Appointment" }, { "type": "null" }] },
+          "reasons": {
+            "type": "array",
+            "items": { "oneOf": [{ "$ref": "#/components/schemas/ConflictItem" }, { "$ref": "#/components/schemas/SyncConflictReason" }] }
           },
-          "operation": {
-            "$ref": "#/components/schemas/SyncOperation"
-          },
-          "preview": {
-            "$ref": "#/components/schemas/ConflictPreview"
-          }
+          "status": { "type": "string", "enum": ["open", "resolved"] },
+          "version": { "type": "integer", "minimum": 1 },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "updatedAt": { "type": "string", "format": "date-time" },
+          "history": { "type": "array", "items": { "$ref": "#/components/schemas/SyncResolutionHistory" } }
         },
-        "required": [
-          "id",
-          "operation",
-          "preview"
-        ],
-        "examples": [
-          {
-            "id": 601,
-            "operation": {
-              "clientOpId": "00000000-0000-4000-8000-000000000001",
-              "entity": "appointment",
-              "action": "create",
-              "payload": {
-                "clientOpId": "00000000-0000-4000-8000-000000000001",
-                "clinicId": 101,
-                "doctorId": 201,
-                "patientId": 301,
-                "startsAt": "2026-09-09T07:00:00Z",
-                "endsAt": "2026-09-09T07:15:00Z",
-                "source": "walk-in"
-              }
-            },
-            "preview": {
-              "ok": false,
-              "conflicts": [
-                {
-                  "type": "doctor-overlap",
-                  "with": {
-                    "appointmentId": 402,
-                    "clinicId": 101
-                  },
-                  "severity": "blocking",
-                  "suggestedSlots": [
-                    {
-                      "startsAt": "2026-09-09T08:00:00Z",
-                      "endsAt": "2026-09-09T08:15:00Z"
-                    }
-                  ]
-                }
-              ]
-            }
-          }
-        ]
+        "required": ["id", "clientOpId", "operation", "targetId", "baseVersion", "serverState", "reasons", "status", "version", "createdAt", "updatedAt", "history"]
       },
-      "ResolutionInput": {
+      "SyncConflictOperation": {
         "type": "object",
         "additionalProperties": false,
         "properties": {
-          "conflictId": {
-            "type": "integer",
-            "minimum": 1
-          },
-          "decision": {
-            "type": "string",
-            "enum": [
-              "discard",
-              "reschedule"
-            ]
-          },
-          "clientOpId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "slot": {
-            "type": "object",
-            "additionalProperties": false,
-            "properties": {
-              "startsAt": {
-                "type": "string",
-                "format": "date-time"
-              },
-              "endsAt": {
-                "type": "string",
-                "format": "date-time"
-              }
-            },
-            "required": [
-              "startsAt",
-              "endsAt"
-            ]
-          }
+          "target": { "type": "string" },
+          "payload": { "oneOf": [{ "$ref": "#/components/schemas/AppointmentInput" }, { "$ref": "#/components/schemas/AppointmentUpdate" }] }
         },
-        "required": [
-          "conflictId",
-          "decision",
-          "clientOpId"
+        "required": ["target", "payload"]
+      },
+      "SyncConflictReason": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "code": { "type": "string" },
+          "messageKey": { "type": "string" },
+          "params": { "$ref": "#/components/schemas/SyncErrorParams" },
+          "conflictId": { "type": "string", "format": "uuid" }
+        },
+        "required": ["code", "messageKey", "params", "conflictId"]
+      },
+      "SyncResolutionHistory": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string" },
+          "clientOpId": { "type": "string", "format": "uuid" },
+          "action": { "type": "string", "enum": ["call", "move-self", "move-other"] },
+          "result": { "$ref": "#/components/schemas/SyncResolutionHistoryResult" },
+          "createdAt": { "type": "string", "format": "date-time" }
+        },
+        "required": ["id", "clientOpId", "action", "result", "createdAt"]
+      },
+      "SyncResolutionHistoryResult": {
+        "description": "Safe recorded resolution projection. Follow-up history deliberately excludes the phone returned only by the authorized call action.",
+        "oneOf": [
+          { "$ref": "#/components/schemas/SyncFollowUpHistoryResult" },
+          { "$ref": "#/components/schemas/SyncResolvedResult" },
+          { "$ref": "#/components/schemas/SyncOpenResult" }
         ],
-        "examples": [
-          {
-            "conflictId": 601,
-            "decision": "discard",
-            "clientOpId": "00000000-0000-4000-8000-000000000001"
-          }
-        ]
+        "discriminator": { "propertyName": "status" }
+      },
+      "SyncFollowUpHistoryResult": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "status": { "type": "string", "enum": ["follow-up"] },
+          "conflictId": { "type": "string", "format": "uuid" },
+          "patientId": { "type": "integer", "minimum": 1 },
+          "called": { "type": "boolean", "enum": [false] },
+          "version": { "type": "integer", "minimum": 1 }
+        },
+        "required": ["status", "conflictId", "patientId", "called", "version"]
+      },
+      "ResolutionInput": {
+        "oneOf": [
+          { "$ref": "#/components/schemas/SyncCallInput" },
+          { "$ref": "#/components/schemas/SyncMoveSelfInput" },
+          { "$ref": "#/components/schemas/SyncMoveOtherInput" }
+        ],
+        "discriminator": { "propertyName": "action" }
+      },
+      "SyncCallInput": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "clientOpId": { "type": "string", "format": "uuid" },
+          "conflictId": { "type": "string", "format": "uuid" },
+          "expectedVersion": { "type": "integer", "minimum": 1 },
+          "action": { "type": "string", "enum": ["call"] }
+        },
+        "required": ["clientOpId", "conflictId", "expectedVersion", "action"]
+      },
+      "SyncMoveSelfInput": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "clientOpId": { "type": "string", "format": "uuid" },
+          "conflictId": { "type": "string", "format": "uuid" },
+          "expectedVersion": { "type": "integer", "minimum": 1 },
+          "action": { "type": "string", "enum": ["move-self"] },
+          "startsAt": { "type": "string", "format": "date-time", "description": "UTC ISO 8601 instant ending in Z; enforced by the service before coercion." },
+          "endsAt": { "type": "string", "format": "date-time", "description": "UTC ISO 8601 instant ending in Z; enforced by the service before coercion." },
+          "targetExpectedVersion": { "type": "integer", "minimum": 1, "description": "Required by the service when the original proposal updates an existing appointment." },
+          "overrideReason": { "type": "string", "minLength": 1, "maxLength": 2000, "pattern": "\\S" }
+        },
+        "required": ["clientOpId", "conflictId", "expectedVersion", "action", "startsAt", "endsAt"]
+      },
+      "SyncMoveOtherInput": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "clientOpId": { "type": "string", "format": "uuid" },
+          "conflictId": { "type": "string", "format": "uuid" },
+          "expectedVersion": { "type": "integer", "minimum": 1 },
+          "action": { "type": "string", "enum": ["move-other"] },
+          "startsAt": { "type": "string", "format": "date-time", "description": "UTC ISO 8601 instant ending in Z; enforced by the service before coercion." },
+          "endsAt": { "type": "string", "format": "date-time", "description": "UTC ISO 8601 instant ending in Z; enforced by the service before coercion." },
+          "otherAppointmentId": { "type": "integer", "minimum": 1 },
+          "otherExpectedVersion": { "type": "integer", "minimum": 1 },
+          "targetExpectedVersion": { "type": "integer", "minimum": 1, "description": "Required by the service when the original proposal updates an existing appointment." },
+          "overrideReason": { "type": "string", "minLength": 1, "maxLength": 2000, "pattern": "\\S" }
+        },
+        "required": ["clientOpId", "conflictId", "expectedVersion", "action", "startsAt", "endsAt", "otherAppointmentId", "otherExpectedVersion"]
+      },
+      "SyncResolutionResult": {
+        "oneOf": [
+          { "$ref": "#/components/schemas/SyncFollowUpResult" },
+          { "$ref": "#/components/schemas/SyncResolvedResult" },
+          { "$ref": "#/components/schemas/SyncOpenResult" }
+        ],
+        "discriminator": { "propertyName": "status" }
+      },
+      "SyncFollowUpResult": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "status": { "type": "string", "enum": ["follow-up"] },
+          "conflictId": { "type": "string", "format": "uuid" },
+          "patientId": { "type": "integer", "minimum": 1 },
+          "phone": { "type": ["string", "null"] },
+          "called": { "type": "boolean", "enum": [false] },
+          "version": { "type": "integer", "minimum": 1 }
+        },
+        "required": ["status", "conflictId", "patientId", "phone", "called", "version"]
+      },
+      "SyncResolvedResult": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "status": { "type": "string", "enum": ["resolved"] },
+          "conflictId": { "type": "string", "format": "uuid" },
+          "appointment": { "$ref": "#/components/schemas/Appointment" },
+          "version": { "type": "integer", "minimum": 1 }
+        },
+        "required": ["status", "conflictId", "appointment", "version"]
+      },
+      "SyncOpenResult": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "status": { "type": "string", "enum": ["open"] },
+          "conflictId": { "type": "string", "format": "uuid" },
+          "error": { "$ref": "#/components/schemas/ApiFailure" },
+          "version": { "type": "integer", "minimum": 1 }
+        },
+        "required": ["status", "conflictId", "error", "version"]
       },
       "ImportUploadInput": {
         "type": "object",
@@ -3056,44 +3021,7 @@
         ],
         "examples": [
           {
-            "items": [
-              {
-                "id": 601,
-                "operation": {
-                  "clientOpId": "00000000-0000-4000-8000-000000000001",
-                  "entity": "appointment",
-                  "action": "create",
-                  "payload": {
-                    "clientOpId": "00000000-0000-4000-8000-000000000001",
-                    "clinicId": 101,
-                    "doctorId": 201,
-                    "patientId": 301,
-                    "startsAt": "2026-09-09T07:00:00Z",
-                    "endsAt": "2026-09-09T07:15:00Z",
-                    "source": "walk-in"
-                  }
-                },
-                "preview": {
-                  "ok": false,
-                  "conflicts": [
-                    {
-                      "type": "doctor-overlap",
-                      "with": {
-                        "appointmentId": 402,
-                        "clinicId": 101
-                      },
-                      "severity": "blocking",
-                      "suggestedSlots": [
-                        {
-                          "startsAt": "2026-09-09T08:00:00Z",
-                          "endsAt": "2026-09-09T08:15:00Z"
-                        }
-                      ]
-                    }
-                  ]
-                }
-              }
-            ],
+            "items": [],
             "nextCursor": null
           }
         ]
@@ -8460,7 +8388,7 @@
           "sync"
         ],
         "summary": "push sync",
-        "description": "Contract-only domain service; mock responses are simulated. Clinic scope comes from authenticated identity, not submitted identifiers. Admin has no implicit clinical access. Network visibility requires active consent and excludes Lite clinics. Mutations require CSRF; clientOpId is replay-safe per clinic, with changed payload returning 409. Ordered outcomes correlate by clientOpId: applied, duplicate, conflict, rejected. Atomic per operation, not per batch. A conflict is retained for explicit resolution; no operation is silently dropped.",
+        "description": "Authenticated trusted-device appointment synchronization. Submit 1–50 consecutive positive sequences in declared order; ordering identity is the server-authenticated device. The next new sequence must follow the device's last accepted receipt. Replays use the shared appointment operation ledger and return the original recorded outcome, not a separate duplicate status. Changed payload, owner, target or sequence reuse is rejected. A rejected or unresolved conflicting predecessor blocks every later operation deterministically. Applied/conflict outcomes and recorded business rejections are durable receipts; blocked operations and pre-execution ordering/identity rejections do not consume new sequences. Retry the identical operation to recover its receipt; resolve an open conflict explicitly before proceeding. A durable rejected predecessor remains blocked rather than being silently skipped. Business failures return partial ordered outcomes; unexpected transient errors roll back the whole batch and are safely retryable. Current actor, clinic and doctor permissions are rechecked. CSRF is required.",
         "security": [
           {
             "sessionCookie": [],
@@ -8471,7 +8399,7 @@
           "doctor",
           "front-desk"
         ],
-        "x-implementation": "contract-only",
+        "x-implementation": "operational",
         "parameters": [
           {
             "name": "X-CSRF-Token",
@@ -8492,24 +8420,15 @@
                   "$ref": "#/components/schemas/SyncPushResult"
                 },
                 "example": {
-                  "outcomes": [
-                    {
-                      "clientOpId": "00000000-0000-4000-8000-000000000001",
-                      "outcome": "applied",
-                      "entityId": 401
-                    },
-                    {
-                      "clientOpId": "00000000-0000-4000-8000-000000000002",
-                      "outcome": "duplicate",
-                      "entityId": 401
-                    },
-                    {
-                      "clientOpId": "00000000-0000-4000-8000-000000000003",
-                      "outcome": "conflict",
-                      "conflictId": 601
-                    }
-                  ],
-                  "cursor": "demo:1"
+                  "outcomes": [{
+                    "sequence": 1,
+                    "clientOpId": "00000000-0000-4000-8000-000000000001",
+                    "status": "blocked",
+                    "code": "SEQUENCE_GAP",
+                    "messageKey": "error.conflict",
+                    "params": {},
+                    "expectedSequence": 2
+                  }]
                 }
               }
             }
@@ -8643,50 +8562,19 @@
                 "$ref": "#/components/schemas/SyncBatch"
               },
               "example": {
-                "operations": [
-                  {
+                "operations": [{
+                  "sequence": 1,
+                  "type": "create",
+                  "input": {
                     "clientOpId": "00000000-0000-4000-8000-000000000001",
-                    "entity": "appointment",
-                    "action": "create",
-                    "payload": {
-                      "clientOpId": "00000000-0000-4000-8000-000000000001",
-                      "clinicId": 101,
-                      "doctorId": 201,
-                      "patientId": 301,
-                      "startsAt": "2026-09-09T07:00:00Z",
-                      "endsAt": "2026-09-09T07:15:00Z",
-                      "source": "walk-in"
-                    }
-                  },
-                  {
-                    "clientOpId": "00000000-0000-4000-8000-000000000002",
-                    "entity": "appointment",
-                    "action": "create",
-                    "payload": {
-                      "clientOpId": "00000000-0000-4000-8000-000000000002",
-                      "clinicId": 101,
-                      "doctorId": 201,
-                      "patientId": 301,
-                      "startsAt": "2026-09-09T07:00:00Z",
-                      "endsAt": "2026-09-09T07:15:00Z",
-                      "source": "walk-in"
-                    }
-                  },
-                  {
-                    "clientOpId": "00000000-0000-4000-8000-000000000003",
-                    "entity": "appointment",
-                    "action": "create",
-                    "payload": {
-                      "clientOpId": "00000000-0000-4000-8000-000000000003",
-                      "clinicId": 101,
-                      "doctorId": 201,
-                      "patientId": 301,
-                      "startsAt": "2026-09-09T07:00:00Z",
-                      "endsAt": "2026-09-09T07:15:00Z",
-                      "source": "walk-in"
-                    }
+                    "clinicId": 101,
+                    "doctorId": 201,
+                    "patientId": 301,
+                    "startsAt": "2026-09-09T07:00:00Z",
+                    "endsAt": "2026-09-09T07:15:00Z",
+                    "source": "walk-in"
                   }
-                ]
+                }]
               }
             }
           }
@@ -8700,7 +8588,7 @@
           "sync"
         ],
         "summary": "pull sync",
-        "description": "Contract-only domain service; mock responses are simulated. Clinic scope comes from authenticated identity, not submitted identifiers. Admin has no implicit clinical access. Network visibility requires active consent and excludes Lite clinics. Mutations require CSRF; clientOpId is replay-safe per clinic, with changed payload returning 409. since is an opaque server cursor, never a local timestamp. Return cursor only after applying the page; hasMore signals additional pages. Invalid/expired cursor returns 400; clients must perform a full authenticated re-bootstrap.",
+        "description": "Pull the authorized operational scheduling change feed, including direct appointment writes, cancellations/tombstones and conflict resolution changes. Omit since to bootstrap. since is an opaque server cursor, never a timestamp or a client-selected scope. The response since always identifies the last delivered change; persist it only after applying the page. nextCursor is non-null only when more changes remain and is passed as the next request's since. Stable commit-ordered pagination cannot advance past undelivered changes. Invalid or scope-invalidated cursors require a fresh authenticated bootstrap. No clinical notes, credentials or unrestricted cross-clinic records are returned.",
         "security": [
           {
             "sessionCookie": []
@@ -8710,25 +8598,17 @@
           "doctor",
           "front-desk"
         ],
-        "x-implementation": "contract-only",
+        "x-implementation": "operational",
         "parameters": [
           {
             "name": "since",
             "in": "query",
-            "required": true,
-            "schema": {
-              "type": "string"
-            },
-            "example": "demo:0"
-          },
-          {
-            "name": "cursor",
-            "in": "query",
             "required": false,
             "schema": {
-              "type": "string"
+              "type": "string",
+              "maxLength": 2048
             },
-            "example": "demo:1"
+            "description": "Opaque server-issued continuation cursor; omit for initial synchronization. Never supply a timestamp."
           },
           {
             "name": "limit",
@@ -8737,7 +8617,8 @@
             "schema": {
               "type": "integer",
               "minimum": 1,
-              "maximum": 100
+              "maximum": 100,
+              "default": 25
             },
             "example": 25
           }
@@ -8753,11 +8634,10 @@
                 "example": {
                   "changes": [
                     {
-                      "entity": "appointment",
-                      "action": "upsert",
-                      "id": 401,
-                      "version": 1,
-                      "value": {
+                      "kind": "appointment",
+                      "id": "1",
+                      "entityId": "401",
+                      "payload": {
                         "clientOpId": "00000000-0000-4000-8000-000000000001",
                         "clinicId": 101,
                         "doctorId": 201,
@@ -8767,12 +8647,13 @@
                         "source": "walk-in",
                         "id": 401,
                         "status": "booked",
-                        "version": 1
+                        "version": 1,
+                        "deleted": false
                       }
                     }
                   ],
-                  "cursor": "demo:1",
-                  "hasMore": false
+                  "since": "opaque-server-cursor",
+                  "nextCursor": null
                 }
               }
             }
@@ -8907,7 +8788,7 @@
           "sync"
         ],
         "summary": "list sync conflicts",
-        "description": "Contract-only domain service; mock responses are simulated. Clinic scope comes from authenticated identity, not submitted identifiers. Admin has no implicit clinical access. Network visibility requires active consent and excludes Lite clinics. Mutations require CSRF; clientOpId is replay-safe per clinic, with changed payload returning 409.",
+        "description": "List durable conflicts owned by the authenticated actor within current clinic, doctor and trusted-device scope. Defaults to open conflicts; status=resolved or all explicitly includes retained resolution history. Original proposals and safe detection evidence are preserved. Cursors do not grant scope.",
         "security": [
           {
             "sessionCookie": []
@@ -8917,14 +8798,21 @@
           "doctor",
           "front-desk"
         ],
-        "x-implementation": "contract-only",
+        "x-implementation": "operational",
         "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string", "enum": ["open", "resolved", "all"], "default": "open" }
+          },
           {
             "name": "cursor",
             "in": "query",
             "required": false,
             "schema": {
-              "type": "string"
+              "type": "string",
+              "maxLength": 2048
             },
             "example": "demo:1"
           },
@@ -8935,7 +8823,8 @@
             "schema": {
               "type": "integer",
               "minimum": 1,
-              "maximum": 100
+              "maximum": 100,
+              "default": 25
             },
             "example": 25
           }
@@ -8949,44 +8838,7 @@
                   "$ref": "#/components/schemas/SyncConflictPage"
                 },
                 "example": {
-                  "items": [
-                    {
-                      "id": 601,
-                      "operation": {
-                        "clientOpId": "00000000-0000-4000-8000-000000000001",
-                        "entity": "appointment",
-                        "action": "create",
-                        "payload": {
-                          "clientOpId": "00000000-0000-4000-8000-000000000001",
-                          "clinicId": 101,
-                          "doctorId": 201,
-                          "patientId": 301,
-                          "startsAt": "2026-09-09T07:00:00Z",
-                          "endsAt": "2026-09-09T07:15:00Z",
-                          "source": "walk-in"
-                        }
-                      },
-                      "preview": {
-                        "ok": false,
-                        "conflicts": [
-                          {
-                            "type": "doctor-overlap",
-                            "with": {
-                              "appointmentId": 402,
-                              "clinicId": 101
-                            },
-                            "severity": "blocking",
-                            "suggestedSlots": [
-                              {
-                                "startsAt": "2026-09-09T08:00:00Z",
-                                "endsAt": "2026-09-09T08:15:00Z"
-                              }
-                            ]
-                          }
-                        ]
-                      }
-                    }
-                  ],
+                  "items": [],
                   "nextCursor": null
                 }
               }
@@ -9122,7 +8974,7 @@
           "sync"
         ],
         "summary": "resolve sync",
-        "description": "Contract-only domain service; mock responses are simulated. Clinic scope comes from authenticated identity, not submitted identifiers. Admin has no implicit clinical access. Network visibility requires active consent and excludes Lite clinics. Mutations require CSRF; clientOpId is replay-safe per clinic, with changed payload returning 409.",
+        "description": "Resolve an owned conflict using a trusted device, current authorization, CSRF and optimistic expectedVersion. move-self requires explicit UTC target times. move-other atomically moves the authorized other appointment and retries the original proposal, with fresh versions and conflict checks for both. Existing-target proposals require targetExpectedVersion. Offline holds confer no guarantee. call returns only the authorized phone projection, records follow-up, always reports called=false and leaves the scheduling conflict open. Failed revalidation returns status=open with a typed error and retained history. Every recorded result includes the incremented conflict version; retries with the same clientOpId return the recorded result.",
         "security": [
           {
             "sessionCookie": [],
@@ -9133,7 +8985,7 @@
           "doctor",
           "front-desk"
         ],
-        "x-implementation": "contract-only",
+        "x-implementation": "operational",
         "parameters": [
           {
             "name": "X-CSRF-Token",
@@ -9147,16 +8999,19 @@
         ],
         "responses": {
           "200": {
-            "description": "SyncOutcome",
+            "description": "SyncResolutionResult",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/SyncOutcome"
+                  "$ref": "#/components/schemas/SyncResolutionResult"
                 },
                 "example": {
-                  "clientOpId": "00000000-0000-4000-8000-000000000001",
-                  "outcome": "applied",
-                  "entityId": 401
+                  "status": "follow-up",
+                  "conflictId": "00000000-0000-4000-8000-000000000601",
+                  "patientId": 301,
+                  "phone": null,
+                  "called": false,
+                  "version": 2
                 }
               }
             }
@@ -9290,8 +9145,9 @@
                 "$ref": "#/components/schemas/ResolutionInput"
               },
               "example": {
-                "conflictId": 601,
-                "decision": "discard",
+                "conflictId": "00000000-0000-4000-8000-000000000601",
+                "action": "call",
+                "expectedVersion": 1,
                 "clientOpId": "00000000-0000-4000-8000-000000000001"
               }
             }

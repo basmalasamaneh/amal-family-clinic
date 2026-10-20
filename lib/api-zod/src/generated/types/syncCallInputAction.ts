@@ -6,7 +6,9 @@
  * OpenAPI spec version: 0.2.0
  */
 
-export type ResolutionInputSlot = {
-  startsAt: Date;
-  endsAt: Date;
-};
+export type SyncCallInputAction = typeof SyncCallInputAction[keyof typeof SyncCallInputAction];
+
+
+export const SyncCallInputAction = {
+  call: 'call',
+} as const;

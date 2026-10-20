@@ -6,6 +6,8 @@ export class ApiError extends Error {
 export const fail = (status: number, code: string, key: string, params = {}) => new ApiError(status, code, key, params);
 export const translations = {
   en: {
+    invalidCursor: "This sync cursor is invalid. Start synchronization again.",
+    cursorScopeChanged: "Your access changed. Clear the previous local snapshot and synchronize again.",
     patientReferenced: "This patient has protected records and cannot be deleted.",
     deviceUntrusted: "This device is not registered or its access was revoked. Ask your clinic administrator to register it.",
     validation: "Check the submitted information.", unauthorized: "Sign in to continue.",
@@ -14,6 +16,8 @@ export const translations = {
     pinLocked: "PIN access is temporarily locked.", rateLimited: "Too many attempts. Try again later.", internal: "An unexpected error occurred.",
   },
   ar: {
+    invalidCursor: "مؤشر المزامنة غير صالح. ابدأ المزامنة من جديد.",
+    cursorScopeChanged: "تغيّرت صلاحياتك. امسح النسخة المحلية السابقة وأعد المزامنة.",
     patientReferenced: "لدى هذا المريض سجلات محمية ولا يمكن حذفه.",
     deviceUntrusted: "هذا الجهاز غير مسجّل أو تم إلغاء وصوله. اطلب من مسؤول العيادة تسجيله.",
     validation: "تحقق من المعلومات المدخلة.", unauthorized: "سجّل الدخول للمتابعة.",

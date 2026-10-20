@@ -6,10 +6,9 @@
  * OpenAPI spec version: 0.2.0
  */
 
-export type SyncChangeAction = typeof SyncChangeAction[keyof typeof SyncChangeAction];
+export type SyncRejectedOutcomeStatus = typeof SyncRejectedOutcomeStatus[keyof typeof SyncRejectedOutcomeStatus];
 
 
-export const SyncChangeAction = {
-  upsert: 'upsert',
-  delete: 'delete',
+export const SyncRejectedOutcomeStatus = {
+  rejected: 'rejected',
 } as const;

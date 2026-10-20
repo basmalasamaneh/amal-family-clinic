@@ -19,3 +19,4 @@
 - [Assisted patient history](assisted-patient-history.md) — approved staff-assisted patient requests, not patient accounts or general reception audit access.
 - [Import and merge authority](import-merge-boundaries.md) — filenames cannot reset event identity; exact demographics cannot transfer consent or visibility rights.
 - [Disposable PostgreSQL tools](disposable-postgres-tools.md) — libpq environment parsing differs from Node connection-string parsing.
+- [Sync ordering and recovery](sync-ordering.md) — conservative device dependencies; feed cursor allocation must remain ordered through commit.

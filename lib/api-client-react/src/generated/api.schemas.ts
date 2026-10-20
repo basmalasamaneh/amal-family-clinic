@@ -747,121 +747,407 @@ export interface OperationInput {
   clientOpId: string;
 }
 
-export type SyncOperationEntity = typeof SyncOperationEntity[keyof typeof SyncOperationEntity];
+export type SyncCreateOperationType = typeof SyncCreateOperationType[keyof typeof SyncCreateOperationType];
 
 
-export const SyncOperationEntity = {
-  appointment: 'appointment',
+export const SyncCreateOperationType = {
+  create: 'create',
 } as const;
 
-export type SyncOperationAction = typeof SyncOperationAction[keyof typeof SyncOperationAction];
+export interface SyncCreateOperation {
+  /** @minimum 1 */
+  sequence: number;
+  type: SyncCreateOperationType;
+  input: AppointmentInput;
+}
+
+export type SyncUpdateOperationType = typeof SyncUpdateOperationType[keyof typeof SyncUpdateOperationType];
 
 
-export const SyncOperationAction = {
-  create: 'create',
+export const SyncUpdateOperationType = {
   update: 'update',
 } as const;
 
-export interface SyncOperation {
-  clientOpId: string;
-  entity: SyncOperationEntity;
-  action: SyncOperationAction;
-  payload: AppointmentInput | AppointmentUpdate;
+export interface SyncUpdateOperation {
   /** @minimum 1 */
-  entityId?: number;
+  sequence: number;
+  type: SyncUpdateOperationType;
+  /** @minimum 1 */
+  appointmentId: number;
+  input: AppointmentUpdate;
 }
 
+export type SyncOperation = SyncCreateOperation | SyncUpdateOperation;
+
+/**
+ * One to fifty operations in consecutive positive device sequence order. The server rejects sequence gaps and blocks all successors after an unresolved or rejected predecessor. Only appointment create and update are supported.
+ */
 export interface SyncBatch {
   /**
      * @minItems 1
-     * @maxItems 100
+     * @maxItems 50
      */
   operations: SyncOperation[];
 }
 
-export type SyncOutcomeOutcome = typeof SyncOutcomeOutcome[keyof typeof SyncOutcomeOutcome];
+export type SyncAppliedOutcomeStatus = typeof SyncAppliedOutcomeStatus[keyof typeof SyncAppliedOutcomeStatus];
 
 
-export const SyncOutcomeOutcome = {
+export const SyncAppliedOutcomeStatus = {
   applied: 'applied',
-  duplicate: 'duplicate',
+} as const;
+
+export interface SyncAppliedOutcome {
+  /** @minimum 1 */
+  sequence: number;
+  clientOpId: string;
+  status: SyncAppliedOutcomeStatus;
+  result: Appointment;
+}
+
+export type SyncConflictOutcomeStatus = typeof SyncConflictOutcomeStatus[keyof typeof SyncConflictOutcomeStatus];
+
+
+export const SyncConflictOutcomeStatus = {
   conflict: 'conflict',
+} as const;
+
+export interface SyncErrorParams {[key: string]: string | number | boolean}
+
+export interface SyncConflictOutcome {
+  /** @minimum 1 */
+  sequence: number;
+  clientOpId: string;
+  status: SyncConflictOutcomeStatus;
+  code: string;
+  messageKey: string;
+  params: SyncErrorParams;
+  conflictId: string;
+}
+
+export type SyncRejectedOutcomeStatus = typeof SyncRejectedOutcomeStatus[keyof typeof SyncRejectedOutcomeStatus];
+
+
+export const SyncRejectedOutcomeStatus = {
   rejected: 'rejected',
 } as const;
 
-export interface SyncOutcome {
+export interface SyncRejectedOutcome {
+  /** @minimum 1 */
+  sequence: number;
   clientOpId: string;
-  outcome: SyncOutcomeOutcome;
-  /** @minimum 1 */
-  entityId?: number;
-  /** @minimum 1 */
-  conflictId?: number;
-  error?: ApiFailure;
+  status: SyncRejectedOutcomeStatus;
+  error: ApiFailure;
 }
+
+export type SyncBlockedOutcome = {
+  /** @minimum 1 */
+  sequence: number;
+  clientOpId: string;
+  status: 'blocked';
+  code: 'PREDECESSOR_UNRESOLVED';
+  messageKey: string;
+  params: SyncErrorParams;
+} | {
+  /** @minimum 1 */
+  sequence: number;
+  clientOpId: string;
+  status: 'blocked';
+  code: 'SEQUENCE_GAP';
+  messageKey: string;
+  params: SyncErrorParams;
+  /** @minimum 1 */
+  expectedSequence: number;
+};
+
+export type SyncOutcome = SyncAppliedOutcome | SyncConflictOutcome | SyncRejectedOutcome | SyncBlockedOutcome;
 
 export interface SyncPushResult {
   outcomes: SyncOutcome[];
-  cursor: string;
 }
 
-export type SyncChangeEntity = typeof SyncChangeEntity[keyof typeof SyncChangeEntity];
+export type SyncAppointmentPayloadStatus = typeof SyncAppointmentPayloadStatus[keyof typeof SyncAppointmentPayloadStatus];
 
 
-export const SyncChangeEntity = {
-  appointment: 'appointment',
+export const SyncAppointmentPayloadStatus = {
+  booked: 'booked',
+  double_booked: 'double_booked',
+  completed: 'completed',
+  no_show: 'no_show',
+  cancelled: 'cancelled',
 } as const;
 
-export type SyncChangeAction = typeof SyncChangeAction[keyof typeof SyncChangeAction];
-
-
-export const SyncChangeAction = {
-  upsert: 'upsert',
-  delete: 'delete',
-} as const;
-
-export interface SyncChange {
-  entity: SyncChangeEntity;
-  action: SyncChangeAction;
+export interface SyncAppointmentPayload {
   /** @minimum 1 */
   id: number;
   /** @minimum 1 */
+  clinicId: number;
+  /** @minimum 1 */
+  doctorId: number;
+  /** @minimum 1 */
+  patientId: number;
+  startsAt: string;
+  endsAt: string;
+  source: string;
+  /** @nullable */
+  clientOpId: string | null;
+  status: SyncAppointmentPayloadStatus;
+  /** @minimum 1 */
   version: number;
-  value?: Appointment;
+  deleted: boolean;
 }
+
+export type SyncConflictPayloadStatus = typeof SyncConflictPayloadStatus[keyof typeof SyncConflictPayloadStatus];
+
+
+export const SyncConflictPayloadStatus = {
+  open: 'open',
+  resolved: 'resolved',
+} as const;
+
+export interface SyncConflictPayload {
+  id: string;
+  /** @minimum 1 */
+  actorId: number;
+  status: SyncConflictPayloadStatus;
+  /** @minimum 1 */
+  version: number;
+  clientOpId: string;
+}
+
+export type SyncChange = {
+  id: string;
+  kind: 'appointment';
+  entityId: string;
+  payload: SyncAppointmentPayload;
+} | {
+  id: string;
+  kind: 'conflict';
+  entityId: string;
+  payload: SyncConflictPayload;
+};
 
 export interface SyncPullResult {
   changes: SyncChange[];
-  cursor: string;
-  hasMore: boolean;
+  /** @nullable */
+  nextCursor: string | null;
+  since: string;
+}
+
+export type SyncConflictStatus = typeof SyncConflictStatus[keyof typeof SyncConflictStatus];
+
+
+export const SyncConflictStatus = {
+  open: 'open',
+  resolved: 'resolved',
+} as const;
+
+export interface SyncConflictOperation {
+  target: string;
+  payload: AppointmentInput | AppointmentUpdate;
+}
+
+export interface SyncConflictReason {
+  code: string;
+  messageKey: string;
+  params: SyncErrorParams;
+  conflictId: string;
+}
+
+export type SyncResolutionHistoryAction = typeof SyncResolutionHistoryAction[keyof typeof SyncResolutionHistoryAction];
+
+
+export const SyncResolutionHistoryAction = {
+  call: 'call',
+  'move-self': 'move-self',
+  'move-other': 'move-other',
+} as const;
+
+export type SyncFollowUpHistoryResultStatus = typeof SyncFollowUpHistoryResultStatus[keyof typeof SyncFollowUpHistoryResultStatus];
+
+
+export const SyncFollowUpHistoryResultStatus = {
+  'follow-up': 'follow-up',
+} as const;
+
+export interface SyncFollowUpHistoryResult {
+  status: SyncFollowUpHistoryResultStatus;
+  conflictId: string;
+  /** @minimum 1 */
+  patientId: number;
+  called: false;
+  /** @minimum 1 */
+  version: number;
+}
+
+export type SyncResolvedResultStatus = typeof SyncResolvedResultStatus[keyof typeof SyncResolvedResultStatus];
+
+
+export const SyncResolvedResultStatus = {
+  resolved: 'resolved',
+} as const;
+
+export interface SyncResolvedResult {
+  status: SyncResolvedResultStatus;
+  conflictId: string;
+  appointment: Appointment;
+  /** @minimum 1 */
+  version: number;
+}
+
+export type SyncOpenResultStatus = typeof SyncOpenResultStatus[keyof typeof SyncOpenResultStatus];
+
+
+export const SyncOpenResultStatus = {
+  open: 'open',
+} as const;
+
+export interface SyncOpenResult {
+  status: SyncOpenResultStatus;
+  conflictId: string;
+  error: ApiFailure;
+  /** @minimum 1 */
+  version: number;
+}
+
+/**
+ * Safe recorded resolution projection. Follow-up history deliberately excludes the phone returned only by the authorized call action.
+ */
+export type SyncResolutionHistoryResult = SyncFollowUpHistoryResult | SyncResolvedResult | SyncOpenResult;
+
+export interface SyncResolutionHistory {
+  id: string;
+  clientOpId: string;
+  action: SyncResolutionHistoryAction;
+  result: SyncResolutionHistoryResult;
+  createdAt: string;
 }
 
 export interface SyncConflict {
+  id: string;
+  clientOpId: string;
+  operation: SyncConflictOperation;
+  /**
+     * @minimum 1
+     * @nullable
+     */
+  targetId: number | null;
+  /**
+     * @minimum 1
+     * @nullable
+     */
+  baseVersion: number | null;
+  serverState: Appointment | null;
+  reasons: (ConflictItem | SyncConflictReason)[];
+  status: SyncConflictStatus;
   /** @minimum 1 */
-  id: number;
-  operation: SyncOperation;
-  preview: ConflictPreview;
+  version: number;
+  createdAt: string;
+  updatedAt: string;
+  history: SyncResolutionHistory[];
 }
 
-export type ResolutionInputDecision = typeof ResolutionInputDecision[keyof typeof ResolutionInputDecision];
+export type SyncCallInputAction = typeof SyncCallInputAction[keyof typeof SyncCallInputAction];
 
 
-export const ResolutionInputDecision = {
-  discard: 'discard',
-  reschedule: 'reschedule',
+export const SyncCallInputAction = {
+  call: 'call',
 } as const;
 
-export type ResolutionInputSlot = {
-  startsAt: string;
-  endsAt: string;
-};
-
-export interface ResolutionInput {
-  /** @minimum 1 */
-  conflictId: number;
-  decision: ResolutionInputDecision;
+export interface SyncCallInput {
   clientOpId: string;
-  slot?: ResolutionInputSlot;
+  conflictId: string;
+  /** @minimum 1 */
+  expectedVersion: number;
+  action: SyncCallInputAction;
 }
+
+export type SyncMoveSelfInputAction = typeof SyncMoveSelfInputAction[keyof typeof SyncMoveSelfInputAction];
+
+
+export const SyncMoveSelfInputAction = {
+  'move-self': 'move-self',
+} as const;
+
+export interface SyncMoveSelfInput {
+  clientOpId: string;
+  conflictId: string;
+  /** @minimum 1 */
+  expectedVersion: number;
+  action: SyncMoveSelfInputAction;
+  /** UTC ISO 8601 instant ending in Z; enforced by the service before coercion. */
+  startsAt: string;
+  /** UTC ISO 8601 instant ending in Z; enforced by the service before coercion. */
+  endsAt: string;
+  /**
+     * Required by the service when the original proposal updates an existing appointment.
+     * @minimum 1
+     */
+  targetExpectedVersion?: number;
+  /**
+     * @minLength 1
+     * @maxLength 2000
+     * @pattern \S
+     */
+  overrideReason?: string;
+}
+
+export type SyncMoveOtherInputAction = typeof SyncMoveOtherInputAction[keyof typeof SyncMoveOtherInputAction];
+
+
+export const SyncMoveOtherInputAction = {
+  'move-other': 'move-other',
+} as const;
+
+export interface SyncMoveOtherInput {
+  clientOpId: string;
+  conflictId: string;
+  /** @minimum 1 */
+  expectedVersion: number;
+  action: SyncMoveOtherInputAction;
+  /** UTC ISO 8601 instant ending in Z; enforced by the service before coercion. */
+  startsAt: string;
+  /** UTC ISO 8601 instant ending in Z; enforced by the service before coercion. */
+  endsAt: string;
+  /** @minimum 1 */
+  otherAppointmentId: number;
+  /** @minimum 1 */
+  otherExpectedVersion: number;
+  /**
+     * Required by the service when the original proposal updates an existing appointment.
+     * @minimum 1
+     */
+  targetExpectedVersion?: number;
+  /**
+     * @minLength 1
+     * @maxLength 2000
+     * @pattern \S
+     */
+  overrideReason?: string;
+}
+
+export type ResolutionInput = SyncCallInput | SyncMoveSelfInput | SyncMoveOtherInput;
+
+export type SyncFollowUpResultStatus = typeof SyncFollowUpResultStatus[keyof typeof SyncFollowUpResultStatus];
+
+
+export const SyncFollowUpResultStatus = {
+  'follow-up': 'follow-up',
+} as const;
+
+export interface SyncFollowUpResult {
+  status: SyncFollowUpResultStatus;
+  conflictId: string;
+  /** @minimum 1 */
+  patientId: number;
+  /** @nullable */
+  phone: string | null;
+  called: false;
+  /** @minimum 1 */
+  version: number;
+}
+
+export type SyncResolutionResult = SyncFollowUpResult | SyncResolvedResult | SyncOpenResult;
 
 export type ImportUploadInputFormat = typeof ImportUploadInputFormat[keyof typeof ImportUploadInputFormat];
 
@@ -1931,8 +2217,11 @@ limit?: number;
 };
 
 export type PullSyncParams = {
-since: string;
-cursor?: string;
+/**
+ * Opaque server-issued continuation cursor; omit for initial synchronization. Never supply a timestamp.
+ * @maxLength 2048
+ */
+since?: string;
 /**
  * @minimum 1
  * @maximum 100
@@ -1941,6 +2230,10 @@ limit?: number;
 };
 
 export type ListSyncConflictsParams = {
+status?: ListSyncConflictsStatus;
+/**
+ * @maxLength 2048
+ */
 cursor?: string;
 /**
  * @minimum 1
@@ -1948,6 +2241,15 @@ cursor?: string;
  */
 limit?: number;
 };
+
+export type ListSyncConflictsStatus = typeof ListSyncConflictsStatus[keyof typeof ListSyncConflictsStatus];
+
+
+export const ListSyncConflictsStatus = {
+  open: 'open',
+  resolved: 'resolved',
+  all: 'all',
+} as const;
 
 export type GetKpisParams = {
 range: GetKpisRange;

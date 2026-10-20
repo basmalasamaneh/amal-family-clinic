@@ -7,8 +7,11 @@
  */
 
 export type PullSyncParams = {
-since: string;
-cursor?: string;
+/**
+ * Opaque server-issued continuation cursor; omit for initial synchronization. Never supply a timestamp.
+ * @maxLength 2048
+ */
+since?: string;
 /**
  * @minimum 1
  * @maximum 100

@@ -3,7 +3,7 @@ import { check, foreignKey, index, integer, jsonb, text, uuid } from "drizzle-or
 import { operational, operationalUsers, operationalClinics, operationalDoctors, operationalPatients, instant } from "./operational-core";
 import { operationalAppointments } from "./operational-clinical";
 
-/** Successful operation outcomes only; inserted in the appointment transaction. */
+/** Shared direct/sync outcomes; conflicts survive business savepoint rollback. */
 export const appointmentOperations = operational.table("appointment_operations", {
   client_op_id: uuid("client_op_id").primaryKey(),
   actor_id: integer("actor_id").notNull().references(() => operationalUsers.id),
@@ -11,6 +11,10 @@ export const appointmentOperations = operational.table("appointment_operations",
   doctor_id: integer("doctor_id").notNull().references(() => operationalDoctors.doctor_id),
   payload_hash: text("payload_hash").notNull(),
   result: jsonb("result").notNull(),
+  request: jsonb("request"),
+  device_id: integer("device_id"),
+  status: text("status").notNull().default("applied"),
+  conflict_id: uuid("conflict_id"),
   created_at: instant("created_at").notNull().default(sql`clock_timestamp()`),
 });
 

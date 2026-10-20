@@ -9,5 +9,4 @@ import type { SyncOutcome } from './syncOutcome';
 
 export interface SyncPushResult {
   outcomes: SyncOutcome[];
-  cursor: string;
 }

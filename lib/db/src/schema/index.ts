@@ -26,3 +26,4 @@ export * from "./operational-patients";
 export * from "./operational-consent";
 export * from "./operational-import";
 export * from "./operational-merge";
+export * from "./operational-sync";

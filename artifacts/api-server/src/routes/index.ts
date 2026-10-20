@@ -8,12 +8,14 @@ import consentRouter from "./consent";
 import doctorRouter from "./doctor";
 import patientMergeRouter from "./patient-merge";
 import importsRouter from "./imports";
+import syncRouter from "./sync";
 
 const router: IRouter = Router();
 
 router.use(healthRouter);
 router.use(authRouter);
 router.use(appointmentsRouter);
+router.use(syncRouter);
 router.use(consentRouter);
 router.use(doctorRouter);
 router.use(importsRouter);

@@ -7,10 +7,13 @@
  */
 import type { SyncOperation } from './syncOperation';
 
+/**
+ * One to fifty operations in consecutive positive device sequence order. The server rejects sequence gaps and blocks all successors after an unresolved or rejected predecessor. Only appointment create and update are supported.
+ */
 export interface SyncBatch {
   /**
      * @minItems 1
-     * @maxItems 100
+     * @maxItems 50
      */
   operations: SyncOperation[];
 }

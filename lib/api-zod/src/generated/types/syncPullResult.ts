@@ -9,6 +9,7 @@ import type { SyncChange } from './syncChange';
 
 export interface SyncPullResult {
   changes: SyncChange[];
-  cursor: string;
-  hasMore: boolean;
+  /** @nullable */
+  nextCursor: string | null;
+  since: string;
 }
