@@ -23,3 +23,12 @@ emulation and reproduced it without axe; uncached requests still failed.
 **How to apply:** Prove offline reload with a service-worker response and an
 uncached failing network probe. Do not fake navigator or weaken application
 authorization to satisfy the browser signal.
+
+Do not reconnect a context while a second CDP session still owns network
+emulation. Detach the extra session before `context.setOffline(false)`.
+
+**Why:** Competing emulator state prevented a genuine reconnect event from
+restarting automatic delivery during live PWA verification.
+
+**How to apply:** Use the extra CDP session only to restore the offline signal
+after a worker-served navigation; let the context own reconnect.

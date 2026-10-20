@@ -5,8 +5,9 @@ import { fromZonedTime } from 'date-fns-tz';
 
 const require = createRequire(new URL('../../../api-server/package.json', import.meta.url));
 const { Client } = require('pg');
-export const origin = process.env.REPLIT_DEV_DOMAIN ? `https://${process.env.REPLIT_DEV_DOMAIN}` : 'http://localhost:80';
-type Fingerprint = Record<string, { count: number; hash: string | null }>;
+export const origin = process.env.AMAL_OFFLINE_E2E === '1' ? 'http://127.0.0.1:4189' :
+  process.env.REPLIT_DEV_DOMAIN ? `https://${process.env.REPLIT_DEV_DOMAIN}` : 'http://localhost:80';
+type Fingerprint = Record<string, { count: number; hash: string | null; schema?: string }>;
 type Appointment = { id: number; clinicId: number; doctorId: number; patientId: number; startsAt: string; endsAt: string; source: string; status: string; version: number; clientOpId: string };
 export interface BookingFixture {
   clinic: number;
@@ -24,6 +25,7 @@ export interface BookingFixture {
   secondContext(): Promise<BrowserContext>;
   audits(): Promise<{ action: string; detail: { reason?: string; appointmentId?: number; clientOpId?: string } }[]>;
   cleanup(): Promise<void>;
+  syncEvidence(): Promise<{ receipts: Record<string, unknown>[]; conflicts: Record<string, unknown>[]; history: Record<string, unknown>[] }>;
 }
 
 export function assertDisposable() {
@@ -50,12 +52,13 @@ export async function display(page: Page) {
   await expect(page.locator('html')).toHaveAttribute('data-theme', theme);
 }
 
-export const test = base.extend<{ f: BookingFixture }>({
+export const test = base.extend<{ f: BookingFixture; offlineJourney: boolean }>({
+  offlineJourney: [false, { option: true }],
   // Never serialize session cookies, CSRF tokens or request headers into trace/video artifacts.
   trace: 'off',
   video: 'off',
   screenshot: 'off',
-  f: async ({ context, browser }, use, info) => {
+  f: async ({ context, browser, offlineJourney }, use, info) => {
     assertDisposable();
     const db = new Client({ connectionString: process.env.DATABASE_URL });
     await db.connect();
@@ -65,6 +68,8 @@ export const test = base.extend<{ f: BookingFixture }>({
       const result: Fingerprint = {};
       for (const table of ['clinics', 'doctors', 'patients', 'appointments', 'patient_visit_history', 'calendar_app_export']) {
         result[table] = await one(`SELECT count(*)::integer count,md5(string_agg(row_to_json(t)::text,E'\\n' ORDER BY row_to_json(t)::text)) hash FROM public.${table} t`);
+        result[table]!.schema = (await one(`SELECT md5(string_agg(row_to_json(c)::text,E'\\n' ORDER BY ordinal_position)) hash
+          FROM information_schema.columns c WHERE table_schema='public' AND table_name=$1`, [table])).hash;
       }
       return result;
     };
@@ -72,6 +77,7 @@ export const test = base.extend<{ f: BookingFixture }>({
     try { before = await seed(); } catch (error) { await db.end(); throw error; }
     const marker = randomUUID();
     const patientNames = [`Booking ${marker}`, `Booking ${marker}`, `Booking ${marker} third`];
+    if (offlineJourney) patientNames.push(`Booking ${marker} competitor`);
     const patients: number[] = [], ids: number[] = [], devices: number[] = [];
     const isolated: BrowserContext[] = [];
     let clinic = 0, doctor = 0, otherDoctor = 0, user = 0, cleaned = false;
@@ -102,12 +108,16 @@ export const test = base.extend<{ f: BookingFixture }>({
       let after: Fingerprint | null = null;
       try {
         await query('BEGIN');
+        await query('DELETE FROM operational.sync_resolution_history WHERE actor_id=$1', [user]);
+        await query('DELETE FROM operational.sync_device_operations WHERE device_id=ANY($1::integer[])', [devices]);
+        await query('DELETE FROM operational.sync_conflicts WHERE actor_id=$1', [user]);
         await query('DELETE FROM operational.appointment_operations WHERE clinic_id=$1 OR actor_id=$2', [clinic, user]);
         await query('DELETE FROM operational.appointment_holds WHERE clinic_id=$1 OR owner_id=$2', [clinic, user]);
         await query('SET LOCAL ROLE amal_demo_reset');
         await query('DELETE FROM operational.audit_log WHERE clinic_id=$1 OR user_id=$2 OR patient_id=ANY($3::integer[])', [clinic, user, patients]);
         await query('RESET ROLE');
         await query('DELETE FROM operational.appointments WHERE clinic_id=$1', [clinic]);
+        await query('DELETE FROM operational.sync_changes WHERE clinic_id=$1', [clinic]);
         await query('DELETE FROM operational.patient_clinic_access WHERE clinic_id=$1', [clinic]);
         await query('DELETE FROM operational.auth_sessions WHERE user_id=$1', [user]);
         await query('DELETE FROM operational.auth_devices WHERE device_id=ANY($1::integer[])', [devices]);
@@ -161,7 +171,7 @@ export const test = base.extend<{ f: BookingFixture }>({
       }
       // Main calendar topology: first two patients at 09:00 / 10:00 Asia/Hebron.
       // Additional doctor has patient 0 at 11:00, allowing a patient-only overlap on doctor 1.
-      for (const [doc, patient, at] of [[doctor, patients[0], '09:00'], [doctor, patients[1], '10:00'], [otherDoctor, patients[0], '11:00']] as const) {
+      for (const [doc, patient, at] of offlineJourney ? [] : [[doctor, patients[0], '09:00'], [doctor, patients[1], '10:00'], [otherDoctor, patients[0], '11:00']] as const) {
         ids.push((await one(`INSERT INTO operational.appointments(clinic_id,doctor_id,patient_id,scheduled_at,duration_minutes,booking_method,status)
           VALUES($1,$2,$3,$4,30,'phone','booked') RETURNING appointment_id`,
         [clinic, doc, patient, fromZonedTime(`2030-01-07T${at}:00`, 'Asia/Hebron').toISOString()])).appointment_id);
@@ -180,6 +190,13 @@ export const test = base.extend<{ f: BookingFixture }>({
     }
     const f: BookingFixture = {
       clinic, doctor, otherDoctor, user, patients, patientNames, ids, before, seed, cleanup,
+      async syncEvidence() {
+        return {
+          receipts: await query('SELECT s.client_op_id::text,s.sequence,o.payload_hash FROM operational.sync_device_operations s JOIN operational.appointment_operations o USING(client_op_id) WHERE s.device_id=ANY($1::integer[]) ORDER BY s.device_id,s.sequence', [devices]),
+          conflicts: await query('SELECT id::text,client_op_id::text,status,version FROM operational.sync_conflicts WHERE actor_id=$1 ORDER BY id', [user]),
+          history: await query('SELECT client_op_id::text,conflict_id::text FROM operational.sync_resolution_history WHERE actor_id=$1 ORDER BY id', [user]),
+        };
+      },
       async read<T>(path: string, target = context): Promise<T> {
         if (!/^\/(?:api\/)?[a-z]/i.test(path) || path.includes('://')) throw new Error('read requires a local API path');
         const response = await target.request.get(`${origin}${path.startsWith('/api/') ? path : `/api${path}`}`);

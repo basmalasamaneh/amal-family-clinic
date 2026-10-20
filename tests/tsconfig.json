@@ -1,9 +1,9 @@
 {
   "extends": "../tsconfig.base.json",
   "compilerOptions": {
-    "lib": ["ES2022", "DOM"],
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "types": ["node"],
     "noEmit": true
   },
-  "include": ["./**/*.ts", "../playwright.config.ts", "../vitest.config.mts", "../artifacts/amal-network/playwright.booking.config.ts", "../artifacts/amal-network/tests/booking-live/**/*.ts"]
+  "include": ["./**/*.ts", "../playwright.config.ts", "../playwright.offline.config.ts", "../vitest.config.mts", "../artifacts/amal-network/playwright.booking.config.ts", "../artifacts/amal-network/tests/booking-live/**/*.ts"]
 }

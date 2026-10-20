@@ -15,6 +15,7 @@
     "ci": "pnpm run test:privacy && pnpm run test && pnpm run typecheck",
     "e2e": "playwright test --config playwright.config.ts",
     "test:booking": "playwright test --config artifacts/amal-network/playwright.booking.config.ts",
+    "test:offline": "playwright test --config playwright.offline.config.ts",
     "test:a11y": "pnpm run e2e --grep @axe",
     "test:screenshots": "pnpm run e2e --grep @screenshot",
     "test:screenshots:update": "pnpm run test:screenshots --update-snapshots"
