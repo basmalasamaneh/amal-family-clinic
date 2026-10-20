@@ -621,6 +621,10 @@ export const LookupNetworkQueryParams = zod.object({
 
 
 
+
+export const lookupNetworkResponseItemsItemVisitsItemAlertsItemExcerptStartMin = 0;
+
+
 export const lookupNetworkResponseItemsItemVisitsMax = 100;
 
 
@@ -638,7 +642,25 @@ export const LookupNetworkResponse = zod.object({
   "seenAt": zod.coerce.date(),
   "visibility": zod.enum(['basic', 'clinical']),
   "complaint": zod.string().optional(),
-  "keyAlerts": zod.array(zod.string()).optional()
+  "keyAlerts": zod.array(zod.string()).optional(),
+  "alerts": zod.array(zod.object({
+  "kind": zod.enum(['medication', 'allergy', 'condition']),
+  "labelKey": zod.string(),
+  "labelParams": zod.record(zod.string(), zod.string()),
+  "label": zod.string().describe('English compatibility label; localize using labelKey and labelParams.'),
+  "ruleId": zod.string().nullable(),
+  "dictionaryVersion": zod.string().nullable(),
+  "sourceNoteExcerpt": zod.string().min(1),
+  "excerptStart": zod.number().int().min(lookupNetworkResponseItemsItemVisitsItemAlertsItemExcerptStartMin).nullable(),
+  "excerptEnd": zod.number().int().min(1).nullable(),
+  "sourceVisitId": zod.number().int(),
+  "patientId": zod.number().int(),
+  "sourceClinicId": zod.number().int(),
+  "sourceClinicName": zod.string(),
+  "sourceVisitDate": zod.coerce.date(),
+  "disclaimerKey": zod.string(),
+  "crossClinicDisclaimerKey": zod.string().nullable()
+}).strict().describe('Unconfirmed source-note mention, not medical advice or a current medication list. Show original untranslated excerpt and disclaimers adjacent to every chip; never render legacy keyAlerts alone. Null rule/offset fields identify manual or legacy evidence.')).optional()
 }).strict().describe('Basic omits complaint and keyAlerts entirely. Clinical includes existing authorized notes/alerts. UTC instant; legacy date-only visits use Asia/Hebron start-of-day, not a claimed known visit time.')).max(lookupNetworkResponseItemsItemVisitsMax).describe('Newest 100 visible visits at most, ordered by visit date then internal visit ID descending; older visits are omitted without totals.')
 }).strict().describe('A name-match candidate, never verified identity. Same-name patients remain separate. No phone, DOB, hidden counts or hidden-source metadata.')),
   "nextCursor": zod.string().nullable()

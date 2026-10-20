@@ -194,6 +194,8 @@ export function createDemoBuilders(input: ClinicContext, initialOptions: Builder
       id: id(), fixture_key: "test.clinical.medication", visit_id: medicationVisit.visit_id,
       patient_id: person.patient_id, kind: "medication", label: "demo.alerts.bloodPressureMedication",
       source_note_excerpt: medicationVisit.diagnosis_notes,
+      extractor_rule_id: null, dictionary_version: null, label_params: {},
+      excerpt_start: null, excerpt_end: null,
     };
     return {
       sourceClinic: source, receivingClinic: receiver, patient: person, sourceDoctor, receivingDoctor,

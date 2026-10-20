@@ -476,6 +476,52 @@ export interface ConsentState {
   effectiveLevel: ConsentStateEffectiveLevel;
 }
 
+export type AlertChipKind = typeof AlertChipKind[keyof typeof AlertChipKind];
+
+
+export const AlertChipKind = {
+  medication: 'medication',
+  allergy: 'allergy',
+  condition: 'condition',
+} as const;
+
+export type AlertChipLabelParams = {[key: string]: string};
+
+/**
+ * Unconfirmed source-note mention, not medical advice or a current medication list. Show original untranslated excerpt and disclaimers adjacent to every chip; never render legacy keyAlerts alone. Null rule/offset fields identify manual or legacy evidence.
+ */
+export interface AlertChip {
+  kind: AlertChipKind;
+  labelKey: string;
+  labelParams: AlertChipLabelParams;
+  /** English compatibility label; localize using labelKey and labelParams. */
+  label: string;
+  /** @nullable */
+  ruleId: string | null;
+  /** @nullable */
+  dictionaryVersion: string | null;
+  /** @minLength 1 */
+  sourceNoteExcerpt: string;
+  /**
+     * @minimum 0
+     * @nullable
+     */
+  excerptStart: number | null;
+  /**
+     * @minimum 1
+     * @nullable
+     */
+  excerptEnd: number | null;
+  sourceVisitId: number;
+  patientId: number;
+  sourceClinicId: number;
+  sourceClinicName: string;
+  sourceVisitDate: string;
+  disclaimerKey: string;
+  /** @nullable */
+  crossClinicDisclaimerKey: string | null;
+}
+
 export type NetworkVisitVisibility = typeof NetworkVisitVisibility[keyof typeof NetworkVisitVisibility];
 
 
@@ -497,7 +543,9 @@ export interface NetworkVisit {
   seenAt: string;
   visibility: NetworkVisitVisibility;
   complaint?: string;
+  /** @deprecated */
   keyAlerts?: string[];
+  alerts?: AlertChip[];
 }
 
 /**

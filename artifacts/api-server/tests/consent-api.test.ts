@@ -181,6 +181,36 @@ after(async () => {
 });
 
 test("consent: role × scope × level, transactional history and network disclosure", async t => {
+  await t.test("extracted chips keep evidence and metadata behind Clinical consent", async () => {
+    const { extractVisit } = await import("../src/alerts/service");
+    const p = await patient();
+    const v = await visit(p, localDoctor, "Started on blood pressure medication (Amlodipine 5mg) - review in 3 months");
+    await extractVisit(v.id);
+    assert.equal(await networkPatient(p), undefined);
+    await record(p, "basic");
+    basicOnly((await networkPatient(p))!);
+    const c = await record(p, "clinical");
+    const result = (await lookup(remoteDoctor, p.name));
+    assert.equal(result.cacheControl, "private, no-store");
+    const chips = result.data.items[0].visits[0].alerts;
+    const chip = chips.find((a: { ruleId: string }) => a.ruleId === "med.amlodipine");
+    assert(chip);
+    assert.equal(chip.label, "Blood-pressure medication (Amlodipine 5 mg)");
+    assert.equal(chip.sourceNoteExcerpt, v.note);
+    assert.equal(chip.sourceVisitId, v.id);
+    assert.equal(chip.patientId, p.id);
+    assert.equal(chip.sourceClinicId, localDoctor.clinic);
+    assert.equal(chip.sourceVisitDate, "2025-01-12");
+    assert.equal(chip.crossClinicDisclaimerKey, "alerts.crossClinic");
+    assert.equal((await lookup(desk, p.name)).status, 403);
+    assert.equal((await lookup(manager, p.name)).status, 403);
+    assert.equal(await networkPatient(p, liteDoctor), undefined);
+    assert.equal(await networkPatient(p, otherDoctor), undefined, "same-clinic without trusted doctor scope is denied");
+    await trustedDoctor(p);
+    assert.equal((await lookup(localDoctor, p.name)).data.items[0].visits[0].alerts[1].crossClinicDisclaimerKey, null);
+    assert.equal((await request(desk, `/consent/${c.id}/withdraw`, "POST", { clientOpId: randomUUID() })).status, 200);
+    assert.equal(await networkPatient(p), undefined);
+  });
   await t.test("consent read/write roles, clinic isolation, fresh PIN, trusted device and CSRF", async () => {
     const p = await patient();
     assert.deepEqual(await consent(p), { current: null, history: [], effectiveLevel: "none" });

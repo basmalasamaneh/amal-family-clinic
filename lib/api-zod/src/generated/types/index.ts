@@ -6,6 +6,9 @@
  * OpenAPI spec version: 0.2.0
  */
 
+export * from './alertChip';
+export * from './alertChipKind';
+export * from './alertChipLabelParams';
 export * from './apiFailure';
 export * from './apiFailureParams';
 export * from './appointment';

@@ -13,3 +13,5 @@ pnpm --filter @workspace/api-server auth:migrate
 pnpm --filter @workspace/api-server appointments:migrate
 pnpm --filter @workspace/api-server patients:migrate
 pnpm --filter @workspace/api-server consent:migrate
+pnpm --filter @workspace/api-server alerts:migrate
+pnpm --filter @workspace/api-server alerts:extract --initialize

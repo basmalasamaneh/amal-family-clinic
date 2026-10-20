@@ -188,7 +188,13 @@ export async function lookupNetwork(auth: Auth, query: unknown, correlationId = 
       v.clinic_name,v.source_mode,v.doctor_name,
       p.consent_level,p.consent_withdrawn_at,p.own_patient,
       COALESCE((SELECT array_agg(a.label ORDER BY a.id) FROM operational.visit_alerts a
-        WHERE a.visit_id=v.visit_id AND a.patient_id=p.patient_id),ARRAY[]::text[]) AS key_alerts
+        WHERE a.visit_id=v.visit_id AND a.patient_id=p.patient_id),ARRAY[]::text[]) AS key_alerts,
+      (v.clinic_id<>$1) AS cross_clinic,
+      COALESCE((SELECT jsonb_agg(jsonb_build_object(
+        'kind',a.kind,'label',a.label,'source_note_excerpt',a.source_note_excerpt,
+        'extractor_rule_id',a.extractor_rule_id,'dictionary_version',a.dictionary_version,
+        'label_params',a.label_params,'excerpt_start',a.excerpt_start,'excerpt_end',a.excerpt_end) ORDER BY a.id)
+        FROM operational.visit_alerts a WHERE a.visit_id=v.visit_id AND a.patient_id=p.patient_id),'[]'::jsonb) AS alerts
       FROM eligible p
       JOIN LATERAL (
         SELECT v.*,c.clinic_name,c.network_mode AS source_mode,d.doctor_name

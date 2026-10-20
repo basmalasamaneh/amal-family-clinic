@@ -9,8 +9,8 @@
     "seed:verify": "tsx ./src/seed-verify.ts",
     "baseline": "tsx ./src/baseline.ts",
     "operational:migrate": "tsx ./src/operational-migrate.ts",
-    "demo:populate": "tsx ./src/demo-populate.ts",
-    "demo:reset": "tsx ./src/demo-reset.ts",
+    "demo:populate": "tsx ./src/demo-with-alerts.ts populate",
+    "demo:reset": "tsx ./src/demo-with-alerts.ts reset",
     "demo:recipes": "tsx ./src/demo-recipes.ts",
     "operational:test": "tsx ./src/operational-test.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"

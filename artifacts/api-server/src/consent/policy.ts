@@ -1,4 +1,19 @@
 import type { Auth } from "../lib/auth";
+import { renderAlert } from "../alerts/dictionary";
+
+export interface AlertSource {
+  kind: "medication" | "allergy" | "condition"; label: string;
+  source_note_excerpt: string; extractor_rule_id: string | null;
+  dictionary_version: string | null; label_params: Record<string, string>;
+  excerpt_start: number | null; excerpt_end: number | null;
+}
+export interface AlertChip {
+  kind: AlertSource["kind"]; labelKey: string; labelParams: Record<string, string>; label: string;
+  ruleId: string | null; dictionaryVersion: string | null; sourceNoteExcerpt: string;
+  excerptStart: number | null; excerptEnd: number | null; sourceVisitId: number;
+  patientId: number; sourceClinicId: number; sourceClinicName: string; sourceVisitDate: string;
+  disclaimerKey: string; crossClinicDisclaimerKey: string | null;
+}
 
 export type ConsentLevel = "none" | "basic" | "clinical";
 export interface ConsentRow {
@@ -39,15 +54,27 @@ export function visitVisibility(c: VisibilityContext): "basic" | "clinical" | nu
 export interface VisitSource {
   clinic_id: number; doctor_id: number; clinic_name: string; doctor_name: string;
   seen_at: Date; diagnosis_notes: string; key_alerts: string[];
+  alerts?: AlertSource[]; visit_id?: number; patient_id?: number; visit_day?: string;
+  cross_clinic?: boolean;
 }
 export interface NetworkVisit {
   clinicId: number; doctorId: number; clinicName: string; doctorName: string;
   seenAt: string; visibility: "basic" | "clinical"; complaint?: string; keyAlerts?: string[];
+  alerts?: AlertChip[];
 }
 export function projectVisit(row: VisitSource, visibility: "basic" | "clinical"): NetworkVisit {
   return {
     clinicId: row.clinic_id, doctorId: row.doctor_id, clinicName: row.clinic_name, doctorName: row.doctor_name,
     seenAt: row.seen_at.toISOString(), visibility,
     ...(visibility === "clinical" ? { complaint: row.diagnosis_notes, keyAlerts: row.key_alerts } : {}),
+    ...(visibility === "clinical" && row.alerts ? { alerts: row.alerts.map(a => ({
+      kind: a.kind, labelKey: a.label, labelParams: a.label_params, label: renderAlert(a.label, a.label_params),
+      ruleId: a.extractor_rule_id, dictionaryVersion: a.dictionary_version,
+      sourceNoteExcerpt: a.source_note_excerpt, excerptStart: a.excerpt_start, excerptEnd: a.excerpt_end,
+      sourceVisitId: row.visit_id!, patientId: row.patient_id!, sourceClinicId: row.clinic_id,
+      sourceClinicName: row.clinic_name, sourceVisitDate: row.visit_day!,
+      disclaimerKey: "alerts.unconfirmed",
+      crossClinicDisclaimerKey: row.cross_clinic ? "alerts.crossClinic" : null,
+    })) } : {}),
   };
 }

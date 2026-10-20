@@ -15,3 +15,4 @@
 - [Uncertain scheduling writes](uncertain-scheduling-writes.md) — resolve unknown outcomes by exact idempotent replay, not a read-back that can race an in-flight commit.
 - [Booking test clocks](booking-test-clocks.md) — axe needs running browser timers; audit pending Undo separately from exact client deadline assertions.
 - [Clinical authority](clinical-authority.md) — clinic demographics do not imply doctor ownership; consent readers and writers need cross-instance ordering.
+- [Source-note extraction](alert-conservatism.md) — uncertain clause scope favors suppression, not inferred clinical claims.

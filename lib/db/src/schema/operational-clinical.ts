@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { integer, text, date, jsonb, check, unique, foreignKey, index } from "drizzle-orm/pg-core";
+import { integer, text, date, jsonb, check, unique, foreignKey, index, uniqueIndex } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import {
@@ -82,10 +82,16 @@ export const operationalVisitAlerts = operational.table("visit_alerts", {
   kind: alertKind("kind").notNull(),
   label: text("label").notNull(),
   source_note_excerpt: text("source_note_excerpt").notNull(),
+  extractor_rule_id: text("extractor_rule_id"),
+  dictionary_version: text("dictionary_version"),
+  label_params: jsonb("label_params").notNull().default(sql`'{}'::jsonb`),
+  excerpt_start: integer("excerpt_start"),
+  excerpt_end: integer("excerpt_end"),
 }, (t) => [
   foreignKey({ name: "alerts_visit_patient_fk", columns: [t.visit_id, t.patient_id], foreignColumns: [operationalPatientVisitHistory.visit_id, operationalPatientVisitHistory.patient_id] }),
   check("alerts_label_check", sql`${t.label} ~ '^[a-z][A-Za-z0-9_.-]*$'`),
   check("alerts_excerpt_check", sql`length(${t.source_note_excerpt}) > 0`),
+  uniqueIndex("visit_alerts_extractor_rule_unique").on(t.visit_id, t.extractor_rule_id).where(sql`${t.extractor_rule_id} IS NOT NULL`),
 ]);
 
 export const operationalAuditLog = operational.table("audit_log", {

@@ -1084,6 +1084,30 @@
         },
         "description": "Current is the latest transition even when withdrawn, never an older grant. History is ordered newest first. Legacy evidence/recording clinic may be null."
       },
+      "AlertChip": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["kind", "labelKey", "labelParams", "label", "ruleId", "dictionaryVersion", "sourceNoteExcerpt", "excerptStart", "excerptEnd", "sourceVisitId", "patientId", "sourceClinicId", "sourceClinicName", "sourceVisitDate", "disclaimerKey", "crossClinicDisclaimerKey"],
+        "properties": {
+          "kind": { "type": "string", "enum": ["medication", "allergy", "condition"] },
+          "labelKey": { "type": "string" },
+          "labelParams": { "type": "object", "additionalProperties": { "type": "string" } },
+          "label": { "type": "string", "description": "English compatibility label; localize using labelKey and labelParams." },
+          "ruleId": { "type": ["string", "null"] },
+          "dictionaryVersion": { "type": ["string", "null"] },
+          "sourceNoteExcerpt": { "type": "string", "minLength": 1 },
+          "excerptStart": { "type": ["integer", "null"], "minimum": 0 },
+          "excerptEnd": { "type": ["integer", "null"], "minimum": 1 },
+          "sourceVisitId": { "type": "integer" },
+          "patientId": { "type": "integer" },
+          "sourceClinicId": { "type": "integer" },
+          "sourceClinicName": { "type": "string" },
+          "sourceVisitDate": { "type": "string", "format": "date" },
+          "disclaimerKey": { "type": "string" },
+          "crossClinicDisclaimerKey": { "type": ["string", "null"] }
+        },
+        "description": "Unconfirmed source-note mention, not medical advice or a current medication list. Show original untranslated excerpt and disclaimers adjacent to every chip; never render legacy keyAlerts alone. Null rule/offset fields identify manual or legacy evidence."
+      },
       "NetworkVisit": {
         "type": "object",
         "additionalProperties": false,
@@ -1096,7 +1120,8 @@
           "seenAt": { "type": "string", "format": "date-time" },
           "visibility": { "type": "string", "enum": ["basic", "clinical"] },
           "complaint": { "type": "string" },
-          "keyAlerts": { "type": "array", "items": { "type": "string" } }
+          "keyAlerts": { "type": "array", "items": { "type": "string" }, "deprecated": true },
+          "alerts": { "type": "array", "items": { "$ref": "#/components/schemas/AlertChip" } }
         },
         "description": "Basic omits complaint and keyAlerts entirely. Clinical includes existing authorized notes/alerts. UTC instant; legacy date-only visits use Asia/Hebron start-of-day, not a claimed known visit time."
       },
