@@ -1299,6 +1299,318 @@ export const KpiResultRange = {
   month: 'month',
 } as const;
 
+/**
+ * Null means network scope; a positive clinic ID restricts the authorized administrator's aggregate view.
+ */
+export interface KpiScope {
+  /**
+     * @minimum 1
+     * @nullable
+     */
+  clinicId: number | null;
+}
+
+/**
+ * Explicitly discloses whether exposure days match. Equal exposure does not imply identical dates or causal comparability.
+ */
+export interface KpiComparison {
+  equalExposure: boolean;
+  note: string;
+}
+
+/**
+ * Half-open local-calendar exposure. UTC instants are converted from Asia/Hebron midnights; local calendar days need not be 24 hours at DST.
+ */
+export interface KpiPeriod {
+  startDate: string;
+  endDateExclusive: string;
+  /** UTC ISO 8601 instant. */
+  start: string;
+  /** UTC ISO 8601 instant. */
+  end: string;
+  /** @minimum 1 */
+  days: number;
+  timezone: 'Asia/Hebron';
+}
+
+/**
+ * Distinct unordered exact-start pairs across ALL statuses, not interval-overlap enforcement. A clinic counts every pair touching it, including cross-clinic counterparts; clinic totals are not additive. Network counts each pair once.
+ */
+export interface KpiCollisionCounts {
+  /** @minimum 0 */
+  sameDoctorSameStartPairs: number;
+  /** @minimum 0 */
+  samePatientSameStartCrossClinicPairs: number;
+}
+
+/**
+ * no_show / all appointments in the scheduled-at window, including cancelled. Ratio is unrounded; percent rounded to one decimal. Both are null for an empty denominator.
+ */
+export interface KpiNoShowRate {
+  /** @minimum 0 */
+  numerator: number;
+  /** @minimum 0 */
+  denominator: number;
+  /**
+     * @minimum 0
+     * @maximum 1
+     * @nullable
+     */
+  ratio: number | null;
+  /**
+     * @minimum 0
+     * @maximum 100
+     * @nullable
+     */
+  percent: number | null;
+}
+
+/**
+ * All statuses. Lowercase/trim source mapping: phone; walk_in/walk-in/walk in; calendar_app/calendar-app/calendar app/calendar; amal_network/amal-network/amal network. Other values map to unknown without changing source rows.
+ */
+export interface KpiSourceCounts {
+  /** @minimum 0 */
+  phone: number;
+  /** @minimum 0 */
+  'walk-in': number;
+  /** @minimum 0 */
+  calendar: number;
+  /** @minimum 0 */
+  'amal-network': number;
+  /** @minimum 0 */
+  unknown: number;
+}
+
+export interface KpiClinicAppointmentAggregate {
+  /** @minimum 1 */
+  clinicId: number;
+  clinicName: string;
+  /** @minimum 0 */
+  totalAppointments: number;
+  /** @minimum 0 */
+  completed: number;
+  collisions: KpiCollisionCounts;
+  noShow: KpiNoShowRate;
+  bookingsBySource: KpiSourceCounts;
+}
+
+/**
+ * Asia/Hebron weekday: 0 Sunday through 6 Saturday. Empty weekdays retain null rates.
+ */
+export interface KpiWeekdayAppointmentAggregate {
+  /**
+     * @minimum 0
+     * @maximum 6
+     */
+  weekday: number;
+  noShow: KpiNoShowRate;
+  bookingsBySource: KpiSourceCounts;
+}
+
+export interface KpiAppointmentDefinitions {
+  collisions: string;
+  clinicAttribution: string;
+  noShow: string;
+  sources: string;
+  weekday: string;
+}
+
+/**
+ * Privacy-safe aggregates only: no doctor/patient/event identity, individual records, ranking or grouping. Counts use the explicit source window; fixed before exposure is never redefined by the requested after range.
+ */
+export interface KpiAppointmentAggregate {
+  /** @minimum 0 */
+  totalAppointments: number;
+  /** @minimum 0 */
+  completed: number;
+  collisions: KpiCollisionCounts;
+  noShow: KpiNoShowRate;
+  bookingsBySource: KpiSourceCounts;
+  clinics: KpiClinicAppointmentAggregate[];
+  /**
+     * @minItems 7
+     * @maxItems 7
+     */
+  weekdays: KpiWeekdayAppointmentAggregate[];
+  definitions: KpiAppointmentDefinitions;
+}
+
+/**
+ * Immutable public seed queries over original 2026-09-08 through 2026-09-13 local dates. Never operational rows or constants.
+ */
+export interface KpiBefore {
+  period: KpiPeriod;
+  provenance: string;
+  metrics: KpiAppointmentAggregate;
+}
+
+/**
+ * Asia/Hebron date. Cumulative series restart at the selected window. Warnings can accompany blocked commits; approved overrides are never blocked.
+ */
+export interface KpiConflictDay {
+  date: string;
+  /** @minimum 0 */
+  blocked: number;
+  /** @minimum 0 */
+  warnings: number;
+  /** @minimum 0 */
+  overrides: number;
+  /** @minimum 0 */
+  cumulativeBlocked: number;
+  /** @minimum 0 */
+  cumulativeWarnings: number;
+  /** @minimum 0 */
+  cumulativeOverrides: number;
+}
+
+export interface KpiConflictTotals {
+  /** @minimum 0 */
+  blocked: number;
+  /** @minimum 0 */
+  warnings: number;
+  /** @minimum 0 */
+  overrides: number;
+}
+
+/**
+ * Durable APPOINTMENT_CONFLICT commit attempts deduplicated by logical clientOpId. Includes failed resolution wrappers whose nested failures were rolled back; successful wrappers are not extra attempts. Excludes repeated previews and version/hold/validation failures. Warning coverage is partial: blocked direct/sync warning evidence and approved patient-overlap override audit evidence only. No claim that an overridden warning prevented a booking.
+ */
+export interface KpiConflicts {
+  daily: KpiConflictDay[];
+  cumulative: KpiConflictTotals;
+  coverage: string;
+}
+
+/**
+ * No durable duration producer exists. No response-count proxy, invented sample count, or average of daily medians. A future instrumented contract must calculate the range median from actual duration samples with defined logical measurement boundaries.
+ */
+export interface KpiLookupTime {
+  available: false;
+  reason: 'LOOKUP_DURATION_PRODUCER_UNAVAILABLE';
+  /** @nullable */
+  medianSeconds: null;
+  /** @nullable */
+  sampleCount: null;
+  measurementBoundaries: string;
+}
+
+/**
+ * No durable logical cross-clinic lookup producer exists; per-result/patient/visit/audit-row counts and retries cannot substitute. No doctor grouping.
+ */
+export interface KpiNetworkActivity {
+  available: false;
+  reason: 'LOGICAL_NETWORK_LOOKUP_PRODUCER_UNAVAILABLE';
+  /** @nullable */
+  daily: null;
+}
+
+/**
+ * Unavailable is not measured zero.
+ */
+export interface KpiClientQueueUnavailable {
+  available: false;
+  reason: 'CLIENT_QUEUE_NOT_OBSERVED';
+  /** @nullable */
+  value: null;
+}
+
+/**
+ * Unavailable is not measured zero.
+ */
+export interface KpiClientLossUnavailable {
+  available: false;
+  reason: 'CLIENT_LOSS_NOT_OBSERVED';
+  /** @nullable */
+  value: null;
+}
+
+/**
+ * Unique server-received sync create operations with durable receipts, grouped by original server receipt time, not appointment time. Synced includes applied creates and subsequently resolved conflicts. Conflicted is currently unresolved. Covered receipts have terminal outcomes, so received pending=0. Unknown unreceived client queues/losses are unavailable, not zero; unresolved/rejected is not lost. Not proof of offline origin.
+ */
+export interface KpiDowntime {
+  /** @minimum 0 */
+  receivedCreates: number;
+  /** @minimum 0 */
+  synced: number;
+  /** @minimum 0 */
+  conflicted: number;
+  /** @minimum 0 */
+  rejected: number;
+  /** @minimum 0 */
+  pending: number;
+  queued: KpiClientQueueUnavailable;
+  lost: KpiClientLossUnavailable;
+  coverage: string;
+}
+
+export interface KpiTelemetryAggregate {
+  conflicts: KpiConflicts;
+  lookupTime: KpiLookupTime;
+  networkActivity: KpiNetworkActivity;
+  downtime: KpiDowntime;
+}
+
+/**
+ * Selected operational scheduled-at window; telemetry uses server event/receipt time within the same explicit window.
+ */
+export interface KpiAfter {
+  period: KpiPeriod;
+  provenance: string;
+  metrics: KpiAppointmentAggregate;
+  telemetry: KpiTelemetryAggregate;
+}
+
+export type KpiAdoptionClinicState = typeof KpiAdoptionClinicState[keyof typeof KpiAdoptionClinicState];
+
+
+export const KpiAdoptionClinicState = {
+  lite: 'lite',
+  full: 'full',
+} as const;
+
+/**
+ * Existing operational state and stored date only. joinedAt can be a bootstrap timestamp, not evidence of Trial or of a state transition.
+ */
+export interface KpiAdoptionClinic {
+  /** @minimum 1 */
+  clinicId: number;
+  clinicName: string;
+  state: KpiAdoptionClinicState;
+  /** @nullable */
+  joinedAt: string | null;
+}
+
+/**
+ * Trial is absent from the upstream state model, so its count is unavailable rather than an invented zero.
+ */
+export interface KpiAdoptionCounts {
+  /** @nullable */
+  trial: null;
+  /** @minimum 0 */
+  lite: number;
+  /** @minimum 0 */
+  full: number;
+}
+
+export const KpiAdoptionHistoryValue = {
+  available: false,
+  reason: 'ADOPTION_TRANSITION_HISTORY_UNAVAILABLE',
+} as const;
+export type KpiAdoptionHistory = typeof KpiAdoptionHistoryValue;
+
+/**
+ * Current clinic adoption, not selected-window history. Does not infer adoption from booking volume or fabricate Trial transitions.
+ */
+export interface KpiAdoptionAggregate {
+  clinics: KpiAdoptionClinic[];
+  counts: KpiAdoptionCounts;
+  history: KpiAdoptionHistory;
+  coverage: string;
+}
+
+/**
+ * Administrator-only aggregate evidence. Inherited appointments/completed/noShowRate/periodStart/periodEnd alias the selected after metrics/window. No raw clinical records, identities other than clinic IDs/names, lookup queries, audit actors, or individual events.
+ */
 export interface KpiResult {
   range: KpiResultRange;
   /** @minimum 0 */
@@ -1308,10 +1620,22 @@ export interface KpiResult {
   /**
      * @minimum 0
      * @maximum 1
+     * @nullable
      */
-  noShowRate: number;
+  noShowRate: number | null;
+  /** UTC ISO 8601 instant. */
   periodStart: string;
+  /** UTC ISO 8601 instant. */
   periodEnd: string;
+  /** @minLength 1 */
+  calculationVersion: string;
+  /** UTC ISO 8601 instant. */
+  generatedAt: string;
+  scope: KpiScope;
+  comparison: KpiComparison;
+  before: KpiBefore;
+  after: KpiAfter;
+  adoption: KpiAdoptionAggregate;
 }
 
 export type AuditEventActorRole = typeof AuditEventActorRole[keyof typeof AuditEventActorRole];
@@ -2275,7 +2599,21 @@ export const ListSyncConflictsStatus = {
 } as const;
 
 export type GetKpisParams = {
+/**
+ * Local-calendar window containing date: day, Monday-start week, or calendar month.
+ */
 range: GetKpisRange;
+/**
+ * Optional Asia/Hebron anchor date, 2000-01-01 through 2100-12-31 inclusive. Defaults to today.
+ * @pattern ^(?:20\d{2}|2100)-\d{2}-\d{2}$
+ */
+date?: string;
+/**
+ * Optional clinic scope; omit for network. Cross-clinic collision pairs touching this clinic remain included.
+ * @minimum 1
+ * @maximum 2147483647
+ */
+clinicId?: number;
 };
 
 export type GetKpisRange = typeof GetKpisRange[keyof typeof GetKpisRange];

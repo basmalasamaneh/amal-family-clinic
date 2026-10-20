@@ -2784,8 +2784,8 @@ export const getGetKpisUrl = (params: GetKpisParams,) => {
 }
 
 /**
- * Contract-only domain service; mock responses are simulated. Clinic scope comes from authenticated identity, not submitted identifiers. Admin has no implicit clinical access. Network visibility requires active consent and excludes Lite clinics. Mutations require CSRF; clientOpId is replay-safe per clinic, with changed payload returning 409.
- * @summary get kpis
+ * Implemented administrator-only aggregate endpoint. range is required; date defaults to today's Asia/Hebron date and must be a valid local date from 2000-01-01 through 2100-12-31. day is one local day; week is Monday through next Monday; month is the local calendar month. All UTC end instants are exclusive. Optional clinicId is a positive int32; no doctor filter/grouping/ranking. Fixed before window is 2026-09-08 through 2026-09-13 local dates, queried from untouched seeds; selected operational after exposure remains separate. Conflicts are exact-start all-status unordered pairs, not interval enforcement. Warnings/overrides and partial durable telemetry coverage are explicit; unavailable instrumentation/loss evidence is null with stable reasons, not fabricated zero. Current adoption is not historical. The response example is synthetic and does not state production baseline values.
+ * @summary Get reproducible baseline and operational KPI aggregates
  */
 export const getKpis = async (params: GetKpisParams, options?: Parameters<typeof customFetch>[1]): Promise<KpiResult> => {
 
@@ -2832,7 +2832,7 @@ export type GetKpisQueryError = ErrorType<ApiFailure>
 
 
 /**
- * @summary get kpis
+ * @summary Get reproducible baseline and operational KPI aggregates
  */
 
 export function useGetKpis<TData = Awaited<ReturnType<typeof getKpis>>, TError = ErrorType<ApiFailure>>(

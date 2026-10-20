@@ -5,8 +5,16 @@
  * Amal Network Section 12. Authentication, appointments and clinic-local patient CRUD/search are implemented; other domain services remain contracts/mocks. UTC ISO instants, required date-only DOB, Asia/Hebron display. Local patient endpoints return demographics only to doctors/front-desk, never clinical history or admin patient access. Separate network services require consent and exclude Lite clinics. Lists use opaque cursor plus limit (1–100, default 25); null nextCursor ends pagination.
  * OpenAPI spec version: 0.2.0
  */
+import type { KpiAdoptionAggregate } from './kpiAdoptionAggregate';
+import type { KpiAfter } from './kpiAfter';
+import type { KpiBefore } from './kpiBefore';
+import type { KpiComparison } from './kpiComparison';
 import type { KpiResultRange } from './kpiResultRange';
+import type { KpiScope } from './kpiScope';
 
+/**
+ * Administrator-only aggregate evidence. Inherited appointments/completed/noShowRate/periodStart/periodEnd alias the selected after metrics/window. No raw clinical records, identities other than clinic IDs/names, lookup queries, audit actors, or individual events.
+ */
 export interface KpiResult {
   range: KpiResultRange;
   /** @minimum 0 */
@@ -16,8 +24,20 @@ export interface KpiResult {
   /**
      * @minimum 0
      * @maximum 1
+     * @nullable
      */
-  noShowRate: number;
+  noShowRate: number | null;
+  /** UTC ISO 8601 instant. */
   periodStart: Date;
+  /** UTC ISO 8601 instant. */
   periodEnd: Date;
+  /** @minLength 1 */
+  calculationVersion: string;
+  /** UTC ISO 8601 instant. */
+  generatedAt: Date;
+  scope: KpiScope;
+  comparison: KpiComparison;
+  before: KpiBefore;
+  after: KpiAfter;
+  adoption: KpiAdoptionAggregate;
 }

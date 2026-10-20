@@ -35,20 +35,42 @@
       "OfflinePermit": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["payload", "signature", "publicKey"],
+        "required": [
+          "payload",
+          "signature",
+          "publicKey"
+        ],
         "properties": {
-          "payload": { "type": "string", "description": "base64url JSON signed claims: version=1, audience=amal-offline-tab, tab nonce, account userId, display name, doctor/front-desk role, single clinic id/name, issuedAt/expiresAt UTC milliseconds. Maximum lifetime 30 minutes and never beyond authenticated session expiry." },
-          "signature": { "type": "string", "description": "base64url ECDSA P-256 SHA-256 signature, IEEE P1363 encoding, over UTF-8 payload." },
-          "publicKey": { "type": "string", "description": "base64url SPKI P-256 verification key pinned by this authenticated HTTPS exchange. Public, never a login credential." }
+          "payload": {
+            "type": "string",
+            "description": "base64url JSON signed claims: version=1, audience=amal-offline-tab, tab nonce, account userId, display name, doctor/front-desk role, single clinic id/name, issuedAt/expiresAt UTC milliseconds. Maximum lifetime 30 minutes and never beyond authenticated session expiry."
+          },
+          "signature": {
+            "type": "string",
+            "description": "base64url ECDSA P-256 SHA-256 signature, IEEE P1363 encoding, over UTF-8 payload."
+          },
+          "publicKey": {
+            "type": "string",
+            "description": "base64url SPKI P-256 verification key pinned by this authenticated HTTPS exchange. Public, never a login credential."
+          }
         }
       },
       "SyncDeviceState": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["deviceId", "nextSequence"],
+        "required": [
+          "deviceId",
+          "nextSequence"
+        ],
         "properties": {
-          "deviceId": { "type": "integer", "minimum": 1 },
-          "nextSequence": { "type": "integer", "minimum": 1 }
+          "deviceId": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "nextSequence": {
+            "type": "integer",
+            "minimum": 1
+          }
         }
       },
       "ReceptionContext": {
@@ -1786,31 +1808,69 @@
       },
       "SyncOperation": {
         "oneOf": [
-          { "$ref": "#/components/schemas/SyncCreateOperation" },
-          { "$ref": "#/components/schemas/SyncUpdateOperation" }
+          {
+            "$ref": "#/components/schemas/SyncCreateOperation"
+          },
+          {
+            "$ref": "#/components/schemas/SyncUpdateOperation"
+          }
         ],
-        "discriminator": { "propertyName": "type" }
+        "discriminator": {
+          "propertyName": "type"
+        }
       },
       "SyncCreateOperation": {
         "type": "object",
         "additionalProperties": false,
         "properties": {
-          "sequence": { "type": "integer", "minimum": 1 },
-          "type": { "type": "string", "enum": ["create"] },
-          "input": { "$ref": "#/components/schemas/AppointmentInput" }
+          "sequence": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "create"
+            ]
+          },
+          "input": {
+            "$ref": "#/components/schemas/AppointmentInput"
+          }
         },
-        "required": ["sequence", "type", "input"]
+        "required": [
+          "sequence",
+          "type",
+          "input"
+        ]
       },
       "SyncUpdateOperation": {
         "type": "object",
         "additionalProperties": false,
         "properties": {
-          "sequence": { "type": "integer", "minimum": 1 },
-          "type": { "type": "string", "enum": ["update"] },
-          "appointmentId": { "type": "integer", "minimum": 1 },
-          "input": { "$ref": "#/components/schemas/AppointmentUpdate" }
+          "sequence": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "update"
+            ]
+          },
+          "appointmentId": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "input": {
+            "$ref": "#/components/schemas/AppointmentUpdate"
+          }
         },
-        "required": ["sequence", "type", "appointmentId", "input"]
+        "required": [
+          "sequence",
+          "type",
+          "appointmentId",
+          "input"
+        ]
       },
       "SyncBatch": {
         "type": "object",
@@ -1832,52 +1892,138 @@
       },
       "SyncOutcome": {
         "oneOf": [
-          { "$ref": "#/components/schemas/SyncAppliedOutcome" },
-          { "$ref": "#/components/schemas/SyncConflictOutcome" },
-          { "$ref": "#/components/schemas/SyncRejectedOutcome" },
-          { "$ref": "#/components/schemas/SyncBlockedOutcome" }
+          {
+            "$ref": "#/components/schemas/SyncAppliedOutcome"
+          },
+          {
+            "$ref": "#/components/schemas/SyncConflictOutcome"
+          },
+          {
+            "$ref": "#/components/schemas/SyncRejectedOutcome"
+          },
+          {
+            "$ref": "#/components/schemas/SyncBlockedOutcome"
+          }
         ],
-        "discriminator": { "propertyName": "status" }
+        "discriminator": {
+          "propertyName": "status"
+        }
       },
       "SyncAppliedOutcome": {
         "type": "object",
         "additionalProperties": false,
         "properties": {
-          "sequence": { "type": "integer", "minimum": 1 },
-          "clientOpId": { "type": "string", "format": "uuid" },
-          "status": { "type": "string", "enum": ["applied"] },
-          "result": { "$ref": "#/components/schemas/Appointment" }
+          "sequence": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "clientOpId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "applied"
+            ]
+          },
+          "result": {
+            "$ref": "#/components/schemas/Appointment"
+          }
         },
-        "required": ["sequence", "clientOpId", "status", "result"]
+        "required": [
+          "sequence",
+          "clientOpId",
+          "status",
+          "result"
+        ]
       },
       "SyncConflictOutcome": {
         "type": "object",
         "additionalProperties": false,
         "properties": {
-          "sequence": { "type": "integer", "minimum": 1 },
-          "clientOpId": { "type": "string", "format": "uuid" },
-          "status": { "type": "string", "enum": ["conflict"] },
-          "code": { "type": "string" },
-          "messageKey": { "type": "string" },
-          "params": { "$ref": "#/components/schemas/SyncErrorParams" },
-          "conflictId": { "type": "string", "format": "uuid" }
+          "sequence": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "clientOpId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "conflict"
+            ]
+          },
+          "code": {
+            "type": "string"
+          },
+          "messageKey": {
+            "type": "string"
+          },
+          "params": {
+            "$ref": "#/components/schemas/SyncErrorParams"
+          },
+          "conflictId": {
+            "type": "string",
+            "format": "uuid"
+          }
         },
-        "required": ["sequence", "clientOpId", "status", "code", "messageKey", "params", "conflictId"]
+        "required": [
+          "sequence",
+          "clientOpId",
+          "status",
+          "code",
+          "messageKey",
+          "params",
+          "conflictId"
+        ]
       },
       "SyncErrorParams": {
         "type": "object",
-        "additionalProperties": { "oneOf": [{ "type": "string" }, { "type": "number" }, { "type": "boolean" }] }
+        "additionalProperties": {
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "boolean"
+            }
+          ]
+        }
       },
       "SyncRejectedOutcome": {
         "type": "object",
         "additionalProperties": false,
         "properties": {
-          "sequence": { "type": "integer", "minimum": 1 },
-          "clientOpId": { "type": "string", "format": "uuid" },
-          "status": { "type": "string", "enum": ["rejected"] },
-          "error": { "$ref": "#/components/schemas/ApiFailure" }
+          "sequence": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "clientOpId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "rejected"
+            ]
+          },
+          "error": {
+            "$ref": "#/components/schemas/ApiFailure"
+          }
         },
-        "required": ["sequence", "clientOpId", "status", "error"]
+        "required": [
+          "sequence",
+          "clientOpId",
+          "status",
+          "error"
+        ]
       },
       "SyncBlockedOutcome": {
         "oneOf": [
@@ -1885,28 +2031,86 @@
             "type": "object",
             "additionalProperties": false,
             "properties": {
-              "sequence": { "type": "integer", "minimum": 1 },
-              "clientOpId": { "type": "string", "format": "uuid" },
-              "status": { "type": "string", "enum": ["blocked"] },
-              "code": { "type": "string", "enum": ["PREDECESSOR_UNRESOLVED"] },
-              "messageKey": { "type": "string" },
-              "params": { "$ref": "#/components/schemas/SyncErrorParams" }
+              "sequence": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "clientOpId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "blocked"
+                ]
+              },
+              "code": {
+                "type": "string",
+                "enum": [
+                  "PREDECESSOR_UNRESOLVED"
+                ]
+              },
+              "messageKey": {
+                "type": "string"
+              },
+              "params": {
+                "$ref": "#/components/schemas/SyncErrorParams"
+              }
             },
-            "required": ["sequence", "clientOpId", "status", "code", "messageKey", "params"]
+            "required": [
+              "sequence",
+              "clientOpId",
+              "status",
+              "code",
+              "messageKey",
+              "params"
+            ]
           },
           {
             "type": "object",
             "additionalProperties": false,
             "properties": {
-              "sequence": { "type": "integer", "minimum": 1 },
-              "clientOpId": { "type": "string", "format": "uuid" },
-              "status": { "type": "string", "enum": ["blocked"] },
-              "code": { "type": "string", "enum": ["SEQUENCE_GAP"] },
-              "messageKey": { "type": "string" },
-              "params": { "$ref": "#/components/schemas/SyncErrorParams" },
-              "expectedSequence": { "type": "integer", "minimum": 1 }
+              "sequence": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "clientOpId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "blocked"
+                ]
+              },
+              "code": {
+                "type": "string",
+                "enum": [
+                  "SEQUENCE_GAP"
+                ]
+              },
+              "messageKey": {
+                "type": "string"
+              },
+              "params": {
+                "$ref": "#/components/schemas/SyncErrorParams"
+              },
+              "expectedSequence": {
+                "type": "integer",
+                "minimum": 1
+              }
             },
-            "required": ["sequence", "clientOpId", "status", "code", "messageKey", "params", "expectedSequence"]
+            "required": [
+              "sequence",
+              "clientOpId",
+              "status",
+              "code",
+              "messageKey",
+              "params",
+              "expectedSequence"
+            ]
           }
         ]
       },
@@ -1931,56 +2135,165 @@
             "type": "object",
             "additionalProperties": false,
             "properties": {
-              "id": { "type": "string" },
-              "kind": { "type": "string", "enum": ["appointment"] },
-              "entityId": { "type": "string" },
-              "payload": { "$ref": "#/components/schemas/SyncAppointmentPayload" }
+              "id": {
+                "type": "string"
+              },
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "appointment"
+                ]
+              },
+              "entityId": {
+                "type": "string"
+              },
+              "payload": {
+                "$ref": "#/components/schemas/SyncAppointmentPayload"
+              }
             },
-            "required": ["id", "kind", "entityId", "payload"]
+            "required": [
+              "id",
+              "kind",
+              "entityId",
+              "payload"
+            ]
           },
           {
             "type": "object",
             "additionalProperties": false,
             "properties": {
-              "id": { "type": "string" },
-              "kind": { "type": "string", "enum": ["conflict"] },
-              "entityId": { "type": "string" },
-              "payload": { "$ref": "#/components/schemas/SyncConflictPayload" }
+              "id": {
+                "type": "string"
+              },
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "conflict"
+                ]
+              },
+              "entityId": {
+                "type": "string"
+              },
+              "payload": {
+                "$ref": "#/components/schemas/SyncConflictPayload"
+              }
             },
-            "required": ["id", "kind", "entityId", "payload"]
+            "required": [
+              "id",
+              "kind",
+              "entityId",
+              "payload"
+            ]
           }
         ],
-        "discriminator": { "propertyName": "kind" }
+        "discriminator": {
+          "propertyName": "kind"
+        }
       },
       "SyncAppointmentPayload": {
         "type": "object",
         "additionalProperties": false,
         "properties": {
-          "id": { "type": "integer", "minimum": 1 },
-          "clinicId": { "type": "integer", "minimum": 1 },
-          "doctorId": { "type": "integer", "minimum": 1 },
-          "patientId": { "type": "integer", "minimum": 1 },
-          "startsAt": { "type": "string", "format": "date-time" },
-          "endsAt": { "type": "string", "format": "date-time" },
-          "source": { "type": "string" },
-          "clientOpId": { "type": ["string", "null"] },
-          "status": { "type": "string", "enum": ["booked", "double_booked", "completed", "no_show", "cancelled"] },
-          "version": { "type": "integer", "minimum": 1 },
-          "deleted": { "type": "boolean" }
+          "id": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "clinicId": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "doctorId": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "patientId": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "startsAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "endsAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "source": {
+            "type": "string"
+          },
+          "clientOpId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "booked",
+              "double_booked",
+              "completed",
+              "no_show",
+              "cancelled"
+            ]
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "deleted": {
+            "type": "boolean"
+          }
         },
-        "required": ["id", "clinicId", "doctorId", "patientId", "startsAt", "endsAt", "source", "clientOpId", "status", "version", "deleted"]
+        "required": [
+          "id",
+          "clinicId",
+          "doctorId",
+          "patientId",
+          "startsAt",
+          "endsAt",
+          "source",
+          "clientOpId",
+          "status",
+          "version",
+          "deleted"
+        ]
       },
       "SyncConflictPayload": {
         "type": "object",
         "additionalProperties": false,
         "properties": {
-          "id": { "type": "string", "format": "uuid" },
-          "actorId": { "type": "integer", "minimum": 1 },
-          "status": { "type": "string", "enum": ["open", "resolved"] },
-          "version": { "type": "integer", "minimum": 1 },
-          "clientOpId": { "type": "string", "format": "uuid" }
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "actorId": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "open",
+              "resolved"
+            ]
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "clientOpId": {
+            "type": "string",
+            "format": "uuid"
+          }
         },
-        "required": ["id", "actorId", "status", "version", "clientOpId"]
+        "required": [
+          "id",
+          "actorId",
+          "status",
+          "version",
+          "clientOpId"
+        ]
       },
       "SyncPullResult": {
         "type": "object",
@@ -1992,8 +2305,15 @@
               "$ref": "#/components/schemas/SyncChange"
             }
           },
-          "nextCursor": { "type": ["string", "null"] },
-          "since": { "type": "string" }
+          "nextCursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "since": {
+            "type": "string"
+          }
         },
         "required": [
           "changes",
@@ -2005,170 +2325,511 @@
         "type": "object",
         "additionalProperties": false,
         "properties": {
-          "id": { "type": "string", "format": "uuid" },
-          "clientOpId": { "type": "string", "format": "uuid" },
-          "operation": { "$ref": "#/components/schemas/SyncConflictOperation" },
-          "targetId": { "type": ["integer", "null"], "minimum": 1 },
-          "baseVersion": { "type": ["integer", "null"], "minimum": 1 },
-          "serverState": { "oneOf": [{ "$ref": "#/components/schemas/Appointment" }, { "type": "null" }] },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "clientOpId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "operation": {
+            "$ref": "#/components/schemas/SyncConflictOperation"
+          },
+          "targetId": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 1
+          },
+          "baseVersion": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 1
+          },
+          "serverState": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/Appointment"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "reasons": {
             "type": "array",
-            "items": { "oneOf": [{ "$ref": "#/components/schemas/ConflictItem" }, { "$ref": "#/components/schemas/SyncConflictReason" }] }
+            "items": {
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/ConflictItem"
+                },
+                {
+                  "$ref": "#/components/schemas/SyncConflictReason"
+                }
+              ]
+            }
           },
-          "status": { "type": "string", "enum": ["open", "resolved"] },
-          "version": { "type": "integer", "minimum": 1 },
-          "createdAt": { "type": "string", "format": "date-time" },
-          "updatedAt": { "type": "string", "format": "date-time" },
-          "history": { "type": "array", "items": { "$ref": "#/components/schemas/SyncResolutionHistory" } }
+          "status": {
+            "type": "string",
+            "enum": [
+              "open",
+              "resolved"
+            ]
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "history": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SyncResolutionHistory"
+            }
+          }
         },
-        "required": ["id", "clientOpId", "operation", "targetId", "baseVersion", "serverState", "reasons", "status", "version", "createdAt", "updatedAt", "history"]
+        "required": [
+          "id",
+          "clientOpId",
+          "operation",
+          "targetId",
+          "baseVersion",
+          "serverState",
+          "reasons",
+          "status",
+          "version",
+          "createdAt",
+          "updatedAt",
+          "history"
+        ]
       },
       "SyncConflictOperation": {
         "type": "object",
         "additionalProperties": false,
         "properties": {
-          "target": { "type": "string" },
-          "payload": { "oneOf": [{ "$ref": "#/components/schemas/AppointmentInput" }, { "$ref": "#/components/schemas/AppointmentUpdate" }] }
+          "target": {
+            "type": "string"
+          },
+          "payload": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/AppointmentInput"
+              },
+              {
+                "$ref": "#/components/schemas/AppointmentUpdate"
+              }
+            ]
+          }
         },
-        "required": ["target", "payload"]
+        "required": [
+          "target",
+          "payload"
+        ]
       },
       "SyncConflictReason": {
         "type": "object",
         "additionalProperties": false,
         "properties": {
-          "code": { "type": "string" },
-          "messageKey": { "type": "string" },
-          "params": { "$ref": "#/components/schemas/SyncErrorParams" },
-          "conflictId": { "type": "string", "format": "uuid" }
+          "code": {
+            "type": "string"
+          },
+          "messageKey": {
+            "type": "string"
+          },
+          "params": {
+            "$ref": "#/components/schemas/SyncErrorParams"
+          },
+          "conflictId": {
+            "type": "string",
+            "format": "uuid"
+          }
         },
-        "required": ["code", "messageKey", "params", "conflictId"]
+        "required": [
+          "code",
+          "messageKey",
+          "params",
+          "conflictId"
+        ]
       },
       "SyncResolutionHistory": {
         "type": "object",
         "additionalProperties": false,
         "properties": {
-          "id": { "type": "string" },
-          "clientOpId": { "type": "string", "format": "uuid" },
-          "action": { "type": "string", "enum": ["call", "move-self", "move-other"] },
-          "result": { "$ref": "#/components/schemas/SyncResolutionHistoryResult" },
-          "createdAt": { "type": "string", "format": "date-time" }
+          "id": {
+            "type": "string"
+          },
+          "clientOpId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "action": {
+            "type": "string",
+            "enum": [
+              "call",
+              "move-self",
+              "move-other"
+            ]
+          },
+          "result": {
+            "$ref": "#/components/schemas/SyncResolutionHistoryResult"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
         },
-        "required": ["id", "clientOpId", "action", "result", "createdAt"]
+        "required": [
+          "id",
+          "clientOpId",
+          "action",
+          "result",
+          "createdAt"
+        ]
       },
       "SyncResolutionHistoryResult": {
         "description": "Safe recorded resolution projection. Follow-up history deliberately excludes the phone returned only by the authorized call action.",
         "oneOf": [
-          { "$ref": "#/components/schemas/SyncFollowUpHistoryResult" },
-          { "$ref": "#/components/schemas/SyncResolvedResult" },
-          { "$ref": "#/components/schemas/SyncOpenResult" }
+          {
+            "$ref": "#/components/schemas/SyncFollowUpHistoryResult"
+          },
+          {
+            "$ref": "#/components/schemas/SyncResolvedResult"
+          },
+          {
+            "$ref": "#/components/schemas/SyncOpenResult"
+          }
         ],
-        "discriminator": { "propertyName": "status" }
+        "discriminator": {
+          "propertyName": "status"
+        }
       },
       "SyncFollowUpHistoryResult": {
         "type": "object",
         "additionalProperties": false,
         "properties": {
-          "status": { "type": "string", "enum": ["follow-up"] },
-          "conflictId": { "type": "string", "format": "uuid" },
-          "patientId": { "type": "integer", "minimum": 1 },
-          "called": { "type": "boolean", "enum": [false] },
-          "version": { "type": "integer", "minimum": 1 }
+          "status": {
+            "type": "string",
+            "enum": [
+              "follow-up"
+            ]
+          },
+          "conflictId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "patientId": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "called": {
+            "type": "boolean",
+            "enum": [
+              false
+            ]
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 1
+          }
         },
-        "required": ["status", "conflictId", "patientId", "called", "version"]
+        "required": [
+          "status",
+          "conflictId",
+          "patientId",
+          "called",
+          "version"
+        ]
       },
       "ResolutionInput": {
         "oneOf": [
-          { "$ref": "#/components/schemas/SyncCallInput" },
-          { "$ref": "#/components/schemas/SyncMoveSelfInput" },
-          { "$ref": "#/components/schemas/SyncMoveOtherInput" }
+          {
+            "$ref": "#/components/schemas/SyncCallInput"
+          },
+          {
+            "$ref": "#/components/schemas/SyncMoveSelfInput"
+          },
+          {
+            "$ref": "#/components/schemas/SyncMoveOtherInput"
+          }
         ],
-        "discriminator": { "propertyName": "action" }
+        "discriminator": {
+          "propertyName": "action"
+        }
       },
       "SyncCallInput": {
         "type": "object",
         "additionalProperties": false,
         "properties": {
-          "clientOpId": { "type": "string", "format": "uuid" },
-          "conflictId": { "type": "string", "format": "uuid" },
-          "expectedVersion": { "type": "integer", "minimum": 1 },
-          "action": { "type": "string", "enum": ["call"] }
+          "clientOpId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "conflictId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "expectedVersion": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "action": {
+            "type": "string",
+            "enum": [
+              "call"
+            ]
+          }
         },
-        "required": ["clientOpId", "conflictId", "expectedVersion", "action"]
+        "required": [
+          "clientOpId",
+          "conflictId",
+          "expectedVersion",
+          "action"
+        ]
       },
       "SyncMoveSelfInput": {
         "type": "object",
         "additionalProperties": false,
         "properties": {
-          "clientOpId": { "type": "string", "format": "uuid" },
-          "conflictId": { "type": "string", "format": "uuid" },
-          "expectedVersion": { "type": "integer", "minimum": 1 },
-          "action": { "type": "string", "enum": ["move-self"] },
-          "startsAt": { "type": "string", "format": "date-time", "description": "UTC ISO 8601 instant ending in Z; enforced by the service before coercion." },
-          "endsAt": { "type": "string", "format": "date-time", "description": "UTC ISO 8601 instant ending in Z; enforced by the service before coercion." },
-          "targetExpectedVersion": { "type": "integer", "minimum": 1, "description": "Required by the service when the original proposal updates an existing appointment." },
-          "overrideReason": { "type": "string", "minLength": 1, "maxLength": 2000, "pattern": "\\S" }
+          "clientOpId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "conflictId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "expectedVersion": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "action": {
+            "type": "string",
+            "enum": [
+              "move-self"
+            ]
+          },
+          "startsAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "UTC ISO 8601 instant ending in Z; enforced by the service before coercion."
+          },
+          "endsAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "UTC ISO 8601 instant ending in Z; enforced by the service before coercion."
+          },
+          "targetExpectedVersion": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Required by the service when the original proposal updates an existing appointment."
+          },
+          "overrideReason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000,
+            "pattern": "\\S"
+          }
         },
-        "required": ["clientOpId", "conflictId", "expectedVersion", "action", "startsAt", "endsAt"]
+        "required": [
+          "clientOpId",
+          "conflictId",
+          "expectedVersion",
+          "action",
+          "startsAt",
+          "endsAt"
+        ]
       },
       "SyncMoveOtherInput": {
         "type": "object",
         "additionalProperties": false,
         "properties": {
-          "clientOpId": { "type": "string", "format": "uuid" },
-          "conflictId": { "type": "string", "format": "uuid" },
-          "expectedVersion": { "type": "integer", "minimum": 1 },
-          "action": { "type": "string", "enum": ["move-other"] },
-          "startsAt": { "type": "string", "format": "date-time", "description": "UTC ISO 8601 instant ending in Z; enforced by the service before coercion." },
-          "endsAt": { "type": "string", "format": "date-time", "description": "UTC ISO 8601 instant ending in Z; enforced by the service before coercion." },
-          "otherAppointmentId": { "type": "integer", "minimum": 1 },
-          "otherExpectedVersion": { "type": "integer", "minimum": 1 },
-          "targetExpectedVersion": { "type": "integer", "minimum": 1, "description": "Required by the service when the original proposal updates an existing appointment." },
-          "overrideReason": { "type": "string", "minLength": 1, "maxLength": 2000, "pattern": "\\S" }
+          "clientOpId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "conflictId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "expectedVersion": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "action": {
+            "type": "string",
+            "enum": [
+              "move-other"
+            ]
+          },
+          "startsAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "UTC ISO 8601 instant ending in Z; enforced by the service before coercion."
+          },
+          "endsAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "UTC ISO 8601 instant ending in Z; enforced by the service before coercion."
+          },
+          "otherAppointmentId": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "otherExpectedVersion": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "targetExpectedVersion": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Required by the service when the original proposal updates an existing appointment."
+          },
+          "overrideReason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000,
+            "pattern": "\\S"
+          }
         },
-        "required": ["clientOpId", "conflictId", "expectedVersion", "action", "startsAt", "endsAt", "otherAppointmentId", "otherExpectedVersion"]
+        "required": [
+          "clientOpId",
+          "conflictId",
+          "expectedVersion",
+          "action",
+          "startsAt",
+          "endsAt",
+          "otherAppointmentId",
+          "otherExpectedVersion"
+        ]
       },
       "SyncResolutionResult": {
         "oneOf": [
-          { "$ref": "#/components/schemas/SyncFollowUpResult" },
-          { "$ref": "#/components/schemas/SyncResolvedResult" },
-          { "$ref": "#/components/schemas/SyncOpenResult" }
+          {
+            "$ref": "#/components/schemas/SyncFollowUpResult"
+          },
+          {
+            "$ref": "#/components/schemas/SyncResolvedResult"
+          },
+          {
+            "$ref": "#/components/schemas/SyncOpenResult"
+          }
         ],
-        "discriminator": { "propertyName": "status" }
+        "discriminator": {
+          "propertyName": "status"
+        }
       },
       "SyncFollowUpResult": {
         "type": "object",
         "additionalProperties": false,
         "properties": {
-          "status": { "type": "string", "enum": ["follow-up"] },
-          "conflictId": { "type": "string", "format": "uuid" },
-          "patientId": { "type": "integer", "minimum": 1 },
-          "phone": { "type": ["string", "null"] },
-          "called": { "type": "boolean", "enum": [false] },
-          "version": { "type": "integer", "minimum": 1 }
+          "status": {
+            "type": "string",
+            "enum": [
+              "follow-up"
+            ]
+          },
+          "conflictId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "patientId": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "phone": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "called": {
+            "type": "boolean",
+            "enum": [
+              false
+            ]
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 1
+          }
         },
-        "required": ["status", "conflictId", "patientId", "phone", "called", "version"]
+        "required": [
+          "status",
+          "conflictId",
+          "patientId",
+          "phone",
+          "called",
+          "version"
+        ]
       },
       "SyncResolvedResult": {
         "type": "object",
         "additionalProperties": false,
         "properties": {
-          "status": { "type": "string", "enum": ["resolved"] },
-          "conflictId": { "type": "string", "format": "uuid" },
-          "appointment": { "$ref": "#/components/schemas/Appointment" },
-          "version": { "type": "integer", "minimum": 1 }
+          "status": {
+            "type": "string",
+            "enum": [
+              "resolved"
+            ]
+          },
+          "conflictId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "appointment": {
+            "$ref": "#/components/schemas/Appointment"
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 1
+          }
         },
-        "required": ["status", "conflictId", "appointment", "version"]
+        "required": [
+          "status",
+          "conflictId",
+          "appointment",
+          "version"
+        ]
       },
       "SyncOpenResult": {
         "type": "object",
         "additionalProperties": false,
         "properties": {
-          "status": { "type": "string", "enum": ["open"] },
-          "conflictId": { "type": "string", "format": "uuid" },
-          "error": { "$ref": "#/components/schemas/ApiFailure" },
-          "version": { "type": "integer", "minimum": 1 }
+          "status": {
+            "type": "string",
+            "enum": [
+              "open"
+            ]
+          },
+          "conflictId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "error": {
+            "$ref": "#/components/schemas/ApiFailure"
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 1
+          }
         },
-        "required": ["status", "conflictId", "error", "version"]
+        "required": [
+          "status",
+          "conflictId",
+          "error",
+          "version"
+        ]
       },
       "ImportUploadInput": {
         "type": "object",
@@ -2492,17 +3153,46 @@
             "minimum": 0
           },
           "noShowRate": {
-            "type": "number",
+            "type": [
+              "number",
+              "null"
+            ],
             "minimum": 0,
             "maximum": 1
           },
           "periodStart": {
             "type": "string",
-            "format": "date-time"
+            "format": "date-time",
+            "description": "UTC ISO 8601 instant."
           },
           "periodEnd": {
             "type": "string",
-            "format": "date-time"
+            "format": "date-time",
+            "description": "UTC ISO 8601 instant."
+          },
+          "calculationVersion": {
+            "type": "string",
+            "minLength": 1
+          },
+          "generatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "UTC ISO 8601 instant."
+          },
+          "scope": {
+            "$ref": "#/components/schemas/KpiScope"
+          },
+          "comparison": {
+            "$ref": "#/components/schemas/KpiComparison"
+          },
+          "before": {
+            "$ref": "#/components/schemas/KpiBefore"
+          },
+          "after": {
+            "$ref": "#/components/schemas/KpiAfter"
+          },
+          "adoption": {
+            "$ref": "#/components/schemas/KpiAdoptionAggregate"
           }
         },
         "required": [
@@ -2511,16 +3201,405 @@
           "completed",
           "noShowRate",
           "periodStart",
-          "periodEnd"
+          "periodEnd",
+          "calculationVersion",
+          "generatedAt",
+          "scope",
+          "comparison",
+          "before",
+          "after",
+          "adoption"
         ],
+        "description": "Administrator-only aggregate evidence. Inherited appointments/completed/noShowRate/periodStart/periodEnd alias the selected after metrics/window. No raw clinical records, identities other than clinic IDs/names, lookup queries, audit actors, or individual events.",
         "examples": [
           {
             "range": "day",
-            "appointments": 12,
-            "completed": 8,
-            "noShowRate": 0.083,
-            "periodStart": "2026-09-09T07:00:00Z",
-            "periodEnd": "2026-09-10T07:00:00Z"
+            "appointments": 0,
+            "completed": 0,
+            "noShowRate": null,
+            "periodStart": "2026-09-08T21:00:00Z",
+            "periodEnd": "2026-09-09T21:00:00Z",
+            "calculationVersion": "amal-kpi-1",
+            "generatedAt": "2026-09-10T08:00:00Z",
+            "scope": {
+              "clinicId": null
+            },
+            "comparison": {
+              "equalExposure": false,
+              "note": "Synthetic contract illustration: six-day baseline versus one selected local day; not equal exposure."
+            },
+            "before": {
+              "period": {
+                "startDate": "2026-09-08",
+                "endDateExclusive": "2026-09-14",
+                "start": "2026-09-07T21:00:00Z",
+                "end": "2026-09-13T21:00:00Z",
+                "days": 6,
+                "timezone": "Asia/Hebron"
+              },
+              "provenance": "Synthetic contract example only; production before values are queried from untouched public seeds.",
+              "metrics": {
+                "totalAppointments": 0,
+                "completed": 0,
+                "collisions": {
+                  "sameDoctorSameStartPairs": 0,
+                  "samePatientSameStartCrossClinicPairs": 0
+                },
+                "noShow": {
+                  "numerator": 0,
+                  "denominator": 0,
+                  "ratio": null,
+                  "percent": null
+                },
+                "bookingsBySource": {
+                  "phone": 0,
+                  "walk-in": 0,
+                  "calendar": 0,
+                  "amal-network": 0,
+                  "unknown": 0
+                },
+                "clinics": [],
+                "weekdays": [
+                  {
+                    "weekday": 0,
+                    "noShow": {
+                      "numerator": 0,
+                      "denominator": 0,
+                      "ratio": null,
+                      "percent": null
+                    },
+                    "bookingsBySource": {
+                      "phone": 0,
+                      "walk-in": 0,
+                      "calendar": 0,
+                      "amal-network": 0,
+                      "unknown": 0
+                    }
+                  },
+                  {
+                    "weekday": 1,
+                    "noShow": {
+                      "numerator": 0,
+                      "denominator": 0,
+                      "ratio": null,
+                      "percent": null
+                    },
+                    "bookingsBySource": {
+                      "phone": 0,
+                      "walk-in": 0,
+                      "calendar": 0,
+                      "amal-network": 0,
+                      "unknown": 0
+                    }
+                  },
+                  {
+                    "weekday": 2,
+                    "noShow": {
+                      "numerator": 0,
+                      "denominator": 0,
+                      "ratio": null,
+                      "percent": null
+                    },
+                    "bookingsBySource": {
+                      "phone": 0,
+                      "walk-in": 0,
+                      "calendar": 0,
+                      "amal-network": 0,
+                      "unknown": 0
+                    }
+                  },
+                  {
+                    "weekday": 3,
+                    "noShow": {
+                      "numerator": 0,
+                      "denominator": 0,
+                      "ratio": null,
+                      "percent": null
+                    },
+                    "bookingsBySource": {
+                      "phone": 0,
+                      "walk-in": 0,
+                      "calendar": 0,
+                      "amal-network": 0,
+                      "unknown": 0
+                    }
+                  },
+                  {
+                    "weekday": 4,
+                    "noShow": {
+                      "numerator": 0,
+                      "denominator": 0,
+                      "ratio": null,
+                      "percent": null
+                    },
+                    "bookingsBySource": {
+                      "phone": 0,
+                      "walk-in": 0,
+                      "calendar": 0,
+                      "amal-network": 0,
+                      "unknown": 0
+                    }
+                  },
+                  {
+                    "weekday": 5,
+                    "noShow": {
+                      "numerator": 0,
+                      "denominator": 0,
+                      "ratio": null,
+                      "percent": null
+                    },
+                    "bookingsBySource": {
+                      "phone": 0,
+                      "walk-in": 0,
+                      "calendar": 0,
+                      "amal-network": 0,
+                      "unknown": 0
+                    }
+                  },
+                  {
+                    "weekday": 6,
+                    "noShow": {
+                      "numerator": 0,
+                      "denominator": 0,
+                      "ratio": null,
+                      "percent": null
+                    },
+                    "bookingsBySource": {
+                      "phone": 0,
+                      "walk-in": 0,
+                      "calendar": 0,
+                      "amal-network": 0,
+                      "unknown": 0
+                    }
+                  }
+                ],
+                "definitions": {
+                  "collisions": "Distinct unordered exact-start pairs across all statuses; not enforcement overlaps.",
+                  "clinicAttribution": "Pairs touch either clinic; clinic totals are not additive.",
+                  "noShow": "no_show / all appointments; ratio and percent null for empty denominators.",
+                  "sources": "Normalize phone, walk-in, calendar and amal-network aliases; all others unknown.",
+                  "weekday": "Asia/Hebron weekday, Sunday=0 through Saturday=6."
+                }
+              }
+            },
+            "after": {
+              "period": {
+                "startDate": "2026-09-09",
+                "endDateExclusive": "2026-09-10",
+                "start": "2026-09-08T21:00:00Z",
+                "end": "2026-09-09T21:00:00Z",
+                "days": 1,
+                "timezone": "Asia/Hebron"
+              },
+              "provenance": "Synthetic empty operational example only.",
+              "metrics": {
+                "totalAppointments": 0,
+                "completed": 0,
+                "collisions": {
+                  "sameDoctorSameStartPairs": 0,
+                  "samePatientSameStartCrossClinicPairs": 0
+                },
+                "noShow": {
+                  "numerator": 0,
+                  "denominator": 0,
+                  "ratio": null,
+                  "percent": null
+                },
+                "bookingsBySource": {
+                  "phone": 0,
+                  "walk-in": 0,
+                  "calendar": 0,
+                  "amal-network": 0,
+                  "unknown": 0
+                },
+                "clinics": [],
+                "weekdays": [
+                  {
+                    "weekday": 0,
+                    "noShow": {
+                      "numerator": 0,
+                      "denominator": 0,
+                      "ratio": null,
+                      "percent": null
+                    },
+                    "bookingsBySource": {
+                      "phone": 0,
+                      "walk-in": 0,
+                      "calendar": 0,
+                      "amal-network": 0,
+                      "unknown": 0
+                    }
+                  },
+                  {
+                    "weekday": 1,
+                    "noShow": {
+                      "numerator": 0,
+                      "denominator": 0,
+                      "ratio": null,
+                      "percent": null
+                    },
+                    "bookingsBySource": {
+                      "phone": 0,
+                      "walk-in": 0,
+                      "calendar": 0,
+                      "amal-network": 0,
+                      "unknown": 0
+                    }
+                  },
+                  {
+                    "weekday": 2,
+                    "noShow": {
+                      "numerator": 0,
+                      "denominator": 0,
+                      "ratio": null,
+                      "percent": null
+                    },
+                    "bookingsBySource": {
+                      "phone": 0,
+                      "walk-in": 0,
+                      "calendar": 0,
+                      "amal-network": 0,
+                      "unknown": 0
+                    }
+                  },
+                  {
+                    "weekday": 3,
+                    "noShow": {
+                      "numerator": 0,
+                      "denominator": 0,
+                      "ratio": null,
+                      "percent": null
+                    },
+                    "bookingsBySource": {
+                      "phone": 0,
+                      "walk-in": 0,
+                      "calendar": 0,
+                      "amal-network": 0,
+                      "unknown": 0
+                    }
+                  },
+                  {
+                    "weekday": 4,
+                    "noShow": {
+                      "numerator": 0,
+                      "denominator": 0,
+                      "ratio": null,
+                      "percent": null
+                    },
+                    "bookingsBySource": {
+                      "phone": 0,
+                      "walk-in": 0,
+                      "calendar": 0,
+                      "amal-network": 0,
+                      "unknown": 0
+                    }
+                  },
+                  {
+                    "weekday": 5,
+                    "noShow": {
+                      "numerator": 0,
+                      "denominator": 0,
+                      "ratio": null,
+                      "percent": null
+                    },
+                    "bookingsBySource": {
+                      "phone": 0,
+                      "walk-in": 0,
+                      "calendar": 0,
+                      "amal-network": 0,
+                      "unknown": 0
+                    }
+                  },
+                  {
+                    "weekday": 6,
+                    "noShow": {
+                      "numerator": 0,
+                      "denominator": 0,
+                      "ratio": null,
+                      "percent": null
+                    },
+                    "bookingsBySource": {
+                      "phone": 0,
+                      "walk-in": 0,
+                      "calendar": 0,
+                      "amal-network": 0,
+                      "unknown": 0
+                    }
+                  }
+                ],
+                "definitions": {
+                  "collisions": "Distinct unordered exact-start pairs across all statuses; not enforcement overlaps.",
+                  "clinicAttribution": "Pairs touch either clinic; clinic totals are not additive.",
+                  "noShow": "no_show / all appointments; ratio and percent null for empty denominators.",
+                  "sources": "Normalize phone, walk-in, calendar and amal-network aliases; all others unknown.",
+                  "weekday": "Asia/Hebron weekday, Sunday=0 through Saturday=6."
+                }
+              },
+              "telemetry": {
+                "conflicts": {
+                  "daily": [
+                    {
+                      "date": "2026-09-09",
+                      "blocked": 0,
+                      "warnings": 0,
+                      "overrides": 0,
+                      "cumulativeBlocked": 0,
+                      "cumulativeWarnings": 0,
+                      "cumulativeOverrides": 0
+                    }
+                  ],
+                  "cumulative": {
+                    "blocked": 0,
+                    "warnings": 0,
+                    "overrides": 0
+                  },
+                  "coverage": "Synthetic covered commit sample; actual warning coverage is limited to durable blocked warning evidence and approved overrides, excluding previews."
+                },
+                "lookupTime": {
+                  "available": false,
+                  "reason": "LOOKUP_DURATION_PRODUCER_UNAVAILABLE",
+                  "medianSeconds": null,
+                  "sampleCount": null,
+                  "measurementBoundaries": "No durable logical lookup duration samples exist."
+                },
+                "networkActivity": {
+                  "available": false,
+                  "reason": "LOGICAL_NETWORK_LOOKUP_PRODUCER_UNAVAILABLE",
+                  "daily": null
+                },
+                "downtime": {
+                  "receivedCreates": 0,
+                  "synced": 0,
+                  "conflicted": 0,
+                  "rejected": 0,
+                  "pending": 0,
+                  "queued": {
+                    "available": false,
+                    "reason": "CLIENT_QUEUE_NOT_OBSERVED",
+                    "value": null
+                  },
+                  "lost": {
+                    "available": false,
+                    "reason": "CLIENT_LOSS_NOT_OBSERVED",
+                    "value": null
+                  },
+                  "coverage": "Synthetic empty server-received create receipts. Unknown client-side queued/lost work is not observed."
+                }
+              }
+            },
+            "adoption": {
+              "clinics": [],
+              "counts": {
+                "trial": null,
+                "lite": 0,
+                "full": 0
+              },
+              "history": {
+                "available": false,
+                "reason": "ADOPTION_TRANSITION_HISTORY_UNAVAILABLE"
+              },
+              "coverage": "Synthetic empty current-state example only. Trial/history unavailable; joinedAt does not establish a transition."
+            }
           }
         ]
       },
@@ -4500,6 +5579,722 @@
             ]
           }
         }
+      },
+      "KpiPeriod": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "startDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "endDateExclusive": {
+            "type": "string",
+            "format": "date"
+          },
+          "start": {
+            "type": "string",
+            "format": "date-time",
+            "description": "UTC ISO 8601 instant."
+          },
+          "end": {
+            "type": "string",
+            "format": "date-time",
+            "description": "UTC ISO 8601 instant."
+          },
+          "days": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "timezone": {
+            "type": "string",
+            "const": "Asia/Hebron"
+          }
+        },
+        "required": [
+          "startDate",
+          "endDateExclusive",
+          "start",
+          "end",
+          "days",
+          "timezone"
+        ],
+        "description": "Half-open local-calendar exposure. UTC instants are converted from Asia/Hebron midnights; local calendar days need not be 24 hours at DST."
+      },
+      "KpiSourceCounts": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "phone": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "walk-in": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "calendar": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "amal-network": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "unknown": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "phone",
+          "walk-in",
+          "calendar",
+          "amal-network",
+          "unknown"
+        ],
+        "description": "All statuses. Lowercase/trim source mapping: phone; walk_in/walk-in/walk in; calendar_app/calendar-app/calendar app/calendar; amal_network/amal-network/amal network. Other values map to unknown without changing source rows."
+      },
+      "KpiNoShowRate": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "numerator": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "denominator": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "ratio": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "minimum": 0,
+            "maximum": 1
+          },
+          "percent": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "minimum": 0,
+            "maximum": 100
+          }
+        },
+        "required": [
+          "numerator",
+          "denominator",
+          "ratio",
+          "percent"
+        ],
+        "description": "no_show / all appointments in the scheduled-at window, including cancelled. Ratio is unrounded; percent rounded to one decimal. Both are null for an empty denominator."
+      },
+      "KpiCollisionCounts": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "sameDoctorSameStartPairs": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "samePatientSameStartCrossClinicPairs": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "sameDoctorSameStartPairs",
+          "samePatientSameStartCrossClinicPairs"
+        ],
+        "description": "Distinct unordered exact-start pairs across ALL statuses, not interval-overlap enforcement. A clinic counts every pair touching it, including cross-clinic counterparts; clinic totals are not additive. Network counts each pair once."
+      },
+      "KpiAppointmentDefinitions": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "collisions": {
+            "type": "string"
+          },
+          "clinicAttribution": {
+            "type": "string"
+          },
+          "noShow": {
+            "type": "string"
+          },
+          "sources": {
+            "type": "string"
+          },
+          "weekday": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "collisions",
+          "clinicAttribution",
+          "noShow",
+          "sources",
+          "weekday"
+        ]
+      },
+      "KpiClinicAppointmentAggregate": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "clinicId": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "clinicName": {
+            "type": "string"
+          },
+          "totalAppointments": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "completed": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "collisions": {
+            "$ref": "#/components/schemas/KpiCollisionCounts"
+          },
+          "noShow": {
+            "$ref": "#/components/schemas/KpiNoShowRate"
+          },
+          "bookingsBySource": {
+            "$ref": "#/components/schemas/KpiSourceCounts"
+          }
+        },
+        "required": [
+          "clinicId",
+          "clinicName",
+          "totalAppointments",
+          "completed",
+          "collisions",
+          "noShow",
+          "bookingsBySource"
+        ]
+      },
+      "KpiWeekdayAppointmentAggregate": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "weekday": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 6
+          },
+          "noShow": {
+            "$ref": "#/components/schemas/KpiNoShowRate"
+          },
+          "bookingsBySource": {
+            "$ref": "#/components/schemas/KpiSourceCounts"
+          }
+        },
+        "required": [
+          "weekday",
+          "noShow",
+          "bookingsBySource"
+        ],
+        "description": "Asia/Hebron weekday: 0 Sunday through 6 Saturday. Empty weekdays retain null rates."
+      },
+      "KpiAppointmentAggregate": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "totalAppointments": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "completed": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "collisions": {
+            "$ref": "#/components/schemas/KpiCollisionCounts"
+          },
+          "noShow": {
+            "$ref": "#/components/schemas/KpiNoShowRate"
+          },
+          "bookingsBySource": {
+            "$ref": "#/components/schemas/KpiSourceCounts"
+          },
+          "clinics": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/KpiClinicAppointmentAggregate"
+            }
+          },
+          "weekdays": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/KpiWeekdayAppointmentAggregate"
+            },
+            "minItems": 7,
+            "maxItems": 7
+          },
+          "definitions": {
+            "$ref": "#/components/schemas/KpiAppointmentDefinitions"
+          }
+        },
+        "required": [
+          "totalAppointments",
+          "completed",
+          "collisions",
+          "noShow",
+          "bookingsBySource",
+          "clinics",
+          "weekdays",
+          "definitions"
+        ],
+        "description": "Privacy-safe aggregates only: no doctor/patient/event identity, individual records, ranking or grouping. Counts use the explicit source window; fixed before exposure is never redefined by the requested after range."
+      },
+      "KpiConflictTotals": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "blocked": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "warnings": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "overrides": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "blocked",
+          "warnings",
+          "overrides"
+        ]
+      },
+      "KpiConflictDay": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "date": {
+            "type": "string",
+            "format": "date"
+          },
+          "blocked": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "warnings": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "overrides": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "cumulativeBlocked": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "cumulativeWarnings": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "cumulativeOverrides": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "date",
+          "blocked",
+          "warnings",
+          "overrides",
+          "cumulativeBlocked",
+          "cumulativeWarnings",
+          "cumulativeOverrides"
+        ],
+        "description": "Asia/Hebron date. Cumulative series restart at the selected window. Warnings can accompany blocked commits; approved overrides are never blocked."
+      },
+      "KpiConflicts": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "daily": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/KpiConflictDay"
+            }
+          },
+          "cumulative": {
+            "$ref": "#/components/schemas/KpiConflictTotals"
+          },
+          "coverage": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "daily",
+          "cumulative",
+          "coverage"
+        ],
+        "description": "Durable APPOINTMENT_CONFLICT commit attempts deduplicated by logical clientOpId. Includes failed resolution wrappers whose nested failures were rolled back; successful wrappers are not extra attempts. Excludes repeated previews and version/hold/validation failures. Warning coverage is partial: blocked direct/sync warning evidence and approved patient-overlap override audit evidence only. No claim that an overridden warning prevented a booking."
+      },
+      "KpiLookupTime": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "available": {
+            "type": "boolean",
+            "const": false
+          },
+          "reason": {
+            "type": "string",
+            "const": "LOOKUP_DURATION_PRODUCER_UNAVAILABLE"
+          },
+          "medianSeconds": {
+            "type": "null"
+          },
+          "sampleCount": {
+            "type": "null"
+          },
+          "measurementBoundaries": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "available",
+          "reason",
+          "medianSeconds",
+          "sampleCount",
+          "measurementBoundaries"
+        ],
+        "description": "No durable duration producer exists. No response-count proxy, invented sample count, or average of daily medians. A future instrumented contract must calculate the range median from actual duration samples with defined logical measurement boundaries."
+      },
+      "KpiNetworkActivity": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "available": {
+            "type": "boolean",
+            "const": false
+          },
+          "reason": {
+            "type": "string",
+            "const": "LOGICAL_NETWORK_LOOKUP_PRODUCER_UNAVAILABLE"
+          },
+          "daily": {
+            "type": "null"
+          }
+        },
+        "required": [
+          "available",
+          "reason",
+          "daily"
+        ],
+        "description": "No durable logical cross-clinic lookup producer exists; per-result/patient/visit/audit-row counts and retries cannot substitute. No doctor grouping."
+      },
+      "KpiClientQueueUnavailable": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "available": {
+            "type": "boolean",
+            "const": false
+          },
+          "reason": {
+            "type": "string",
+            "const": "CLIENT_QUEUE_NOT_OBSERVED"
+          },
+          "value": {
+            "type": "null"
+          }
+        },
+        "required": [
+          "available",
+          "reason",
+          "value"
+        ],
+        "description": "Unavailable is not measured zero."
+      },
+      "KpiClientLossUnavailable": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "available": {
+            "type": "boolean",
+            "const": false
+          },
+          "reason": {
+            "type": "string",
+            "const": "CLIENT_LOSS_NOT_OBSERVED"
+          },
+          "value": {
+            "type": "null"
+          }
+        },
+        "required": [
+          "available",
+          "reason",
+          "value"
+        ],
+        "description": "Unavailable is not measured zero."
+      },
+      "KpiDowntime": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "receivedCreates": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "synced": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "conflicted": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "rejected": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "pending": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "queued": {
+            "$ref": "#/components/schemas/KpiClientQueueUnavailable"
+          },
+          "lost": {
+            "$ref": "#/components/schemas/KpiClientLossUnavailable"
+          },
+          "coverage": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "receivedCreates",
+          "synced",
+          "conflicted",
+          "rejected",
+          "pending",
+          "queued",
+          "lost",
+          "coverage"
+        ],
+        "description": "Unique server-received sync create operations with durable receipts, grouped by original server receipt time, not appointment time. Synced includes applied creates and subsequently resolved conflicts. Conflicted is currently unresolved. Covered receipts have terminal outcomes, so received pending=0. Unknown unreceived client queues/losses are unavailable, not zero; unresolved/rejected is not lost. Not proof of offline origin."
+      },
+      "KpiTelemetryAggregate": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "conflicts": {
+            "$ref": "#/components/schemas/KpiConflicts"
+          },
+          "lookupTime": {
+            "$ref": "#/components/schemas/KpiLookupTime"
+          },
+          "networkActivity": {
+            "$ref": "#/components/schemas/KpiNetworkActivity"
+          },
+          "downtime": {
+            "$ref": "#/components/schemas/KpiDowntime"
+          }
+        },
+        "required": [
+          "conflicts",
+          "lookupTime",
+          "networkActivity",
+          "downtime"
+        ]
+      },
+      "KpiAdoptionClinic": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "clinicId": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "clinicName": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "lite",
+              "full"
+            ]
+          },
+          "joinedAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "clinicId",
+          "clinicName",
+          "state",
+          "joinedAt"
+        ],
+        "description": "Existing operational state and stored date only. joinedAt can be a bootstrap timestamp, not evidence of Trial or of a state transition."
+      },
+      "KpiAdoptionCounts": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "trial": {
+            "type": "null"
+          },
+          "lite": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "full": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "trial",
+          "lite",
+          "full"
+        ],
+        "description": "Trial is absent from the upstream state model, so its count is unavailable rather than an invented zero."
+      },
+      "KpiAdoptionHistory": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "available": {
+            "type": "boolean",
+            "const": false
+          },
+          "reason": {
+            "type": "string",
+            "const": "ADOPTION_TRANSITION_HISTORY_UNAVAILABLE"
+          }
+        },
+        "required": [
+          "available",
+          "reason"
+        ]
+      },
+      "KpiAdoptionAggregate": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "clinics": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/KpiAdoptionClinic"
+            }
+          },
+          "counts": {
+            "$ref": "#/components/schemas/KpiAdoptionCounts"
+          },
+          "history": {
+            "$ref": "#/components/schemas/KpiAdoptionHistory"
+          },
+          "coverage": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "clinics",
+          "counts",
+          "history",
+          "coverage"
+        ],
+        "description": "Current clinic adoption, not selected-window history. Does not infer adoption from booking volume or fabricate Trial transitions."
+      },
+      "KpiScope": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "clinicId": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 1
+          }
+        },
+        "required": [
+          "clinicId"
+        ],
+        "description": "Null means network scope; a positive clinic ID restricts the authorized administrator's aggregate view."
+      },
+      "KpiComparison": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "equalExposure": {
+            "type": "boolean"
+          },
+          "note": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "equalExposure",
+          "note"
+        ],
+        "description": "Explicitly discloses whether exposure days match. Equal exposure does not imply identical dates or causal comparability."
+      },
+      "KpiBefore": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "period": {
+            "$ref": "#/components/schemas/KpiPeriod"
+          },
+          "provenance": {
+            "type": "string"
+          },
+          "metrics": {
+            "$ref": "#/components/schemas/KpiAppointmentAggregate"
+          }
+        },
+        "required": [
+          "period",
+          "provenance",
+          "metrics"
+        ],
+        "description": "Immutable public seed queries over original 2026-09-08 through 2026-09-13 local dates. Never operational rows or constants."
+      },
+      "KpiAfter": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "period": {
+            "$ref": "#/components/schemas/KpiPeriod"
+          },
+          "provenance": {
+            "type": "string"
+          },
+          "metrics": {
+            "$ref": "#/components/schemas/KpiAppointmentAggregate"
+          },
+          "telemetry": {
+            "$ref": "#/components/schemas/KpiTelemetryAggregate"
+          }
+        },
+        "required": [
+          "period",
+          "provenance",
+          "metrics",
+          "telemetry"
+        ],
+        "description": "Selected operational scheduled-at window; telemetry uses server event/receipt time within the same explicit window."
       }
     },
     "responses": {
@@ -8403,33 +10198,145 @@
     "/auth/offline-permit": {
       "get": {
         "operationId": "getOfflinePermit",
-        "tags": ["auth"],
+        "tags": [
+          "auth"
+        ],
         "summary": "Issue a bounded tab-session offline continuation permit",
         "description": "Authenticated doctor/front-desk only. Signs current user and single clinic scope with a caller-generated 256-bit tab nonce. Expires at the earlier of session expiry or 30 minutes. No-store; persist only in the already verified tab session, never Dexie. Not accepted by any server endpoint as login or credentials. Revocation is immediate in this browser via shell peer events; remote revocation is discovered on reconnect or bounded by expiry while offline.",
-        "security": [{ "sessionCookie": [] }],
-        "x-roles": ["doctor", "front-desk"],
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "x-roles": [
+          "doctor",
+          "front-desk"
+        ],
         "x-implementation": "operational",
-        "parameters": [{ "in": "query", "name": "nonce", "required": true, "schema": { "type": "string", "pattern": "^[a-f0-9]{64}$" } }],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "nonce",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            }
+          }
+        ],
         "responses": {
-          "200": { "description": "Signed offline continuation permit", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/OfflinePermit" }, "example": { "payload": "eyJ2ZXJzaW9uIjoxfQ", "signature": "illustrative-signature-not-valid-authority", "publicKey": "illustrative-public-key" } } } },
-          "401": { "description": "UNAUTHORIZED", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ApiFailure" }, "example": { "code": "UNAUTHORIZED", "messageKey": "error.unauthorized", "params": {} } } } },
-          "403": { "description": "FORBIDDEN", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ApiFailure" }, "example": { "code": "FORBIDDEN", "messageKey": "error.forbidden", "params": {} } } } }
+          "200": {
+            "description": "Signed offline continuation permit",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OfflinePermit"
+                },
+                "example": {
+                  "payload": "eyJ2ZXJzaW9uIjoxfQ",
+                  "signature": "illustrative-signature-not-valid-authority",
+                  "publicKey": "illustrative-public-key"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHORIZED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                },
+                "example": {
+                  "code": "UNAUTHORIZED",
+                  "messageKey": "error.unauthorized",
+                  "params": {}
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                },
+                "example": {
+                  "code": "FORBIDDEN",
+                  "messageKey": "error.forbidden",
+                  "params": {}
+                }
+              }
+            }
+          }
         }
       }
     },
     "/sync/state": {
       "get": {
         "operationId": "getSyncState",
-        "tags": ["sync"],
+        "tags": [
+          "sync"
+        ],
         "summary": "Read authenticated device ordering bootstrap",
         "description": "Authenticated requireSyncDevice scope, same trusted-device/actor/clinic constraints as sync.push. Returns the next globally contiguous sequence for the authenticated device; never accepts a caller-selected device ID.",
-        "security": [{ "sessionCookie": [], "deviceCookie": [] }],
-        "x-roles": ["doctor", "front-desk"],
+        "security": [
+          {
+            "sessionCookie": [],
+            "deviceCookie": []
+          }
+        ],
+        "x-roles": [
+          "doctor",
+          "front-desk"
+        ],
         "x-implementation": "operational",
         "responses": {
-          "200": { "description": "Device ordering state", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SyncDeviceState" }, "example": { "deviceId": 1, "nextSequence": 1 } } } },
-          "401": { "description": "UNAUTHORIZED", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ApiFailure" }, "example": { "code": "UNAUTHORIZED", "messageKey": "error.unauthorized", "params": {} } } } },
-          "403": { "description": "FORBIDDEN", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ApiFailure" }, "example": { "code": "FORBIDDEN", "messageKey": "error.forbidden", "params": {} } } } }
+          "200": {
+            "description": "Device ordering state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SyncDeviceState"
+                },
+                "example": {
+                  "deviceId": 1,
+                  "nextSequence": 1
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHORIZED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                },
+                "example": {
+                  "code": "UNAUTHORIZED",
+                  "messageKey": "error.unauthorized",
+                  "params": {}
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                },
+                "example": {
+                  "code": "FORBIDDEN",
+                  "messageKey": "error.forbidden",
+                  "params": {}
+                }
+              }
+            }
+          }
         }
       }
     },
@@ -8472,15 +10379,17 @@
                   "$ref": "#/components/schemas/SyncPushResult"
                 },
                 "example": {
-                  "outcomes": [{
-                    "sequence": 1,
-                    "clientOpId": "00000000-0000-4000-8000-000000000001",
-                    "status": "blocked",
-                    "code": "SEQUENCE_GAP",
-                    "messageKey": "error.conflict",
-                    "params": {},
-                    "expectedSequence": 2
-                  }]
+                  "outcomes": [
+                    {
+                      "sequence": 1,
+                      "clientOpId": "00000000-0000-4000-8000-000000000001",
+                      "status": "blocked",
+                      "code": "SEQUENCE_GAP",
+                      "messageKey": "error.conflict",
+                      "params": {},
+                      "expectedSequence": 2
+                    }
+                  ]
                 }
               }
             }
@@ -8614,19 +10523,21 @@
                 "$ref": "#/components/schemas/SyncBatch"
               },
               "example": {
-                "operations": [{
-                  "sequence": 1,
-                  "type": "create",
-                  "input": {
-                    "clientOpId": "00000000-0000-4000-8000-000000000001",
-                    "clinicId": 101,
-                    "doctorId": 201,
-                    "patientId": 301,
-                    "startsAt": "2026-09-09T07:00:00Z",
-                    "endsAt": "2026-09-09T07:15:00Z",
-                    "source": "walk-in"
+                "operations": [
+                  {
+                    "sequence": 1,
+                    "type": "create",
+                    "input": {
+                      "clientOpId": "00000000-0000-4000-8000-000000000001",
+                      "clinicId": 101,
+                      "doctorId": 201,
+                      "patientId": 301,
+                      "startsAt": "2026-09-09T07:00:00Z",
+                      "endsAt": "2026-09-09T07:15:00Z",
+                      "source": "walk-in"
+                    }
                   }
-                }]
+                ]
               }
             }
           }
@@ -8856,7 +10767,15 @@
             "name": "status",
             "in": "query",
             "required": false,
-            "schema": { "type": "string", "enum": ["open", "resolved", "all"], "default": "open" }
+            "schema": {
+              "type": "string",
+              "enum": [
+                "open",
+                "resolved",
+                "all"
+              ],
+              "default": "open"
+            }
           },
           {
             "name": "cursor",
@@ -9600,19 +11519,17 @@
         "tags": [
           "kpis"
         ],
-        "summary": "get kpis",
-        "description": "Contract-only domain service; mock responses are simulated. Clinic scope comes from authenticated identity, not submitted identifiers. Admin has no implicit clinical access. Network visibility requires active consent and excludes Lite clinics. Mutations require CSRF; clientOpId is replay-safe per clinic, with changed payload returning 409.",
+        "summary": "Get reproducible baseline and operational KPI aggregates",
+        "description": "Implemented administrator-only aggregate endpoint. range is required; date defaults to today's Asia/Hebron date and must be a valid local date from 2000-01-01 through 2100-12-31. day is one local day; week is Monday through next Monday; month is the local calendar month. All UTC end instants are exclusive. Optional clinicId is a positive int32; no doctor filter/grouping/ranking. Fixed before window is 2026-09-08 through 2026-09-13 local dates, queried from untouched seeds; selected operational after exposure remains separate. Conflicts are exact-start all-status unordered pairs, not interval enforcement. Warnings/overrides and partial durable telemetry coverage are explicit; unavailable instrumentation/loss evidence is null with stable reasons, not fabricated zero. Current adoption is not historical. The response example is synthetic and does not state production baseline values.",
         "security": [
           {
             "sessionCookie": []
           }
         ],
         "x-roles": [
-          "admin",
-          "doctor",
-          "front-desk"
+          "admin"
         ],
-        "x-implementation": "contract-only",
+        "x-implementation": "implemented",
         "parameters": [
           {
             "name": "range",
@@ -9626,12 +11543,36 @@
                 "month"
               ]
             },
-            "example": "day"
+            "example": "day",
+            "description": "Local-calendar window containing date: day, Monday-start week, or calendar month."
+          },
+          {
+            "name": "date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^(?:20\\d{2}|2100)-\\d{2}-\\d{2}$"
+            },
+            "example": "2026-09-09",
+            "description": "Optional Asia/Hebron anchor date, 2000-01-01 through 2100-12-31 inclusive. Defaults to today."
+          },
+          {
+            "name": "clinicId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 2147483647
+            },
+            "example": 1,
+            "description": "Optional clinic scope; omit for network. Cross-clinic collision pairs touching this clinic remain included."
           }
         ],
         "responses": {
           "200": {
-            "description": "KpiResult",
+            "description": "Versioned aggregate-only baseline, operational metrics, coverage and adoption. Synthetic example; production evidence is queried.",
             "content": {
               "application/json": {
                 "schema": {
@@ -9639,11 +11580,392 @@
                 },
                 "example": {
                   "range": "day",
-                  "appointments": 12,
-                  "completed": 8,
-                  "noShowRate": 0.083,
-                  "periodStart": "2026-09-09T07:00:00Z",
-                  "periodEnd": "2026-09-10T07:00:00Z"
+                  "appointments": 0,
+                  "completed": 0,
+                  "noShowRate": null,
+                  "periodStart": "2026-09-08T21:00:00Z",
+                  "periodEnd": "2026-09-09T21:00:00Z",
+                  "calculationVersion": "amal-kpi-1",
+                  "generatedAt": "2026-09-10T08:00:00Z",
+                  "scope": {
+                    "clinicId": null
+                  },
+                  "comparison": {
+                    "equalExposure": false,
+                    "note": "Synthetic contract illustration: six-day baseline versus one selected local day; not equal exposure."
+                  },
+                  "before": {
+                    "period": {
+                      "startDate": "2026-09-08",
+                      "endDateExclusive": "2026-09-14",
+                      "start": "2026-09-07T21:00:00Z",
+                      "end": "2026-09-13T21:00:00Z",
+                      "days": 6,
+                      "timezone": "Asia/Hebron"
+                    },
+                    "provenance": "Synthetic contract example only; production before values are queried from untouched public seeds.",
+                    "metrics": {
+                      "totalAppointments": 0,
+                      "completed": 0,
+                      "collisions": {
+                        "sameDoctorSameStartPairs": 0,
+                        "samePatientSameStartCrossClinicPairs": 0
+                      },
+                      "noShow": {
+                        "numerator": 0,
+                        "denominator": 0,
+                        "ratio": null,
+                        "percent": null
+                      },
+                      "bookingsBySource": {
+                        "phone": 0,
+                        "walk-in": 0,
+                        "calendar": 0,
+                        "amal-network": 0,
+                        "unknown": 0
+                      },
+                      "clinics": [],
+                      "weekdays": [
+                        {
+                          "weekday": 0,
+                          "noShow": {
+                            "numerator": 0,
+                            "denominator": 0,
+                            "ratio": null,
+                            "percent": null
+                          },
+                          "bookingsBySource": {
+                            "phone": 0,
+                            "walk-in": 0,
+                            "calendar": 0,
+                            "amal-network": 0,
+                            "unknown": 0
+                          }
+                        },
+                        {
+                          "weekday": 1,
+                          "noShow": {
+                            "numerator": 0,
+                            "denominator": 0,
+                            "ratio": null,
+                            "percent": null
+                          },
+                          "bookingsBySource": {
+                            "phone": 0,
+                            "walk-in": 0,
+                            "calendar": 0,
+                            "amal-network": 0,
+                            "unknown": 0
+                          }
+                        },
+                        {
+                          "weekday": 2,
+                          "noShow": {
+                            "numerator": 0,
+                            "denominator": 0,
+                            "ratio": null,
+                            "percent": null
+                          },
+                          "bookingsBySource": {
+                            "phone": 0,
+                            "walk-in": 0,
+                            "calendar": 0,
+                            "amal-network": 0,
+                            "unknown": 0
+                          }
+                        },
+                        {
+                          "weekday": 3,
+                          "noShow": {
+                            "numerator": 0,
+                            "denominator": 0,
+                            "ratio": null,
+                            "percent": null
+                          },
+                          "bookingsBySource": {
+                            "phone": 0,
+                            "walk-in": 0,
+                            "calendar": 0,
+                            "amal-network": 0,
+                            "unknown": 0
+                          }
+                        },
+                        {
+                          "weekday": 4,
+                          "noShow": {
+                            "numerator": 0,
+                            "denominator": 0,
+                            "ratio": null,
+                            "percent": null
+                          },
+                          "bookingsBySource": {
+                            "phone": 0,
+                            "walk-in": 0,
+                            "calendar": 0,
+                            "amal-network": 0,
+                            "unknown": 0
+                          }
+                        },
+                        {
+                          "weekday": 5,
+                          "noShow": {
+                            "numerator": 0,
+                            "denominator": 0,
+                            "ratio": null,
+                            "percent": null
+                          },
+                          "bookingsBySource": {
+                            "phone": 0,
+                            "walk-in": 0,
+                            "calendar": 0,
+                            "amal-network": 0,
+                            "unknown": 0
+                          }
+                        },
+                        {
+                          "weekday": 6,
+                          "noShow": {
+                            "numerator": 0,
+                            "denominator": 0,
+                            "ratio": null,
+                            "percent": null
+                          },
+                          "bookingsBySource": {
+                            "phone": 0,
+                            "walk-in": 0,
+                            "calendar": 0,
+                            "amal-network": 0,
+                            "unknown": 0
+                          }
+                        }
+                      ],
+                      "definitions": {
+                        "collisions": "Distinct unordered exact-start pairs across all statuses; not enforcement overlaps.",
+                        "clinicAttribution": "Pairs touch either clinic; clinic totals are not additive.",
+                        "noShow": "no_show / all appointments; ratio and percent null for empty denominators.",
+                        "sources": "Normalize phone, walk-in, calendar and amal-network aliases; all others unknown.",
+                        "weekday": "Asia/Hebron weekday, Sunday=0 through Saturday=6."
+                      }
+                    }
+                  },
+                  "after": {
+                    "period": {
+                      "startDate": "2026-09-09",
+                      "endDateExclusive": "2026-09-10",
+                      "start": "2026-09-08T21:00:00Z",
+                      "end": "2026-09-09T21:00:00Z",
+                      "days": 1,
+                      "timezone": "Asia/Hebron"
+                    },
+                    "provenance": "Synthetic empty operational example only.",
+                    "metrics": {
+                      "totalAppointments": 0,
+                      "completed": 0,
+                      "collisions": {
+                        "sameDoctorSameStartPairs": 0,
+                        "samePatientSameStartCrossClinicPairs": 0
+                      },
+                      "noShow": {
+                        "numerator": 0,
+                        "denominator": 0,
+                        "ratio": null,
+                        "percent": null
+                      },
+                      "bookingsBySource": {
+                        "phone": 0,
+                        "walk-in": 0,
+                        "calendar": 0,
+                        "amal-network": 0,
+                        "unknown": 0
+                      },
+                      "clinics": [],
+                      "weekdays": [
+                        {
+                          "weekday": 0,
+                          "noShow": {
+                            "numerator": 0,
+                            "denominator": 0,
+                            "ratio": null,
+                            "percent": null
+                          },
+                          "bookingsBySource": {
+                            "phone": 0,
+                            "walk-in": 0,
+                            "calendar": 0,
+                            "amal-network": 0,
+                            "unknown": 0
+                          }
+                        },
+                        {
+                          "weekday": 1,
+                          "noShow": {
+                            "numerator": 0,
+                            "denominator": 0,
+                            "ratio": null,
+                            "percent": null
+                          },
+                          "bookingsBySource": {
+                            "phone": 0,
+                            "walk-in": 0,
+                            "calendar": 0,
+                            "amal-network": 0,
+                            "unknown": 0
+                          }
+                        },
+                        {
+                          "weekday": 2,
+                          "noShow": {
+                            "numerator": 0,
+                            "denominator": 0,
+                            "ratio": null,
+                            "percent": null
+                          },
+                          "bookingsBySource": {
+                            "phone": 0,
+                            "walk-in": 0,
+                            "calendar": 0,
+                            "amal-network": 0,
+                            "unknown": 0
+                          }
+                        },
+                        {
+                          "weekday": 3,
+                          "noShow": {
+                            "numerator": 0,
+                            "denominator": 0,
+                            "ratio": null,
+                            "percent": null
+                          },
+                          "bookingsBySource": {
+                            "phone": 0,
+                            "walk-in": 0,
+                            "calendar": 0,
+                            "amal-network": 0,
+                            "unknown": 0
+                          }
+                        },
+                        {
+                          "weekday": 4,
+                          "noShow": {
+                            "numerator": 0,
+                            "denominator": 0,
+                            "ratio": null,
+                            "percent": null
+                          },
+                          "bookingsBySource": {
+                            "phone": 0,
+                            "walk-in": 0,
+                            "calendar": 0,
+                            "amal-network": 0,
+                            "unknown": 0
+                          }
+                        },
+                        {
+                          "weekday": 5,
+                          "noShow": {
+                            "numerator": 0,
+                            "denominator": 0,
+                            "ratio": null,
+                            "percent": null
+                          },
+                          "bookingsBySource": {
+                            "phone": 0,
+                            "walk-in": 0,
+                            "calendar": 0,
+                            "amal-network": 0,
+                            "unknown": 0
+                          }
+                        },
+                        {
+                          "weekday": 6,
+                          "noShow": {
+                            "numerator": 0,
+                            "denominator": 0,
+                            "ratio": null,
+                            "percent": null
+                          },
+                          "bookingsBySource": {
+                            "phone": 0,
+                            "walk-in": 0,
+                            "calendar": 0,
+                            "amal-network": 0,
+                            "unknown": 0
+                          }
+                        }
+                      ],
+                      "definitions": {
+                        "collisions": "Distinct unordered exact-start pairs across all statuses; not enforcement overlaps.",
+                        "clinicAttribution": "Pairs touch either clinic; clinic totals are not additive.",
+                        "noShow": "no_show / all appointments; ratio and percent null for empty denominators.",
+                        "sources": "Normalize phone, walk-in, calendar and amal-network aliases; all others unknown.",
+                        "weekday": "Asia/Hebron weekday, Sunday=0 through Saturday=6."
+                      }
+                    },
+                    "telemetry": {
+                      "conflicts": {
+                        "daily": [
+                          {
+                            "date": "2026-09-09",
+                            "blocked": 0,
+                            "warnings": 0,
+                            "overrides": 0,
+                            "cumulativeBlocked": 0,
+                            "cumulativeWarnings": 0,
+                            "cumulativeOverrides": 0
+                          }
+                        ],
+                        "cumulative": {
+                          "blocked": 0,
+                          "warnings": 0,
+                          "overrides": 0
+                        },
+                        "coverage": "Synthetic covered commit sample; actual warning coverage is limited to durable blocked warning evidence and approved overrides, excluding previews."
+                      },
+                      "lookupTime": {
+                        "available": false,
+                        "reason": "LOOKUP_DURATION_PRODUCER_UNAVAILABLE",
+                        "medianSeconds": null,
+                        "sampleCount": null,
+                        "measurementBoundaries": "No durable logical lookup duration samples exist."
+                      },
+                      "networkActivity": {
+                        "available": false,
+                        "reason": "LOGICAL_NETWORK_LOOKUP_PRODUCER_UNAVAILABLE",
+                        "daily": null
+                      },
+                      "downtime": {
+                        "receivedCreates": 0,
+                        "synced": 0,
+                        "conflicted": 0,
+                        "rejected": 0,
+                        "pending": 0,
+                        "queued": {
+                          "available": false,
+                          "reason": "CLIENT_QUEUE_NOT_OBSERVED",
+                          "value": null
+                        },
+                        "lost": {
+                          "available": false,
+                          "reason": "CLIENT_LOSS_NOT_OBSERVED",
+                          "value": null
+                        },
+                        "coverage": "Synthetic empty server-received create receipts. Unknown client-side queued/lost work is not observed."
+                      }
+                    }
+                  },
+                  "adoption": {
+                    "clinics": [],
+                    "counts": {
+                      "trial": null,
+                      "lite": 0,
+                      "full": 0
+                    },
+                    "history": {
+                      "available": false,
+                      "reason": "ADOPTION_TRANSITION_HISTORY_UNAVAILABLE"
+                    },
+                    "coverage": "Synthetic empty current-state example only. Trial/history unavailable; joinedAt does not establish a transition."
+                  }
                 }
               }
             }

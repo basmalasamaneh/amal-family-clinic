@@ -1742,11 +1742,18 @@ export const CommitImportResponse = zod.object({
 
 
 /**
- * Contract-only domain service; mock responses are simulated. Clinic scope comes from authenticated identity, not submitted identifiers. Admin has no implicit clinical access. Network visibility requires active consent and excludes Lite clinics. Mutations require CSRF; clientOpId is replay-safe per clinic, with changed payload returning 409.
- * @summary get kpis
+ * Implemented administrator-only aggregate endpoint. range is required; date defaults to today's Asia/Hebron date and must be a valid local date from 2000-01-01 through 2100-12-31. day is one local day; week is Monday through next Monday; month is the local calendar month. All UTC end instants are exclusive. Optional clinicId is a positive int32; no doctor filter/grouping/ranking. Fixed before window is 2026-09-08 through 2026-09-13 local dates, queried from untouched seeds; selected operational after exposure remains separate. Conflicts are exact-start all-status unordered pairs, not interval enforcement. Warnings/overrides and partial durable telemetry coverage are explicit; unavailable instrumentation/loss evidence is null with stable reasons, not fabricated zero. Current adoption is not historical. The response example is synthetic and does not state production baseline values.
+ * @summary Get reproducible baseline and operational KPI aggregates
  */
+export const getKpisQueryDateRegExp = new RegExp('^(?:20\\d{2}|2100)-\\d{2}-\\d{2}$');
+export const getKpisQueryClinicIdMax = 2147483647;
+
+
+
 export const GetKpisQueryParams = zod.object({
-  "range": zod.enum(['day', 'week', 'month'])
+  "range": zod.enum(['day', 'week', 'month']).describe('Local-calendar window containing date: day, Monday-start week, or calendar month.'),
+  "date": zod.coerce.string().regex(getKpisQueryDateRegExp).optional().describe('Optional Asia/Hebron anchor date, 2000-01-01 through 2100-12-31 inclusive. Defaults to today.'),
+  "clinicId": zod.coerce.number().int().min(1).max(getKpisQueryClinicIdMax).optional().describe('Optional clinic scope; omit for network. Cross-clinic collision pairs touching this clinic remain included.')
 }).strict()
 
 export const getKpisResponseAppointmentsMin = 0;
@@ -1758,14 +1765,449 @@ export const getKpisResponseNoShowRateMax = 1;
 
 
 
+
+export const getKpisResponseBeforeMetricsTotalAppointmentsMin = 0;
+
+export const getKpisResponseBeforeMetricsCompletedMin = 0;
+
+export const getKpisResponseBeforeMetricsCollisionsSameDoctorSameStartPairsMin = 0;
+
+export const getKpisResponseBeforeMetricsCollisionsSamePatientSameStartCrossClinicPairsMin = 0;
+
+export const getKpisResponseBeforeMetricsNoShowNumeratorMin = 0;
+
+export const getKpisResponseBeforeMetricsNoShowDenominatorMin = 0;
+
+export const getKpisResponseBeforeMetricsNoShowRatioMin = 0;
+export const getKpisResponseBeforeMetricsNoShowRatioMax = 1;
+
+export const getKpisResponseBeforeMetricsNoShowPercentMin = 0;
+export const getKpisResponseBeforeMetricsNoShowPercentMax = 100;
+
+export const getKpisResponseBeforeMetricsBookingsBySourcePhoneMin = 0;
+
+export const getKpisResponseBeforeMetricsBookingsBySourceWalkInMin = 0;
+
+export const getKpisResponseBeforeMetricsBookingsBySourceCalendarMin = 0;
+
+export const getKpisResponseBeforeMetricsBookingsBySourceAmalNetworkMin = 0;
+
+export const getKpisResponseBeforeMetricsBookingsBySourceUnknownMin = 0;
+
+
+export const getKpisResponseBeforeMetricsClinicsItemTotalAppointmentsMin = 0;
+
+export const getKpisResponseBeforeMetricsClinicsItemCompletedMin = 0;
+
+export const getKpisResponseBeforeMetricsClinicsItemCollisionsSameDoctorSameStartPairsMin = 0;
+
+export const getKpisResponseBeforeMetricsClinicsItemCollisionsSamePatientSameStartCrossClinicPairsMin = 0;
+
+export const getKpisResponseBeforeMetricsClinicsItemNoShowNumeratorMin = 0;
+
+export const getKpisResponseBeforeMetricsClinicsItemNoShowDenominatorMin = 0;
+
+export const getKpisResponseBeforeMetricsClinicsItemNoShowRatioMin = 0;
+export const getKpisResponseBeforeMetricsClinicsItemNoShowRatioMax = 1;
+
+export const getKpisResponseBeforeMetricsClinicsItemNoShowPercentMin = 0;
+export const getKpisResponseBeforeMetricsClinicsItemNoShowPercentMax = 100;
+
+export const getKpisResponseBeforeMetricsClinicsItemBookingsBySourcePhoneMin = 0;
+
+export const getKpisResponseBeforeMetricsClinicsItemBookingsBySourceWalkInMin = 0;
+
+export const getKpisResponseBeforeMetricsClinicsItemBookingsBySourceCalendarMin = 0;
+
+export const getKpisResponseBeforeMetricsClinicsItemBookingsBySourceAmalNetworkMin = 0;
+
+export const getKpisResponseBeforeMetricsClinicsItemBookingsBySourceUnknownMin = 0;
+
+export const getKpisResponseBeforeMetricsWeekdaysItemWeekdayMin = 0;
+export const getKpisResponseBeforeMetricsWeekdaysItemWeekdayMax = 6;
+
+export const getKpisResponseBeforeMetricsWeekdaysItemNoShowNumeratorMin = 0;
+
+export const getKpisResponseBeforeMetricsWeekdaysItemNoShowDenominatorMin = 0;
+
+export const getKpisResponseBeforeMetricsWeekdaysItemNoShowRatioMin = 0;
+export const getKpisResponseBeforeMetricsWeekdaysItemNoShowRatioMax = 1;
+
+export const getKpisResponseBeforeMetricsWeekdaysItemNoShowPercentMin = 0;
+export const getKpisResponseBeforeMetricsWeekdaysItemNoShowPercentMax = 100;
+
+export const getKpisResponseBeforeMetricsWeekdaysItemBookingsBySourcePhoneMin = 0;
+
+export const getKpisResponseBeforeMetricsWeekdaysItemBookingsBySourceWalkInMin = 0;
+
+export const getKpisResponseBeforeMetricsWeekdaysItemBookingsBySourceCalendarMin = 0;
+
+export const getKpisResponseBeforeMetricsWeekdaysItemBookingsBySourceAmalNetworkMin = 0;
+
+export const getKpisResponseBeforeMetricsWeekdaysItemBookingsBySourceUnknownMin = 0;
+
+export const getKpisResponseBeforeMetricsWeekdaysMin = 7;
+export const getKpisResponseBeforeMetricsWeekdaysMax = 7;
+
+
+export const getKpisResponseAfterMetricsTotalAppointmentsMin = 0;
+
+export const getKpisResponseAfterMetricsCompletedMin = 0;
+
+export const getKpisResponseAfterMetricsCollisionsSameDoctorSameStartPairsMin = 0;
+
+export const getKpisResponseAfterMetricsCollisionsSamePatientSameStartCrossClinicPairsMin = 0;
+
+export const getKpisResponseAfterMetricsNoShowNumeratorMin = 0;
+
+export const getKpisResponseAfterMetricsNoShowDenominatorMin = 0;
+
+export const getKpisResponseAfterMetricsNoShowRatioMin = 0;
+export const getKpisResponseAfterMetricsNoShowRatioMax = 1;
+
+export const getKpisResponseAfterMetricsNoShowPercentMin = 0;
+export const getKpisResponseAfterMetricsNoShowPercentMax = 100;
+
+export const getKpisResponseAfterMetricsBookingsBySourcePhoneMin = 0;
+
+export const getKpisResponseAfterMetricsBookingsBySourceWalkInMin = 0;
+
+export const getKpisResponseAfterMetricsBookingsBySourceCalendarMin = 0;
+
+export const getKpisResponseAfterMetricsBookingsBySourceAmalNetworkMin = 0;
+
+export const getKpisResponseAfterMetricsBookingsBySourceUnknownMin = 0;
+
+
+export const getKpisResponseAfterMetricsClinicsItemTotalAppointmentsMin = 0;
+
+export const getKpisResponseAfterMetricsClinicsItemCompletedMin = 0;
+
+export const getKpisResponseAfterMetricsClinicsItemCollisionsSameDoctorSameStartPairsMin = 0;
+
+export const getKpisResponseAfterMetricsClinicsItemCollisionsSamePatientSameStartCrossClinicPairsMin = 0;
+
+export const getKpisResponseAfterMetricsClinicsItemNoShowNumeratorMin = 0;
+
+export const getKpisResponseAfterMetricsClinicsItemNoShowDenominatorMin = 0;
+
+export const getKpisResponseAfterMetricsClinicsItemNoShowRatioMin = 0;
+export const getKpisResponseAfterMetricsClinicsItemNoShowRatioMax = 1;
+
+export const getKpisResponseAfterMetricsClinicsItemNoShowPercentMin = 0;
+export const getKpisResponseAfterMetricsClinicsItemNoShowPercentMax = 100;
+
+export const getKpisResponseAfterMetricsClinicsItemBookingsBySourcePhoneMin = 0;
+
+export const getKpisResponseAfterMetricsClinicsItemBookingsBySourceWalkInMin = 0;
+
+export const getKpisResponseAfterMetricsClinicsItemBookingsBySourceCalendarMin = 0;
+
+export const getKpisResponseAfterMetricsClinicsItemBookingsBySourceAmalNetworkMin = 0;
+
+export const getKpisResponseAfterMetricsClinicsItemBookingsBySourceUnknownMin = 0;
+
+export const getKpisResponseAfterMetricsWeekdaysItemWeekdayMin = 0;
+export const getKpisResponseAfterMetricsWeekdaysItemWeekdayMax = 6;
+
+export const getKpisResponseAfterMetricsWeekdaysItemNoShowNumeratorMin = 0;
+
+export const getKpisResponseAfterMetricsWeekdaysItemNoShowDenominatorMin = 0;
+
+export const getKpisResponseAfterMetricsWeekdaysItemNoShowRatioMin = 0;
+export const getKpisResponseAfterMetricsWeekdaysItemNoShowRatioMax = 1;
+
+export const getKpisResponseAfterMetricsWeekdaysItemNoShowPercentMin = 0;
+export const getKpisResponseAfterMetricsWeekdaysItemNoShowPercentMax = 100;
+
+export const getKpisResponseAfterMetricsWeekdaysItemBookingsBySourcePhoneMin = 0;
+
+export const getKpisResponseAfterMetricsWeekdaysItemBookingsBySourceWalkInMin = 0;
+
+export const getKpisResponseAfterMetricsWeekdaysItemBookingsBySourceCalendarMin = 0;
+
+export const getKpisResponseAfterMetricsWeekdaysItemBookingsBySourceAmalNetworkMin = 0;
+
+export const getKpisResponseAfterMetricsWeekdaysItemBookingsBySourceUnknownMin = 0;
+
+export const getKpisResponseAfterMetricsWeekdaysMin = 7;
+export const getKpisResponseAfterMetricsWeekdaysMax = 7;
+
+export const getKpisResponseAfterTelemetryConflictsDailyItemBlockedMin = 0;
+
+export const getKpisResponseAfterTelemetryConflictsDailyItemWarningsMin = 0;
+
+export const getKpisResponseAfterTelemetryConflictsDailyItemOverridesMin = 0;
+
+export const getKpisResponseAfterTelemetryConflictsDailyItemCumulativeBlockedMin = 0;
+
+export const getKpisResponseAfterTelemetryConflictsDailyItemCumulativeWarningsMin = 0;
+
+export const getKpisResponseAfterTelemetryConflictsDailyItemCumulativeOverridesMin = 0;
+
+export const getKpisResponseAfterTelemetryConflictsCumulativeBlockedMin = 0;
+
+export const getKpisResponseAfterTelemetryConflictsCumulativeWarningsMin = 0;
+
+export const getKpisResponseAfterTelemetryConflictsCumulativeOverridesMin = 0;
+
+export const getKpisResponseAfterTelemetryDowntimeReceivedCreatesMin = 0;
+
+export const getKpisResponseAfterTelemetryDowntimeSyncedMin = 0;
+
+export const getKpisResponseAfterTelemetryDowntimeConflictedMin = 0;
+
+export const getKpisResponseAfterTelemetryDowntimeRejectedMin = 0;
+
+export const getKpisResponseAfterTelemetryDowntimePendingMin = 0;
+
+
+export const getKpisResponseAdoptionCountsLiteMin = 0;
+
+export const getKpisResponseAdoptionCountsFullMin = 0;
+
+
+
 export const GetKpisResponse = zod.object({
   "range": zod.enum(['day', 'week', 'month']),
   "appointments": zod.number().int().min(getKpisResponseAppointmentsMin),
   "completed": zod.number().int().min(getKpisResponseCompletedMin),
-  "noShowRate": zod.number().min(getKpisResponseNoShowRateMin).max(getKpisResponseNoShowRateMax),
-  "periodStart": zod.coerce.date(),
-  "periodEnd": zod.coerce.date()
+  "noShowRate": zod.number().min(getKpisResponseNoShowRateMin).max(getKpisResponseNoShowRateMax).nullable(),
+  "periodStart": zod.coerce.date().describe('UTC ISO 8601 instant.'),
+  "periodEnd": zod.coerce.date().describe('UTC ISO 8601 instant.'),
+  "calculationVersion": zod.string().min(1),
+  "generatedAt": zod.coerce.date().describe('UTC ISO 8601 instant.'),
+  "scope": zod.object({
+  "clinicId": zod.number().int().min(1).nullable()
+}).strict().describe('Null means network scope; a positive clinic ID restricts the authorized administrator\'s aggregate view.'),
+  "comparison": zod.object({
+  "equalExposure": zod.boolean(),
+  "note": zod.string()
+}).strict().describe('Explicitly discloses whether exposure days match. Equal exposure does not imply identical dates or causal comparability.'),
+  "before": zod.object({
+  "period": zod.object({
+  "startDate": zod.coerce.date(),
+  "endDateExclusive": zod.coerce.date(),
+  "start": zod.coerce.date().describe('UTC ISO 8601 instant.'),
+  "end": zod.coerce.date().describe('UTC ISO 8601 instant.'),
+  "days": zod.number().int().min(1),
+  "timezone": zod.literal("Asia/Hebron")
+}).strict().describe('Half-open local-calendar exposure. UTC instants are converted from Asia/Hebron midnights; local calendar days need not be 24 hours at DST.'),
+  "provenance": zod.string(),
+  "metrics": zod.object({
+  "totalAppointments": zod.number().int().min(getKpisResponseBeforeMetricsTotalAppointmentsMin),
+  "completed": zod.number().int().min(getKpisResponseBeforeMetricsCompletedMin),
+  "collisions": zod.object({
+  "sameDoctorSameStartPairs": zod.number().int().min(getKpisResponseBeforeMetricsCollisionsSameDoctorSameStartPairsMin),
+  "samePatientSameStartCrossClinicPairs": zod.number().int().min(getKpisResponseBeforeMetricsCollisionsSamePatientSameStartCrossClinicPairsMin)
+}).strict().describe('Distinct unordered exact-start pairs across ALL statuses, not interval-overlap enforcement. A clinic counts every pair touching it, including cross-clinic counterparts; clinic totals are not additive. Network counts each pair once.'),
+  "noShow": zod.object({
+  "numerator": zod.number().int().min(getKpisResponseBeforeMetricsNoShowNumeratorMin),
+  "denominator": zod.number().int().min(getKpisResponseBeforeMetricsNoShowDenominatorMin),
+  "ratio": zod.number().min(getKpisResponseBeforeMetricsNoShowRatioMin).max(getKpisResponseBeforeMetricsNoShowRatioMax).nullable(),
+  "percent": zod.number().min(getKpisResponseBeforeMetricsNoShowPercentMin).max(getKpisResponseBeforeMetricsNoShowPercentMax).nullable()
+}).strict().describe('no_show / all appointments in the scheduled-at window, including cancelled. Ratio is unrounded; percent rounded to one decimal. Both are null for an empty denominator.'),
+  "bookingsBySource": zod.object({
+  "phone": zod.number().int().min(getKpisResponseBeforeMetricsBookingsBySourcePhoneMin),
+  "walk-in": zod.number().int().min(getKpisResponseBeforeMetricsBookingsBySourceWalkInMin),
+  "calendar": zod.number().int().min(getKpisResponseBeforeMetricsBookingsBySourceCalendarMin),
+  "amal-network": zod.number().int().min(getKpisResponseBeforeMetricsBookingsBySourceAmalNetworkMin),
+  "unknown": zod.number().int().min(getKpisResponseBeforeMetricsBookingsBySourceUnknownMin)
+}).strict().describe('All statuses. Lowercase/trim source mapping: phone; walk_in/walk-in/walk in; calendar_app/calendar-app/calendar app/calendar; amal_network/amal-network/amal network. Other values map to unknown without changing source rows.'),
+  "clinics": zod.array(zod.object({
+  "clinicId": zod.number().int().min(1),
+  "clinicName": zod.string(),
+  "totalAppointments": zod.number().int().min(getKpisResponseBeforeMetricsClinicsItemTotalAppointmentsMin),
+  "completed": zod.number().int().min(getKpisResponseBeforeMetricsClinicsItemCompletedMin),
+  "collisions": zod.object({
+  "sameDoctorSameStartPairs": zod.number().int().min(getKpisResponseBeforeMetricsClinicsItemCollisionsSameDoctorSameStartPairsMin),
+  "samePatientSameStartCrossClinicPairs": zod.number().int().min(getKpisResponseBeforeMetricsClinicsItemCollisionsSamePatientSameStartCrossClinicPairsMin)
+}).strict().describe('Distinct unordered exact-start pairs across ALL statuses, not interval-overlap enforcement. A clinic counts every pair touching it, including cross-clinic counterparts; clinic totals are not additive. Network counts each pair once.'),
+  "noShow": zod.object({
+  "numerator": zod.number().int().min(getKpisResponseBeforeMetricsClinicsItemNoShowNumeratorMin),
+  "denominator": zod.number().int().min(getKpisResponseBeforeMetricsClinicsItemNoShowDenominatorMin),
+  "ratio": zod.number().min(getKpisResponseBeforeMetricsClinicsItemNoShowRatioMin).max(getKpisResponseBeforeMetricsClinicsItemNoShowRatioMax).nullable(),
+  "percent": zod.number().min(getKpisResponseBeforeMetricsClinicsItemNoShowPercentMin).max(getKpisResponseBeforeMetricsClinicsItemNoShowPercentMax).nullable()
+}).strict().describe('no_show / all appointments in the scheduled-at window, including cancelled. Ratio is unrounded; percent rounded to one decimal. Both are null for an empty denominator.'),
+  "bookingsBySource": zod.object({
+  "phone": zod.number().int().min(getKpisResponseBeforeMetricsClinicsItemBookingsBySourcePhoneMin),
+  "walk-in": zod.number().int().min(getKpisResponseBeforeMetricsClinicsItemBookingsBySourceWalkInMin),
+  "calendar": zod.number().int().min(getKpisResponseBeforeMetricsClinicsItemBookingsBySourceCalendarMin),
+  "amal-network": zod.number().int().min(getKpisResponseBeforeMetricsClinicsItemBookingsBySourceAmalNetworkMin),
+  "unknown": zod.number().int().min(getKpisResponseBeforeMetricsClinicsItemBookingsBySourceUnknownMin)
+}).strict().describe('All statuses. Lowercase/trim source mapping: phone; walk_in/walk-in/walk in; calendar_app/calendar-app/calendar app/calendar; amal_network/amal-network/amal network. Other values map to unknown without changing source rows.')
+}).strict()),
+  "weekdays": zod.array(zod.object({
+  "weekday": zod.number().int().min(getKpisResponseBeforeMetricsWeekdaysItemWeekdayMin).max(getKpisResponseBeforeMetricsWeekdaysItemWeekdayMax),
+  "noShow": zod.object({
+  "numerator": zod.number().int().min(getKpisResponseBeforeMetricsWeekdaysItemNoShowNumeratorMin),
+  "denominator": zod.number().int().min(getKpisResponseBeforeMetricsWeekdaysItemNoShowDenominatorMin),
+  "ratio": zod.number().min(getKpisResponseBeforeMetricsWeekdaysItemNoShowRatioMin).max(getKpisResponseBeforeMetricsWeekdaysItemNoShowRatioMax).nullable(),
+  "percent": zod.number().min(getKpisResponseBeforeMetricsWeekdaysItemNoShowPercentMin).max(getKpisResponseBeforeMetricsWeekdaysItemNoShowPercentMax).nullable()
+}).strict().describe('no_show / all appointments in the scheduled-at window, including cancelled. Ratio is unrounded; percent rounded to one decimal. Both are null for an empty denominator.'),
+  "bookingsBySource": zod.object({
+  "phone": zod.number().int().min(getKpisResponseBeforeMetricsWeekdaysItemBookingsBySourcePhoneMin),
+  "walk-in": zod.number().int().min(getKpisResponseBeforeMetricsWeekdaysItemBookingsBySourceWalkInMin),
+  "calendar": zod.number().int().min(getKpisResponseBeforeMetricsWeekdaysItemBookingsBySourceCalendarMin),
+  "amal-network": zod.number().int().min(getKpisResponseBeforeMetricsWeekdaysItemBookingsBySourceAmalNetworkMin),
+  "unknown": zod.number().int().min(getKpisResponseBeforeMetricsWeekdaysItemBookingsBySourceUnknownMin)
+}).strict().describe('All statuses. Lowercase/trim source mapping: phone; walk_in/walk-in/walk in; calendar_app/calendar-app/calendar app/calendar; amal_network/amal-network/amal network. Other values map to unknown without changing source rows.')
+}).strict().describe('Asia/Hebron weekday: 0 Sunday through 6 Saturday. Empty weekdays retain null rates.')).min(getKpisResponseBeforeMetricsWeekdaysMin).max(getKpisResponseBeforeMetricsWeekdaysMax),
+  "definitions": zod.object({
+  "collisions": zod.string(),
+  "clinicAttribution": zod.string(),
+  "noShow": zod.string(),
+  "sources": zod.string(),
+  "weekday": zod.string()
 }).strict()
+}).strict().describe('Privacy-safe aggregates only: no doctor/patient/event identity, individual records, ranking or grouping. Counts use the explicit source window; fixed before exposure is never redefined by the requested after range.')
+}).strict().describe('Immutable public seed queries over original 2026-09-08 through 2026-09-13 local dates. Never operational rows or constants.'),
+  "after": zod.object({
+  "period": zod.object({
+  "startDate": zod.coerce.date(),
+  "endDateExclusive": zod.coerce.date(),
+  "start": zod.coerce.date().describe('UTC ISO 8601 instant.'),
+  "end": zod.coerce.date().describe('UTC ISO 8601 instant.'),
+  "days": zod.number().int().min(1),
+  "timezone": zod.literal("Asia/Hebron")
+}).strict().describe('Half-open local-calendar exposure. UTC instants are converted from Asia/Hebron midnights; local calendar days need not be 24 hours at DST.'),
+  "provenance": zod.string(),
+  "metrics": zod.object({
+  "totalAppointments": zod.number().int().min(getKpisResponseAfterMetricsTotalAppointmentsMin),
+  "completed": zod.number().int().min(getKpisResponseAfterMetricsCompletedMin),
+  "collisions": zod.object({
+  "sameDoctorSameStartPairs": zod.number().int().min(getKpisResponseAfterMetricsCollisionsSameDoctorSameStartPairsMin),
+  "samePatientSameStartCrossClinicPairs": zod.number().int().min(getKpisResponseAfterMetricsCollisionsSamePatientSameStartCrossClinicPairsMin)
+}).strict().describe('Distinct unordered exact-start pairs across ALL statuses, not interval-overlap enforcement. A clinic counts every pair touching it, including cross-clinic counterparts; clinic totals are not additive. Network counts each pair once.'),
+  "noShow": zod.object({
+  "numerator": zod.number().int().min(getKpisResponseAfterMetricsNoShowNumeratorMin),
+  "denominator": zod.number().int().min(getKpisResponseAfterMetricsNoShowDenominatorMin),
+  "ratio": zod.number().min(getKpisResponseAfterMetricsNoShowRatioMin).max(getKpisResponseAfterMetricsNoShowRatioMax).nullable(),
+  "percent": zod.number().min(getKpisResponseAfterMetricsNoShowPercentMin).max(getKpisResponseAfterMetricsNoShowPercentMax).nullable()
+}).strict().describe('no_show / all appointments in the scheduled-at window, including cancelled. Ratio is unrounded; percent rounded to one decimal. Both are null for an empty denominator.'),
+  "bookingsBySource": zod.object({
+  "phone": zod.number().int().min(getKpisResponseAfterMetricsBookingsBySourcePhoneMin),
+  "walk-in": zod.number().int().min(getKpisResponseAfterMetricsBookingsBySourceWalkInMin),
+  "calendar": zod.number().int().min(getKpisResponseAfterMetricsBookingsBySourceCalendarMin),
+  "amal-network": zod.number().int().min(getKpisResponseAfterMetricsBookingsBySourceAmalNetworkMin),
+  "unknown": zod.number().int().min(getKpisResponseAfterMetricsBookingsBySourceUnknownMin)
+}).strict().describe('All statuses. Lowercase/trim source mapping: phone; walk_in/walk-in/walk in; calendar_app/calendar-app/calendar app/calendar; amal_network/amal-network/amal network. Other values map to unknown without changing source rows.'),
+  "clinics": zod.array(zod.object({
+  "clinicId": zod.number().int().min(1),
+  "clinicName": zod.string(),
+  "totalAppointments": zod.number().int().min(getKpisResponseAfterMetricsClinicsItemTotalAppointmentsMin),
+  "completed": zod.number().int().min(getKpisResponseAfterMetricsClinicsItemCompletedMin),
+  "collisions": zod.object({
+  "sameDoctorSameStartPairs": zod.number().int().min(getKpisResponseAfterMetricsClinicsItemCollisionsSameDoctorSameStartPairsMin),
+  "samePatientSameStartCrossClinicPairs": zod.number().int().min(getKpisResponseAfterMetricsClinicsItemCollisionsSamePatientSameStartCrossClinicPairsMin)
+}).strict().describe('Distinct unordered exact-start pairs across ALL statuses, not interval-overlap enforcement. A clinic counts every pair touching it, including cross-clinic counterparts; clinic totals are not additive. Network counts each pair once.'),
+  "noShow": zod.object({
+  "numerator": zod.number().int().min(getKpisResponseAfterMetricsClinicsItemNoShowNumeratorMin),
+  "denominator": zod.number().int().min(getKpisResponseAfterMetricsClinicsItemNoShowDenominatorMin),
+  "ratio": zod.number().min(getKpisResponseAfterMetricsClinicsItemNoShowRatioMin).max(getKpisResponseAfterMetricsClinicsItemNoShowRatioMax).nullable(),
+  "percent": zod.number().min(getKpisResponseAfterMetricsClinicsItemNoShowPercentMin).max(getKpisResponseAfterMetricsClinicsItemNoShowPercentMax).nullable()
+}).strict().describe('no_show / all appointments in the scheduled-at window, including cancelled. Ratio is unrounded; percent rounded to one decimal. Both are null for an empty denominator.'),
+  "bookingsBySource": zod.object({
+  "phone": zod.number().int().min(getKpisResponseAfterMetricsClinicsItemBookingsBySourcePhoneMin),
+  "walk-in": zod.number().int().min(getKpisResponseAfterMetricsClinicsItemBookingsBySourceWalkInMin),
+  "calendar": zod.number().int().min(getKpisResponseAfterMetricsClinicsItemBookingsBySourceCalendarMin),
+  "amal-network": zod.number().int().min(getKpisResponseAfterMetricsClinicsItemBookingsBySourceAmalNetworkMin),
+  "unknown": zod.number().int().min(getKpisResponseAfterMetricsClinicsItemBookingsBySourceUnknownMin)
+}).strict().describe('All statuses. Lowercase/trim source mapping: phone; walk_in/walk-in/walk in; calendar_app/calendar-app/calendar app/calendar; amal_network/amal-network/amal network. Other values map to unknown without changing source rows.')
+}).strict()),
+  "weekdays": zod.array(zod.object({
+  "weekday": zod.number().int().min(getKpisResponseAfterMetricsWeekdaysItemWeekdayMin).max(getKpisResponseAfterMetricsWeekdaysItemWeekdayMax),
+  "noShow": zod.object({
+  "numerator": zod.number().int().min(getKpisResponseAfterMetricsWeekdaysItemNoShowNumeratorMin),
+  "denominator": zod.number().int().min(getKpisResponseAfterMetricsWeekdaysItemNoShowDenominatorMin),
+  "ratio": zod.number().min(getKpisResponseAfterMetricsWeekdaysItemNoShowRatioMin).max(getKpisResponseAfterMetricsWeekdaysItemNoShowRatioMax).nullable(),
+  "percent": zod.number().min(getKpisResponseAfterMetricsWeekdaysItemNoShowPercentMin).max(getKpisResponseAfterMetricsWeekdaysItemNoShowPercentMax).nullable()
+}).strict().describe('no_show / all appointments in the scheduled-at window, including cancelled. Ratio is unrounded; percent rounded to one decimal. Both are null for an empty denominator.'),
+  "bookingsBySource": zod.object({
+  "phone": zod.number().int().min(getKpisResponseAfterMetricsWeekdaysItemBookingsBySourcePhoneMin),
+  "walk-in": zod.number().int().min(getKpisResponseAfterMetricsWeekdaysItemBookingsBySourceWalkInMin),
+  "calendar": zod.number().int().min(getKpisResponseAfterMetricsWeekdaysItemBookingsBySourceCalendarMin),
+  "amal-network": zod.number().int().min(getKpisResponseAfterMetricsWeekdaysItemBookingsBySourceAmalNetworkMin),
+  "unknown": zod.number().int().min(getKpisResponseAfterMetricsWeekdaysItemBookingsBySourceUnknownMin)
+}).strict().describe('All statuses. Lowercase/trim source mapping: phone; walk_in/walk-in/walk in; calendar_app/calendar-app/calendar app/calendar; amal_network/amal-network/amal network. Other values map to unknown without changing source rows.')
+}).strict().describe('Asia/Hebron weekday: 0 Sunday through 6 Saturday. Empty weekdays retain null rates.')).min(getKpisResponseAfterMetricsWeekdaysMin).max(getKpisResponseAfterMetricsWeekdaysMax),
+  "definitions": zod.object({
+  "collisions": zod.string(),
+  "clinicAttribution": zod.string(),
+  "noShow": zod.string(),
+  "sources": zod.string(),
+  "weekday": zod.string()
+}).strict()
+}).strict().describe('Privacy-safe aggregates only: no doctor/patient/event identity, individual records, ranking or grouping. Counts use the explicit source window; fixed before exposure is never redefined by the requested after range.'),
+  "telemetry": zod.object({
+  "conflicts": zod.object({
+  "daily": zod.array(zod.object({
+  "date": zod.coerce.date(),
+  "blocked": zod.number().int().min(getKpisResponseAfterTelemetryConflictsDailyItemBlockedMin),
+  "warnings": zod.number().int().min(getKpisResponseAfterTelemetryConflictsDailyItemWarningsMin),
+  "overrides": zod.number().int().min(getKpisResponseAfterTelemetryConflictsDailyItemOverridesMin),
+  "cumulativeBlocked": zod.number().int().min(getKpisResponseAfterTelemetryConflictsDailyItemCumulativeBlockedMin),
+  "cumulativeWarnings": zod.number().int().min(getKpisResponseAfterTelemetryConflictsDailyItemCumulativeWarningsMin),
+  "cumulativeOverrides": zod.number().int().min(getKpisResponseAfterTelemetryConflictsDailyItemCumulativeOverridesMin)
+}).strict().describe('Asia/Hebron date. Cumulative series restart at the selected window. Warnings can accompany blocked commits; approved overrides are never blocked.')),
+  "cumulative": zod.object({
+  "blocked": zod.number().int().min(getKpisResponseAfterTelemetryConflictsCumulativeBlockedMin),
+  "warnings": zod.number().int().min(getKpisResponseAfterTelemetryConflictsCumulativeWarningsMin),
+  "overrides": zod.number().int().min(getKpisResponseAfterTelemetryConflictsCumulativeOverridesMin)
+}).strict(),
+  "coverage": zod.string()
+}).strict().describe('Durable APPOINTMENT_CONFLICT commit attempts deduplicated by logical clientOpId. Includes failed resolution wrappers whose nested failures were rolled back; successful wrappers are not extra attempts. Excludes repeated previews and version/hold/validation failures. Warning coverage is partial: blocked direct/sync warning evidence and approved patient-overlap override audit evidence only. No claim that an overridden warning prevented a booking.'),
+  "lookupTime": zod.object({
+  "available": zod.literal(false),
+  "reason": zod.literal("LOOKUP_DURATION_PRODUCER_UNAVAILABLE"),
+  "medianSeconds": zod.null(),
+  "sampleCount": zod.null(),
+  "measurementBoundaries": zod.string()
+}).strict().describe('No durable duration producer exists. No response-count proxy, invented sample count, or average of daily medians. A future instrumented contract must calculate the range median from actual duration samples with defined logical measurement boundaries.'),
+  "networkActivity": zod.object({
+  "available": zod.literal(false),
+  "reason": zod.literal("LOGICAL_NETWORK_LOOKUP_PRODUCER_UNAVAILABLE"),
+  "daily": zod.null()
+}).strict().describe('No durable logical cross-clinic lookup producer exists; per-result/patient/visit/audit-row counts and retries cannot substitute. No doctor grouping.'),
+  "downtime": zod.object({
+  "receivedCreates": zod.number().int().min(getKpisResponseAfterTelemetryDowntimeReceivedCreatesMin),
+  "synced": zod.number().int().min(getKpisResponseAfterTelemetryDowntimeSyncedMin),
+  "conflicted": zod.number().int().min(getKpisResponseAfterTelemetryDowntimeConflictedMin),
+  "rejected": zod.number().int().min(getKpisResponseAfterTelemetryDowntimeRejectedMin),
+  "pending": zod.number().int().min(getKpisResponseAfterTelemetryDowntimePendingMin),
+  "queued": zod.object({
+  "available": zod.literal(false),
+  "reason": zod.literal("CLIENT_QUEUE_NOT_OBSERVED"),
+  "value": zod.null()
+}).strict().describe('Unavailable is not measured zero.'),
+  "lost": zod.object({
+  "available": zod.literal(false),
+  "reason": zod.literal("CLIENT_LOSS_NOT_OBSERVED"),
+  "value": zod.null()
+}).strict().describe('Unavailable is not measured zero.'),
+  "coverage": zod.string()
+}).strict().describe('Unique server-received sync create operations with durable receipts, grouped by original server receipt time, not appointment time. Synced includes applied creates and subsequently resolved conflicts. Conflicted is currently unresolved. Covered receipts have terminal outcomes, so received pending=0. Unknown unreceived client queues/losses are unavailable, not zero; unresolved/rejected is not lost. Not proof of offline origin.')
+}).strict()
+}).strict().describe('Selected operational scheduled-at window; telemetry uses server event/receipt time within the same explicit window.'),
+  "adoption": zod.object({
+  "clinics": zod.array(zod.object({
+  "clinicId": zod.number().int().min(1),
+  "clinicName": zod.string(),
+  "state": zod.enum(['lite', 'full']),
+  "joinedAt": zod.coerce.date().nullable()
+}).strict().describe('Existing operational state and stored date only. joinedAt can be a bootstrap timestamp, not evidence of Trial or of a state transition.')),
+  "counts": zod.object({
+  "trial": zod.null(),
+  "lite": zod.number().int().min(getKpisResponseAdoptionCountsLiteMin),
+  "full": zod.number().int().min(getKpisResponseAdoptionCountsFullMin)
+}).strict().describe('Trial is absent from the upstream state model, so its count is unavailable rather than an invented zero.'),
+  "history": zod.object({
+  "available": zod.literal(false),
+  "reason": zod.literal("ADOPTION_TRANSITION_HISTORY_UNAVAILABLE")
+}).strict(),
+  "coverage": zod.string()
+}).strict().describe('Current clinic adoption, not selected-window history. Does not infer adoption from booking volume or fabricate Trial transitions.')
+}).strict().describe('Administrator-only aggregate evidence. Inherited appointments/completed/noShowRate/periodStart/periodEnd alias the selected after metrics/window. No raw clinical records, identities other than clinic IDs/names, lookup queries, audit actors, or individual events.')
 
 
 /**

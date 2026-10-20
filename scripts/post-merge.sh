@@ -18,3 +18,4 @@ pnpm --filter @workspace/api-server alerts:extract --initialize
 pnpm --filter @workspace/api-server imports:migrate
 pnpm --filter @workspace/api-server merge:migrate
 pnpm --filter @workspace/api-server sync:migrate
+pnpm --filter @workspace/api-server kpis:migrate

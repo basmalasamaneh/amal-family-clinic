@@ -9,6 +9,7 @@ import doctorRouter from "./doctor";
 import patientMergeRouter from "./patient-merge";
 import importsRouter from "./imports";
 import syncRouter from "./sync";
+import kpisRouter from "./kpis";
 
 const router: IRouter = Router();
 
@@ -16,6 +17,7 @@ router.use(healthRouter);
 router.use(authRouter);
 router.use(appointmentsRouter);
 router.use(syncRouter);
+router.use(kpisRouter);
 router.use(consentRouter);
 router.use(doctorRouter);
 router.use(importsRouter);

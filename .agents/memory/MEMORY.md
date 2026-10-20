@@ -23,3 +23,4 @@
 - [Sync ordering and recovery](sync-ordering.md) — conservative device dependencies; feed cursor allocation must remain ordered through commit.
 - [Offline permit clocks](offline-permit-clocks.md) — subsecond skew can block valid issuance; wait and fully reverify, never extend authority.
 - [Guarded Dexie observation](guarded-dexie-observation.md) — liveQuery cannot host the controller’s guarded read-write transactions; observe mutations then read with tickets.
+- [Orval date validation](orval-date-patterns.md) — combining date formats and regex patterns emits invalid ZodDate validators; fix the source contract.

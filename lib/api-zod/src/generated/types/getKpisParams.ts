@@ -8,5 +8,19 @@
 import type { GetKpisRange } from './getKpisRange';
 
 export type GetKpisParams = {
+/**
+ * Local-calendar window containing date: day, Monday-start week, or calendar month.
+ */
 range: GetKpisRange;
+/**
+ * Optional Asia/Hebron anchor date, 2000-01-01 through 2100-12-31 inclusive. Defaults to today.
+ * @pattern ^(?:20\d{2}|2100)-\d{2}-\d{2}$
+ */
+date?: string;
+/**
+ * Optional clinic scope; omit for network. Cross-clinic collision pairs touching this clinic remain included.
+ * @minimum 1
+ * @maximum 2147483647
+ */
+clinicId?: number;
 };
