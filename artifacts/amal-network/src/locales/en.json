@@ -234,16 +234,248 @@
         "desc": "This address does not exist in Amal Network.",
         "back": "Go to my landing screen"
       },
-      "signedOut": {
-        "title": "You are not signed in",
-        "desc": "Sign-in is not available in this version. Retry after signing in through your administrator.",
-        "retry": "Retry"
-      },
       "error": {
         "title": "Could not load your account",
         "desc": "The identity service did not respond. Your previous settings were not applied.",
         "retry": "Retry"
       }
     }
+  },
+  "error": {
+    "unauthorized": "Your session is not valid. Please sign in again.",
+    "forbidden": "This action is not permitted for your account.",
+    "rateLimited": "Too many attempts. Please wait before trying again.",
+    "pinLocked": "This PIN is locked after repeated failed attempts. Wait for the lock to end or ask your clinic administrator.",
+    "reauthRequired": "Please confirm your PIN again to continue.",
+    "csrf": "Your session check failed. Reload the page and sign in again.",
+    "notFound": "The requested item was not found.",
+    "validation": "Some details are not in the expected format. Check them and try again.",
+    "internal": "The server had a problem. Nothing was changed. Try again shortly.",
+    "deviceUntrusted": "This device is not registered for reception sign-in.",
+    "network": "Could not reach Amal Network. Check the connection and try again.",
+    "unknown": "Something went wrong. Try again."
+  },
+  "auth": {
+    "title": "Sign in",
+    "lede": "Use the sign-in method your clinic set up for you.",
+    "expired": "Your session ended. Sign in again to continue where you were.",
+    "brand": {
+      "kicker": "Amal Network",
+      "line": "One patient, many clinics, and a decision that stays with the patient.",
+      "sub": "Reception, doctors and administrators each see only what their role needs."
+    },
+    "mode": {
+      "label": "Sign-in method",
+      "password": "Email and password",
+      "pin": "Reception PIN"
+    },
+    "email": "Email",
+    "password": {
+      "label": "Password",
+      "hint": "For doctors and administrators.",
+      "show": "Show password",
+      "hide": "Hide password"
+    },
+    "pin": {
+      "label": "Four-digit PIN",
+      "hint": "Arabic or Latin digits both work. Leading zeros are kept.",
+      "emailHint": "Each reception colleague signs in with their own email, even on a shared device.",
+      "checking": "Checking this device",
+      "clinicLabel": "Trusted device for",
+      "clinicNote": "Set by your administrator when this device was registered. It cannot be changed here.",
+      "recheck": "Check again",
+      "untrusted": {
+        "title": "This device is not registered for reception",
+        "desc": "PIN sign-in only works on a device your clinic administrator has registered. Doctors and administrators can use email and password instead. Devices cannot be registered from this screen."
+      },
+      "ctxError": {
+        "title": "Could not check this device",
+        "desc": "The device check did not complete. Check the connection and try again."
+      }
+    },
+    "validation": {
+      "email": "Enter a valid email address.",
+      "password": "Enter your password (up to 72 characters).",
+      "pin": "Enter exactly four digits."
+    },
+    "errors": {
+      "unauthorized": {
+        "password": "Email or password is incorrect.",
+        "pin": "Sign-in failed. Check your email and PIN, and that this account belongs to this device's clinic. Repeated failures lock the PIN."
+      },
+      "retryAfter_one": "Try again in about {{count}} minute.",
+      "retryAfter_other": "Try again in about {{count}} minutes."
+    },
+    "submit": "Sign in",
+    "pending": "Signing in",
+    "dataLink": "What we store, who can see it and how to change your mind."
+  },
+  "help": {
+    "label": "Help",
+    "open": "Help and guided tour",
+    "title": "Help",
+    "close": "Close help",
+    "desc": "Short guidance for this workspace.",
+    "replay": "Replay the guided tour",
+    "replayDesc": "A short walk through navigation, your account and this Help menu.",
+    "dataDesc": "How patient data is stored, shared and audited.",
+    "support": "For account or device problems, contact your clinic administrator."
+  },
+  "tour": {
+    "step": "Step {{n}} of {{total}}",
+    "next": "Next",
+    "back": "Back",
+    "skip": "Skip tour",
+    "done": "Finish",
+    "dismiss": "Close tour",
+    "welcome": {
+      "title": "Welcome to Amal Network",
+      "front-desk": "This workspace is set up for reception at your clinic. Many screens are still being built and are marked as placeholders.",
+      "doctor": "This workspace is set up for doctors. Many screens are still being built and are marked as placeholders.",
+      "admin": "This workspace is set up for administrators. Administrative access does not include patients' clinical content."
+    },
+    "nav": {
+      "title": "Your destinations",
+      "front-desk": "Today, the week, bookings, patient lookup, sync and the day sheet live here.",
+      "doctor": "My day, network search, the patient card and privacy settings live here.",
+      "admin": "Clinic operations, users and devices, duplicates, audit and import live here."
+    },
+    "account": {
+      "title": "Account and display",
+      "body": "See who is signed in, change language, theme and digits, and sign out. On a shared device, always sign out when you leave."
+    },
+    "help": {
+      "title": "Help is always here",
+      "body": "Open Help to replay this tour or read how patient data is handled."
+    },
+    "data": {
+      "title": "Your data, your decision",
+      "body": "The data page explains what is stored, who can see it and how patients ask their clinic to change consent. It is public and needs no sign-in."
+    }
+  },
+  "data": {
+    "navLink": "Your data",
+    "title": "Your data, your decision",
+    "eyebrow": "For patients, families and staff",
+    "lede": "Amal Network connects clinics so the next doctor can start informed. Nothing about you is shared between clinics unless you agree, and you can change your mind.",
+    "status": "This page describes how Amal Network is designed to work. Sections marked Planned describe protections that are part of the design but are not yet active in this version.",
+    "planned": "Planned",
+    "toc": "On this page",
+    "backLogin": "Back to sign in",
+    "backApp": "Back to my workspace",
+    "noAnalytics": {
+      "title": "No doctor-performance analytics",
+      "body": "Amal Network does not rank, score or compare doctors. Patient records are never used to measure how a doctor performs."
+    },
+    "stored": {
+      "title": "What is stored",
+      "intro": "Only what a clinic needs to look after you.",
+      "identity": {
+        "t": "Identity and contact",
+        "d": "Name, date of birth and phone number, so reception can find the right record."
+      },
+      "appointments": {
+        "t": "Appointments",
+        "d": "Booked, arrived, completed or cancelled visits at a clinic."
+      },
+      "clinical": {
+        "t": "Clinical notes",
+        "d": "What a doctor writes during a visit, including key alerts such as allergies."
+      },
+      "consent": {
+        "t": "Consent records",
+        "d": "Which sharing level you chose, when, and who gave it if a guardian did."
+      },
+      "account": {
+        "t": "Staff accounts and devices",
+        "d": "Staff sign-in accounts and the reception devices registered to each clinic. No patient logs in."
+      },
+      "audit": {
+        "t": "Access log",
+        "d": "A record of who opened a patient record from another clinic, and when."
+      }
+    },
+    "who": {
+      "title": "Who can see what",
+      "intro": "Each role sees only what it needs. Your own clinic keeps the records it created for you.",
+      "role": "Role",
+      "col": {
+        "identity": "Identity and contact",
+        "visits": "Visits at other clinics",
+        "clinical": "Notes and key alerts"
+      },
+      "row": {
+        "reception": "Reception",
+        "doctorBasic": "Doctor, Basic consent",
+        "doctorClinical": "Doctor, Clinical consent",
+        "admin": "Administrator"
+      },
+      "cell": {
+        "yes": "Yes",
+        "own": "Own clinic",
+        "no": "No"
+      },
+      "n1": "Reception coordinates appointments and never sees visit history or clinical notes.",
+      "n2": "Basic consent shows a doctor the date, clinic and doctor of your other visits. Clinical consent adds notes and key alerts.",
+      "n3": "Administrators manage clinics, users and devices. Administrative access is not clinical access."
+    },
+    "consent": {
+      "title": "Consent levels",
+      "none": {
+        "t": "None",
+        "d": "Nothing is shared with other clinics."
+      },
+      "basic": {
+        "t": "Basic",
+        "d": "Other clinics' doctors can see when and where you were seen."
+      },
+      "clinical": {
+        "t": "Clinical",
+        "d": "Doctors can also see visit notes and key alerts."
+      },
+      "before": {
+        "t": "Nothing before consent.",
+        "d": "Until consent is recorded, no other clinic sees your records."
+      },
+      "guardian": {
+        "t": "Guardians.",
+        "d": "For a child or a person who cannot decide, a guardian gives consent and their name and relationship are recorded."
+      },
+      "lite": {
+        "t": "Lite clinics.",
+        "d": "Clinics using Lite mode keep their own records only and are not part of network sharing."
+      }
+    },
+    "audit": {
+      "title": "Every cross-clinic look is recorded",
+      "body": "When a doctor opens your record from another clinic, the access is designed to be logged with the role, clinic and time, so your clinic can tell you who viewed it."
+    },
+    "choices": {
+      "title": "Changing your mind",
+      "withdraw": {
+        "t": "Withdraw sharing consent",
+        "d": "Stops other clinics from seeing your records from their next request onward.",
+        "btn": "Withdraw online"
+      },
+      "export": {
+        "t": "Get a copy of your data",
+        "d": "Ask your clinic for a copy of the records it holds about you.",
+        "btn": "Download online"
+      },
+      "unavailable": "Not yet available online. Ask at your clinic.",
+      "how": {
+        "t": "How to ask today",
+        "d": "Speak to reception at the clinic you visit, in person or by the phone number you already use for appointments. Staff record your request and the doctor or administrator handles it."
+      },
+      "vsDelete": {
+        "t": "Withdrawal is not deletion.",
+        "d": "Withdrawing consent stops future sharing. It does not remove records your own clinic lawfully keeps about your care."
+      },
+      "effect": {
+        "t": "When it takes effect.",
+        "d": "Once a withdrawal is recorded, the design is that the next lookup from another clinic no longer shows your information."
+      }
+    },
+    "foot": "This page explains the design of Amal Network in plain language. It is not a legal statement."
   }
 }

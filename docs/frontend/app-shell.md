@@ -4,11 +4,11 @@
 
 The completed UI foundation remains in `@workspace/amal-ui` and `/ui-kit`.
 The shell uses the P1-02 generated `getMe`, `listClinics` and `logout` clients.
-No authentication screens, database changes or clinical workflows are implemented.
+Authentication screens, the public data disclosure, and role tours are now supplied by the login integration. Clinical workflows remain unimplemented.
 All 18 destinations in master-plan Section 11 are placeholders; their route table
 is the single source for navigation and direct-entry guards.
 
-- Normal `/` loads the real session. A 401 shows a localized session-required screen.
+- Normal `/` loads the real session. A 401 routes to the localized real-API login screen.
   Other identity failures show an explicit retry state; unknown roles deny access.
 - Clinic listing is presently a contract without a registered live handler. The
   shell preserves identity and displays clinic-unavailable/retry, never a fake clinic.

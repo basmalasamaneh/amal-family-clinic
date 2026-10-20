@@ -3,10 +3,12 @@ import { useTranslation } from 'react-i18next';
 import { Link, Redirect, useLocation } from 'wouter';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import * as Dialog from '@radix-ui/react-dialog';
-import { CircleUserRound, FlaskConical, LogOut, MoreHorizontal, RotateCw, Search, WifiOff, X } from 'lucide-react';
+import { BookOpenText, CircleHelp, CircleUserRound, PlayCircle, ShieldCheck, FlaskConical, LogOut, MoreHorizontal, RotateCw, Search, WifiOff, X } from 'lucide-react';
 import { AmalLogo, AmalMark, Button, EmptyState, LanguageSwitch, Segmented, ThemeSwitch, useAmalPreferences } from '@workspace/amal-ui';
 import { formatInstant, formatNumber } from './formatting';
 import { demoPath, type ShellClinic, type ShellIdentity } from './identity';
+import { TourOverlay } from '@/tour/TourOverlay';
+import { useTour } from '@/tour/use-tour';
 import { isKnownRole, landingFor, resolve, routesFor, type Resolution, type ShellRoute } from './routes';
 
 const BOTTOM_SLOTS = 4;
@@ -27,6 +29,7 @@ export function AppShell({ identity, fixture, onRefresh, onLogout }: Props) {
   }, [clinics, clinicId]);
   const clinic = clinics.find((c) => c.id === clinicId) ?? null;
 
+  const tour = useTour(identity.id, role);
   const title = titleFor(res, t);
   const [announce, setAnnounce] = useState('');
   const first = useRef(true);
@@ -45,7 +48,7 @@ export function AppShell({ identity, fixture, onRefresh, onLogout }: Props) {
       <a href="#main" className="shell-skip" data-testid="link-skip">{t('shell.skip')}</a>
       <div className="shell-sr" role="status" aria-live="polite" data-testid="status-route-announce">{announce}</div>
 
-      <aside className="shell-side" data-testid="nav-sidebar">
+      <aside className="shell-side" data-testid="nav-sidebar" data-tour="nav-side">
         <Link href={demoPath('/')} className="shell-side__brand" aria-label={t('shell.brand')} data-testid="link-brand">
           <AmalMark size={36} />
           <span aria-hidden="true">{t('app.name')}</span>
@@ -55,6 +58,7 @@ export function AppShell({ identity, fixture, onRefresh, onLogout }: Props) {
             {items.map((r) => <li key={r.id}><NavLink route={r} location={location} variant="side" /></li>)}
           </ul>
         </nav>
+        <Link href={demoPath('/data')} className="shell-side__kit shell-side__data" data-testid="link-side-data"><ShieldCheck size={18} aria-hidden="true" />{t('data.navLink')}</Link>
         <Link href="/ui-kit" className="shell-side__kit" data-testid="link-ui-kit">{t('shell.nav.uiKit')}</Link>
       </aside>
 
@@ -71,6 +75,7 @@ export function AppShell({ identity, fixture, onRefresh, onLogout }: Props) {
           <div className="shell-top__end">
             <ConnectionPill />
             <div className="shell-top__prefs"><LanguageSwitch /><ThemeSwitch /></div>
+            <HelpMenu onReplay={tour.start} canReplay={tour.steps.length > 0} />
             <UserMenu identity={identity} fixture={fixture} onLogout={onLogout} />
           </div>
         </header>
@@ -81,6 +86,7 @@ export function AppShell({ identity, fixture, onRefresh, onLogout }: Props) {
       </div>
 
       {items.length > 0 && <BottomNav items={items} location={location} />}
+      {tour.open && <TourOverlay key={tour.run} steps={tour.steps} onFinish={tour.finish} />}
     </div>
   );
 }
@@ -120,7 +126,7 @@ function BottomNav({ items, location }: { items: ShellRoute[]; location: string 
   const overflow = needsMore ? items.slice(BOTTOM_SLOTS) : [];
   const overflowActive = overflow.some((r) => r.path === location);
   return (
-    <nav className="shell-bottom" aria-label={t('shell.nav.label')} data-testid="nav-bottom">
+    <nav className="shell-bottom" aria-label={t('shell.nav.label')} data-testid="nav-bottom" data-tour="nav-bottom">
       <ul>
         {visible.map((r) => <li key={r.id}><NavLink route={r} location={location} variant="bottom" /></li>)}
         {needsMore && (
@@ -234,7 +240,7 @@ function UserMenu({ identity, fixture, onLogout }: { identity: ShellIdentity; fi
   const roleLabel = t(`shell.roles.${isKnownRole(identity.role) ? identity.role : 'none'}`);
   return (
     <Dialog.Root>
-      <Dialog.Trigger className="shell-user" aria-label={t('shell.user.open', { name: identity.name })} data-testid="button-user-menu">
+      <Dialog.Trigger data-tour="user-menu" className="shell-user" aria-label={t('shell.user.open', { name: identity.name })} data-testid="button-user-menu">
         <span className="shell-user__avatar" aria-hidden="true"><CircleUserRound size={22} /></span>
         <span className="shell-user__name" aria-hidden="true"><bdi>{identity.name}</bdi></span>
         <CircleUserRound size={18} aria-hidden="true" className="shell-user__icon" />
@@ -281,6 +287,44 @@ function UserMenu({ identity, fixture, onLogout }: { identity: ShellIdentity; fi
             {logoutState === 'error' && <p className="shell-error" role="alert" data-testid="status-logout-error">{t('shell.user.logoutError')}</p>}
             {fixture && <p className="shell-note">{t('shell.user.logoutNote')}</p>}
           </div>
+        </Dialog.Content>
+      </Dialog.Portal>
+    </Dialog.Root>
+  );
+}
+
+function HelpMenu({ onReplay, canReplay }: { onReplay: () => void; canReplay: boolean }) {
+  const { t } = useTranslation();
+  const [open, setOpen] = useState(false);
+  return (
+    <Dialog.Root open={open} onOpenChange={setOpen}>
+      <Dialog.Trigger className="shell-user shell-help" data-tour="help" aria-label={t('help.open')} data-testid="button-help">
+        <CircleHelp size={22} aria-hidden="true" />
+        <span className="shell-user__name" aria-hidden="true">{t('help.label')}</span>
+      </Dialog.Trigger>
+      <Dialog.Portal>
+        <Dialog.Overlay className="shell-overlay" />
+        <Dialog.Content className="shell-dialog" data-testid="dialog-help" aria-describedby="help-desc">
+          <div className="shell-dialog__head">
+            <Dialog.Title className="shell-dialog__title">{t('help.title')}</Dialog.Title>
+            <Dialog.Close className="amal-btn amal-btn--icon shell-dialog__x" aria-label={t('help.close')} data-testid="button-help-close"><X size={20} aria-hidden="true" /></Dialog.Close>
+          </div>
+          <p id="help-desc" className="shell-dialog__preview">{t('help.desc')}</p>
+          <ul className="help-list">
+            <li>
+              <button type="button" className="help-item" disabled={!canReplay} onClick={() => { setOpen(false); setTimeout(onReplay, 0); }} data-testid="button-replay-tour">
+                <PlayCircle size={22} aria-hidden="true" />
+                <span><strong>{t('help.replay')}</strong><small>{t('help.replayDesc')}</small></span>
+              </button>
+            </li>
+            <li>
+              <Link href={demoPath('/data')} className="help-item" onClick={() => setOpen(false)} data-testid="link-help-data">
+                <BookOpenText size={22} aria-hidden="true" />
+                <span><strong>{t('data.title')}</strong><small>{t('help.dataDesc')}</small></span>
+              </Link>
+            </li>
+          </ul>
+          <p className="shell-note">{t('help.support')}</p>
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>

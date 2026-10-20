@@ -9,6 +9,10 @@ export interface ShellIdentity {
   role: ShellRole | null;
   clinics: ShellClinic[];
   clinicsState?: 'ready' | 'error';
+  /** Server session expiry (UTC ISO); used only to re-check GET /me, never trusted for authority. */
+  expiresAt?: string | null;
+  /** In-memory only, applied by the session owner after stale-load checks. */
+  csrfToken?: string;
 }
 export interface IdentityAdapter {
   mode: 'real' | 'fixture';
@@ -25,7 +29,6 @@ export function authorizedClinics(identity: Pick<Identity, 'role' | 'clinicId'>,
 export const realIdentityAdapter: IdentityAdapter = {
   mode: 'real',
   async load() {
-    setCsrfToken(null);
     let identity: Identity;
     try { identity = await getMe(); }
     catch (error) {
@@ -33,8 +36,7 @@ export const realIdentityAdapter: IdentityAdapter = {
       throw error;
     }
     if (!Number.isSafeInteger(identity.id) || identity.id <= 0 || typeof identity.email !== 'string') throw new Error('Invalid identity response');
-    setCsrfToken(identity.csrfToken);
-    const result: ShellIdentity = { id: `account:${identity.id}`, name: identity.email, role: canonicalRole(identity.role), clinics: [], clinicsState: 'ready' };
+    const result: ShellIdentity = { id: `account:${identity.id}`, name: identity.email, role: canonicalRole(identity.role), clinics: [], clinicsState: 'ready', expiresAt: identity.session?.expiresAt ?? null, csrfToken: identity.csrfToken };
     if (!result.role) return result;
     try {
       let cursor: string | undefined;
@@ -48,7 +50,8 @@ export const realIdentityAdapter: IdentityAdapter = {
         if (cursor) seen.add(cursor);
       } while (cursor);
       result.clinics = [...new Map(result.clinics.map(c => [c.id, c])).values()];
-    } catch {
+    } catch (error) {
+      if (error && typeof error === 'object' && 'status' in error && error.status === 401) return null;
       // The contract may exist before its endpoint is implemented. Never substitute demo data.
       result.clinics = [];
       result.clinicsState = 'error';

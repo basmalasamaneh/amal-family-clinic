@@ -104,12 +104,25 @@ test("real auth security integration", async t => {
     assert.deepEqual(Object.keys(d.data).sort(),["clinicId","id","label"]);
   });
   await t.test("device IDs cannot establish trust; strict PIN and clinic checks", async () => {
+    const anonymousContext = await desk.call("/api/auth/device-context");
+    assert.equal(anonymousContext.status,403);
+    assert.equal(anonymousContext.data.messageKey,"error.deviceUntrusted");
     assert.equal((await desk.call("/api/auth/login","POST",{email:reception.email,password})).status,401);
     assert.equal((await desk.call("/api/auth/pin","POST",{email:reception.email,pin:"0123"})).status,401);
     assert.equal((await desk.call("/api/auth/pin","POST",{email:reception.email,pin:"0123",deviceId})).status,400);
     desk.jar.set("amal_device","forged");
+    assert.deepEqual((await desk.call("/api/auth/device-context")).data,anonymousContext.data);
     assert.equal((await desk.call("/api/auth/pin","POST",{email:reception.email,pin:"0123"})).status,401);
     desk.jar.set("amal_device",manager.jar.get("amal_device")!);
+    const context = await desk.call("/api/auth/device-context");
+    assert.equal(context.status,200);
+    assert.deepEqual(Object.keys(context.data),["clinic"]);
+    assert.deepEqual(Object.keys(context.data.clinic).sort(),["id","name"]);
+    assert.equal(context.data.clinic.id,reception.clinic_id);
+    assert.equal(typeof context.data.clinic.name,"string");
+    assert.equal(context.headers.get("cache-control"),"no-store");
+    assert.equal((await desk.call(`/api/auth/device-context?clinicId=${other.clinic_id}`)).data.clinic.id,reception.clinic_id);
+    assert.equal((await desk.call("/api/me")).status,401, "Device context must not create a session");
     assert.equal((await desk.call("/api/auth/login","POST",{email:reception.email,password})).status,401);
     assert.equal((await desk.call("/api/auth/pin","POST",{email:other.email,pin:"0123"})).status,401);
     for (const pin of [123,"123","１２３４","12345"]) assert.equal((await desk.call("/api/auth/pin","POST",{email:reception.email,pin})).status,400);
@@ -145,6 +158,9 @@ test("real auth security integration", async t => {
     assert.equal((await desk.call("/api/me")).status,401);
     await desk.call("/api/auth/pin","POST",{email:reception.email,pin:"0123"});
     assert.equal((await manager.call(`/api/auth/devices/${deviceId}`,"DELETE")).status,204);
+    const revokedContext = await desk.call("/api/auth/device-context");
+    assert.equal(revokedContext.status,403);
+    assert.equal(revokedContext.data.messageKey,"error.deviceUntrusted");
     assert.equal((await desk.call("/api/me")).status,401);
     assert.equal((await desk.call("/api/auth/pin","POST",{email:reception.email,pin:"0123"})).status,401);
   });

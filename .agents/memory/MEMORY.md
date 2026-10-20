@@ -4,3 +4,5 @@
 - [Demo scenario isolation](demo-scenario-isolation.md) — Lite onboarding and cross-clinic Clinical sharing require separate, explicit scenario preparation.
 - [Deployment guard environment](deployment-guard-environment.md) — REPLIT_ENVIRONMENT can say production inside a development task workspace.
 - [Prerequisite database availability](prerequisite-database-check.md) — merged code does not guarantee schema and fixtures exist in the current task database.
+- [Reception account selection](reception-account-selection.md) — device trust establishes clinic scope; email and PIN identify the individual shared-device user.
+- [Development auth origins](development-auth-origin.md) — task forks may inherit an outdated allowed origin; correct development configuration, not CSRF enforcement.

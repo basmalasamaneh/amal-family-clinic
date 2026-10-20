@@ -106,6 +106,8 @@ export * from './patientProjectionPage';
 export * from './pinCredentials';
 export * from './pinReentry';
 export * from './pullSyncParams';
+export * from './receptionContext';
+export * from './receptionContextClinic';
 export * from './resolutionInput';
 export * from './resolutionInputDecision';
 export * from './resolutionInputSlot';

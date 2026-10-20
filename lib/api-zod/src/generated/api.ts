@@ -9,6 +9,21 @@ import * as zod from 'zod';
 
 
 /**
+ * Real pre-session endpoint. Requires the existing HttpOnly trusted-device cookie. Returns only its assigned clinic ID/name, never an account list, device credential, or clinic directory. Missing, forged and revoked devices receive the same 403. This grants no session or enrollment authority; PIN login still requires account email and four ASCII digits.
+ * @summary Trusted reception device clinic
+ */
+
+
+
+export const GetReceptionContextResponse = zod.object({
+  "clinic": zod.object({
+  "id": zod.number().int().min(1),
+  "name": zod.string()
+}).strict()
+}).strict()
+
+
+/**
  * Returns server health status without authentication.
  * @summary health check
  */

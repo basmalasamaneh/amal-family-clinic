@@ -63,8 +63,7 @@ test.describe('roles, routing and guards', () => {
 
   test('signed-out and error identity states offer retry', async ({ page }) => {
     await page.goto(demo('signed-out'));
-    await expect(page.getByTestId('state-signedOut')).toBeVisible();
-    await expect(page.getByTestId('button-retry-identity')).toBeVisible();
+    await expect(page.getByTestId('page-login')).toBeVisible();
     await page.goto(demo('error'));
     await expect(page.getByTestId('state-error')).toBeVisible();
   });
@@ -72,7 +71,7 @@ test.describe('roles, routing and guards', () => {
   test('real adapter: 401 from /api/me renders signed-out state', async ({ page }) => {
     await page.route('**/api/me', (r) => r.fulfill({ status: 401, contentType: 'application/json', body: '{}' }));
     await page.goto('/desk/today');
-    await expect(page.getByTestId('state-signedOut')).toBeVisible();
+    await expect(page.getByTestId('page-login')).toBeVisible();
     await expect(page.locator('html')).toHaveAttribute('lang', 'ar');
   });
 
@@ -111,7 +110,7 @@ test('real contracts filter unauthorized clinics and preserve session after logo
   await expect(page.getByTestId('app-shell')).toBeVisible();
   fail = false;
   await page.getByTestId('button-logout').click();
-  await expect(page.getByTestId('state-signedOut')).toBeVisible();
+  await expect(page.getByTestId('page-login')).toBeVisible();
 });
 
 test('clinic errors preserve identity; expired-session retry clears it', async ({ page }) => {
@@ -122,7 +121,7 @@ test('clinic errors preserve identity; expired-session retry clears it', async (
   await expect(page.getByTestId('status-clinic-error')).toBeVisible();
   expired = true;
   await page.getByTestId('button-clinic-retry').click();
-  await expect(page.getByTestId('state-signedOut')).toBeVisible();
+  await expect(page.getByTestId('page-login')).toBeVisible();
 });
 
 test.describe('preferences', () => {
@@ -177,7 +176,7 @@ test.describe('fixture boundaries and session', () => {
     await page.goto(demo('front-desk'));
     await page.getByTestId('button-user-menu').click();
     await page.getByTestId('dialog-user').getByTestId('button-logout').click();
-    await expect(page.getByTestId('state-signedOut')).toBeVisible();
+    await expect(page.getByTestId('page-login')).toBeVisible();
   });
 
   test('no-clinics and clinic-error states are distinct and usable', async ({ page }) => {

@@ -1,50 +1,125 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Redirect, useLocation, useSearch } from 'wouter';
+import { useQueryClient } from '@tanstack/react-query';
+import { setCsrfToken } from '@workspace/api-client-react';
 import { AmalLogo, AmalPreferencesProvider, Button, EmptyState, ToastProvider } from '@workspace/amal-ui';
 import { i18n } from '@/i18n';
-import { identityAdapter, type ShellIdentity } from './identity';
+import { LoginPage } from '@/pages/login/LoginPage';
+import { DataPage } from '@/pages/data/DataPage';
+import { loginHref, safeReturnTo } from '@/auth/return-to';
+import { onUnauthorized, reportUnauthorized } from '@/auth/session-events';
+import { demoPath, identityAdapter, type ShellIdentity } from './identity';
+import { landingFor } from './routes';
 import { AppShell } from './AppShell';
 
-type LoadState = { status: 'loading' } | { status: 'error' } | { status: 'ready'; identity: ShellIdentity | null };
+type LoadState = { status: 'loading' } | { status: 'error' } | { status: 'ready'; identity: ShellIdentity | null; expired?: boolean };
+const MAX_TIMER = 2_147_000_000;
 
 /**
- * Loads identity before mounting the account shell so another user's preferences are never applied.
- * While loading/signed-out/error, preferences use isolated defaults (userId null).
+ * Session owner. GET /me (via the adapter) is authoritative; login only triggers a reload.
+ * Preferences are mounted per identity so another account's settings never apply.
  */
 export function ShellRoot() {
   const [state, setState] = useState<LoadState>({ status: 'loading' });
+  const [location, navigate] = useLocation();
+  const search = useSearch();
+  const qc = useQueryClient();
   const mounted = useRef(true);
+  const locRef = useRef(location);
+  locRef.current = location;
+
+  const clearPrivate = useCallback(() => { void qc.cancelQueries(); qc.clear(); setCsrfToken(null); }, [qc]);
+  /** Every load gets a generation; logout/expiry bump it so stale in-flight loads can never restore a session. */
+  const gen = useRef(0);
+  const principal = useRef<string | null>(null);
+  /** Applies a loaded identity; any change of account id or role drops all private cached queries. */
+  const apply = useCallback((identity: ShellIdentity | null, extra?: { expired?: boolean }) => {
+    const next = identity ? `${identity.id}|${identity.role ?? 'none'}` : null;
+    if (principal.current !== null && principal.current !== next) { void qc.cancelQueries(); qc.clear(); }
+    principal.current = next;
+    setCsrfToken(identity?.csrfToken ?? null);
+    setState({ status: 'ready', identity, ...extra });
+  }, [qc]);
 
   const load = useCallback(() => {
+    const g = ++gen.current;
     setState({ status: 'loading' });
     identityAdapter.load().then(
-      (identity) => mounted.current && setState({ status: 'ready', identity }),
-      () => mounted.current && setState({ status: 'error' }),
+      (identity) => { if (mounted.current && g === gen.current) apply(identity); },
+      () => { if (mounted.current && g === gen.current) setState({ status: 'error' }); },
     );
-  }, []);
+  }, [apply]);
 
-  /** Refresh without unmounting the shell (e.g. clinic retry); keeps identity on failure. */
   const refresh = useCallback(async () => {
-    try {
-      const identity = await identityAdapter.load();
-      if (mounted.current) setState({ status: 'ready', identity });
-    } catch { /* keep current identity */ }
-  }, []);
+    const g = ++gen.current;
+    const identity = await identityAdapter.load();
+    if (g !== gen.current || !mounted.current) throw new Error('Superseded identity load');
+    if (!identity) { reportUnauthorized(); throw new Error('No session after sign-in'); }
+    apply(identity);
+  }, [apply]);
+
+  const expire = useCallback(() => {
+    gen.current++;
+    principal.current = null;
+    clearPrivate();
+    setState((s) => (s.status === 'ready' && s.identity ? { status: 'ready', identity: null, expired: true } : s));
+    const here = locRef.current;
+    if (here !== '/login' && here !== '/data') navigate(demoPath(loginHref(here, true)), { replace: true });
+  }, [clearPrivate, navigate]);
 
   useEffect(() => { mounted.current = true; load(); return () => { mounted.current = false; }; }, [load]);
+  useEffect(() => onUnauthorized(expire), [expire]);
+
+  // One GET /me re-check at server expiry; a 401 ends the session, success slides it. Never loops on the same expiry.
+  const identity = state.status === 'ready' ? state.identity : null;
+  const expiresAt = identity?.expiresAt ?? null;
+  useEffect(() => {
+    if (!expiresAt) return;
+    const at = Date.parse(expiresAt);
+    if (!Number.isFinite(at)) return;
+    const timer = window.setTimeout(() => {
+      const g = ++gen.current;
+      identityAdapter.load().then(
+        (next) => { if (!mounted.current || g !== gen.current) return; if (!next) expire(); else if (next.expiresAt !== expiresAt) apply(next); },
+        () => { /* transient; shell keeps working, next request will surface 401 */ },
+      );
+    }, Math.min(Math.max(at - Date.now() + 1000, 1000), MAX_TIMER));
+    return () => window.clearTimeout(timer);
+  }, [expiresAt, expire, apply]);
+
+  const path = location.replace(/\/+$/, '') || '/';
+  const params = new URLSearchParams(search);
+
+  if (path === '/data') {
+    const home = identity ? demoPath(landingFor(identity.role) ?? '/') : demoPath('/login');
+    return (
+      <AmalPreferencesProvider key={identity?.id ?? 'anonymous'} i18n={i18n} userId={identity?.id ?? null}>
+        <DataPage signedIn={!!identity} home={home} />
+      </AmalPreferencesProvider>
+    );
+  }
 
   if (state.status === 'ready' && state.identity) {
-    const identity = state.identity;
+    const id = state.identity;
+    if (path === '/login') return <Redirect to={demoPath(safeReturnTo(params.get('next'), id.role))} replace />;
     return (
-      <AmalPreferencesProvider key={identity.id} i18n={i18n} userId={identity.id}>
+      <AmalPreferencesProvider key={`${id.id}|${id.role ?? 'none'}`} i18n={i18n} userId={id.id}>
         <ToastProvider>
           <AppShell
-            identity={identity}
+            identity={id}
             fixture={identityAdapter.mode === 'fixture'}
-            onRefresh={refresh}
+            onRefresh={async () => { try { await refresh(); } catch { /* keep identity */ } }}
             onLogout={async () => {
-              await identityAdapter.logout();
-              if (mounted.current) setState({ status: 'ready', identity: null });
+              gen.current++;
+              try { await identityAdapter.logout(); }
+              catch (error) {
+                if (!(error && typeof error === 'object' && 'status' in error && error.status === 401)) throw error;
+                // Already-expired server sessions still clear the local identity.
+              }
+              principal.current = null;
+              clearPrivate();
+              if (mounted.current) { setState({ status: 'ready', identity: null }); navigate(demoPath('/login'), { replace: true }); }
             }}
           />
         </ToastProvider>
@@ -54,7 +129,10 @@ export function ShellRoot() {
 
   return (
     <AmalPreferencesProvider key="anonymous" i18n={i18n} userId={null}>
-      {state.status === 'loading' ? <ShellLoading /> : <SessionState kind={state.status === 'error' ? 'error' : 'signedOut'} onRetry={load} />}
+      {state.status === 'loading' ? <ShellLoading />
+        : state.status === 'error' ? <SessionError onRetry={load} />
+        : path !== '/login' ? <Redirect to={demoPath(loginHref(path === '/' ? null : path))} replace />
+        : <LoginPage notice={state.expired || params.get('reason') === 'expired' ? 'expired' : null} onAuthenticated={refresh} />}
     </AmalPreferencesProvider>
   );
 }
@@ -74,18 +152,17 @@ function ShellLoading() {
   );
 }
 
-function SessionState({ kind, onRetry }: { kind: 'error' | 'signedOut'; onRetry: () => void }) {
+function SessionError({ onRetry }: { onRetry: () => void }) {
   const { t } = useTranslation();
-  const h1 = useRef<HTMLDivElement>(null);
-  useEffect(() => { document.title = `${t(`shell.states.${kind}.title`)} · ${t('app.name')}`; }, [kind, t]);
+  useEffect(() => { document.title = `${t('shell.states.error.title')} · ${t('app.name')}`; }, [t]);
   return (
-    <main className="shell-session" ref={h1} data-testid={`state-${kind}`}>
+    <main className="shell-session" data-testid="state-error">
       <AmalLogo />
       <EmptyState
         headingLevel={1}
-        title={t(`shell.states.${kind}.title`)}
-        description={t(`shell.states.${kind}.desc`)}
-        actions={<Button onClick={onRetry} data-testid="button-retry-identity">{t(`shell.states.${kind}.retry`)}</Button>}
+        title={t('shell.states.error.title')}
+        description={t('shell.states.error.desc')}
+        actions={<Button onClick={onRetry} data-testid="button-retry-identity">{t('shell.states.error.retry')}</Button>}
       />
     </main>
   );

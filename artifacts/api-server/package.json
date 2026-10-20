@@ -10,6 +10,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "auth:migrate": "tsx scripts/auth-migrate.ts",
     "auth:test": "tsx --test tests/auth.test.ts",
+    "auth:browser": "tsx scripts/login-browser-test.ts",
     "mock": "node src/mock/server.mjs",
     "test:contract": "node --test test/contract-mock.test.mjs"
   },

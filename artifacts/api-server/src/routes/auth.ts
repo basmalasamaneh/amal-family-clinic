@@ -3,7 +3,7 @@ import { z } from "zod/v4";
 import bcrypt from "bcryptjs";
 import { pool } from "@workspace/db";
 import { authenticate, audit, cookies, cookieOptions, createSession, csrf, digest, enforceScope, forbidden, identity, newCredential, requireRoles, throttle, trustedDevice, unauthorized, verifyPin } from "../lib/auth";
-import { fail } from "../lib/auth-errors";
+import { ApiError, fail } from "../lib/auth-errors";
 
 const router: IRouter = Router();
 const email = z.email().max(254).transform(v => v.toLowerCase());
@@ -11,6 +11,20 @@ const pin = z.string().regex(/^[0-9]{4}$/);
 const id = z.coerce.number().int().positive();
 // Valid bcrypt constant prevents the missing-user fast path from skipping costly verification.
 const dummyHash = bcrypt.hashSync("not-a-real-credential", 12);
+// A device-bound context, not a public clinic directory or an enrollment path.
+router.get("/auth/device-context", async (req, res) => {
+  let device;
+  try { device = await trustedDevice(req); }
+  catch (error) {
+    if (error instanceof ApiError && error.status === 401) throw fail(403, "DEVICE_UNTRUSTED", "deviceUntrusted");
+    throw error;
+  }
+  const { rows: [clinic] } = await pool.query(
+    "SELECT clinic_id AS id, clinic_name AS name FROM operational.clinics WHERE clinic_id=$1", [device.clinic_id],
+  );
+  if (!clinic) throw fail(403, "DEVICE_UNTRUSTED", "deviceUntrusted");
+  res.json({ clinic });
+});
 router.post("/auth/login", async (req, res, next) => {
   const body = z.object({ email, password: z.string().min(1).max(72).refine(v => Buffer.byteLength(v, "utf8") <= 72) }).strict().parse(req.body);
   await throttle(req, body.email);

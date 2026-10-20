@@ -32,6 +32,23 @@
       }
     },
     "schemas": {
+      "ReceptionContext": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["clinic"],
+        "properties": {
+          "clinic": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "name"],
+            "properties": {
+              "id": { "type": "integer", "minimum": 1 },
+              "name": { "type": "string" }
+            }
+          }
+        },
+        "examples": [{ "clinic": { "id": 101, "name": "Synthetic demonstration clinic" } }]
+      },
       "HealthStatus": {
         "type": "object",
         "additionalProperties": false,
@@ -2953,6 +2970,30 @@
     }
   },
   "paths": {
+    "/auth/device-context": {
+      "get": {
+        "operationId": "getReceptionContext",
+        "tags": ["auth"],
+        "summary": "Trusted reception device clinic",
+        "description": "Real pre-session endpoint. Requires the existing HttpOnly trusted-device cookie. Returns only its assigned clinic ID/name, never an account list, device credential, or clinic directory. Missing, forged and revoked devices receive the same 403. This grants no session or enrollment authority; PIN login still requires account email and four ASCII digits.",
+        "security": [{ "deviceCookie": [] }],
+        "x-roles": ["front-desk"],
+        "responses": {
+          "200": {
+            "description": "Registered device clinic",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ReceptionContext" }, "example": { "clinic": { "id": 101, "name": "Synthetic demonstration clinic" } } } }
+          },
+          "403": {
+            "description": "Device untrusted; contact the clinic administrator",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ApiFailure" }, "example": { "code": "DEVICE_UNTRUSTED", "messageKey": "error.deviceUntrusted", "params": {} } } }
+          },
+          "500": {
+            "description": "Server failure",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ApiFailure" }, "example": { "code": "INTERNAL", "messageKey": "error.internal", "params": {} } } }
+          }
+        }
+      }
+    },
     "/healthz": {
       "get": {
         "operationId": "healthCheck",

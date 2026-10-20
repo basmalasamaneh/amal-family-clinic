@@ -67,6 +67,7 @@ import type {
   PinCredentials,
   PinReentry,
   PullSyncParams,
+  ReceptionContext,
   ResolutionInput,
   SyncBatch,
   SyncConflictPage,
@@ -101,6 +102,84 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
   }
   return result;
 };
+
+export const getGetReceptionContextUrl = () => {
+
+
+
+
+  return `/api/auth/device-context`
+}
+
+/**
+ * Real pre-session endpoint. Requires the existing HttpOnly trusted-device cookie. Returns only its assigned clinic ID/name, never an account list, device credential, or clinic directory. Missing, forged and revoked devices receive the same 403. This grants no session or enrollment authority; PIN login still requires account email and four ASCII digits.
+ * @summary Trusted reception device clinic
+ */
+export const getReceptionContext = async ( options?: Parameters<typeof customFetch>[1]): Promise<ReceptionContext> => {
+
+  return customFetch<ReceptionContext>(getGetReceptionContextUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetReceptionContextQueryKey = () => {
+    return [
+    `/api/auth/device-context`
+    ] as const;
+    }
+
+
+export const getGetReceptionContextQueryOptions = <TData = Awaited<ReturnType<typeof getReceptionContext>>, TError = ErrorType<ApiFailure>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getReceptionContext>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetReceptionContextQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getReceptionContext>>> = ({ signal }) => getReceptionContext({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getReceptionContext>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetReceptionContextQueryResult = NonNullable<Awaited<ReturnType<typeof getReceptionContext>>>
+export type GetReceptionContextQueryError = ErrorType<ApiFailure>
+
+
+/**
+ * @summary Trusted reception device clinic
+ */
+
+export function useGetReceptionContext<TData = Awaited<ReturnType<typeof getReceptionContext>>, TError = ErrorType<ApiFailure>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getReceptionContext>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetReceptionContextQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export const getHealthCheckUrl = () => {
 
