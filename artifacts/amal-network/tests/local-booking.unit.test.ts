@@ -166,3 +166,26 @@ test('existing timezone validator rejects DST gap and preserves exact UTC slots'
   assert.equal(exact.ok, true);
   if (exact.ok) assert.equal(Date.parse(exact.startsAt), Date.parse('2026-10-24T00:30:00Z'));
 });
+
+test('malformed non-applied acknowledgements never consume a proposal and actual machine codes persist', async t => {
+  const { db, cache, ticket } = await setup(t);
+  const p = value(await cache.saveBooking(ticket, input()));
+  const base = { sequence: p.sequence, clientOpId: p.operationId };
+  const malformed = [
+    { ...base, status: 'rejected' },
+    { ...base, status: 'rejected', error: { code: 'REJECTED' } },
+    { ...base, status: 'blocked', code: 'SEQUENCE_GAP', messageKey: 'error.gap', params: {} },
+    { ...base, status: 'blocked', code: 'UNKNOWN_CODE', messageKey: 'error.blocked', params: {} },
+    { ...base, status: 'conflict', code: 'APPOINTMENT_CONFLICT', messageKey: 'error.conflict', params: {}, conflictId: '' },
+  ];
+  for (const outcome of malformed) {
+    assert.deepEqual(await cache.acknowledgeBooking(ticket, p.operationId, outcome as SyncOutcome),
+      { ok: false, error: 'invalid-data' });
+    assert.equal((await db.proposals.toArray())[0].outcome, 'pending');
+    assert.equal((await db.outbox.toArray())[0].status, 'pending');
+  }
+  value(await cache.acknowledgeBooking(ticket, p.operationId, {
+    ...base, status: 'rejected', error: { code: 'VERSION_CONFLICT', messageKey: 'error.conflict', params: {} },
+  }));
+  assert.equal((await db.proposals.toArray())[0].outcomeCode, 'VERSION_CONFLICT');
+});

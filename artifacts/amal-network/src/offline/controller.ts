@@ -2,11 +2,13 @@ import type { Transaction } from 'dexie';
 import { appointmentWindow } from './calendar';
 import { LocalCacheDatabase } from './database';
 import { acknowledgeBooking, bookingInput, BookingFailure, persistBooking, validateBooking } from './booking-command';
-import type { AppointmentInput, SyncOutcome } from '@workspace/api-client-react';
+import type { AppointmentInput, SyncOutcome, SyncConflict, SyncResolutionResult } from '@workspace/api-client-react';
+import { applyPage, reconcile, saveIntent, finishIntent, readState } from './sync-store';
 import { InvalidProjection, projectOperation, projectSnapshot, requireValid, utcInstant, validId, validText } from './projections';
 import type {
   AuthorizedContext, AuthorizedSnapshot, CacheErrorCode, CacheMetadata, CachedSnapshot,
   LocalOperation, OutboxRecord, OutboxStatus, OutboxUpdate, Result, Scope, ScopeTicket, StorageStatus,
+  SyncPage, ResolveConflictInput, ResolutionIntent, SyncState, RetryCode,
 } from './types';
 
 class CacheFailure extends Error {
@@ -307,7 +309,9 @@ export class LocalCacheController {
       // Rows outside source coverage are never accepted as authorized coverage.
       requireValid(projection.appointments.every((row) =>
         row.endsAt > projection.coverageStartUtc && row.startsAt < projection.coverageEndUtc));
-      const appointments = projection.appointments.filter((row) => row.endsAt > window.startUtc && row.startsAt < window.endUtc);
+      const tombstones = new Set((await this.scopeRows(this.db.syncTombstones, scope).toArray()).map(row => row.id));
+      const appointments = projection.appointments.filter((row) =>
+        !tombstones.has(row.id) && row.endsAt > window.startUtc && row.startsAt < window.endUtc);
       await this.scopeRows(this.db.appointments, scope).delete();
       await this.scopeRows(this.db.doctors, scope).delete();
       await this.scopeRows(this.db.patients, scope).delete();
@@ -341,12 +345,14 @@ export class LocalCacheController {
       }
       // Re-project reads as well, so old records never leak unexpected fields after migration.
       const safe = projectSnapshot({
-        ...scope, doctors, patients, appointments,
+        ...scope, doctors, patients, appointments: appointments.filter(a =>
+          doctors.some(d => d.id === a.doctorId) && patients.some(p => p.id === a.patientId)),
         coverage: { startUtc: metadata?.coverageStartUtc ?? window.startUtc, endUtc: metadata?.coverageEndUtc ?? window.endUtc },
       }, scope);
       return {
         doctors: safe.doctors, patients: safe.patients, appointments: safe.appointments, metadata, window,
-        fullyCovered: metadata !== null && metadata.coverageStartUtc <= window.startUtc && metadata.coverageEndUtc >= window.endUtc,
+        fullyCovered: safe.appointments.length === appointments.length && metadata !== null &&
+          metadata.coverageStartUtc <= window.startUtc && metadata.coverageEndUtc >= window.endUtc,
       };
     });
   }
@@ -404,8 +410,11 @@ export class LocalCacheController {
   }
   /** All clinics belonging to the currently authorized user, including failed/conflict/processing. */
   pendingCount(ticket: ScopeTicket): Promise<Result<number>> {
-    return this.scoped(ticket, async (scope) =>
-      this.db.outbox.where('userId').equals(scope.userId).filter((row) => row.status !== 'succeeded').count());
+    return this.scoped(ticket, async (scope) => {
+      const bookings = await this.db.outbox.where('userId').equals(scope.userId).filter((row) => row.status !== 'succeeded').count();
+      const decisions = await this.db.resolutionIntents.where('userId').equals(scope.userId).filter(row => row.status === 'pending').count();
+      return bookings + decisions;
+    });
   }
   prepareBookingStream(ticket: ScopeTicket, state: { deviceId: number; nextSequence: number }): Promise<Result<void>> {
     return this.scoped(ticket, async scope => {
@@ -426,6 +435,51 @@ export class LocalCacheController {
   }
   acknowledgeBooking(ticket: ScopeTicket, operationId: string, outcome: SyncOutcome): Promise<Result<void>> {
     return this.scoped(ticket, scope => acknowledgeBooking(this.db, scope, operationId, outcome, this.now()));
+  }
+  readSyncState(ticket: ScopeTicket): Promise<Result<SyncState>> {
+    return this.scoped(ticket, scope => readState(this.db, scope));
+  }
+  applySyncPage(ticket: ScopeTicket, page: SyncPage): Promise<Result<void>> {
+    return this.scoped(ticket, scope => applyPage(this.db, scope, page));
+  }
+  resetSyncCursor(ticket: ScopeTicket): Promise<Result<void>> {
+    return this.scoped(ticket, async scope => {
+      for (const table of [this.db.appointments, this.db.doctors, this.db.patients, this.db.syncConflicts]) {
+        await table.where('[userId+clinicId]').equals([scope.userId, scope.clinicId]).delete();
+      }
+      await this.db.metadata.delete([scope.userId, scope.clinicId]);
+      await this.db.syncCursors.put({ ...scope, cursor: null });
+    });
+  }
+  reconcileConflicts(ticket: ScopeTicket, items: SyncConflict[]): Promise<Result<void>> {
+    return this.scoped(ticket, scope => reconcile(this.db, scope, items, this.now()));
+  }
+  saveResolutionIntent(ticket: ScopeTicket, input: ResolveConflictInput): Promise<Result<ResolutionIntent>> {
+    return this.scoped(ticket, scope => saveIntent(this.db, scope, input, this.now()));
+  }
+  finishResolutionIntent(ticket: ScopeTicket, clientOpId: string, result: SyncResolutionResult): Promise<Result<void>> {
+    return this.scoped(ticket, scope => finishIntent(this.db, scope, clientOpId, result, this.now()));
+  }
+  rejectResolutionIntent(ticket: ScopeTicket, clientOpId: string): Promise<Result<void>> {
+    return this.scoped(ticket, async scope => {
+      const key: [string, number, string] = [scope.userId, scope.clinicId, clientOpId];
+      const intent = await this.db.resolutionIntents.get(key);
+      requireValid(intent && intent.status !== 'finished');
+      await this.db.resolutionIntents.update(key, { status: 'rejected' });
+    });
+  }
+  markBookingAttempt(ticket: ScopeTicket, operationId: string, status: 'processing' | 'failed',
+    retryAt: string | null, errorCode: RetryCode | null): Promise<Result<void>> {
+    return this.scoped(ticket, async scope => {
+      const key: [string, number, string] = [scope.userId, scope.clinicId, operationId];
+      const row = await this.db.outbox.get(key);
+      requireValid(row?.booking && ['processing', 'failed'].includes(status));
+      requireValid(errorCode === null || ['network', 'rate-limited', 'conflict', 'rejected', 'unknown'].includes(errorCode));
+      if (retryAt !== null) utcInstant(retryAt);
+      if (row.status === 'succeeded' || row.status === 'conflict') return;
+      await this.db.outbox.put(this.safeOutbox({ ...row, status, retryAt, errorCode,
+        updatedAt: this.now().toISOString() }, scope));
+    });
   }
   /** One explicit attempt, never a drain loop. Unresolved predecessors block delivery. */
   beginBookingDelivery(ticket: ScopeTicket, operationId: string) {
@@ -466,9 +520,10 @@ export class LocalCacheController {
       await this.db.transaction('rw', this.db.tables, async () => {
         if (!userId) fail('unauthorized');
         const pending = await this.db.outbox.where('userId').equals(userId).filter((row) => row.status !== 'succeeded').count();
-        if (pending) fail('pending-outbox');
+        const decisions = await this.db.resolutionIntents.where('userId').equals(userId).filter(row => row.status === 'pending').count();
+        if (pending || decisions) fail('pending-outbox');
         // Acknowledged booking receipts and device ordering are retained too.
-        for (const table of [this.db.appointments, this.db.doctors, this.db.patients, this.db.metadata, this.db.bookingScopes]) {
+        for (const table of [this.db.appointments, this.db.doctors, this.db.patients, this.db.metadata, this.db.bookingScopes, this.db.syncCursors, this.db.syncConflicts]) {
           await table.where('userId').equals(userId).delete();
         }
       });

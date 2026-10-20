@@ -4,6 +4,7 @@ import { fromZonedTime, formatInTimeZone } from 'date-fns-tz';
 import { localCache } from '../offline';
 import type { ShellIdentity } from './identity';
 import './offline-messages';
+import { syncClient } from '../sync/client';
 
 /** Online identity or a verified bounded continuation permit; reconnect itself grants nothing. */
 export function usePrivateCacheContext(identity: ShellIdentity, clinicId: number | null, fixture: boolean) {
@@ -27,17 +28,27 @@ export function usePrivateCacheContext(identity: ShellIdentity, clinicId: number
       authorizedUntil && Date.parse(authorizedUntil) > Date.now();
     void localCache.setContext(valid && clinicId !== null ? {
       userId: identity.id, clinicId, authorizedUntil: authorizedUntil!,
-    } : null).then(result => { if (!disposed && result.ok) prune(); });
+    } : null).then(result => {
+      if (!disposed && result.ok && valid) {
+        prune();
+        const ticket = localCache.captureScope();
+        if (ticket.ok) syncClient.start(ticket.value, !identity.offlineRestored);
+      }
+    });
     const lock = () => { void localCache.setContext(null); };
-    const visible = () => { if (document.visibilityState === 'visible') prune(); };
+    const visible = () => { if (document.visibilityState === 'visible') { prune(); syncClient.refresh(); } };
+    const offline = () => syncClient.refresh();
     const expiry = valid ? setTimeout(lock, Math.max(0, Date.parse(authorizedUntil!) - Date.now())) : undefined;
     document.addEventListener('visibilitychange', visible);
+    window.addEventListener('offline', offline);
     schedule();
     return () => {
       disposed = true;
       clearTimeout(timer);
       clearTimeout(expiry);
       document.removeEventListener('visibilitychange', visible);
+      window.removeEventListener('offline', offline);
+      syncClient.stop();
       void localCache.setContext(null);
     };
   }, [identity, clinicId, fixture]);

@@ -21,3 +21,4 @@
 - [Import and merge authority](import-merge-boundaries.md) — filenames cannot reset event identity; exact demographics cannot transfer consent or visibility rights.
 - [Disposable PostgreSQL tools](disposable-postgres-tools.md) — libpq environment parsing differs from Node connection-string parsing.
 - [Sync ordering and recovery](sync-ordering.md) — conservative device dependencies; feed cursor allocation must remain ordered through commit.
+- [Offline permit clocks](offline-permit-clocks.md) — subsecond skew can block valid issuance; wait and fully reverify, never extend authority.

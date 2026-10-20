@@ -258,7 +258,7 @@ test('storage probe/subscription surfaces sanitized errors and quota abort prese
   error(disabled.captureScope(), 'unauthorized');
 });
 
-test('v1 -> v3 nondestructive migration preserves patient/cache and pending operation', async (t) => {
+test('v1 -> v5 nondestructive migration preserves patient/cache and pending operation', async (t) => {
   const name = `synthetic-migration-${crypto.randomUUID()}`;
   const old = new Dexie(name);
   old.version(1).stores(SCHEMA_V1);
@@ -280,7 +280,7 @@ test('v1 -> v3 nondestructive migration preserves patient/cache and pending oper
   t.after(async () => { cache.close(); await Dexie.delete(name); });
   value(await cache.setContext(AUTH));
   const ticket = value(cache.captureScope());
-  assert.equal(db.verno, 3);
+  assert.equal(db.verno, 5);
   assert.equal(value(await cache.readSnapshot(ticket)).patients.length, 1);
   assert.equal(value(await cache.listOutbox(ticket)).length, 1);
   assert.ok(db.outbox.schema.indexes.some((index) => index.name === '[userId+clinicId+status+enqueuedAt]'));

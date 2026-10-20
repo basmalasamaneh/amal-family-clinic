@@ -124,6 +124,25 @@ export interface BookingProposal extends Scope {
   outcome: 'pending' | 'applied' | 'conflict' | 'rejected' | 'blocked';
   /** Allowlisted machine codes only, never cross-clinic conflict details. */
   outcomeCode: string | null;
+  /** Immutable prior canonical outcomes, including explicitly resolved replacements. */
+  canonicalHistory?: import('@workspace/api-client-react').Appointment[];
+}
+export type SyncPage = import('@workspace/api-client-react').SyncPullResult;
+export type ResolveConflictInput = import('@workspace/api-client-react').ResolutionInput;
+export interface ResolutionIntent extends Scope {
+  clientOpId: string;
+  conflictId: string;
+  input: ResolveConflictInput;
+  status: 'pending' | 'finished' | 'rejected';
+  createdAt: string;
+  result: import('@workspace/api-client-react').SyncResolutionHistoryResult | null;
+}
+export interface SyncState {
+  cursor: string | null;
+  /** Retained across bootstrap to suppress proposal canonical fallbacks. */
+  tombstoneIds: number[];
+  conflicts: import('@workspace/api-client-react').SyncConflict[];
+  intents: ResolutionIntent[];
 }
 export interface OutboxUpdate {
   status: OutboxStatus;

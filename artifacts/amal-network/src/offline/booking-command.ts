@@ -3,6 +3,7 @@ import type { LocalCacheDatabase } from './database';
 import type { BookingProposal, Scope, OutboxRecord, CacheErrorCode } from './types';
 import { appointmentWindow } from './calendar';
 import { projectOperation, requireValid, validId } from './projections';
+import { parseBookingOutcome } from './sync-store';
 
 export class BookingFailure extends Error {
   constructor(readonly code: CacheErrorCode) { super(code); }
@@ -36,9 +37,11 @@ export async function validateBooking(db: LocalCacheDatabase, scope: Scope, inpu
   const overlaps = (row: { doctorId: number; startsAt: string; endsAt: string }) =>
     row.doctorId === input.doctorId && row.startsAt < input.endsAt && row.endsAt > input.startsAt;
   const cached = await rows(db.appointments, scope).toArray();
+  const deletedIds = new Set((await rows(db.syncTombstones, scope).toArray()).map(row => row.id));
   if (cached.some(a => blocking(a.status) && overlaps(a))) fail('doctor-overlap');
   if (await rows(db.proposals, scope).filter(p => {
     if (p.operationId === input.clientOpId) return false;
+    if (p.canonical && deletedIds.has(p.canonical.id)) return false;
     const canonical = p.canonical && (cached.find(a => a.id === p.canonical!.id) ?? p.canonical);
     return canonical ? blocking(canonical.status) && overlaps(canonical) : overlaps(p.input);
   }).count()) fail('doctor-overlap');
@@ -85,6 +88,7 @@ export async function persistBooking(db: LocalCacheDatabase, scope: Scope, raw: 
 
 /** A transport success is not acknowledgement. All identifying fields must match. */
 export async function acknowledgeBooking(db: LocalCacheDatabase, scope: Scope, operationId: string, outcome: SyncOutcome, now: Date) {
+  outcome = parseBookingOutcome(outcome);
   const key: [string, number, string] = [scope.userId, scope.clinicId, operationId];
   const proposal = await db.proposals.get(key);
   const outbox = await db.outbox.get(key);
@@ -99,6 +103,7 @@ export async function acknowledgeBooking(db: LocalCacheDatabase, scope: Scope, o
     proposal.canonical = { id: a.id, clinicId: a.clinicId, doctorId: a.doctorId, patientId: a.patientId,
       startsAt: input.startsAt, endsAt: input.endsAt, source: a.source, status: a.status,
       version: a.version, clientOpId: operationId };
+    proposal.canonicalHistory = [...(proposal.canonicalHistory ?? []), proposal.canonical];
     outbox.status = 'succeeded';
     outbox.errorCode = null;
   } else {
@@ -108,7 +113,8 @@ export async function acknowledgeBooking(db: LocalCacheDatabase, scope: Scope, o
   }
   proposal.outcome = outcome.status;
   // Do not cache raw errors, patient warnings, or other clinics' appointments.
-  proposal.outcomeCode = outcome.status === 'applied' ? null : outcome.status;
+  proposal.outcomeCode = outcome.status === 'applied' ? null :
+    outcome.status === 'rejected' ? outcome.error.code : outcome.code;
   outbox.updatedAt = now.toISOString();
   await db.proposals.put(proposal);
   await db.outbox.put(outbox);

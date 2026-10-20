@@ -22,3 +22,14 @@ can permanently skip a lower ID from a late-committing transaction.
 
 **How to apply:** Keep trigger and reader coordination together when changing
 locking or feed storage; test a delayed commit, not only equal timestamps.
+
+Full snapshot fetches and incremental sync passes must share delivery ownership,
+including the network-fetch interval, not only their IndexedDB commit.
+
+**Why:** A snapshot fetched before a newer pull can otherwise overwrite it after
+the pull cursor has advanced, permanently hiding updates.
+
+**How to apply:** Serialize snapshot preparation, pull reconciliation and resolution
+under the same authenticated-device lock. Preserve tombstone evidence across
+bootstrap and never treat a cached original proposal as proof a deleted canonical
+appointment still exists.

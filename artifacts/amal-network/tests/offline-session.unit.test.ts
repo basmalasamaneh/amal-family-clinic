@@ -22,6 +22,17 @@ const auth = (now: number, role: Auth['role'] = 'doctor'): Auth => ({
 });
 const identity: ShellIdentity = { id: 'account:12', name: 'doctor@example.org', role: 'doctor', clinics: [clinic] };
 
+test('slightly future-issued permit waits for strict verification without extending expiry', async () => {
+  local.clear(); session.clear();
+  const now = Date.now(), nonce = newTabNonce();
+  const permit = issueOfflinePermit(auth(now), clinic, nonce, now + 200);
+  assert.equal(await verifyOfflinePermit(permit, nonce, now), null);
+  const until = await rememberOfflinePermit(permit, nonce, authorizationEpoch(), identity);
+  assert.equal(until, new Date(now + 200 + OFFLINE_PERMIT_LIFETIME_MS).toISOString());
+  assert.ok(Date.now() >= now + 200);
+  local.clear(); session.clear();
+});
+
 test('actual server P1363 permits verify locally, expire, and bind user/clinic/tab nonce', async () => {
   const now = Date.now(), nonce = newTabNonce();
   const permit = issueOfflinePermit(auth(now), clinic, nonce, now);

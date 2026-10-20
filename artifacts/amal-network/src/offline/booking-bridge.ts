@@ -1,5 +1,5 @@
 import {
-  getSyncState, listAppointments, listDoctors, listPatients, pushSync,
+  getSyncState, listAppointments, listDoctors, listPatients,
   type Appointment, type AppointmentInput, type SyncOutcome,
 } from '@workspace/api-client-react';
 import { localCache } from './index';
@@ -10,6 +10,8 @@ import type { PatientSearchAdapter } from '../booking/patients';
 import { matchesPatient } from '../booking/normalize';
 import { reportUnauthorized } from '../auth/session-events';
 import './booking-messages';
+import { syncClient, wakeSync } from '../sync/client';
+import { browserQueueLock } from '../sync/runner';
 
 class LocalBookingError extends Error {
   constructor(readonly code: string) { super(code); }
@@ -53,15 +55,16 @@ export async function prepareBookingCache(): Promise<void> {
   const existing = preparing.get(key);
   if (existing) return existing;
   const task = (async () => {
+    const state = await getSyncState();
+    await browserQueueLock(state.deviceId, new AbortController().signal, async () => {
     const window = appointmentWindow();
     // Server durations are bounded to 1440 minutes. Include starts in the prior
     // 24h so a booking crossing midnight cannot disappear from conflict checks.
     const overlapFrom = new Date(Date.parse(window.startUtc) - 86_400_000).toISOString();
-    const [doctors, patients, appointments, state] = await Promise.all([
+    const [doctors, patients, appointments] = await Promise.all([
       pages(cursor => listDoctors({ clinicId: ticket.clinicId, limit: 100, ...(cursor ? { cursor } : {}) })),
       pages(cursor => listPatients({ limit: 100, ...(cursor ? { cursor } : {}) })),
       pages(cursor => listAppointments({ clinicId: ticket.clinicId, from: overlapFrom, to: window.endUtc, limit: 100, ...(cursor ? { cursor } : {}) })),
-      getSyncState(),
     ]);
     value(await localCache.replaceSnapshot(ticket, {
       userId: ticket.userId, clinicId: ticket.clinicId,
@@ -71,6 +74,7 @@ export async function prepareBookingCache(): Promise<void> {
       coverage: { startUtc: window.startUtc, endUtc: window.endUtc },
     }));
     value(await localCache.prepareBookingStream(ticket, state));
+    });
   })().catch(error => { handlePermission(error); throw error; }).finally(() => { preparing.delete(key); });
   preparing.set(key, task);
   return task;
@@ -97,25 +101,12 @@ export async function saveLocalBooking(input: AppointmentInput): Promise<Appoint
   const ticket = scope();
   const proposal = value(await localCache.saveBooking(ticket, input));
   changed();
-  if (navigator.onLine) void deliverLocalBooking(proposal.operationId).catch(() => { /* Durable proposal remains waiting. */ });
+  wakeSync();
   return provisional(proposal);
 }
-/** Explicit handoff for future orchestration/manual retry: no events or timers call this. */
-export async function deliverLocalBooking(operationId: string): Promise<void> {
-  const ticket = scope();
-  const operation = value(await localCache.beginBookingDelivery(ticket, operationId));
-  if (!operation) return;
-  try {
-    const response = await pushSync({ operations: [operation] });
-    const matching = response.outcomes.filter(o => o.clientOpId === operationId && o.sequence === operation.sequence);
-    if (matching.length !== 1) throw new LocalBookingError('invalid-data');
-    await acceptBookingOutcome(ticket, operationId, matching[0]!);
-    const outcome = matching[0]!;
-    if (outcome.status === 'rejected' && ['FORBIDDEN', 'UNAUTHORIZED', 'DEVICE_UNTRUSTED', 'SESSION_EXPIRED'].includes(outcome.error.code)) {
-      void localCache.setContext(null);
-      reportUnauthorized();
-    }
-  } catch (error) { handlePermission(error); throw error; }
+/** One coordinated owner handles initial delivery and exact replay alike. */
+export async function deliverLocalBooking(_operationId: string): Promise<void> {
+  syncClient.retry();
 }
 /** Exact per-operation result, not HTTP status, reconciles canonical identity. */
 export async function acceptBookingOutcome(ticket: ScopeTicket, operationId: string, outcome: SyncOutcome) {
@@ -127,6 +118,7 @@ export async function getLocalCalendar(q: { clinicId: number; from: string; to: 
   if (q.clinicId !== ticket.clinicId) throw new LocalBookingError('unauthorized');
   const snapshot = value(await localCache.readSnapshot(ticket));
   const proposals = value(await localCache.listBookings(ticket));
+  const tombstones = new Set(value(await localCache.readSyncState(ticket)).tombstoneIds);
   const ids = new Set(proposals.map(p => p.canonical?.id).filter(Boolean));
   const operationIds = new Set(proposals.filter(p => !p.canonical).map(p => p.operationId));
   const patientNames = new Map(snapshot.patients.map(p => [p.id, p.name]));
@@ -136,6 +128,7 @@ export async function getLocalCalendar(q: { clinicId: number; from: string; to: 
       startsAt: a.startsAt, endsAt: a.endsAt, lifecycle: a.status === 'arrived' ? 'booked' : a.status,
       conflict: a.status === 'double_booked', syncPending: false, version: a.version }));
   for (const proposal of proposals) {
+    if (proposal.canonical && tombstones.has(proposal.canonical.id)) continue;
     const a = proposal.canonical ? snapshot.appointments.find(a => a.id === proposal.canonical!.id) ?? proposal.canonical : provisional(proposal);
     result.push({ id: a.id, clinicId: a.clinicId, doctorId: a.doctorId, patientName: proposal.patient.name, clientOpId: proposal.operationId,
       startsAt: a.startsAt, endsAt: a.endsAt, lifecycle: a.status === 'arrived' ? 'booked' : a.status,

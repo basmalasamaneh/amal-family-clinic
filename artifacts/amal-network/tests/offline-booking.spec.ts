@@ -124,6 +124,7 @@ async function mockAuthorizedApi(context: BrowserContext, day: string, locale: L
       if (path === '/api/sync/state') return json({ deviceId, nextSequence: 1 });
       if (path === '/api/reception/context') return json({ clinic, doctors });
       if (path === '/api/sync/conflicts') return json({ items: [], nextCursor: null });
+      if (path === '/api/sync/pull') return json({ changes: [], nextCursor: null, since: 'mock-offline-booking-cursor' });
     }
     if (request.method() === 'POST' && path === '/api/auth/login' && loginPages.has(requestPage)) {
       const body = request.postDataJSON() as { email?: string; password?: string };

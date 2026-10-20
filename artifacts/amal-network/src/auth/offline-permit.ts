@@ -72,7 +72,14 @@ export function onPeerRevocation(listener: () => void): () => void {
   return () => { window.removeEventListener('storage', storage); channel?.close(); };
 }
 export async function rememberOfflinePermit(permit: OfflinePermit, nonce: string, epoch: string | null, identity: ShellIdentity): Promise<string | null> {
-  const claims = await verifyOfflinePermit(permit, nonce);
+  let claims = await verifyOfflinePermit(permit, nonce);
+  if (!claims && epoch !== null && epoch === authorizationEpoch()) {
+    // A remote browser clock can trail the server by a fraction of a second.
+    // Wait once, then repeat EVERY strict check at the actual current time.
+    // Never accept a future-issued claim or shift/extend its signed expiry.
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    claims = await verifyOfflinePermit(permit, nonce);
+  }
   if (!claims || epoch === null || epoch !== authorizationEpoch() || claims.userId !== identity.id ||
     claims.role !== identity.role || !identity.clinics.some(c => c.id === claims.clinic.id)) return null;
   try {
