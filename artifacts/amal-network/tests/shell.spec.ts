@@ -5,9 +5,9 @@ import AxeBuilder from '@axe-core/playwright';
 const demo = (role: string, path = '/') => `${path}${path.includes('?') ? '&' : '?'}shellDemo=${role}`;
 
 const NAV: Record<string, string[]> = {
-  'front-desk': ['today', 'week', 'newBooking', 'patientLookup', 'sync', 'daySheet'],
-  doctor: ['myDay', 'networkSearch', 'patientCard', 'privacy'],
-  admin: ['kpi', 'networkHealth', 'usersDevices', 'clinicsDoctors', 'duplicates', 'audit', 'import', 'developer'],
+  'front-desk': ['today', 'week', 'newBooking', 'patientLookup', 'sync', 'daySheet', 'import', 'duplicates'],
+  doctor: ['myDay', 'networkSearch', 'patientCard', 'privacy', 'import', 'duplicates'],
+  admin: ['kpi', 'networkHealth', 'usersDevices', 'clinicsDoctors', 'audit', 'developer'],
 };
 const LANDING: Record<string, string> = { 'front-desk': '/desk/today', doctor: '/doctor/my-day', admin: '/admin/kpi' };
 const FOREIGN: Record<string, string> = { 'front-desk': '/admin/audit', doctor: '/desk/new-booking', admin: '/doctor/patient-card' };

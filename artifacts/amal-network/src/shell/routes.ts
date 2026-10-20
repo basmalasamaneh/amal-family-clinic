@@ -31,10 +31,11 @@ export const SHELL_ROUTES: readonly ShellRoute[] = [
   { id: 'networkHealth', path: '/admin/network-health', roles: ['admin'], icon: Activity },
   { id: 'usersDevices', path: '/admin/users-devices', roles: ['admin'], icon: Users },
   { id: 'clinicsDoctors', path: '/admin/clinics-doctors', roles: ['admin'], icon: Building2 },
-  { id: 'duplicates', path: '/admin/duplicates', roles: ['admin'], icon: Copy },
   { id: 'audit', path: '/admin/audit', roles: ['admin'], icon: ScrollText },
-  { id: 'import', path: '/admin/import', roles: ['admin'], icon: FileUp },
   { id: 'developer', path: '/admin/developer', roles: ['admin'], icon: Code2 },
+  // P1-07 import/merge APIs authorize doctor and front-desk only; admin status grants no patient-level access.
+  { id: 'import', path: '/work/import', roles: ['front-desk', 'doctor'], icon: FileUp },
+  { id: 'duplicates', path: '/work/duplicates', roles: ['front-desk', 'doctor'], icon: Copy },
 ];
 
 export const KNOWN_ROLES: readonly ShellRole[] = ['admin', 'doctor', 'front-desk'];

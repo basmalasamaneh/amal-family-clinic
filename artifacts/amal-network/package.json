@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "test:shell:unit": "tsx --test tests/shell.unit.test.ts",
+    "test:imports:unit": "tsx --test tests/imports.unit.test.ts",
     "test:shell": "playwright test shell.spec.ts",
     "test:ui-kit": "playwright test",
     "dev": "vite --config vite.config.ts --host 0.0.0.0",

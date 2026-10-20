@@ -28,6 +28,8 @@ import { PrivacyPage } from '@/doctor/PrivacyPage';
 import { clearSelection as clearNetworkSelection } from '@/network/model';
 import { clearConsentSelection } from '@/consent/model';
 import { ConsentPage } from '@/consent/ConsentPage';
+import { ImportPage } from '@/imports/ImportPage';
+import { DuplicatesPage } from '@/duplicates/DuplicatesPage';
 import { isKnownRole, landingFor, resolve, routesFor, type Resolution, type ShellRoute } from './routes';
 
 const BOTTOM_SLOTS = 4;
@@ -387,6 +389,8 @@ function PageContent({ res, title, clinic, fixture, landing, scope }: { res: Res
 
   if (res.kind === 'page' && (res.route.id === 'today' || res.route.id === 'week')) return <CalendarPage view={res.route.id === 'today' ? 'day' : 'week'} clinic={clinic} fixture={fixture} title={title} />;
   if (res.kind === 'page' && res.route.id === 'patientLookup') return <PatientsPage clinic={clinic} fixture={fixture} title={title} />;
+  if (res.kind === 'page' && res.route.id === 'import') return <ImportPage clinic={clinic} title={title} scope={scope} />;
+  if (res.kind === 'page' && res.route.id === 'duplicates') return <DuplicatesPage clinic={clinic} title={title} scope={scope} />;
   if (res.kind === 'page' && res.route.id === 'consent') return <ConsentPage clinic={clinic} title={title} scope={scope} />;
   if (res.kind === 'page' && res.route.id === 'networkSearch') return <NetworkSearchPage clinic={clinic} title={title} scope={scope} />;
   if (res.kind === 'page' && res.route.id === 'patientCard') return <PatientCardPage clinic={clinic} title={title} scope={scope} />;
