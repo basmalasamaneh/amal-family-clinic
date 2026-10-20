@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Link, useSearch } from 'wouter';
 import * as Dialog from '@radix-ui/react-dialog';
 import { AlertTriangle, ArrowLeft, CheckCircle2, Eye, History, KeyRound, Loader2, Lock, RotateCcw, ShieldCheck, ShieldOff, UserRound, Users, X } from 'lucide-react';
-import { useAmalPreferences } from '@workspace/amal-ui';
+import { EmptyState, useAmalPreferences } from '@workspace/amal-ui';
 import type { Consent } from '@workspace/api-client-react';
 import type { ShellClinic } from '@/shell/identity';
 import { demoPath } from '@/shell/identity';
@@ -486,7 +486,7 @@ function AccessList({ views, onMore, onRetry, onHide }: { views: Exclude<Views, 
     <div className="cs-views__list">
       <p className="rx-sr" role="status" aria-live="polite">{views.kind === 'loading' ? t('cs.views.loading') : views.kind === 'fail' ? t(`cs.views.${views.why}`) : ''}</p>
       {views.kind === 'loading' && !items.length && <div className="bk-list" aria-hidden="true" data-testid="status-access-loading"><div className="bk-skel" /><div className="bk-skel" /><div className="bk-skel" /></div>}
-      {views.kind === 'ok' && !items.length && <p className="rx-up__empty" data-testid="status-access-empty"><Eye size={20} aria-hidden="true" />{t('cs.views.empty')}</p>}
+      {views.kind === 'ok' && !items.length && <div data-testid="status-access-empty"><EmptyState className="amal-empty--compact" title={t('cs.views.empty')} description={t('cs.views.emptyDesc')} /></div>}
       {items.length > 0 && (
         <ol className="cs-access">
           {items.map((i) => {

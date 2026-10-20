@@ -83,9 +83,9 @@ function UsersPanel() {
       </form>
       {flash.node}
       {list.isPending ? <Skeleton /> : list.isError && (!list.data || isAccessFailure(list.error)) ? <LoadError error={list.error} onRetry={() => void list.refetch()} />
-        : !list.data || list.data.items.length === 0 ? <Empty testId="state-users-empty" title={t('adm.users.empty')} />
+        : !list.data || list.data.items.length === 0 ? <Empty testId="state-users-empty" title={t('adm.users.empty')} desc={t('adm.users.emptyDesc')} />
         : <>
-          <div className="adm-table-wrap"><table className="adm-table" data-testid="table-users">
+          <div className="adm-table-wrap" role="region" tabIndex={0} aria-label={t('adm.users.tabUsers')} data-testid="region-users-table"><table className="adm-table" data-testid="table-users">
             <thead><tr><th>{t('adm.users.email')}</th><th>{t('adm.users.role')}</th><th>{t('adm.users.clinic')}</th><th>{t('adm.users.status')}</th><th>{t('adm.users.lastLogin')}</th><th><span className="shell-sr">{t('adm.common.edit')}</span></th></tr></thead>
             <tbody>{list.data.items.map(u => (
               <tr key={u.id} data-testid={`row-user-${u.id}`} className={u.active ? '' : 'is-muted'}>
@@ -326,9 +326,9 @@ function DevicesPanel() {
       </div>
       {flash.node}
       {list.isPending ? <Skeleton /> : list.isError && (!list.data || isAccessFailure(list.error)) ? <LoadError error={list.error} onRetry={() => void list.refetch()} />
-        : !list.data || list.data.items.length === 0 ? <Empty testId="state-devices-empty" title={t('adm.devices.empty')} />
+        : !list.data || list.data.items.length === 0 ? <Empty testId="state-devices-empty" title={t('adm.devices.empty')} desc={t('adm.devices.emptyDesc')} />
         : <>
-          <div className="adm-table-wrap"><table className="adm-table" data-testid="table-devices">
+          <div className="adm-table-wrap" role="region" tabIndex={0} aria-label={t('adm.users.tabDevices')} data-testid="region-devices-table"><table className="adm-table" data-testid="table-devices">
             <thead><tr><th>{t('adm.devices.label')}</th><th>{t('adm.devices.clinic')}</th><th>{t('adm.devices.registered')}</th><th>{t('adm.devices.status')}</th><th><span className="shell-sr">{t('adm.devices.revoke')}</span></th></tr></thead>
             <tbody>{list.data.items.map(d => (
               <tr key={d.id} data-testid={`row-device-${d.id}`} className={d.revokedAt ? 'is-muted' : ''}>

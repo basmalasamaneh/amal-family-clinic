@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Segmented } from '@workspace/amal-ui';
+import { EmptyState, Segmented } from '@workspace/amal-ui';
 import type { KpiResult } from '@workspace/api-client-react';
 import { CalendarDays, Clock, GitCompareArrows, PieChart, ShieldCheck, UserX, WifiOff } from 'lucide-react';
 import { ChartFrame, Unavail, iso, useFmt } from './ChartFrame';
@@ -191,7 +191,7 @@ export function SourcesChart({ data }: { data: KpiResult }) {
         { value: 'after', label: t('kpi.meta.after'), testId: 'button-sources-after' },
         { value: 'before', label: t('kpi.meta.before'), testId: 'button-sources-before' },
       ]} />
-      {total === 0 ? <p className="kpi-empty-line" data-testid="state-sources-empty">{t('kpi.sources.empty')}</p> : (
+      {total === 0 ? <div data-testid="state-sources-empty"><EmptyState className="amal-empty--compact" headingLevel={4} title={t('kpi.sources.emptyTitle')} description={t('kpi.sources.empty')} /></div> : (
         <div className="kpi-donut">
           <svg viewBox="0 0 180 180" aria-hidden="true" className="kpi-donut__svg">
             <g transform="rotate(-90 90 90)">

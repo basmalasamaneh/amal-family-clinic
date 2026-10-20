@@ -109,7 +109,7 @@
       "successD": "Demonstration only — nothing left this page.",
       "warningT": "Connection is slow",
       "warningD": "Example message for degraded network.",
-      "dangerT": "Something went wrong",
+      "dangerT": "The request did not complete",
       "dangerD": "Example error with a retry action.",
       "retry": "Try again",
       "retried": "Retried"
@@ -252,10 +252,10 @@
     "csrf": "Your session check failed. Reload the page and sign in again.",
     "notFound": "The requested item was not found.",
     "validation": "Some details are not in the expected format. Check them and try again.",
-    "internal": "The server had a problem. Nothing was changed. Try again shortly.",
+    "internal": "The server had a problem. Check the current state before trying again.",
     "deviceUntrusted": "This device is not registered for reception sign-in.",
     "network": "Could not reach Amal Network. Check the connection and try again.",
-    "unknown": "Something went wrong. Try again."
+    "unknown": "The request did not complete as expected. Check the current state before trying again."
   },
   "auth": {
     "title": "Sign in",

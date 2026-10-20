@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Link, Redirect, useLocation, useSearch } from 'wouter';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import * as Dialog from '@radix-ui/react-dialog';
-import { DoorOpen, BookOpenText, CircleHelp, CircleUserRound, PlayCircle, ShieldCheck, FlaskConical, LogOut, MoreHorizontal, RotateCw, Search, X } from 'lucide-react';
+import { DoorOpen, BookOpenText, CircleHelp, CircleUserRound, PlayCircle, ShieldCheck, FlaskConical, LogOut, MoreHorizontal, RotateCw, Search, X, ShieldX, UserX, FileQuestion } from 'lucide-react';
 import { ConnectionStatus } from './ConnectionStatus';
 import { DaySheet } from '@/day-sheet/DaySheet';
 import './offline-messages';
@@ -427,6 +427,7 @@ function PageContent({ identity, res, title, clinic, clinics, fixture, landing, 
     <div className="shell-state" data-testid={`state-${kind}`}>
       <EmptyState
         headingLevel={1}
+        illustration={<span className={`shell-state__icon shell-state__icon--${kind}`} aria-hidden="true">{kind === 'forbidden' ? <ShieldX size={40} /> : kind === 'noRole' ? <UserX size={40} /> : <FileQuestion size={40} />}</span>}
         title={<span id="page-title" tabIndex={-1}>{title}</span>}
         description={t(`shell.states.${kind}.desc`)}
         actions={landing && kind !== 'noRole'

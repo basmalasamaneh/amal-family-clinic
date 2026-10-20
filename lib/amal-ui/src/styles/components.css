@@ -126,3 +126,9 @@
 /* ---------- Logo ---------- */
 .amal-logo-island { display: inline-flex; align-items: center; background: transparent; padding: 0; }
 .amal-logo { display: block; block-size: 44px; inline-size: auto; }
+/* P2-11: compact variant for empty collections inside panels; same gold art, smaller footprint. */
+.amal-empty { overflow-wrap: anywhere; }
+.amal-empty--compact { padding-block: 20px; padding-inline: 16px; gap: 6px; }
+.amal-empty--compact .amal-empty__art { inline-size: 88px; margin-block-end: 4px; }
+.amal-empty--compact .amal-empty__title { font-size: var(--amal-text-md); }
+.amal-empty__actions > * { min-block-size: 44px; }

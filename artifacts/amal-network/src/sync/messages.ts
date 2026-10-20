@@ -27,6 +27,7 @@ const en = {
   queueEmptyHint: 'Bookings created while offline will appear here with their delivery status.',
   conflictsTitle: 'Needs a decision',
   conflictsEmpty: 'No conflicts to resolve.',
+  conflictsEmptyHint: 'If an offline booking clashes with the live schedule, it waits here for your decision.',
   status: {
     waiting: 'Waiting to send',
     syncing: 'Sending',
@@ -135,6 +136,7 @@ const ar: typeof en = {
   queueEmptyHint: 'ستظهر هنا الحجوزات المُنشأة دون اتصال مع حالة إرسالها.',
   conflictsTitle: 'بحاجة إلى قرار',
   conflictsEmpty: 'لا توجد تعارضات لحلها.',
+  conflictsEmptyHint: 'إذا تعارض حجز دون اتصال مع الجدول الحالي فسينتظر هنا قرارك.',
   status: {
     waiting: 'بانتظار الإرسال',
     syncing: 'قيد الإرسال',

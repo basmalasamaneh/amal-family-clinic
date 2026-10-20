@@ -112,9 +112,9 @@ export function ClinicsDoctorsPage({ title, accountKey, onClinicsChanged }: { ti
         </div>
         <p className="adm-foot">{t('adm.clinics.doctorNote')}</p>
         {doctors.isPending ? <Skeleton /> : doctors.isError && (!doctors.data || isAccessFailure(doctors.error)) ? <LoadError error={doctors.error} onRetry={() => void doctors.refetch()} />
-          : !doctors.data || doctors.data.items.length === 0 ? <Empty testId="state-doctors-empty" title={t('adm.clinics.doctorsEmpty')} />
+          : !doctors.data || doctors.data.items.length === 0 ? <Empty testId="state-doctors-empty" title={t('adm.clinics.doctorsEmpty')} desc={t('adm.clinics.doctorsEmptyDesc')} />
           : <>
-            <div className="adm-table-wrap"><table className="adm-table" data-testid="table-doctors">
+            <div className="adm-table-wrap" role="region" tabIndex={0} aria-label={t('adm.clinics.doctors')} data-testid="region-doctors-table"><table className="adm-table" data-testid="table-doctors">
               <thead><tr><th>{t('adm.clinics.doctorName')}</th><th>{t('adm.clinics.specialty')}</th><th>{t('adm.users.clinic')}</th><th>{t('adm.clinics.email')}</th><th>{t('adm.clinics.login')}</th><th><span className="shell-sr">{t('adm.common.edit')}</span></th></tr></thead>
               <tbody>{doctors.data.items.map(d => (
                 <tr key={d.id} data-testid={`row-doctor-${d.id}`}>

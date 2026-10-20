@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useSearch } from 'wouter';
 import { ShieldCheck, AlertTriangle, CalendarClock, CalendarDays, DoorOpen, FlaskConical, IdCard, Lock, PhoneCall, RotateCcw, Search, UserPlus, UserRound, X } from 'lucide-react';
-import { useAmalPreferences } from '@workspace/amal-ui';
+import { EmptyState, useAmalPreferences } from '@workspace/amal-ui';
 import type { ShellClinic } from '@/shell/identity';
 import { demoPath } from '@/shell/identity';
 import { resolveSchedulingAdapter } from '@/calendar/adapter';
@@ -192,7 +192,7 @@ function PatientDetail({ patient, clinic, api, doctorNames, headingRef, onClear,
         {up.kind === 'loading' && <div className="bk-list" aria-hidden="true" data-testid="status-upcoming-loading"><div className="bk-skel" /><div className="bk-skel" /></div>}
         {up.kind === 'error' && <div className="bk-msg bk-msg--block" data-testid="status-upcoming-error"><AlertTriangle size={20} aria-hidden="true" /><div className="bk-msg__body"><p>{errText}</p>
           <button type="button" className="bk-btn bk-btn--sm" onClick={() => setNonce((n) => n + 1)} data-testid="button-upcoming-retry"><RotateCcw size={16} aria-hidden="true" />{t('rx.up.retry')}</button></div></div>}
-        {up.kind === 'ok' && !up.items.length && <p className="rx-up__empty" data-testid="status-upcoming-empty"><CalendarDays size={20} aria-hidden="true" />{t('rx.up.empty')}</p>}
+        {up.kind === 'ok' && !up.items.length && <div data-testid="status-upcoming-empty"><EmptyState className="amal-empty--compact" title={t('rx.up.empty')} description={t('rx.up.emptyDesc')} /></div>}
         {up.kind === 'ok' && up.items.length > 0 && (
           <ol className="rx-up__list">
             {up.items.map((a) => {

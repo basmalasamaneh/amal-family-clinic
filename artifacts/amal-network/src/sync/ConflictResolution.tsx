@@ -192,7 +192,7 @@ export function ConflictResolution({ conflict, proposal, intent, clinicId, locke
               <dl className="cr__dl"><dt>{t('when')}</dt><dd>{fmt(other.startsAt)}</dd><dt>{t('version', { n: '' }).trim()}</dt><dd data-testid={`text-other-version-${conflict.id}`}>{other.version}</dd></dl>
               <p className="cr__note">{t('otherVerified')}</p>
             </>
-          ) : otherState === 'loading' ? <div className="sync-skel" aria-label={t('otherLoading')} />
+          ) : otherState === 'loading' ? <div className="sync-skel" role="status" aria-label={t('otherLoading')} />
             : <p className="cr__muted">{otherState === 'none' ? t('otherNone') : otherState === 'hidden' ? t('otherHidden') : t('otherUnavailable')}</p>}
         </section>
       </div>

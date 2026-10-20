@@ -1,3 +1,4 @@
+import { EmptyState } from '@workspace/amal-ui';
 import { useTranslation } from 'react-i18next';
 import { Info, Layers } from 'lucide-react';
 import type { KpiResult } from '@workspace/api-client-react';
@@ -26,7 +27,7 @@ export function AdoptionSection({ data }: { data: KpiResult }) {
           <div><p className="kpi-notice__title">{t('kpi.adoption.designationTitle')}</p><p>{t('kpi.adoption.designation')}</p></div>
         </div>
       )}
-      {clinics.length === 0 ? <p className="kpi-empty-line">{t('kpi.adoption.empty')}</p> : (
+      {clinics.length === 0 ? <div data-testid="state-adoption-empty"><EmptyState className="amal-empty--compact" headingLevel={4} title={t('kpi.adoption.empty')} description={t('kpi.adoption.emptyDesc')} /></div> : (
         <ul className="kpi-adopt">
           {clinics.map((c) => {
             const cur = ADOPTION_STEPS.indexOf(c.state);

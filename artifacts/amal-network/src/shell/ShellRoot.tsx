@@ -1,3 +1,4 @@
+import { AlertTriangle, LockKeyhole, WifiOff } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Redirect, useLocation, useSearch } from 'wouter';
@@ -148,7 +149,7 @@ export function ShellRoot() {
     return <AmalPreferencesProvider key="cleanup" i18n={i18n} userId={null}>
       <main className="shell-session" data-testid="state-cleanup-incomplete">
         <AmalLogo />
-        <EmptyState headingLevel={1} title={t(cleanupTarget === UNKNOWN_CLEANUP ? 'offline:cleanupUnknownTitle' : 'offline:cleanupTitle')}
+        <EmptyState headingLevel={1} illustration={<span className="shell-state__icon shell-state__icon--warn" aria-hidden="true"><LockKeyhole size={40} /></span>} title={t(cleanupTarget === UNKNOWN_CLEANUP ? 'offline:cleanupUnknownTitle' : 'offline:cleanupTitle')}
           description={t(cleanupTarget === UNKNOWN_CLEANUP ? 'offline:cleanupUnknownDescription' : 'offline:cleanupDescription')}
           actions={cleanupTarget === UNKNOWN_CLEANUP ? undefined : <Button disabled={cleaning} data-testid="button-retry-cleanup" onClick={async () => {
             setCleaning(true);
@@ -249,6 +250,7 @@ function SessionError({ onRetry }: { onRetry: () => void }) {
       <AmalLogo />
       <EmptyState
         headingLevel={1}
+        illustration={<span className="shell-state__icon shell-state__icon--warn" aria-hidden="true">{online ? <AlertTriangle size={40} /> : <WifiOff size={40} />}</span>}
         title={t(online ? 'shell.states.error.title' : 'offline:lockedTitle')}
         description={t(online ? 'shell.states.error.desc' : 'offline:lockedDescription')}
         actions={<Button onClick={onRetry} data-testid="button-retry-identity">{t('shell.states.error.retry')}</Button>}

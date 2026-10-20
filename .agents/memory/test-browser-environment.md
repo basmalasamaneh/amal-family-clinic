@@ -3,6 +3,16 @@ name: Test browser environment
 description: NixOS browser dependency boundary and screenshot portability.
 ---
 
+Native browser zoom screenshots need a virtual display large enough to contain
+the whole browser window. DevTools full-page captures may omit composited text;
+use actual foreground-window captures before diagnosing apparent clipping.
+
+**Why:** At genuine 200% zoom, a smaller virtual display clipped the capture
+even though layout measurements passed; resizing the display exposed the intact UI.
+
+**How to apply:** Verify browser/display geometry and capture method before
+changing responsive CSS based on a zoom screenshot alone.
+
 Use a Nix-wrapped Chromium for browser tests in Replit; Playwright's downloaded
 Linux executable may install successfully but fail to launch because native
 shared libraries are not on its search path.

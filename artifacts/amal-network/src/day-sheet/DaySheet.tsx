@@ -195,7 +195,7 @@ export function DaySheet({ clinic, scope, title }: Props) {
       {!clinic ? <Notice icon="info" text={t('noClinic')} testId="state-day-sheet-no-clinic" /> :
        load.kind === 'locked' ? <Notice icon="warn" text={t('locked')} testId="state-day-sheet-locked" action={<button type="button" className="amal-btn amal-btn--secondary amal-btn--sm" onClick={() => void read()} data-testid="button-day-sheet-retry"><RotateCw size={16} aria-hidden="true" />{t('retry')}</button>} /> :
        load.kind === 'error' ? <Notice icon="warn" text={t('error')} testId="state-day-sheet-error" action={<button type="button" className="amal-btn amal-btn--secondary amal-btn--sm" onClick={() => void read()} data-testid="button-day-sheet-retry"><RotateCw size={16} aria-hidden="true" />{t('retry')}</button>} /> :
-       load.kind === 'loading' ? <div className="ds-skel ds-screen" aria-busy="true" aria-label={t('loading')} data-testid="state-day-sheet-loading"><span /><span /><span /><span /></div> :
+       load.kind === 'loading' ? <div className="ds-skel ds-screen" role="status" aria-busy="true" aria-label={t('loading')} data-testid="state-day-sheet-loading"><span /><span /><span /><span /></div> :
        !hasCache ? <Notice icon="warn" text={t('notCached')} testId="state-day-sheet-uncached" /> : (
         <>
           <div className="ds-controls ds-screen" role="group" aria-label={t('eyebrow')}>
@@ -218,7 +218,7 @@ export function DaySheet({ clinic, scope, title }: Props) {
           </div>
 
           {view && (
-            <section className="ds-sheet" lang={vLocale} aria-labelledby="ds-sheet-title" data-testid="day-sheet-preview">
+            <section className="ds-sheet" tabIndex={0} lang={vLocale} aria-labelledby="ds-sheet-title" data-testid="day-sheet-preview">
               <div className="ds-sheet__head">
                 <div>
                   <p className="ds-sheet__clinic"><span>{vt('clinic')}:</span> <bdi data-testid="text-day-sheet-clinic">{view.clinicName}</bdi></p>

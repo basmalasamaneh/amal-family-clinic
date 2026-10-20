@@ -20,7 +20,7 @@
 .kpi-periods { margin: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px; }
 .kpi-period dt { font-size: var(--amal-text-xs); font-weight: 700; color: var(--amal-muted); }
 .kpi-period dd { margin: 0; font-weight: 600; font-variant-numeric: tabular-nums; }
-.kpi-prov summary { cursor: pointer; font-weight: 600; min-block-size: 32px; }
+.kpi-prov summary { cursor: pointer; font-weight: 600; min-block-size: 44px; padding-block: 11px; box-sizing: border-box; }
 .kpi-prov p { margin-block: 6px; font-size: var(--amal-text-sm); }
 
 .kpi-notice { display: flex; gap: 10px; align-items: flex-start; padding-block: 12px; padding-inline: 14px; border-radius: var(--amal-radius-control); background: var(--amal-status-sync-bg); color: var(--amal-status-sync-fg); border: 1px solid var(--amal-status-sync-border); }

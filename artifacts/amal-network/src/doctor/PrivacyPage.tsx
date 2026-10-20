@@ -51,7 +51,7 @@ export function PrivacyPage({ clinic, title, scope }: { clinic: ShellClinic | nu
         <p className="net-hint">{t('doc.privacy.auditDesc')}</p>
         {a.kind === 'loading' && <Skeleton rows={3} />}
         {a.kind === 'fail' && <FailState why={a.why} onRetry={audit.reload} testPrefix="audit" />}
-        {a.kind === 'ok' && a.items.length === 0 && <Empty icon={<EyeOff size={30} />} title={t('doc.privacy.auditEmptyTitle')} desc={t('doc.privacy.auditEmptyDesc')} testId="state-audit-empty" />}
+        {a.kind === 'ok' && a.items.length === 0 && <Empty icon={<EyeOff size={30} />} title={t('doc.privacy.auditEmptyTitle')} desc={t('doc.privacy.auditEmptyDesc')} testId="state-audit-empty" gold />}
         {a.kind === 'ok' && a.items.length > 0 && (
           <>
             <ol ref={listRef} tabIndex={-1} className="doc-audit" aria-label={t('doc.privacy.auditListLabel')} data-testid="list-audit">

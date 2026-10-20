@@ -30,7 +30,8 @@ export function DataPage({ signedIn, home }: { signedIn: boolean; home: string }
     <div className="data" data-testid="page-data">
       <a href="#data-main" className="shell-skip">{t('shell.skip')}</a>
       <header className="data-top">
-        <Link href={home} className="data-top__brand" aria-label={signedIn ? t('data.backApp') : t('data.backLogin')} data-testid="link-data-home"><AmalLogo /></Link>
+        <Link href={home} className="data-top__brand" aria-describedby="data-home-destination" data-testid="link-data-home"><AmalLogo /></Link>
+        <span id="data-home-destination" className="amal-sr-only">{signedIn ? t('data.backApp') : t('data.backLogin')}</span>
         <div className="data-top__end">
           <LanguageSwitch /><ThemeSwitch />
           <Link href={home} className="amal-btn amal-btn--secondary amal-btn--sm" data-testid="link-data-back">

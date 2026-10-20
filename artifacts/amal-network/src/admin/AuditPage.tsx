@@ -80,10 +80,10 @@ export function AuditPage({ title }: { title: string }) {
       </form>
       <p className="adm-foot">{t('adm.common.hebron')} · {t('adm.audit.newest')}</p>
       {q.isPending ? <Skeleton rows={6} /> : q.isError && (!q.data || isAccessFailure(q.error)) ? <LoadError error={q.error} onRetry={() => void q.refetch()} />
-        : !q.data || q.data.items.length === 0 ? <Empty testId="state-audit-empty" title={t('adm.audit.empty')} />
+        : !q.data || q.data.items.length === 0 ? <Empty testId="state-audit-empty" title={t('adm.audit.empty')} desc={t('adm.audit.emptyDesc')} />
         : <>
           {q.isError && <p className="adm-notice adm-notice--warn" role="alert">{t('adm.common.loadError')} {t(classify(q.error).key)}</p>}
-          <div className="adm-table-wrap"><table className="adm-table adm-table--audit" data-testid="table-audit">
+          <div className="adm-table-wrap" role="region" tabIndex={0} aria-label={title} data-testid="region-audit-table"><table className="adm-table adm-table--audit" data-testid="table-audit">
             <thead><tr><th>{t('adm.audit.when')}</th><th>{t('adm.audit.action')}</th><th>{t('adm.audit.outcome')}</th><th>{t('adm.audit.actor')}</th><th>{t('adm.audit.clinic')}</th><th>{t('adm.audit.target')}</th></tr></thead>
             <tbody>{q.data.items.map(ev => (
               <tr key={ev.id} data-testid={`row-audit-${ev.id}`}>

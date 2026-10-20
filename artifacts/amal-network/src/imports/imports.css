@@ -109,7 +109,7 @@
 .im-seg__opt.is-off { opacity: .5; cursor: not-allowed; }
 .im-seg__opt input { accent-color: var(--amal-primary); }
 .im-details { border: 1px solid var(--amal-border); border-radius: var(--amal-radius-control); padding-block: 8px; padding-inline: 12px; }
-.im-details summary { cursor: pointer; font-weight: 600; min-block-size: 32px; }
+.im-details summary { cursor: pointer; font-weight: 600; min-block-size: 44px; padding-block: 11px; box-sizing: border-box; }
 .im-source { padding: 12px; background: var(--amal-surface-2); border-radius: var(--amal-radius-control); }
 .im-dl { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 14px; margin: 0; font-size: var(--amal-text-sm); }
 .im-dl dt { color: var(--amal-muted); } .im-dl dd { margin: 0; font-weight: 600; }

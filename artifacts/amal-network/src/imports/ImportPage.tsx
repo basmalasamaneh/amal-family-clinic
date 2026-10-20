@@ -7,7 +7,7 @@ import {
   commitImport, downloadImportReport, getGetImportBatchQueryKey, getImportBatch, getListDoctorsQueryKey, useGetImportBatch, useListDoctors, useUploadImport,
   type ImportBatch, type ImportRow,
 } from '@workspace/api-client-react';
-import { useAmalPreferences } from '@workspace/amal-ui';
+import { EmptyState, useAmalPreferences } from '@workspace/amal-ui';
 import type { ShellClinic } from '@/shell/identity';
 import { formatInstant, formatNumber } from '@/shell/formatting';
 import { newOpId } from '@/booking/ops';
@@ -330,7 +330,7 @@ function PatientsStep({ batch, doctorFor, doctorName, onEdit }: { batch: ImportB
           {(['all', 'open', 'done'] as const).map((f) => <option key={f} value={f}>{t(`im.patients.filters.${f}`)}</option>)}
         </select>
       </div>
-      {batch.rows.length === 0 ? <div className="im-empty"><p>{t('im.patients.empty')}</p></div> : (
+      {batch.rows.length === 0 ? <div data-testid="state-batch-empty"><EmptyState className="amal-empty--compact" title={t('im.patients.empty')} description={t('im.patients.emptyDesc')} /></div> : (
         <div className="im-table-wrap">
           <table className="im-table">
             <thead><tr>

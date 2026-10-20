@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import * as Dialog from '@radix-ui/react-dialog';
 import * as AlertDialog from '@radix-ui/react-alert-dialog';
 import { AlertTriangle, WifiOff, X } from 'lucide-react';
-import { Button, useAmalPreferences } from '@workspace/amal-ui';
+import { Button, EmptyState, useAmalPreferences } from '@workspace/amal-ui';
 import {
   getGetKpisQueryKey, getGetNetworkHealthQueryKey, getListAdminClinicsQueryKey, getListAdminDevicesQueryKey, getListAdminDoctorsQueryKey, getListAdminUsersQueryKey, getListClinicsQueryKey,
   listAdminClinics, listAdminDoctors, type AdminClinic, type AdminDoctor,
@@ -223,6 +223,7 @@ export function LoadError({ onRetry, text, error }: { onRetry: () => void; text?
     <Button variant="secondary" onClick={onRetry} data-testid="button-admin-retry">{t('adm.common.retry')}</Button></div>;
 }
 export function Empty({ title, desc, testId, action }: { title: string; desc?: string; testId: string; action?: ReactNode }) {
-  return <div className="adm-empty" data-testid={testId}><span className="adm-empty__ring" aria-hidden="true" /><p className="adm-empty__title">{title}</p>{desc && <p>{desc}</p>}{action}</div>;
+  // Genuine empty collection or no-filter-match only; errors/forbidden/loading keep their own treatments.
+  return <div className="adm-empty-wrap" data-testid={testId}><EmptyState headingLevel={2} title={title} description={desc} actions={action} /></div>;
 }
 

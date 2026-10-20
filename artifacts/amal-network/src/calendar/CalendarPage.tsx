@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, type CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useLocation, useSearch } from 'wouter';
-import { AlertTriangle, CalendarDays, CalendarPlus, CalendarRange, Clock3, RotateCw, UserRoundPlus, UsersRound } from 'lucide-react';
+import { AlertTriangle, Building2, CalendarDays, CalendarPlus, CalendarRange, Clock3, RotateCw, UserRoundPlus, UsersRound } from 'lucide-react';
 import { EmptyState, useAmalPreferences } from '@workspace/amal-ui';
 import { demoPath, type ShellClinic } from '@/shell/identity';
 import { DEMO_DATE, resolveSchedulingAdapter, type CalendarAppointment, type CalendarDoctor, type ClinicHours } from './adapter';
@@ -107,7 +107,7 @@ export function CalendarPage({ view, clinic, fixture, title }: { view: 'day' | '
 
       {load.state === 'ready' && <LocalCalendarNotice cache={load.data.localCache} />}
       {!clinic ? (
-        <EmptyState headingLevel={2} title={t('calendar.state.noClinic')} description={t('calendar.state.noClinicDesc')} />
+        <EmptyState headingLevel={2} illustration={<span className="shell-state__icon" aria-hidden="true"><Building2 size={40} /></span>} title={t('calendar.state.noClinic')} description={t('calendar.state.noClinicDesc')} />
       ) : load.state === 'loading' ? <CalSkeleton /> : load.state === 'error' ? (
         <div className="cal-state" role="alert" data-testid="state-calendar-error">
           <AlertTriangle size={28} aria-hidden="true" />
@@ -234,8 +234,8 @@ function WeekGrid({ date, today, search, doctorId, doctors, appointments }: {
         return (
           <li key={d} className={`cal-week__day${d === today ? ' is-today' : ''}${d === date ? ' is-selected' : ''}`} data-testid={`week-day-${d}`}>
             <h2 className="cal-week__head">
-              <Link href={calHref(`/desk/today${p.toString() ? `?${p}` : ''}`, search)} className="cal-week__link" aria-label={t('calendar.week.openDay', { date: formatLocalDate(d, locale, digitPreference) })} data-testid={`link-week-day-${d}`}>
-                <span className="cal-week__dow">{formatLocalDate(d, locale, digitPreference, 'EEEE')}</span>
+              <Link href={calHref(`/desk/today${p.toString() ? `?${p}` : ''}`, search)} className="cal-week__link" aria-label={t('calendar.week.openDay', { date: formatLocalDate(d, locale, digitPreference, 'EEEE d MMM') })} data-testid={`link-week-day-${d}`}>
+                <span className="cal-week__dow">{formatLocalDate(d, locale, digitPreference, 'EEEE')}</span>{' '}
                 <span className="cal-week__num">{formatLocalDate(d, locale, digitPreference, 'd MMM')}</span>
               </Link>
             </h2>

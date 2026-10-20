@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useQueryClient } from '@tanstack/react-query';
 import * as AlertDialog from '@radix-ui/react-alert-dialog';
 import { AlertTriangle, LogIn, PlugZap, Power, RotateCcw, Trash2 } from 'lucide-react';
-import { Button } from '@workspace/amal-ui';
+import { Button, EmptyState } from '@workspace/amal-ui';
 import {
   getDeveloperResetReceipt, getDeveloperStatus, getGetDeveloperStatusQueryKey, resetDeveloperDemo, setDeveloperOutage, useGetDeveloperStatus,
   type DemoResetReceipt, type DeveloperStatus,
@@ -227,7 +227,7 @@ export function DeveloperToolsPage({ title }: { title: string }) {
           <section className="dev-card" aria-labelledby="dev-outage-h" data-testid="card-outage">
             <h2 id="dev-outage-h" className="dev-card__title"><PlugZap size={20} aria-hidden="true" /> {t('dev.outage.title')}</h2>
             <p className="dev-card__desc">{t('dev.outage.desc')}</p>
-            {clinics.length === 0 ? <p className="adm-foot" data-testid="state-outage-empty">{t('dev.outage.none')}</p> : <>
+            {clinics.length === 0 ? <div data-testid="state-outage-empty"><EmptyState className="amal-empty--compact" headingLevel={3} title={t('dev.outage.none')} /></div> : <>
               <div className="dev-row">
                 <SelectField id="dev-clinic" label={t('dev.outage.clinic')} value={selected} onChange={(v) => { setSelected(v); setOutMsg(null); }} testId="select-outage-clinic" disabled={!!outBusy}>
                   {clinics.map(c => <option key={c.id} value={String(c.id)}>{c.name}{c.outage ? ` (${t('dev.outage.on')})` : ''}</option>)}

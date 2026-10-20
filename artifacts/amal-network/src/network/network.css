@@ -102,3 +102,5 @@
   .net-card { grid-template-columns: minmax(0, 1fr); }
   .net-h1 { font-size: var(--amal-text-2xl); }
 }
+/* P2-11: gold empty variant centres the shared EmptyState. */
+.net-empty--gold { align-items: stretch; }

@@ -4,12 +4,12 @@ import { createContext, useContext, useEffect, useMemo, useRef, useState } from 
 const LockCtx = createContext<{ locked: boolean; setLocked: (b: boolean) => void }>({ locked: false, setLocked: () => undefined });
 import { useTranslation } from 'react-i18next';
 import { useQueryClient } from '@tanstack/react-query';
-import { AlertTriangle, CheckCircle2, Copy, GitMerge, Loader2, Lock, Search, ShieldCheck, XCircle } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Copy, GitMerge, Loader2, Lock, Search, XCircle } from 'lucide-react';
 import {
   getGetPatientQueryKey, getListPatientDuplicatesQueryKey, getListPatientsQueryKey, mergePatients, useGetPatient, useListPatientDuplicates, useListPatients, usePreviewPatientMerge,
   type PatientMergeRequest, type PatientDuplicatePair, type PatientMergePreview,
 } from '@workspace/api-client-react';
-import { useAmalPreferences } from '@workspace/amal-ui';
+import { EmptyState, useAmalPreferences } from '@workspace/amal-ui';
 import type { ShellClinic } from '@/shell/identity';
 import { formatDateOnly } from '@/shell/formatting';
 import { createOpKeeper } from '@/booking/ops';
@@ -74,7 +74,7 @@ function DuplicatesWorkspace({ clinic, title }: { clinic: ShellClinic; title: st
           <div className="im-panel">
             {dupQ.isLoading && pairs.length === 0 ? <Skeleton lines={4} label={t('im.common.loading')} />
               : dupQ.isError ? <Msg tone="block" testId="status-dup-error">{errorText(t, dupQ.error)} <button type="button" className="bk-btn bk-btn--sm" onClick={() => void dupQ.refetch()} data-testid="button-dup-retry">{t('im.common.retry')}</button></Msg>
-              : pairs.length === 0 ? <div className="im-empty" data-testid="state-dup-empty"><ShieldCheck size={28} aria-hidden="true" /><p>{t('im.dup.empty')}</p></div>
+              : pairs.length === 0 ? <div data-testid="state-dup-empty"><EmptyState headingLevel={3} title={t('im.dup.empty')} description={t('im.dup.emptyDesc')} /></div>
               : (
                 <>
                   <p className="im-hint" data-testid="text-pair-count">{t('im.dup.pairs', { count: pairs.length })}</p>

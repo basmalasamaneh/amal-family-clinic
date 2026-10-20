@@ -16,7 +16,7 @@ export const receptionEn = {
     walkIn: 'Walk-in for this patient', consent: 'Sharing consent', phoneBooking: 'Phone booking',
   },
   up: {
-    title: 'Upcoming appointments', loading: 'Loading upcoming appointments', empty: 'No upcoming appointments in this clinic.',
+    title: 'Upcoming appointments', loading: 'Loading upcoming appointments', empty: 'No upcoming appointments in this clinic.', emptyDesc: 'New bookings for this patient will be listed here.',
     error: 'Upcoming appointments could not be loaded.', unavailable: 'The upcoming appointments service is not available yet.',
     auth: 'You are not allowed to view appointments for this patient.', retry: 'Try again', more: 'Show later appointments',
     open: 'Open in calendar', doctor: 'Doctor {{id}}', status: { booked: 'Booked', double_booked: 'Double-booked' },
@@ -83,7 +83,7 @@ export const receptionAr: ArabicReception = {
     consent: 'موافقة المشاركة', walkIn: 'حضور مباشر لهذا المريض', phoneBooking: 'حجز هاتفي',
   },
   up: {
-    title: 'المواعيد القادمة', loading: 'جارٍ تحميل المواعيد القادمة', empty: 'لا توجد مواعيد قادمة في هذه العيادة.',
+    title: 'المواعيد القادمة', loading: 'جارٍ تحميل المواعيد القادمة', empty: 'لا توجد مواعيد قادمة في هذه العيادة.', emptyDesc: 'ستظهر هنا الحجوزات الجديدة لهذا المريض.',
     error: 'تعذّر تحميل المواعيد القادمة.', unavailable: 'خدمة المواعيد القادمة غير متاحة بعد.',
     auth: 'غير مسموح لك بعرض مواعيد هذا المريض.', retry: 'أعد المحاولة', more: 'عرض المواعيد اللاحقة',
     open: 'فتح في التقويم', doctor: 'الطبيب {{id}}', status: { booked: 'محجوز', double_booked: 'حجز مزدوج' },

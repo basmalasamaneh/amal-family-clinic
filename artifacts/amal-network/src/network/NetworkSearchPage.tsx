@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState, type FormEvent, type Keyboard
 import { useTranslation } from 'react-i18next';
 import { useLocation } from 'wouter';
 import { ChevronDown, Globe2, Lock, RotateCcw, Search, SearchX, ShieldAlert, UserRound } from 'lucide-react';
-import { useAmalPreferences } from '@workspace/amal-ui';
+import { EmptyState, useAmalPreferences } from '@workspace/amal-ui';
 import { lookupNetwork, recordLookupDuration, type NetworkPatient } from '@workspace/api-client-react';
 import { LookupTiming, observePaintedCard } from './lookup-timing';
 import type { ShellClinic } from '@/shell/identity';
@@ -177,7 +177,7 @@ export function NetworkSearchPage({ clinic, title, scope }: { clinic: ShellClini
         />
       )}
       {state.kind === 'ok' && state.items.length === 0 && (
-        <Empty icon={<SearchX size={30} />} title={t('net.search.emptyTitle')} desc={t('net.search.emptyDesc', { q: '\u2068' + state.q + '\u2069' })} testId="state-network-empty" />
+        <Empty icon={<SearchX size={30} />} title={t('net.search.emptyTitle')} desc={t('net.search.emptyDesc', { q: '\u2068' + state.q + '\u2069' })} testId="state-network-empty" gold />
       )}
       {state.kind === 'ok' && state.items.length > 0 && (
         <>
@@ -205,7 +205,7 @@ function Result({ p, onOpen, clinicId }: { p: NetworkPatient; onOpen: () => void
   const shown = alerts.slice(0, 2);
   return (
     <article className="net-card" data-testid={`network-result-${p.id}`}>
-      <button type="button" className="net-hit" data-pid={p.id} onClick={onOpen} aria-label={t('net.result.open', { name: p.name })} data-testid={`button-open-patient-${p.id}`}>
+      <button type="button" className="net-hit" data-pid={p.id} onClick={onOpen} aria-describedby={`open-patient-description-${p.id}`} data-testid={`button-open-patient-${p.id}`}>
         <span className="net-hit__av" aria-hidden="true"><UserRound size={22} /></span>
         <span className="net-hit__main">
           <bdi className="net-hit__name" dir="auto">{p.name}</bdi>
@@ -226,6 +226,7 @@ function Result({ p, onOpen, clinicId }: { p: NetworkPatient; onOpen: () => void
           </span>
         </span>
       </button>
+      <span className="amal-sr-only" id={`open-patient-description-${p.id}`}>{t('net.result.open', { name: p.name })}</span>
       <div className="net-card__side"><ConsentBadge level={effectiveConsent(p)} testId={`badge-consent-${p.id}`} /></div>
       {shown.length > 0 && (
         <div className="net-card__flags">
@@ -237,7 +238,9 @@ function Result({ p, onOpen, clinicId }: { p: NetworkPatient; onOpen: () => void
   );
 }
 
-export function Empty({ icon, title, desc, action, testId, alert }: { icon: React.ReactNode; title: string; desc?: string; action?: React.ReactNode; testId: string; alert?: boolean }) {
+export function Empty({ icon, title, desc, action, testId, alert, gold }: { icon: React.ReactNode; title: string; desc?: string; action?: React.ReactNode; testId: string; alert?: boolean; gold?: boolean }) {
+  // gold: genuine empty collection / no-result view -> shared gold EmptyState. Idle, short-query, error and forbidden keep the icon panel.
+  if (gold && !alert) return <div className="net-empty net-empty--gold" data-testid={testId}><EmptyState headingLevel={2} title={title} description={desc} actions={action} /></div>;
   return (
     <div className="net-empty" data-testid={testId} role={alert ? 'alert' : undefined}>
       <span className="net-empty__mark" aria-hidden="true">{icon}</span>

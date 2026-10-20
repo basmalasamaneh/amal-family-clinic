@@ -103,7 +103,9 @@
 :root, [data-theme='light'] { --shell-nav-bg: var(--amal-toast-bg); --shell-nav-fg: var(--amal-toast-fg); --shell-nav-accent: var(--amal-toast-accent); }
 [data-theme='dark'] { --shell-nav-bg: var(--amal-surface); --shell-nav-fg: var(--amal-text); --shell-nav-accent: var(--amal-primary-text); }
 :root { --shell-nav-muted: color-mix(in srgb, var(--shell-nav-fg) 82%, var(--shell-nav-bg)); --shell-nav-active-bg: color-mix(in srgb, var(--shell-nav-fg) 14%, var(--shell-nav-bg)); }
-.shell-sr { position: absolute; inline-size: 1px; block-size: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+/* Anchor hidden text explicitly: its static position in a wide, scrolling table
+   can otherwise escape the scroller and enlarge the document/scroll-lock gap. */
+.shell-sr { position: absolute; inset-inline-start: 0; inset-block-start: 0; inline-size: 1px; block-size: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .shell-skip { position: absolute; inset-inline-start: 12px; inset-block-start: -80px; z-index: 80; background: var(--amal-primary); color: var(--amal-on-primary); padding-block: 12px; padding-inline: 16px; border-radius: var(--amal-radius-control); font-weight: 600; text-decoration: none; }
 .shell-skip:focus { inset-block-start: 12px; }
 .shell { display: grid; grid-template-columns: 248px minmax(0, 1fr); min-block-size: 100dvh; background: var(--amal-bg); }
@@ -418,7 +420,7 @@
 .cal-card--noshow { border-inline-start-color: var(--amal-status-noshow-border); }
 .cal-card--conflict { border-inline-start-color: var(--amal-status-conflict-border); }
 .cal-card--sync { border-inline-start-color: var(--amal-status-sync-border); border-inline-start-style: dashed; }
-.cal-card--cancelled { border-inline-start-color: var(--amal-status-cancelled-border); opacity: 0.85; }
+.cal-card--cancelled { border-inline-start-color: var(--amal-status-cancelled-border); }
 .cal-card--unknown { border-inline-start-color: var(--amal-border); }
 .cal-card--cancelled .cal-card__name { text-decoration: line-through; }
 .cal-card__time { display: flex; flex-wrap: wrap; gap: 4px 8px; font-weight: 700; font-variant-numeric: tabular-nums; }
@@ -465,3 +467,11 @@
 .cal-docs { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 10px; }
 .cal-docs__item { border: 1px solid var(--amal-border); border-radius: var(--amal-radius-card); background: var(--amal-surface); overflow: hidden; }
 .cal-docs__item .cal-week__empty { padding-block: 12px; padding-inline: 14px; }
+
+/* ===== P2-11 polish: long Arabic labels / mixed-direction values wrap instead of clipping. ===== */
+.shell-page__title, .shell-dialog__title, .auth-title, .tour-card__title { overflow-wrap: anywhere; }
+.shell-dl dd, .help-item span { overflow-wrap: anywhere; min-inline-size: 0; }
+.shell-state .amal-empty__actions .amal-btn { min-block-size: 44px; }
+/* P2-11: non-empty states (forbidden, no role, not found, error, offline lock, no clinic selected) use a semantic icon, never the gold art. */
+.shell-state__icon { display: grid; place-items: center; inline-size: 72px; block-size: 72px; margin-block-end: 8px; border-radius: 50%; background: var(--amal-surface-2); color: var(--amal-primary-text); border: 1px solid var(--amal-border); }
+.shell-state__icon--forbidden, .shell-state__icon--noRole, .shell-state__icon--warn { color: var(--amal-danger-strong); }

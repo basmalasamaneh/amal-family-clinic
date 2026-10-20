@@ -165,3 +165,8 @@
   .adm-wizard { padding: 16px; }
   .adm-filters .amal-field { flex: 1 1 100%; }
 }
+/* P2-11: admin empty states reuse the shared gold EmptyState inside a dashed frame. */
+.adm-empty-wrap { border: 1px dashed var(--amal-border); border-radius: var(--amal-radius-card); padding-block: 8px; padding-inline: 12px; }
+.adm-empty .amal-btn, .adm-empty-wrap .amal-btn { min-block-size: 44px; }
+/* P2-11: scrollable table regions are keyboard-reachable named regions with visible focus. */
+.adm-table-wrap:focus-visible { outline: 3px solid var(--amal-focus-ring); outline-offset: 2px; }

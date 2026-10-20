@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AlertCircle, CheckCircle2, Lock, RefreshCcw, RotateCw, WifiOff } from 'lucide-react';
-import { Button } from '@workspace/amal-ui';
+import { Button, EmptyState } from '@workspace/amal-ui';
 import type { BookingProposal, OutboxRecord } from '@/offline/types';
 import type { ShellClinic } from '@/shell/identity';
 import { syncClient } from './client';
@@ -103,7 +103,7 @@ export function SyncQueuePanel({ clinic, title, scope }: { clinic: ShellClinic |
         <h2 className="sync-h" id="sync-conflicts-h">{t('conflictsTitle')}<span className="sync-h__badge">{openConflicts}</span></h2>
         {snap.phase === 'locked' ? <div className="sync-empty" data-testid="locked-conflicts"><strong>{t('lockedConflicts')}</strong></div>
           : loading ? <div className="sync-skels" aria-hidden="true"><div className="sync-skel" style={{ blockSize: 180 }} /></div>
-          : snap.conflicts.length === 0 ? <div className="sync-empty" data-testid="empty-conflicts"><strong>{t('conflictsEmpty')}</strong></div>
+          : snap.conflicts.length === 0 ? <div data-testid="empty-conflicts"><EmptyState className="amal-empty--compact" title={t('conflictsEmpty')} description={t('conflictsEmptyHint')} /></div>
           : snap.conflicts.map((c) => (
             <ConflictResolution key={`${scope}:${c.id}`} conflict={c} proposal={proposalFor(c.clientOpId)} intent={intentFor(c.id)} clinicId={clinic?.id ?? 0} locked={false} announce={announce} />
           ))}
@@ -112,9 +112,9 @@ export function SyncQueuePanel({ clinic, title, scope }: { clinic: ShellClinic |
       <section aria-labelledby="sync-queue-h">
         <h2 className="sync-h" id="sync-queue-h">{t('queueTitle')}<span className="sync-h__badge">{rows.length}</span></h2>
         {loading ? (
-          <div className="sync-skels" aria-busy="true" aria-label={t('phase.loading')}>{[0, 1, 2].map((i) => <div key={i} className="sync-skel" />)}</div>
+          <div className="sync-skels" role="status" aria-busy="true" aria-label={t('phase.loading')}>{[0, 1, 2].map((i) => <div key={i} className="sync-skel" />)}</div>
         ) : rows.length === 0 ? (
-          <div className="sync-empty" data-testid="empty-queue"><strong>{t('queueEmpty')}</strong>{t('queueEmptyHint')}</div>
+          <div data-testid="empty-queue"><EmptyState className="amal-empty--compact" title={t('queueEmpty')} description={t('queueEmptyHint')} /></div>
         ) : (
           <ol className="sync-list">
             {rows.map(({ p, s }) => (

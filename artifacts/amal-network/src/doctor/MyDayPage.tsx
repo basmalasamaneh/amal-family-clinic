@@ -55,7 +55,7 @@ export function MyDayPage({ clinic, title, scope }: { clinic: ShellClinic | null
 
       {state.kind === 'loading' && <Skeleton rows={3} />}
       {state.kind === 'fail' && <FailState why={state.why} onRetry={reload} testPrefix="day" />}
-      {state.kind === 'ok' && items.length === 0 && <Empty icon={<Clock size={30} />} title={t('doc.day.emptyTitle')} desc={t('doc.day.emptyDesc')} testId="state-day-empty" />}
+      {state.kind === 'ok' && items.length === 0 && <Empty icon={<Clock size={30} />} title={t('doc.day.emptyTitle')} desc={t('doc.day.emptyDesc')} testId="state-day-empty" gold />}
       {state.kind === 'ok' && items.length > 0 && (
         <>
           <ol ref={listRef} tabIndex={-1} className="doc-day" aria-label={t('doc.day.listLabel')} data-testid="list-my-day">
