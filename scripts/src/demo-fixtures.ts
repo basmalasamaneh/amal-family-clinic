@@ -11,11 +11,7 @@ export const demoPin = "2468";
 export const fixtureInstant = fromZonedTime("2026-09-08T08:00:00", zone).toISOString();
 export const minorAsOf = "2026-09-08";
 
-export function normalizeName(value: string) {
-  return value.normalize("NFKD").replace(/\p{M}/gu, "")
-    .replace(/[أإآ]/g, "ا").replace(/ة/g, "ه").replace(/ى/g, "ي")
-    .replace(/ـ/g, "").trim().replace(/\s+/g, " ").toLowerCase();
-}
+export { normalizeName } from "@workspace/db/patient-search";
 
 async function account(client: pg.Client, fixtureKey: string, email: string,
   role: string, clinicId: number | null, doctorId: number | null) {

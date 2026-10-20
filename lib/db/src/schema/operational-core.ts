@@ -80,6 +80,7 @@ export const operationalDevices = operational.table("devices", {
 
 export const operationalPatients = operational.table("patients", {
   patient_id: identity("patient_id"),
+  created_clinic_id: integer("created_clinic_id").references(() => operationalClinics.clinic_id),
   patient_name: text("patient_name").notNull(),
   phone: text("phone").notNull(),
   dob: date("dob").notNull(),

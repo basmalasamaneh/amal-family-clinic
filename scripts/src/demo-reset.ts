@@ -15,6 +15,12 @@ export async function clearOperational(client: pg.Client) {
   await lockOperational(client);
   await client.query("SET CONSTRAINTS ALL DEFERRED");
   await client.query("SET LOCAL ROLE amal_demo_reset");
+  // Optional patient-service children: keep the existing explicit demo reset
+  // compatible whether or not the additive patient migration has been applied.
+  for (const table of ["patient_create_receipts", "patient_clinic_access"] as const) {
+    const { rows: [present] } = await client.query("SELECT to_regclass($1) IS NOT NULL AS ready", [`operational.${table}`]);
+    if (present.ready) await client.query(`DELETE FROM operational.${table}`);
+  }
   for (const table of deleteOrder) await client.query(`DELETE FROM operational.${table}`);
   await client.query("RESET ROLE");
 }

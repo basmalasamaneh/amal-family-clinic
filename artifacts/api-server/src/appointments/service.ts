@@ -1,3 +1,4 @@
+import { patientScopeSql } from "../lib/patient-access";
 import { createHash, randomUUID } from "node:crypto";
 import type { PoolClient } from "pg";
 import { z } from "zod/v4";
@@ -109,7 +110,7 @@ async function existing(client: PoolClient, actor: Auth, id: number): Promise<Ro
 async function relationships(client: PoolClient, input: Pick<IntervalInput, "clinicId" | "doctorId" | "patientId">) {
   const { rows: [valid] } = await client.query(`SELECT
     EXISTS(SELECT 1 FROM operational.doctors WHERE doctor_id=$1 AND clinic_id=$2) AS doctor,
-    EXISTS(SELECT 1 FROM operational.patients WHERE patient_id=$3 AND merged_into_id IS NULL) AS patient`, [input.doctorId, input.clinicId, input.patientId]);
+    EXISTS(SELECT 1 FROM operational.patients p WHERE p.patient_id=$3 AND ${patientScopeSql("$2")}) AS patient`, [input.doctorId, input.clinicId, input.patientId]);
   if (!valid.doctor || !valid.patient) throw fail(422, "INVALID_BOOKING_REFERENCE", "validation");
 }
 function exactHold(h: HoldRow, actor: Auth, input: { clinicId: number; doctorId: number; patientId: number; startsAt: string }, minutes: number, appointmentId?: number) {

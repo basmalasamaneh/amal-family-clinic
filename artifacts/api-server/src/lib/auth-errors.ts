@@ -6,6 +6,7 @@ export class ApiError extends Error {
 export const fail = (status: number, code: string, key: string, params = {}) => new ApiError(status, code, key, params);
 export const translations = {
   en: {
+    patientReferenced: "This patient has protected records and cannot be deleted.",
     deviceUntrusted: "This device is not registered or its access was revoked. Ask your clinic administrator to register it.",
     validation: "Check the submitted information.", unauthorized: "Sign in to continue.",
     forbidden: "You do not have access.", csrf: "Refresh the page and try again.",
@@ -13,6 +14,7 @@ export const translations = {
     pinLocked: "PIN access is temporarily locked.", rateLimited: "Too many attempts. Try again later.", internal: "An unexpected error occurred.",
   },
   ar: {
+    patientReferenced: "لدى هذا المريض سجلات محمية ولا يمكن حذفه.",
     deviceUntrusted: "هذا الجهاز غير مسجّل أو تم إلغاء وصوله. اطلب من مسؤول العيادة تسجيله.",
     validation: "تحقق من المعلومات المدخلة.", unauthorized: "سجّل الدخول للمتابعة.",
     forbidden: "ليس لديك صلاحية الوصول.", csrf: "حدّث الصفحة وحاول مجددًا.",

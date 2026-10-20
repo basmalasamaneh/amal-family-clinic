@@ -5,6 +5,7 @@ import type {
   OperationalImportBatch, OperationalImportRow, OperationalPatientMergeCandidate,
 } from "@workspace/db/schema";
 import { addCalendarDays, dateOnly, demoZone, hebronDate, hebronInstant, isMinor, utcInstant } from "./time";
+import { normalizeName as normalize } from "@workspace/db/patient-search";
 
 export * from "./time";
 
@@ -24,10 +25,6 @@ export interface BuilderOptions {
   doctor?: DoctorOverrides;
   appointment?: AppointmentOverrides;
 }
-
-const normalize = (value: string) => value.normalize("NFKD").replace(/\p{M}/gu, "")
-  .replace(/[أإآ]/g, "ا").replace(/ة/g, "ه").replace(/ى/g, "ي")
-  .replace(/ـ/g, "").trim().replace(/\s+/g, " ").toLowerCase();
 
 /**
  * One private ID stream per factory. No pool, script, seed data, clock, randomness,
@@ -78,6 +75,7 @@ export function createDemoBuilders(input: ClinicContext, initialOptions: Builder
     const patient_name = values.patient_name ?? `Synthetic patient ${patient_id}`;
     if ((values.guardian_name == null) !== (values.guardian_relation == null)) throw new Error("Guardian details must be paired");
     const row: OperationalPatient = {
+      created_clinic_id: null,
       patient_name, phone: `000${patient_id}`, dob, minor_as_of,
       name_normalized: normalize(patient_name), guardian_name: null, guardian_relation: null,
       ...values, patient_id, is_minor: isMinor(dob, minor_as_of), merged_into_id: null,

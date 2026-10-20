@@ -3,7 +3,7 @@
   "info": {
     "title": "Api",
     "version": "0.2.0",
-    "description": "Amal Network Section 12. Authentication and appointments are implemented; other domain services remain contracts/mocks. UTC ISO instants, date-only DOB, Asia/Hebron display. Reception gets identity/coordination only; doctor Basic consent adds visit date/clinic/doctor, Clinical adds notes and alerts. No visit history for reception or admin. Lite clinics excluded from network. Network accesses audited. Withdrawal removes future network access, not existing lawful local records. Lists use opaque cursor plus limit (1–100, default 25); null nextCursor ends pagination."
+    "description": "Amal Network Section 12. Authentication, appointments and clinic-local patient CRUD/search are implemented; other domain services remain contracts/mocks. UTC ISO instants, required date-only DOB, Asia/Hebron display. Local patient endpoints return demographics only to doctors/front-desk, never clinical history or admin patient access. Separate network services require consent and exclude Lite clinics. Lists use opaque cursor plus limit (1–100, default 25); null nextCursor ends pagination."
   },
   "servers": [
     {
@@ -521,13 +521,25 @@
           }
         ]
       },
+      "PatientUpdate": {
+        "type": "object",
+        "additionalProperties": false,
+        "minProperties": 1,
+        "properties": {
+          "name": { "type": "string", "minLength": 1, "maxLength": 200 },
+          "phone": { "type": "string", "minLength": 1, "maxLength": 40 },
+          "dateOfBirth": { "type": "string", "format": "date" }
+        },
+        "examples": [{ "name": "Synthetic patient updated" }]
+      },
       "PatientInput": {
         "type": "object",
         "additionalProperties": false,
         "properties": {
           "name": {
             "type": "string",
-            "minLength": 1
+            "minLength": 1,
+            "maxLength": 200
           },
           "dateOfBirth": {
             "type": "string",
@@ -535,7 +547,8 @@
           },
           "phone": {
             "type": "string",
-            "minLength": 1
+            "minLength": 1,
+            "maxLength": 40
           },
           "clientOpId": {
             "type": "string",
@@ -5258,7 +5271,7 @@
           "patients"
         ],
         "summary": "list patients",
-        "description": "Contract-only domain service; mock responses are simulated. Clinic scope comes from authenticated identity, not submitted identifiers. Admin has no implicit clinical access. Network visibility requires active consent and excludes Lite clinics. Mutations require CSRF; clientOpId is replay-safe per clinic, with changed payload returning 409.",
+        "description": "Implemented clinic-local demographic search only. No admin access or network lookup. Query max 200 characters; absent/normalized-blank lists all authorized records by ID. Limit 1–100 (default 25), bounded opaque query/clinic-bound cursor. All candidates are scoped before ranking and pagination. Exact normalized name OR exact canonical phone is tier 0; literal substring (query >=2) tier 1; whole-name Levenshtein tier 2 (4–7 chars max 1 edit; 8–64 chars max 2; >=75% similarity; names max 64 for fuzzy). Stable patient-ID ties. Phone preserves zeros and optional +, removes only visual separators, never infers countries. NFKD strips combining marks, alef variants including wasla unify, ة→ه, ى→ي, tatweel removed, whitespace collapsed, lowercase. No transliteration or identity confirmation. See docs/patients.md.",
         "security": [
           {
             "sessionCookie": []
@@ -5268,7 +5281,7 @@
           "doctor",
           "front-desk"
         ],
-        "x-implementation": "contract-only",
+        "x-implementation": "implemented",
         "parameters": [
           {
             "name": "q",
@@ -5276,7 +5289,7 @@
             "required": false,
             "schema": {
               "type": "string",
-              "minLength": 2
+              "maxLength": 200
             },
             "example": "Synthetic"
           },
@@ -5285,7 +5298,8 @@
             "in": "query",
             "required": false,
             "schema": {
-              "type": "string"
+              "type": "string",
+              "maxLength": 512
             },
             "example": "demo:1"
           },
@@ -5453,7 +5467,7 @@
           "patients"
         ],
         "summary": "create patient",
-        "description": "Contract-only domain service; mock responses are simulated. Clinic scope comes from authenticated identity, not submitted identifiers. Admin has no implicit clinical access. Network visibility requires active consent and excludes Lite clinics. Mutations require CSRF; clientOpId is replay-safe per clinic, with changed payload returning 409.",
+        "description": "Implemented. Strict required name (1–200), phone (1–40; canonical ASCII digits with optional +, 3–20 digits) and real nonfuture YYYY-MM-DD DOB. Missing DOB is rejected, never invented. Clinic authority derives solely from authentication. Names and shared phones never merge or overwrite. clientOpId is serialized per clinic: changed payload 409, replay returns current accessible record, deleted record replay 404 and never recreates it. Only demographics are returned. CSRF required.",
         "security": [
           {
             "sessionCookie": [],
@@ -5464,7 +5478,7 @@
           "doctor",
           "front-desk"
         ],
-        "x-implementation": "contract-only",
+        "x-implementation": "implemented",
         "parameters": [
           {
             "name": "X-CSRF-Token",
@@ -5635,13 +5649,46 @@
       }
     },
     "/patients/{id}": {
+      "patch": {
+        "operationId": "updatePatient",
+        "summary": "Update clinic-local patient demographics only",
+        "description": "Strict demographics only. Real date-only DOB is required when supplied; no future dates. See docs/patients.md for scope, search and protected-reference rules.",
+        "x-roles": ["doctor", "front-desk"],
+        "security": [{ "sessionCookie": [], "csrfToken": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer", "minimum": 1 } }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PatientUpdate" }, "example": { "name": "Synthetic patient updated" } } } },
+        "responses": {
+          "200": { "description": "Demographics only", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PatientBasic" }, "example": { "id": 301, "name": "Synthetic patient updated", "phone": "+970599000001", "dateOfBirth": "1990-05-12", "clinicId": 101, "visibility": "basic" } } } },
+          "400": { "description": "Invalid input" },
+          "401": { "description": "Authentication required" },
+          "403": { "description": "Role, scope or CSRF denied" },
+          "404": { "description": "Absent or inaccessible patient" },
+          "409": { "description": "Protected demographic constraint" }
+        }
+      },
+      "delete": {
+        "operationId": "deletePatient",
+        "summary": "Delete an unreferenced operational patient",
+        "description": "No cascade. Seed-backed patients and patients with any protected reference (including audit patient references) return 409 PATIENT_REFERENCED / error.patientReferenced. Audit and create receipts survive deletion.",
+        "x-roles": ["doctor", "front-desk"],
+        "security": [{ "sessionCookie": [], "csrfToken": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer", "minimum": 1 } }],
+        "responses": {
+          "204": { "description": "Deleted; audit retained" },
+          "400": { "description": "Invalid input" },
+          "401": { "description": "Authentication required" },
+          "403": { "description": "Role, scope or CSRF denied" },
+          "404": { "description": "Absent or inaccessible patient" },
+          "409": { "description": "Patient has protected references" }
+        }
+      },
       "get": {
         "operationId": "getPatient",
         "tags": [
           "patients"
         ],
         "summary": "get patient",
-        "description": "Contract-only domain service; mock responses are simulated. Clinic scope comes from authenticated identity, not submitted identifiers. Admin has no implicit clinical access. Network visibility requires active consent and excludes Lite clinics. Mutations require CSRF; clientOpId is replay-safe per clinic, with changed payload returning 409. Front-desk gets identity/coordination only, never visit history. Doctor Basic consent permits visit date/clinic/doctor summaries without notes or alerts; Clinical additionally permits notes and key alerts. None/withdrawn consent yields no network results, as does Lite mode. Admin denied.",
+        "description": "Implemented clinic-local demographics only, for doctor/front-desk. PatientProjection is retained for compatibility but this endpoint always returns its PatientBasic branch, never visits or notes. Local registration or an independent trusted clinic grant establishes scope. Legacy grants come only from immutable seed relationships. Operational bookings/history, consent and import suggestions never grant access. Booking itself requires independent patient authorization. Inaccessible and absent records both return 404. No admin bypass.",
         "security": [
           {
             "sessionCookie": []
@@ -5651,7 +5698,7 @@
           "doctor",
           "front-desk"
         ],
-        "x-implementation": "contract-only",
+        "x-implementation": "implemented",
         "parameters": [
           {
             "name": "id",

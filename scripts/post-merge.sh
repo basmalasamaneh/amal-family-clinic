@@ -11,3 +11,4 @@ pnpm --filter @workspace/scripts seed:verify
 pnpm --filter @workspace/scripts operational:migrate
 pnpm --filter @workspace/api-server auth:migrate
 pnpm --filter @workspace/api-server appointments:migrate
+pnpm --filter @workspace/api-server patients:migrate

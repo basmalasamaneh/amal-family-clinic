@@ -11,3 +11,4 @@
 - [Test browser environment](test-browser-environment.md) — downloaded Playwright browsers may lack NixOS native libraries; screenshot baselines depend on browser and fonts.
 - [Scheduling coordination](scheduling-coordination.md) — future sync/import writes must share database locks; historical collisions prevent blanket exclusion constraints.
 - [Portal sizing](portal-sizing.md) — check modal bounds directly; page scroll width can hide portaled overflow.
+- [Local patient boundary](local-patient-boundary.md) — similarity is not clinic authority or identity; unknown DOB cannot be invented and deletion must retain audit.

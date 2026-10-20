@@ -242,6 +242,7 @@
     }
   },
   "error": {
+    "patientReferenced": "This patient has protected records and cannot be deleted.",
     "unauthorized": "Your session is not valid. Please sign in again.",
     "forbidden": "This action is not permitted for your account.",
     "rateLimited": "Too many attempts. Please wait before trying again.",

@@ -6,7 +6,8 @@
   "exports": {
     ".": "./src/index.ts",
     "./schema": "./src/schema/index.ts",
-    "./runtime-connection": "./src/runtime-connection.ts"
+    "./runtime-connection": "./src/runtime-connection.ts",
+    "./patient-search": "./src/patient-search.ts"
   },
   "scripts": {
     "push": "node -e \"console.error('Schema push is disabled: use pnpm --filter @workspace/scripts operational:migrate'); process.exit(1)\"",

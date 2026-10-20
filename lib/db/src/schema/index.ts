@@ -22,3 +22,4 @@ export * from "./operational-core";
 export * from "./operational-clinical";
 export * from "./operational-workflows";
 export * from "./operational-scheduling";
+export * from "./operational-patients";

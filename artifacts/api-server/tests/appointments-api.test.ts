@@ -88,6 +88,11 @@ before(async () => {
     const { rows: [patient] } = await admin.query(`INSERT INTO operational.patients(patient_name,phone,dob,name_normalized)
       VALUES($1,'test-phone','1980-01-01',$1) RETURNING patient_id`, [`appointment-test-${marker}-${index}`]);
     patientIds.push(patient.patient_id);
+    // Explicit trusted fixture grants, independent of any booking. Cross-clinic
+    // scheduling tests exercise authorized shared patients, not guessed IDs.
+    for (const clinicId of clinicIds) await admin.query(
+      "INSERT INTO operational.patient_clinic_access(patient_id,clinic_id) VALUES($1,$2)",
+      [patient.patient_id, clinicId]);
   }
   await admin.query("COMMIT");
 });
@@ -104,6 +109,7 @@ after(async () => {
     await admin.query("DELETE FROM operational.audit_log WHERE patient_id=ANY($1::integer[]) OR user_id=ANY($2::integer[])", [patientIds, userIds]);
     await admin.query("RESET ROLE");
     await admin.query("DELETE FROM operational.appointments WHERE patient_id=ANY($1::integer[])", [patientIds]);
+    await admin.query("DELETE FROM operational.patient_clinic_access WHERE patient_id=ANY($1::integer[])", [patientIds]);
     await admin.query("DELETE FROM operational.auth_sessions WHERE user_id=ANY($1::integer[])", [userIds]);
     await admin.query("DELETE FROM operational.auth_devices WHERE device_id=ANY($1::integer[])", [deviceIds]);
     await admin.query("DELETE FROM operational.devices WHERE id=ANY($1::integer[])", [deviceIds]);
