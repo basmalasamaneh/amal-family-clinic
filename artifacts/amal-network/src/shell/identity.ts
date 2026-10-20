@@ -1,5 +1,5 @@
 import { createFixtureAdapter } from './identity-fixture';
-import { getMe, getOfflinePermit, listClinics, logout, type Identity } from '@workspace/api-client-react';
+import { getMe, getOfflinePermit, listClinics, listAdminClinics, logout, type Identity } from '@workspace/api-client-react';
 import { authorizationEpoch, forgetOfflinePermit, isExplicitlySignedOut, newTabNonce, rememberOfflinePermit, restoreOfflineIdentity, revokeOfflineAuthorization } from '../auth/offline-permit';
 
 export type ShellRole = 'admin' | 'doctor' | 'front-desk';
@@ -17,6 +17,8 @@ export interface ShellIdentity {
   /** Locally verified signed continuation expiry; never derived from persisted identity. */
   offlineAuthorizedUntil?: string;
   offlineRestored?: boolean;
+  /** Online /me authority only; a login session is not a trusted sync device. */
+  syncDeviceAuthorized?: boolean;
 }
 export interface IdentityAdapter {
   mode: 'real' | 'fixture';
@@ -48,13 +50,15 @@ export const realIdentityAdapter: IdentityAdapter = {
     }
     forgetOfflinePermit();
     if (!Number.isSafeInteger(identity.id) || identity.id <= 0 || typeof identity.email !== 'string') throw new Error('Invalid identity response');
-    const result: ShellIdentity = { id: `account:${identity.id}`, name: identity.email, role: canonicalRole(identity.role), clinics: [], clinicsState: 'ready', expiresAt: identity.session?.expiresAt ?? null, csrfToken: identity.csrfToken };
+    const result: ShellIdentity = { id: `account:${identity.id}`, name: identity.email, role: canonicalRole(identity.role), clinics: [], clinicsState: 'ready', expiresAt: identity.session?.expiresAt ?? null, csrfToken: identity.csrfToken,
+      syncDeviceAuthorized: identity.device !== null && identity.device.clinicId === identity.clinicId };
     if (!result.role) return result;
     try {
       let cursor: string | undefined;
       const seen = new Set<string>();
       do {
-        const page = await listClinics({ limit: 100, ...(cursor ? { cursor } : {}) });
+        const list = result.role === 'admin' ? listAdminClinics : listClinics;
+        const page = await list({ limit: 100, ...(cursor ? { cursor } : {}) });
         if (!Array.isArray(page.items) || page.items.some(c => !Number.isSafeInteger(c.id) || typeof c.name !== 'string')) throw new Error('Invalid clinic response');
         result.clinics.push(...authorizedClinics(identity, page.items));
         cursor = page.nextCursor ?? undefined;

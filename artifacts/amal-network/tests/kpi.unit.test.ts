@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import type { KpiResult } from '@workspace/api-client-react';
 import {
   addDays, clinicPairs, inclusiveEnd, isEmptyWindow, lossStatus, matchesSelection, meetsLookupTarget, noShowRows, partialItems, pct,
-  preventionSeries, resolveDesignation, sourceSlices, topRate, weekdayName, weekdayRows,
+  preventionSeries, resolveDesignation, sourceSlices, topRate, weekdayName, weekdayRows, lookupView,
 } from '../src/kpi/model';
 import { kpiAr, kpiEn } from '../src/kpi/strings';
 
@@ -24,7 +24,7 @@ export function fixture(o: { daily?: KpiResult['after']['telemetry']['conflicts'
       period: period('2026-10-05', 7), provenance: 'ops', metrics: metrics(o.afterClinics ?? [clinic(3, 'Synthetic South', 0, 0, rate(1, 8)), clinic(9, 'Synthetic East', 4, 0)], o.afterExtra),
       telemetry: {
         conflicts: { daily: o.daily ?? [], cumulative: { blocked: 5, warnings: 2, overrides: 1 }, coverage: 'c' },
-        lookupTime: { available: false, reason: 'LOOKUP_DURATION_PRODUCER_UNAVAILABLE', medianSeconds: null, sampleCount: null, measurementBoundaries: 'b' },
+        lookupTime: { available: false, reason: 'NO_LOOKUP_SAMPLES', medianSeconds: null, p90Seconds: null, sampleCount: 0, measurementBoundaries: 'b', units: 'seconds', storageUnits: 'milliseconds', exact: true, percentileMethod: 'Exact median; nearest-rank p90', coverage: 'c', attribution: 'a' },
         networkActivity: { available: false, reason: 'LOGICAL_NETWORK_LOOKUP_PRODUCER_UNAVAILABLE', daily: null },
         downtime: { receivedCreates: 0, synced: 0, conflicted: 0, rejected: 0, pending: 0, queued: { available: false, reason: 'CLIENT_QUEUE_NOT_OBSERVED', value: null }, lost: { available: false, reason: 'CLIENT_LOSS_NOT_OBSERVED', value: null }, coverage: 'c' },
       },
@@ -33,6 +33,20 @@ export function fixture(o: { daily?: KpiResult['after']['telemetry']['conflicts'
   } as KpiResult;
 }
 const day = (date: string, blocked: number, cum: number) => ({ date, blocked, warnings: 1, overrides: 0, cumulativeBlocked: cum, cumulativeWarnings: 0, cumulativeOverrides: 0 });
+
+test('lookup displays server range percentiles, exact precision and honest empty count', () => {
+  const data = fixture();
+  const empty = lookupView(data);
+  assert.equal(empty.median, null);
+  assert.equal(empty.p90, null);
+  assert.equal(empty.samples, 0);
+  Object.assign(data.after.telemetry.lookupTime, { available: true, reason: null, medianSeconds: 1.2345, p90Seconds: 12.345, sampleCount: 8 });
+  const measured = lookupView(data);
+  assert.equal(measured.median, 1.2345);
+  assert.equal(measured.p90, 12.345);
+  assert.equal(measured.samples, 8);
+  assert.equal(measured.meetsTarget, true);
+});
 
 test('every English KPI string has a non-empty Arabic counterpart', () => {
   const walk = (en: Record<string, unknown>, ar: Record<string, unknown>, path: string) => {
@@ -87,6 +101,16 @@ test('weekday: seven Sunday-first buckets from API, missing stay null', () => {
 test('targets: lookup strictly under 10 s, loss null is unavailable not success', () => {
   assert.equal(meetsLookupTarget(9.99), true); assert.equal(meetsLookupTarget(10), false); assert.equal(meetsLookupTarget(null), null);
   assert.equal(lossStatus(null), 'unavailable'); assert.equal(lossStatus(0), 'met'); assert.equal(lossStatus(1), 'missed');
+});
+test('lookup measurements make an otherwise empty window nonempty', () => {
+  const data = fixture();
+  data.after.telemetry.conflicts.cumulative = { blocked: 0, warnings: 0, overrides: 0 };
+  assert.equal(isEmptyWindow(data), true);
+  data.after.telemetry.lookupTime = {
+    ...data.after.telemetry.lookupTime,
+    available: true, reason: null, medianSeconds: 1.25, p90Seconds: 1.5, sampleCount: 2,
+  };
+  assert.equal(isEmptyWindow(data), false);
 });
 test('designation is unavailable; no ID/name guess', () => {
   assert.deepEqual(resolveDesignation(fixture()), { kind: 'unavailable' });

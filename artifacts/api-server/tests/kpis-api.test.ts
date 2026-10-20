@@ -4,10 +4,13 @@ import { once } from "node:events";
 import { randomUUID } from "node:crypto";
 import pg from "pg";
 import { parseKpiQuery, BASELINE_PERIOD } from "../src/kpis/period";
+import { aggregateLookup, ingestLookup, isLookupTelemetryPath, lookupBody, summarizeLookup } from "../src/kpis/lookup";
+import type { Auth } from "../src/lib/auth";
 
 if (process.env.NODE_ENV === "production" || process.env.REPLIT_DEPLOYMENT === "1") throw new Error("KPI tests prohibited in deployment");
 process.env.NODE_ENV = "test";
 process.env.LOG_LEVEL = "silent";
+process.env.AUTH_ALLOWED_ORIGINS = "http://lookup.test";
 const { default: app } = await import("../src/app");
 const { pool } = await import("@workspace/db");
 const { refreshKpis } = await import("../src/kpis/service");
@@ -148,4 +151,75 @@ test("Asia/Hebron calendar anchors preserve DST and exclusive local midnight", (
   assert.equal((Date.parse(autumn.end) - Date.parse(autumn.start)) / 3600000, 25);
   assert.equal(parseKpiQuery({ range: "week", date: "2026-09-13" }).period.startDate, "2026-09-07");
   assert.equal(parseKpiQuery({ range: "month", date: "2028-02-29" }).period.days, 29);
+});
+test("strict duration validation, path privacy variants and exact percentiles", () => {
+  for (const durationMs of [-1, 0.1, NaN, Infinity, "1", Number.MAX_SAFE_INTEGER + 1, null]) {
+    assert.equal(lookupBody.safeParse({ durationMs }).success, false);
+  }
+  assert.equal(lookupBody.safeParse({ durationMs: 1, clinicId }).success, false);
+  for (const durationMs of [0, 1, Number.MAX_SAFE_INTEGER]) assert(lookupBody.safeParse({ durationMs }).success);
+  for (const path of ["/api/kpis/lookup-duration", "/API/KPIS/LOOKUP-DURATION/", "/api/kpis/lookup-duration/?private=value"]) assert(isLookupTelemetryPath(path));
+  assert.deepEqual([summarizeLookup([]).medianSeconds, summarizeLookup([]).p90Seconds], [null, null]);
+  assert.equal(summarizeLookup([[1000, 1], [3000, 1]]).medianSeconds, 2);
+  assert.equal(summarizeLookup([[1000, 9], [10000, 1]]).p90Seconds, 1);
+});
+test("lookup auth, strict API, concurrent daily increments, midnight attribution and refresh preservation", async () => {
+  const { rows: [session] } = await admin.query("SELECT csrf_token FROM operational.auth_sessions WHERE token_digest=$1", [digest(doctorToken)]);
+  const post = (token?: string, body: unknown = { durationMs: 10 }, csrf = session.csrf_token, path = "/kpis/lookup-duration") =>
+    fetch(base.replace(/\/kpis$/, "") + path, { method: "POST", headers: {
+      origin: "http://lookup.test", "content-type": "application/json", "x-csrf-token": csrf,
+      ...(token ? { cookie: `amal_session=${token}` } : {}),
+    }, body: JSON.stringify(body) });
+  const auth = { id: users[1], role: "doctor", clinicId, doctorId } as Auth;
+  const query = { range: "week", date: "2094-06-09", clinicId: String(clinicId) };
+  const period = parseKpiQuery(query).period;
+  // Two adjacent receipt dates with deliberately unequal counts. Range median
+  // must be 1s, not the 5.5s average of the two daily medians.
+  const first = new Date("2094-06-08T20:59:59Z"), second = new Date("2094-06-08T21:00:00Z");
+  const { rows: [auditBefore] } = await admin.query("SELECT count(*)::int AS n FROM operational.audit_log WHERE user_id=$1", [auth.id]);
+  const client = await pool.connect();
+  try {
+    await ingestLookup(auth, { durationMs: 1000 }, first);
+    const { rows: [original] } = await admin.query("SELECT generated_at FROM operational.kpi_snapshots WHERE metric='lookup_duration_ms' AND clinic_id=$1 AND date='2094-06-08'", [clinicId]);
+    await Promise.all([
+      ...Array.from({ length: 19 }, () => ingestLookup(auth, { durationMs: 1000 }, first)),
+      ...Array.from({ length: 2 }, () => ingestLookup(auth, { durationMs: 10000 }, second)),
+      refreshKpis(query),
+    ]);
+    const result = await refreshKpis(query);
+    assert.equal(result.after.telemetry.lookupTime.sampleCount, 22);
+    assert.equal(result.after.telemetry.lookupTime.medianSeconds, 1);
+    assert.equal(result.after.telemetry.lookupTime.p90Seconds, 1);
+    const { rows } = await admin.query("SELECT date::text,evidence,generated_at FROM operational.kpi_snapshots WHERE metric='lookup_duration_ms' AND clinic_id=$1 AND date BETWEEN '2094-06-08' AND '2094-06-09' ORDER BY date", [clinicId]);
+    assert.equal(rows.length, 2);
+    assert.deepEqual(rows.map(r => r.evidence), [
+      { sampleCount: 20, frequencies: { "1000": 20 } },
+      { sampleCount: 2, frequencies: { "10000": 2 } },
+    ]);
+    assert.equal(rows[0].generated_at.toISOString(), original.generated_at.toISOString());
+    await client.query("SET TIME ZONE 'Pacific/Honolulu'");
+    assert.equal((await aggregateLookup(client, period.start, period.end, clinicId)).sampleCount, 22);
+    await assert.rejects(ingestLookup({ ...auth, clinicId: 2147483647 }, { durationMs: 1 }));
+    const { rows: [auditAfter] } = await admin.query("SELECT count(*)::int AS n FROM operational.audit_log WHERE user_id=$1", [auth.id]);
+    assert.equal(auditAfter.n, auditBefore.n);
+    assert.equal((await post()).status, 401);
+    assert.equal((await post(adminToken)).status, 403);
+    assert.equal((await post(doctorToken, { durationMs: 1 }, "wrong")).status, 403);
+    assert.equal((await post(doctorToken, { durationMs: 1, clinicId: 999 })).status, 400);
+    assert.equal((await post(doctorToken, { durationMs: -1 })).status, 400);
+    // Invalid variant paths are rejected without audits; successful API receipt
+    // is checked below with a zero bucket and restored to its previous evidence.
+    const today = parseKpiQuery({ range: "day" }).period.startDate;
+    const { rows: [saved] } = await admin.query("SELECT id,evidence FROM operational.kpi_snapshots WHERE metric='lookup_duration_ms' AND clinic_id=$1 AND date=$2", [clinicId, today]);
+    try {
+      assert.equal((await post(doctorToken, { durationMs: 0 }, session.csrf_token, "/KPIS/LOOKUP-DURATION/?ignored=true")).status, 204);
+    } finally {
+      if (saved) await admin.query("UPDATE operational.kpi_snapshots SET evidence=$2 WHERE id=$1", [saved.id, saved.evidence]);
+      else await admin.query("DELETE FROM operational.kpi_snapshots WHERE metric='lookup_duration_ms' AND clinic_id=$1 AND date=$2", [clinicId, today]);
+    }
+  } finally {
+    await client.query("RESET TIME ZONE");
+    client.release();
+    await admin.query("DELETE FROM operational.kpi_snapshots WHERE clinic_id=$1 AND date BETWEEN $2 AND $3 AND source='after'", [clinicId, period.startDate, period.endDateExclusive]);
+  }
 });

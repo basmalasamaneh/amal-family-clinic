@@ -2081,6 +2081,12 @@ export const getKpisResponseAfterTelemetryConflictsCumulativeWarningsMin = 0;
 
 export const getKpisResponseAfterTelemetryConflictsCumulativeOverridesMin = 0;
 
+export const getKpisResponseAfterTelemetryLookupTimeMedianSecondsMin = 0;
+
+export const getKpisResponseAfterTelemetryLookupTimeP90SecondsMin = 0;
+
+export const getKpisResponseAfterTelemetryLookupTimeSampleCountMin = 0;
+
 export const getKpisResponseAfterTelemetryDowntimeReceivedCreatesMin = 0;
 
 export const getKpisResponseAfterTelemetryDowntimeSyncedMin = 0;
@@ -2288,12 +2294,19 @@ export const GetKpisResponse = zod.object({
   "coverage": zod.string()
 }).strict().describe('Durable APPOINTMENT_CONFLICT commit attempts deduplicated by logical clientOpId. Includes failed resolution wrappers whose nested failures were rolled back; successful wrappers are not extra attempts. Excludes repeated previews and version/hold/validation failures. Warning coverage is partial: blocked direct/sync warning evidence and approved patient-overlap override audit evidence only. No claim that an overridden warning prevented a booking.'),
   "lookupTime": zod.object({
-  "available": zod.literal(false),
-  "reason": zod.literal("LOOKUP_DURATION_PRODUCER_UNAVAILABLE"),
-  "medianSeconds": zod.null(),
-  "sampleCount": zod.null(),
-  "measurementBoundaries": zod.string()
-}).strict().describe('No durable duration producer exists. No response-count proxy, invented sample count, or average of daily medians. A future instrumented contract must calculate the range median from actual duration samples with defined logical measurement boundaries.'),
+  "available": zod.boolean(),
+  "reason": zod.string().nullable(),
+  "medianSeconds": zod.number().min(getKpisResponseAfterTelemetryLookupTimeMedianSecondsMin).nullable(),
+  "p90Seconds": zod.number().min(getKpisResponseAfterTelemetryLookupTimeP90SecondsMin).nullable(),
+  "sampleCount": zod.number().int().min(getKpisResponseAfterTelemetryLookupTimeSampleCountMin),
+  "measurementBoundaries": zod.string(),
+  "coverage": zod.string(),
+  "units": zod.literal("seconds"),
+  "storageUnits": zod.literal("milliseconds"),
+  "exact": zod.literal(true),
+  "percentileMethod": zod.string(),
+  "attribution": zod.string()
+}).strict().describe('Exact merged integer-ms frequencies across the selected receipt-date range. Never average daily percentiles. Empty sample count is zero; percentiles are null.'),
   "networkActivity": zod.object({
   "available": zod.literal(false),
   "reason": zod.literal("LOGICAL_NETWORK_LOOKUP_PRODUCER_UNAVAILABLE"),
@@ -3741,5 +3754,21 @@ export const RecordNetworkHeartbeatResponse = zod.object({
   "receivedAt": zod.coerce.date(),
   "heartbeatTimeoutSeconds": zod.number().int().min(recordNetworkHeartbeatResponseHeartbeatTimeoutSecondsMin).max(recordNetworkHeartbeatResponseHeartbeatTimeoutSecondsMax)
 }).strict()
+
+
+/**
+ * Doctor only; trusted current clinic from authenticated account and linked doctor. CSRF required. Server receipt Asia/Hebron date; only exact daily aggregate frequencies and count retained. No automatic retries.
+ * @summary Receive one foreground successful-card lookup duration
+ */
+export const recordLookupDurationBodyDurationMsMin = 0;
+export const recordLookupDurationBodyDurationMsMax = 9007199254740991;
+
+
+
+export const RecordLookupDurationBody = zod.object({
+  "durationMs": zod.number().int().min(recordLookupDurationBodyDurationMsMin).max(recordLookupDurationBodyDurationMsMax)
+}).strict().describe('Only finite safe integer elapsed milliseconds. No identity, query, client clinic or wall-clock timestamp; no clipping.')
+
+export const RecordLookupDurationResponse = zod.void()
 
 

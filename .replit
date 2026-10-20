@@ -90,4 +90,4 @@ channel = "stable-25_05"
 [userenv]
 
 [userenv.development]
-AUTH_ALLOWED_ORIGINS = "https://bf3e32dc-54d0-4d6f-8c18-82dda6dba30b-00-2b6qfmcqqsbep-bxlkcqsd.reed.replit.dev"
+AUTH_ALLOWED_ORIGINS = "https://bf3e32dc-54d0-4d6f-8c18-82dda6dba30b-00-2b6qfmcqqsbep-vnwoq9fo.reed.replit.dev"

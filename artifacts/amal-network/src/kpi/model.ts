@@ -94,10 +94,10 @@ export function weekdayRows(r: KpiResult): WeekdayRow[] {
   });
 }
 
-/** Lookup metric is presented only from API values; the contract currently guarantees unavailable. */
+/** Range percentiles come from the merged server distribution, never averaged daily values. */
 export function lookupView(r: KpiResult) {
   const l = r.after.telemetry.lookupTime;
-  return { available: (l.available as boolean) === true, median: l.medianSeconds as number | null, samples: l.sampleCount as number | null, meetsTarget: null as boolean | null, boundaries: l.measurementBoundaries, dailyMedians: [] as { date: string; seconds: number }[] };
+  return { available: l.available, median: l.medianSeconds, p90: l.p90Seconds, samples: l.sampleCount, meetsTarget: meetsLookupTarget(l.medianSeconds), boundaries: l.measurementBoundaries };
 }
 /** Strict target: under 10 s. 10.0 does not meet it. */
 export function meetsLookupTarget(seconds: number | null): boolean | null { return seconds === null ? null : seconds < LOOKUP_TARGET_SECONDS; }
@@ -115,6 +115,7 @@ export function resolveDesignation(_r: KpiResult): { kind: 'unavailable' } | { k
 export function isEmptyWindow(r: KpiResult): boolean {
   const c = r.after.telemetry.conflicts;
   return r.after.metrics.totalAppointments === 0
+    && !r.after.telemetry.lookupTime.available
     && Object.values(c.cumulative).every((count) => count === 0)
     && c.daily.every((day) => day.blocked === 0 && day.warnings === 0 && day.overrides === 0)
     && r.after.telemetry.downtime.receivedCreates === 0;

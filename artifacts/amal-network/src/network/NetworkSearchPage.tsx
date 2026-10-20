@@ -3,7 +3,8 @@ import { useTranslation } from 'react-i18next';
 import { useLocation } from 'wouter';
 import { ChevronDown, Globe2, Lock, RotateCcw, Search, SearchX, ShieldAlert, UserRound } from 'lucide-react';
 import { useAmalPreferences } from '@workspace/amal-ui';
-import { lookupNetwork, type NetworkPatient } from '@workspace/api-client-react';
+import { lookupNetwork, recordLookupDuration, type NetworkPatient } from '@workspace/api-client-react';
+import { LookupTiming, observePaintedCard } from './lookup-timing';
 import type { ShellClinic } from '@/shell/identity';
 import { demoPath } from '@/shell/identity';
 import { ConsentBadge, KeyAlertChip } from './indicators';
@@ -20,7 +21,7 @@ type State =
   | { kind: 'short' }
   | { kind: 'loading'; q: string }
   | { kind: 'hidden'; q: string }
-  | { kind: 'ok'; q: string; items: NetworkPatient[]; next: string | null; more: boolean }
+  | { kind: 'ok'; q: string; items: NetworkPatient[]; next: string | null; more: boolean; timingToken: number | null; requestId: number }
   | { kind: 'fail'; q: string; why: Failure };
 
 /**
@@ -39,8 +40,12 @@ export function NetworkSearchPage({ clinic, title, scope }: { clinic: ShellClini
   const listRef = useRef<HTMLUListElement>(null);
   const restoreId = useRef<number | null>(prior?.id ?? null);
   const stateRef = useRef(state); stateRef.current = state;
+  const timing = useRef(new LookupTiming(() => performance.now(), body => recordLookupDuration(body)));
+  useEffect(() => () => timing.current.cancel(), [scope]);
 
-  const run = useCallback((raw: string, cursor?: string) => {
+  const run = useCallback((raw: string, cursor?: string, userInitiated = false) => {
+    if (!userInitiated || document.visibilityState !== 'visible') timing.current.cancel();
+    const timingToken = userInitiated ? timing.current.request() : null;
     const q = normalizeQuery(raw);
     ctl.current?.abort();
     const id = ++seq.current;
@@ -52,7 +57,7 @@ export function NetworkSearchPage({ clinic, title, scope }: { clinic: ShellClini
       (page) => {
         if (id !== seq.current || clinicalDataBlocked()) return; // superseded
         // Replace pages: a newly authorized response must not retain old protected projections.
-        setState({ kind: 'ok', q, items: page.items, next: page.nextCursor, more: false });
+        setState({ kind: 'ok', q, items: page.items, next: page.nextCursor, more: false, timingToken, requestId: id });
       },
       (e) => {
         if (id !== seq.current || isAbortError(e)) return;
@@ -64,13 +69,20 @@ export function NetworkSearchPage({ clinic, title, scope }: { clinic: ShellClini
   }, []);
 
   // Restore after returning from the card: revalidate, never redisplay old data.
-  useEffect(() => { if (prior?.q) run(prior.q); return () => { ctl.current?.abort(); seq.current++; }; }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (prior?.q) run(prior.q); return () => { timing.current.cancel(); ctl.current?.abort(); seq.current++; }; }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (state.kind !== 'ok' || state.timingToken === null || !state.items.length || !listRef.current) return;
+    return observePaintedCard(listRef.current, () => {
+      if (seq.current === state.requestId && !clinicalDataBlocked() && document.visibilityState === 'visible') timing.current.complete(state.timingToken!);
+    });
+  }, [state]);
 
   // Debounced typing; Enter / button runs immediately.
   const typed = useRef(false);
   useEffect(() => {
     if (!typed.current) return;
-    const h = setTimeout(() => run(text), 350);
+    const h = setTimeout(() => { if (typed.current) run(text, undefined, true); }, 350);
     return () => clearTimeout(h);
   }, [text, run]);
 
@@ -80,6 +92,8 @@ export function NetworkSearchPage({ clinic, title, scope }: { clinic: ShellClini
     const onVis = () => {
       const s = stateRef.current;
       if (document.visibilityState === 'hidden') {
+        timing.current.cancel();
+        typed.current = false;
         if (s.kind === 'ok' || s.kind === 'loading' || s.kind === 'fail') { ctl.current?.abort(); seq.current++; setState({ kind: 'hidden', q: s.q }); }
       } else again();
     };
@@ -98,7 +112,12 @@ export function NetworkSearchPage({ clinic, title, scope }: { clinic: ShellClini
     el?.focus();
   }, [state]);
 
-  const submit = (e: FormEvent) => { e.preventDefault(); typed.current = false; run(text); };
+  const submit = (e: FormEvent) => {
+    e.preventDefault(); typed.current = false;
+    if (text.trim()) timing.current.submit();
+    else timing.current.cancel();
+    run(text, undefined, true);
+  };
   const open = (p: NetworkPatient, q: string) => { setSelection({ scope, q, id: p.id }); navigate(demoPath('/doctor/patient-card')); };
   const onKey = (e: KeyboardEvent<HTMLUListElement>) => {
     if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
@@ -130,6 +149,8 @@ export function NetworkSearchPage({ clinic, title, scope }: { clinic: ShellClini
             type="search" value={text} dir="auto" autoComplete="off" spellCheck={false} maxLength={200}
             placeholder={t('net.search.placeholder')} aria-describedby="net-hint"
             onChange={(e) => {
+              if (e.target.value === text) return;
+              timing.current.input(!!e.target.value.trim());
               // Abort and supersede immediately; previous results never outlive the term that produced them.
               typed.current = true; ctl.current?.abort(); seq.current++;
               const v = e.target.value; setText(v);

@@ -213,6 +213,7 @@ export * from './listPatientDuplicatesParams';
 export * from './listPatientsParams';
 export * from './listSyncConflictsParams';
 export * from './listSyncConflictsStatus';
+export * from './lookupDurationInput';
 export * from './lookupNetworkParams';
 export * from './mergeInput';
 export * from './mergeInputDecision';

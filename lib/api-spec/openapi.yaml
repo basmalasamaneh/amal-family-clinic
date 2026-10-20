@@ -3555,10 +3555,17 @@
                 },
                 "lookupTime": {
                   "available": false,
-                  "reason": "LOOKUP_DURATION_PRODUCER_UNAVAILABLE",
+                  "reason": "NO_LOOKUP_SAMPLES",
                   "medianSeconds": null,
-                  "sampleCount": null,
-                  "measurementBoundaries": "No durable logical lookup duration samples exist."
+                  "p90Seconds": null,
+                  "sampleCount": 0,
+                  "units": "seconds",
+                  "storageUnits": "milliseconds",
+                  "exact": true,
+                  "percentileMethod": "Exact median and nearest-rank p90 of merged integer-ms frequencies.",
+                  "attribution": "Server receipt Asia/Hebron calendar date.",
+                  "coverage": "Only successfully received foreground completed cards; no retries, hidden-tab samples or offline queue.",
+                  "measurementBoundaries": "First query-changing input or fallback submission through matching visible successful result card."
                 },
                 "networkActivity": {
                   "available": false,
@@ -5910,20 +5917,54 @@
         "additionalProperties": false,
         "properties": {
           "available": {
-            "type": "boolean",
-            "const": false
+            "type": "boolean"
           },
           "reason": {
-            "type": "string",
-            "const": "LOOKUP_DURATION_PRODUCER_UNAVAILABLE"
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "medianSeconds": {
-            "type": "null"
+            "type": [
+              "number",
+              "null"
+            ],
+            "minimum": 0
+          },
+          "p90Seconds": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "minimum": 0
           },
           "sampleCount": {
-            "type": "null"
+            "type": "integer",
+            "minimum": 0
           },
           "measurementBoundaries": {
+            "type": "string"
+          },
+          "coverage": {
+            "type": "string"
+          },
+          "units": {
+            "type": "string",
+            "const": "seconds"
+          },
+          "storageUnits": {
+            "type": "string",
+            "const": "milliseconds"
+          },
+          "exact": {
+            "type": "boolean",
+            "const": true
+          },
+          "percentileMethod": {
+            "type": "string"
+          },
+          "attribution": {
             "type": "string"
           }
         },
@@ -5931,10 +5972,17 @@
           "available",
           "reason",
           "medianSeconds",
+          "p90Seconds",
           "sampleCount",
-          "measurementBoundaries"
+          "measurementBoundaries",
+          "coverage",
+          "units",
+          "storageUnits",
+          "exact",
+          "percentileMethod",
+          "attribution"
         ],
-        "description": "No durable duration producer exists. No response-count proxy, invented sample count, or average of daily medians. A future instrumented contract must calculate the range median from actual duration samples with defined logical measurement boundaries."
+        "description": "Exact merged integer-ms frequencies across the selected receipt-date range. Never average daily percentiles. Empty sample count is zero; percentiles are null."
       },
       "KpiNetworkActivity": {
         "type": "object",
@@ -7178,6 +7226,21 @@
           "receivedAt",
           "heartbeatTimeoutSeconds"
         ]
+      },
+      "LookupDurationInput": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "durationMs": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          }
+        },
+        "required": [
+          "durationMs"
+        ],
+        "description": "Only finite safe integer elapsed milliseconds. No identity, query, client clinic or wall-clock timestamp; no clipping."
       }
     },
     "responses": {
@@ -12805,10 +12868,17 @@
                       },
                       "lookupTime": {
                         "available": false,
-                        "reason": "LOOKUP_DURATION_PRODUCER_UNAVAILABLE",
+                        "reason": "NO_LOOKUP_SAMPLES",
                         "medianSeconds": null,
-                        "sampleCount": null,
-                        "measurementBoundaries": "No durable logical lookup duration samples exist."
+                        "p90Seconds": null,
+                        "sampleCount": 0,
+                        "units": "seconds",
+                        "storageUnits": "milliseconds",
+                        "exact": true,
+                        "percentileMethod": "Exact median and nearest-rank p90 of merged integer-ms frequencies.",
+                        "attribution": "Server receipt Asia/Hebron calendar date.",
+                        "coverage": "Only successfully received foreground completed cards; no retries, hidden-tab samples or offline queue.",
+                        "measurementBoundaries": "First query-changing input or fallback submission through matching visible successful result card."
                       },
                       "networkActivity": {
                         "available": false,
@@ -17384,6 +17454,100 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/NetworkHeartbeatInput"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/kpis/lookup-duration": {
+      "post": {
+        "operationId": "recordLookupDuration",
+        "tags": [
+          "Kpis"
+        ],
+        "summary": "Receive one foreground successful-card lookup duration",
+        "description": "Doctor only; trusted current clinic from authenticated account and linked doctor. CSRF required. Server receipt Asia/Hebron date; only exact daily aggregate frequencies and count retained. No automatic retries.",
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "x-roles": [
+          "doctor"
+        ],
+        "x-implementation": "implemented",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LookupDurationInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Accepted into clinic/day aggregate; no event record."
+          },
+          "400": {
+            "description": "Rejected request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                },
+                "example": {
+                  "code": "VALIDATION",
+                  "messageKey": "error.validation",
+                  "params": {}
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Rejected request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                },
+                "example": {
+                  "code": "UNAUTHORIZED",
+                  "messageKey": "error.unauthorized",
+                  "params": {}
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Rejected request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                },
+                "example": {
+                  "code": "FORBIDDEN",
+                  "messageKey": "error.forbidden",
+                  "params": {}
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Rejected request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiFailure"
+                },
+                "example": {
+                  "code": "INTERNAL",
+                  "messageKey": "error.internal",
+                  "params": {}
+                }
               }
             }
           }

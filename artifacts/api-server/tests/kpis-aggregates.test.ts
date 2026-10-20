@@ -200,8 +200,8 @@ test("KPI SQL aggregates reconcile seeds and isolated operational evidence witho
       assert.deepEqual(result.downtime.queued, { available: false, reason: "CLIENT_QUEUE_NOT_OBSERVED", value: null });
       assert.deepEqual(result.downtime.lost, { available: false, reason: "CLIENT_LOSS_NOT_OBSERVED", value: null });
       assert.equal(result.lookupTime.medianSeconds, null);
-      assert.equal(result.lookupTime.sampleCount, null);
-      assert.equal(result.lookupTime.reason, "LOOKUP_DURATION_PRODUCER_UNAVAILABLE");
+      assert.equal(result.lookupTime.sampleCount, 0);
+      assert.equal(result.lookupTime.reason, "NO_LOOKUP_SAMPLES");
       assert.equal(result.networkActivity.reason, "LOGICAL_NETWORK_LOOKUP_PRODUCER_UNAVAILABLE");
       assert.equal(result.networkActivity.daily, null);
       assert(!JSON.stringify(result).includes("private override text"));

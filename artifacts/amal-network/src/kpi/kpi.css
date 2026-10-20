@@ -10,7 +10,7 @@
 .kpi-controls { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px 16px; padding-block: 14px; padding-inline: 16px; background: var(--amal-surface); border: 1px solid var(--amal-border); border-radius: var(--amal-radius-card); position: sticky; inset-block-start: 72px; z-index: 5; }
 .kpi-controls .kpi-hint { flex-basis: 100%; }
 .kpi-date { display: flex; flex-direction: column; gap: 4px; font-size: var(--amal-text-sm); font-weight: 600; color: var(--amal-muted); }
-.kpi-date input { min-block-size: 44px; padding-inline: 10px; border: 1px solid var(--amal-border); border-radius: var(--amal-radius-control); background: var(--amal-surface); color: var(--amal-text); font: inherit; color-scheme: light dark; }
+.kpi-date input, .kpi-date select { min-block-size: 44px; padding-inline: 10px; border: 1px solid var(--amal-border); border-radius: var(--amal-radius-control); background: var(--amal-surface); color: var(--amal-text); font: inherit; color-scheme: light dark; }
 .kpi :focus-visible { outline: 3px solid var(--amal-focus-ring); outline-offset: 2px; }
 .kpi-hint { margin: 0; color: var(--amal-muted); font-size: var(--amal-text-sm); }
 .kpi-warn-note { margin: 0; padding-inline-start: 10px; border-inline-start: 3px solid var(--amal-warning); font-size: var(--amal-text-sm); color: var(--amal-text); }

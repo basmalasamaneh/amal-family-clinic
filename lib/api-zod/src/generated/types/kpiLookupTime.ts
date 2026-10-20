@@ -7,14 +7,29 @@
  */
 
 /**
- * No durable duration producer exists. No response-count proxy, invented sample count, or average of daily medians. A future instrumented contract must calculate the range median from actual duration samples with defined logical measurement boundaries.
+ * Exact merged integer-ms frequencies across the selected receipt-date range. Never average daily percentiles. Empty sample count is zero; percentiles are null.
  */
 export interface KpiLookupTime {
-  available: false;
-  reason: 'LOOKUP_DURATION_PRODUCER_UNAVAILABLE';
+  available: boolean;
   /** @nullable */
-  medianSeconds: null;
-  /** @nullable */
-  sampleCount: null;
+  reason: string | null;
+  /**
+     * @minimum 0
+     * @nullable
+     */
+  medianSeconds: number | null;
+  /**
+     * @minimum 0
+     * @nullable
+     */
+  p90Seconds: number | null;
+  /** @minimum 0 */
+  sampleCount: number;
   measurementBoundaries: string;
+  coverage: string;
+  units: 'seconds';
+  storageUnits: 'milliseconds';
+  exact: true;
+  percentileMethod: string;
+  attribution: string;
 }

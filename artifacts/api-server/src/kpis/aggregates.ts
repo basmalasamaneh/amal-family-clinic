@@ -1,4 +1,5 @@
 import type { PoolClient } from "pg";
+import { aggregateLookup } from "./lookup";
 
 export type SourceCounts = Record<"phone" | "walk-in" | "calendar" | "amal-network" | "unknown", number>;
 export interface NoShowRate {
@@ -141,7 +142,7 @@ export interface TelemetryAggregate {
     cumulative: ConflictTotals;
     coverage: string;
   };
-  lookupTime: { available: false; reason: string; medianSeconds: null; sampleCount: null; measurementBoundaries: string };
+  lookupTime: Awaited<ReturnType<typeof aggregateLookup>>;
   networkActivity: { available: false; reason: string; daily: null };
   downtime: {
     receivedCreates: number;
@@ -239,13 +240,7 @@ export async function aggregateTelemetry(
       cumulative: row.cumulative,
       coverage: "Selected-window server commit attempts only, deduplicated by clientOpId across direct writes, sync receipts/retries, failed resolution attempts and override audit rows. Blocked means durable APPOINTMENT_CONFLICT, not version/hold/validation failures; approved overrides are never blocked. Warnings count only warning evidence on blocked direct/sync commits and approved patient-overlap overrides, not all previews/informational warnings or failed-resolution warning details. Failed resolution wrappers count once because their nested failures are rolled back; successful wrappers do not duplicate nested commits. Daily cumulative totals restart at the selected window; dates use Asia/Hebron.",
     },
-    lookupTime: {
-      available: false,
-      reason: "LOOKUP_DURATION_PRODUCER_UNAVAILABLE",
-      medianSeconds: null,
-      sampleCount: null,
-      measurementBoundaries: "No durable lookup start/end duration samples exist. A future producer must define logical lookup boundaries; response counts and daily medians cannot substitute for a range median.",
-    },
+    lookupTime: await aggregateLookup(client, start, end, clinicId),
     networkActivity: { available: false, reason: "LOGICAL_NETWORK_LOOKUP_PRODUCER_UNAVAILABLE", daily: null },
     downtime: {
       ...row.downtime,

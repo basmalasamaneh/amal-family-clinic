@@ -1,3 +1,51 @@
+# Lookup duration instrumentation
+
+`POST /api/kpis/lookup-duration` (`recordLookupDuration`) accepts only
+`{"durationMs": <finite nonnegative safe integer>}` and returns 204. The upper
+bound is JavaScript's exact integer limit, not a clipped search-time limit.
+Doctor session, CSRF and a valid doctor/user/current-clinic linkage are required.
+The clinic is never accepted from the payload. Read-only authentication avoids
+updating session activity from measurements; this route adds no access audit.
+Clinical network-access auditing remains separate.
+
+Receipt time is captured before authentication and body parsing. `date-fns-tz`
+attributes it to the Asia/Hebron date (not client time or database session time).
+One `operational.kpi_snapshots` row per clinic/day uses metric
+`lookup_duration_ms`, source `after`, calculation version `lookup-ms-frequency-1`.
+Evidence contains exactly `sampleCount` and `frequencies`, mapping integer-ms
+strings to counts. A single `INSERT ... ON CONFLICT ... DO UPDATE` increments
+both from the locked row, so concurrent updates cannot overwrite increments.
+There are no event rows, event clocks, actor IDs or query fields. `generated_at`
+is UTC snapshot-creation metadata and is not updated per measurement.
+Existing KPI refresh uses other metric/version keys and cannot overwrite this
+distribution. No seed schema or data changes are needed.
+
+Selected-range distributions are merged before calculating the exact median
+(mean of the middle pair for even counts) and nearest-rank p90. Seconds are
+presentation units only; no millisecond quantization occurs before aggregation.
+Empty distributions return sampleCount 0, null percentiles and
+`NO_LOOKUP_SAMPLES`. The contract includes units, storageUnits, exact,
+percentileMethod, measurementBoundaries, attribution and coverage.
+
+Coverage is successfully received foreground matching successful result cards
+only, from first query-changing input or fallback submission through visible
+render. It excludes hidden-tab completion, errors/empty results, cancellation,
+superseded responses and failed transmissions. No retry or offline queue means
+delivery gaps are expected. Browser elapsed values are self-reported and are not
+proof of server latency or exhaustive search coverage.
+
+Automatic HTTP logging is excluded for case-insensitive and trailing-slash/query
+variants of this route. No telemetry identifiers or payloads are added to logs,
+audits or tracing. Deployment proxy/access-log policies remain outside the API
+process and should likewise avoid identity-bearing telemetry associations.
+
+Reproduce backend evidence with `pnpm --filter @workspace/api-server kpis:test`.
+The tests cover strict validation, exact ranks, unequal daily sample counts,
+concurrent increments during refresh, clinic scope, receipt midnight, session
+timezone independence, unchanged generated_at, aggregate-only evidence and
+audit counts, HTTP auth/CSRF and case/trailing-slash variants. Existing KPI SQL
+tests fingerprint all six seed tables before/after their rollback fixtures.
+
 # KPI endpoint and evidence
 
 `GET /api/kpis?range=day|week|month&date=YYYY-MM-DD&clinicId=<id>`
@@ -62,7 +110,7 @@ Explicit unavailable metrics:
 
 | Metric | Stable reason | Meaning |
 | --- | --- | --- |
-| Median lookup seconds and sample count | `LOOKUP_DURATION_PRODUCER_UNAVAILABLE` | No durable start/end duration producer exists. No averages of daily medians, response-count proxies or invented samples. |
+| Lookup percentiles with no received samples | `NO_LOOKUP_SAMPLES` | Median and p90 are null; sample count is zero. See duration instrumentation above. |
 | Daily logical cross-clinic activity | `LOGICAL_NETWORK_LOOKUP_PRODUCER_UNAVAILABLE` | Per-patient audit rows cannot establish logical request counts or retry identity. |
 | Client queued appointments | `CLIENT_QUEUE_NOT_OBSERVED` | Server receipts cannot see all local queued work. |
 | Confirmed lost appointments | `CLIENT_LOSS_NOT_OBSERVED` | Pending/rejected/unreceived is not proven loss. |
@@ -70,8 +118,8 @@ Explicit unavailable metrics:
 
 Adoption projects actual clinic IDs, names, current state and stored joinedAt.
 JoinedAt can be bootstrap evidence; it is not asserted to be a Trial or mode
-transition date. No booking-volume inference is made. No additional lookup,
-offline-loss or adoption workflows are introduced here.
+transition date. No booking-volume inference is made. No offline-loss or
+adoption workflows are introduced here.
 
 ## Snapshots and refresh
 
@@ -126,7 +174,5 @@ remove their operational fixtures and refresh affected test snapshots.
 Baseline expectations live in tests, not response-building code: 6 doctor/start
 pairs, 2 cross-clinic patient/start pairs, 22/102 no-shows (21.6%), and source
 counts 48 phone, 21 walk-in, 33 calendar. See `docs/data/exploration.sql` for
-independent original baseline evidence. A duration-median numerical test cannot
-be meaningful until the existing lookup instrumentation task supplies real
-sample boundaries and durable samples; current tests assert explicit
-unavailability instead.
+independent original baseline evidence. Lookup tests use isolated known
+integer-ms distributions, not fabricated production baseline measurements.

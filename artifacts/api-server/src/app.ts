@@ -7,8 +7,14 @@ import cookieParser from "cookie-parser";
 import { ZodError } from "zod/v4";
 import { ApiError, fail } from "./lib/auth-errors";
 import { resolve } from "node:path";
+import { isLookupTelemetryPath } from "./kpis/lookup";
 
 const app: Express = express();
+// Capture receipt before security checks, authentication or body parsing.
+app.use((req, res, next) => {
+  if (isLookupTelemetryPath(req.originalUrl)) res.locals.lookupReceivedAt = new Date();
+  next();
+});
 app.disable("x-powered-by");
 // Only trust a known reverse-proxy hop count when deployment explicitly opts in.
 const proxyHops = Number(process.env.AUTH_PROXY_HOPS ?? 0);
@@ -34,6 +40,7 @@ app.use((req, res, next) => {
 app.use(
   pinoHttp({
     logger,
+    autoLogging: { ignore: req => isLookupTelemetryPath(req.url ?? "") },
     serializers: {
       req(req) {
         return {

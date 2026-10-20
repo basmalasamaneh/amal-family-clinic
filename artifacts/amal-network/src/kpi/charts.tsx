@@ -108,35 +108,32 @@ export function PreventionChart({ data }: { data: KpiResult }) {
   );
 }
 
-/* ---------- Big number: median lookup time + daily-median sparkline ---------- */
+/* ---------- Exact range lookup percentiles ---------- */
 export function LookupCard({ data }: { data: KpiResult }) {
   const { t } = useTranslation(); const f = useFmt();
   const v = lookupView(data);
   const unav = t('kpi.states.unavailable');
   return (
-    <ChartFrame id="lookup" icon={<Clock size={20} aria-hidden="true" />} title={t('kpi.lookup.title')} summary={t('kpi.lookup.summary', { target: f.n(LOOKUP_TARGET_SECONDS) })}
+    <ChartFrame id="lookup" icon={<Clock size={20} aria-hidden="true" />} title={t('kpi.lookup.title')} summary={v.available ? t('kpi.lookup.measuredSummary', { median: f.n(v.median!, 4), percentile: f.n(v.p90!, 3), count: f.n(v.samples!) }) : t('kpi.lookup.empty')}
       caption={t('kpi.lookup.caption')}
       head={[t('kpi.lookup.colMeasure'), t('kpi.lookup.colValue')]}
       rows={[
-        [t('kpi.lookup.rowMedian'), v.median === null ? <Unavail /> : f.n(v.median, 1)],
+        [t('kpi.lookup.rowMedian'), v.median === null ? <Unavail /> : f.n(v.median, 4)],
+        [t('kpi.lookup.rowP90'), v.p90 === null ? <Unavail /> : f.n(v.p90, 3)],
         [t('kpi.lookup.rowSamples'), v.samples === null ? <Unavail /> : f.n(v.samples)],
         [t('kpi.lookup.rowTarget'), t('kpi.lookup.targetValue', { target: f.n(LOOKUP_TARGET_SECONDS) })],
-        [t('kpi.lookup.rowDaily'), <Unavail key="d" label={t('kpi.states.noObservation')} />],
       ]}
-      notes={<p><strong>{t('kpi.lookup.boundaries')}:</strong> <span dir="auto">{v.boundaries}</span></p>}>
-      <div className="kpi-big" data-status="unavailable" data-testid="value-lookup">
-        <span className="kpi-big__value">{v.median === null ? '—' : f.n(v.median, 1)}</span>
-        <span className="kpi-big__badge">{t('kpi.lookup.unavailable')}</span>
+      notes={<><p><strong>{t('kpi.lookup.boundaries')}:</strong> {t('kpi.lookup.boundaryText')}</p><p><strong>{t('kpi.lookup.coverage')}:</strong> {t('kpi.lookup.coverageText')}</p><p>{t('kpi.lookup.method')}</p></>}>
+      <div className="kpi-big" data-status={v.available ? (v.meetsTarget ? 'met' : 'missed') : 'unavailable'} data-testid="value-lookup">
+        <span className="kpi-big__value">{v.median === null ? '—' : f.n(v.median, 4)}</span>
+        <span className="kpi-big__badge">{t(v.available ? 'kpi.lookup.rowMedian' : 'kpi.lookup.unavailable')}</span>
       </div>
       <p className="kpi-target" data-testid="text-lookup-target">{t('kpi.lookup.target', { target: f.n(LOOKUP_TARGET_SECONDS) })}</p>
       <dl className="kpi-dl">
+        <div><dt>{t('kpi.lookup.rowP90')}</dt><dd data-testid="value-lookup-p90">{v.p90 === null ? unav : f.n(v.p90, 3)}</dd></div>
         <div><dt>{t('kpi.lookup.samples')}</dt><dd data-testid="text-lookup-samples">{v.samples === null ? unav : f.n(v.samples)}</dd></div>
       </dl>
-      <p className="kpi-why">{t('kpi.lookup.why')}</p>
-      <figure className="kpi-spark kpi-spark--empty" data-testid="spark-lookup-unavailable">
-        <figcaption>{t('kpi.lookup.sparkTitle')}</figcaption>
-        <p>{t('kpi.lookup.sparkUnavailable')}</p>
-      </figure>
+      {!v.available && <p className="kpi-why" data-testid="state-lookup-empty">{t('kpi.lookup.empty')}</p>}
     </ChartFrame>
   );
 }

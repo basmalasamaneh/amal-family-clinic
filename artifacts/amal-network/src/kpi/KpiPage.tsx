@@ -13,14 +13,17 @@ import { NetworkActivity } from './NetworkActivity';
 import { inclusiveEnd, isEmptyWindow, matchesSelection, partialItems, type RangeKind } from './model';
 import './kpi.css';
 import './i18n';
+import type { ShellClinic } from '@/shell/identity';
 
 const DATE_RE = /^(?:20\d{2}|2100)-\d{2}-\d{2}$/;
 
-export function KpiPage({ title }: { title: string }) {
+export function KpiPage({ title, clinics }: { title: string; clinics: ShellClinic[] }) {
   const { t } = useTranslation();
   const [range, setRange] = useState<RangeKind>('week');
   const [date, setDate] = useState(() => hebronToday(new Date()));
-  const params: GetKpisParams = { range, ...(DATE_RE.test(date) ? { date } : {}) };
+  const [clinicId, setClinicId] = useState<number | undefined>();
+  const selectedClinic = clinics.some(c => c.id === clinicId) ? clinicId : undefined;
+  const params: GetKpisParams = { range, ...(selectedClinic ? { clinicId: selectedClinic } : {}), ...(DATE_RE.test(date) ? { date } : {}) };
   // Query key includes range+date: a late response for an older selection lands in its own cache entry and is never shown.
   const q = useGetKpis(params, { query: { queryKey: getGetKpisQueryKey(params), retry: (n, e) => !isAuthFailure(e) && n < 1, staleTime: 30_000 } });
   const data = matchesSelection(q.data, range) ? q.data : undefined;
@@ -36,6 +39,13 @@ export function KpiPage({ title }: { title: string }) {
       </header>
 
       <form className="kpi-controls" aria-label={t('kpi.controls.label')} onSubmit={(e) => { e.preventDefault(); void q.refetch(); }}>
+        <label className="kpi-date">
+          <span>{t('kpi.lookup.clinic')}</span>
+          <select value={selectedClinic ?? ''} onChange={e => setClinicId(e.target.value ? Number(e.target.value) : undefined)} data-testid="select-kpi-clinic">
+            <option value="">{t('kpi.lookup.allClinics')}</option>
+            {clinics.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+          </select>
+        </label>
         <Segmented label={t('kpi.controls.range')} value={range} onChange={(v) => setRange(v as RangeKind)} options={(['day', 'week', 'month'] as const).map((r) => ({ value: r, label: t(`kpi.controls.${r}`), testId: `button-range-${r}` }))} />
         <label className="kpi-date">
           <span>{t('kpi.controls.anchor')}</span>

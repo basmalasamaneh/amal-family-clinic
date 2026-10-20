@@ -118,7 +118,7 @@ function AppShellContent({ identity, fixture, onRefresh, onLogout }: Props) {
         </header>
 
         <main id="main" tabIndex={-1} className="shell-main" key={clinicId ?? 'none'}>
-          <PageContent res={res} title={title} clinic={clinic} fixture={fixture} landing={landingFor(role)} scope={`${identity.id}:${role ?? 'none'}:${clinic?.id ?? 'none'}`} />
+          <PageContent res={res} title={title} clinic={clinic} clinics={clinics} fixture={fixture} landing={landingFor(role)} scope={`${identity.id}:${role ?? 'none'}:${clinic?.id ?? 'none'}`} />
         </main>
       </div>
 
@@ -373,7 +373,7 @@ function HelpMenu({ onReplay, canReplay }: { onReplay: () => void; canReplay: bo
   );
 }
 
-function PageContent({ res, title, clinic, fixture, landing, scope }: { res: Resolution; title: string; clinic: ShellClinic | null; fixture: boolean; landing: string | null; scope: string }) {
+function PageContent({ res, title, clinic, clinics, fixture, landing, scope }: { res: Resolution; title: string; clinic: ShellClinic | null; clinics: ShellClinic[]; fixture: boolean; landing: string | null; scope: string }) {
   const { t } = useTranslation();
   const { locale, digitPreference } = useAmalPreferences();
   const [now] = useState(() => new Date().toISOString());
@@ -389,7 +389,7 @@ function PageContent({ res, title, clinic, fixture, landing, scope }: { res: Res
   if (res.kind === 'page' && res.route.id === 'patientCard') return <PatientCardPage clinic={clinic} title={title} scope={scope} />;
   if (res.kind === 'page' && res.route.id === 'myDay') return <MyDayPage clinic={clinic} title={title} scope={scope} />;
   if (res.kind === 'page' && res.route.id === 'privacy') return <PrivacyPage clinic={clinic} title={title} scope={scope} />;
-  if (res.kind === 'page' && res.route.id === 'kpi') return <KpiPage key={scope} title={title} />;
+  if (res.kind === 'page' && res.route.id === 'kpi') return <KpiPage key={scope} title={title} clinics={clinics} />;
   if (res.kind === 'page' && res.route.id === 'newBooking') return <BookingHandoff clinic={clinic} fixture={fixture} title={title} />;
   if (res.kind === 'page') {
     const Icon = res.route.icon;

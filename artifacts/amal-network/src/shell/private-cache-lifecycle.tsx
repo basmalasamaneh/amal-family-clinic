@@ -32,7 +32,11 @@ export function usePrivateCacheContext(identity: ShellIdentity, clinicId: number
       if (!disposed && result.ok && valid) {
         prune();
         const ticket = localCache.captureScope();
-        if (ticket.ok) syncClient.start(ticket.value, !identity.offlineRestored);
+        // Device-less password sessions may use online clinical services, but
+        // cannot bootstrap device-only sync. Do not turn that expected denial
+        // into a global sign-out. Restored permits only observe local work.
+        if (ticket.ok && (identity.syncDeviceAuthorized || identity.offlineRestored))
+          syncClient.start(ticket.value, !identity.offlineRestored && identity.syncDeviceAuthorized === true);
       }
     });
     const lock = () => { void localCache.setContext(null); };

@@ -25,3 +25,4 @@
 - [Guarded Dexie observation](guarded-dexie-observation.md) — liveQuery cannot host the controller’s guarded read-write transactions; observe mutations then read with tickets.
 - [Orval date validation](orval-date-patterns.md) — combining date formats and regex patterns emits invalid ZodDate validators; fix the source contract.
 - [Admin provisioning boundaries](admin-provisioning.md) — doctor discovery must not implicitly provision login; health queue coverage is evidence, not an exact backlog.
+- [Online and sync authority](online-and-sync-authority.md) — device-less doctor login remains valid for online clinical work; sync requires separate trusted-device authority.
