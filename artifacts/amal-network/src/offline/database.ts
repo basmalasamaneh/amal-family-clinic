@@ -17,7 +17,7 @@ export class LocalCacheDatabase extends Dexie {
   patients!: Table<CachedPatient, [string, number, number]>;
   outbox!: Table<OutboxRecord, [string, number, string]>;
   metadata!: Table<CacheMetadata, [string, number]>;
-  lifecycle!: Table<{ key: string; epoch: number }, string>;
+  lifecycle!: Table<{ key: string; epoch: number; demoGeneration?: string }, string>;
   proposals!: Table<BookingProposal, [string, number, string]>;
   streams!: Table<{ deviceId: number; nextSequence: number }, number>;
   bookingScopes!: Table<{ userId: string; clinicId: number; deviceId: number }, [string, number]>;

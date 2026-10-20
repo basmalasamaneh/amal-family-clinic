@@ -4,6 +4,7 @@ import pg from "pg";
 import { dbValue, readSource, tables } from "./seed-source";
 
 export const operationalLock = 761901;
+export const demoGenerationLock = 761930;
 export const operationalTables = [
   "clinics", "doctors", "users", "devices", "patients", "appointments",
   "patient_visit_history", "patient_consents", "visit_alerts", "audit_log",
@@ -88,6 +89,8 @@ export async function operationalCounts(client: pg.Client) {
 export async function transaction<T>(client: pg.Client, fn: () => Promise<T>) {
   await client.query("BEGIN");
   try {
+    // Global ordering: generation fence, population lock, table/clinical locks.
+    await client.query("SELECT pg_advisory_xact_lock($1)", [demoGenerationLock]);
     await client.query("SELECT pg_advisory_xact_lock($1)", [operationalLock]);
     await client.query("SET LOCAL TIME ZONE 'UTC'");
     const before = await seedFingerprint(client);

@@ -1,11 +1,15 @@
 export class ApiError extends Error {
-  constructor(public status: number, public code: string, public key: string, public params: Record<string, number> = {}) {
+  constructor(public status: number, public code: string, public key: string, public params: Record<string, string | number | boolean> = {}) {
     super(code);
   }
 }
 export const fail = (status: number, code: string, key: string, params = {}) => new ApiError(status, code, key, params);
 export const translations = {
   en: {
+    developerToolsDisabled: "Developer tools are disabled in this environment.",
+    demoResetRequired: "Demo data was reset. Old offline work was intentionally discarded. Sign in again.",
+    clinicOutage: "A clinic API outage is being simulated. Prepared offline data remains available.",
+    demoResetFailed: "The demo reset could not be confirmed. Reconcile its status before retrying.",
     clinicLeft: "This clinic has left the network. Rejoining is not available.",
     lifecycleRetry: "The clinic changed concurrently. Refresh and try again.",
     exportLimitExceeded: "The clinic export exceeds the download limit.",
@@ -21,6 +25,10 @@ export const translations = {
     pinLocked: "PIN access is temporarily locked.", rateLimited: "Too many attempts. Try again later.", internal: "An unexpected error occurred.",
   },
   ar: {
+    developerToolsDisabled: "أدوات المطوّر معطّلة في هذه البيئة.",
+    demoResetRequired: "أُعيد ضبط بيانات العرض. تم تجاهل العمل السابق دون اتصال عمدًا. سجّل الدخول مجددًا.",
+    clinicOutage: "تجري محاكاة انقطاع واجهة العيادة. تبقى البيانات المحضّرة دون اتصال متاحة.",
+    demoResetFailed: "تعذّر تأكيد إعادة ضبط العرض. تحقّق من الحالة قبل إعادة المحاولة.",
     clinicLeft: "غادرت هذه العيادة الشبكة. إعادة الانضمام غير متاحة.",
     lifecycleRetry: "تغيّرت حالة العيادة بالتزامن. حدّث الصفحة وحاول مجددًا.",
     exportLimitExceeded: "تجاوز تصدير العيادة الحد المسموح للتنزيل.",

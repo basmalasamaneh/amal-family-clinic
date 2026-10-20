@@ -530,6 +530,56 @@ export class LocalCacheController {
       if (this.lastUserId === userId) this.lastUserId = null;
     });
   }
+  /**
+   * Bind operational rows atomically to a server-confirmed enabled demo generation.
+   * Unversioned legacy rows cannot be assigned to a new generation: discard them
+   * before binding. A second tab seeing the already-bound generation must NOT clear
+   * new work committed by the first tab.
+   */
+  reconcileDemoGeneration(generation: string, onReset: () => void): Promise<Result<boolean>> {
+    return this.result(async () => {
+      await this.open();
+      return this.db.transaction('rw', this.db.tables, async () => {
+        const binding = await this.db.lifecycle.get('demo-generation');
+        const tables = this.db.tables.filter(table => table.name !== this.db.lifecycle.name);
+        let legacy = false;
+        if (!binding?.demoGeneration) {
+          for (const table of tables) if (await table.count()) { legacy = true; break; }
+        }
+        const reset = legacy || (!!binding?.demoGeneration && binding.demoGeneration !== generation);
+        if (reset) {
+          this.invalidate();
+          this.notifyPeers();
+          onReset();
+          for (const table of tables) await table.clear();
+          const revision = await this.db.lifecycle.get('global');
+          await this.db.lifecycle.put({ key: 'global', epoch: (revision?.epoch ?? 0) + 1 });
+          this.lastUserId = null;
+        }
+        if (binding?.demoGeneration !== generation)
+          await this.db.lifecycle.put({ key: 'demo-generation', epoch: 0, demoGeneration: generation });
+        return reset;
+      });
+    });
+  }
+  /** Only an authoritative demo-generation mismatch permits discarding obsolete demo work.
+   * This database contains only Amal private operational cache, never preferences or credentials.
+   */
+  clearDemoGeneration(): Promise<Result<void>> {
+    this.invalidate();
+    this.notifyPeers();
+    return this.result(async () => {
+      await this.open();
+      await this.db.transaction('rw', this.db.tables, async () => {
+        const revision = await this.db.lifecycle.get('global');
+        for (const table of this.db.tables) {
+          if (table.name !== this.db.lifecycle.name) await table.clear();
+        }
+        await this.db.lifecycle.put({ key: 'global', epoch: (revision?.epoch ?? 0) + 1 });
+      });
+      this.lastUserId = null;
+    });
+  }
   /** Dispose for tests/unmounting the owning application; does not silently delete pending work. */
   close() {
     this.closed = true;

@@ -6,6 +6,7 @@
   },
   "include": ["src", "tests/privacy/**/*.ts", "tests/privacy-api.test.ts", "tests/consent-api.test.ts", "tests/consent-policy.test.ts"],
   "references": [
+    { "path": "../../scripts" },
     { "path": "../../lib/db" },
     { "path": "../../lib/api-zod" }
   ]

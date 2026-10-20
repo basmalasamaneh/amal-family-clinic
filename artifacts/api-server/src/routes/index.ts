@@ -16,8 +16,12 @@ import networkHealthRouter from "./network-health";
 import adminAuditRouter from "./admin-audit";
 import adoptionRouter from "./adoption";
 import adoptionResultsRouter from "./adoption-results";
+import developerRouter from "./developer";
+import { demoBoundary } from "../developer/boundary";
 
 const router: IRouter = Router();
+router.use(demoBoundary);
+router.use(developerRouter);
 
 router.use(healthRouter);
 router.use(authRouter);

@@ -9,6 +9,7 @@ import { LoginPage } from '@/pages/login/LoginPage';
 import { DataPage } from '@/pages/data/DataPage';
 import { loginHref, safeReturnTo } from '@/auth/return-to';
 import { onUnauthorized, reportUnauthorized } from '@/auth/session-events';
+import { ensureDemoContext, startDemoContextPolling } from '@/auth/demo-context';
 import { demoPath, identityAdapter, type ShellIdentity } from './identity';
 import { landingFor } from './routes';
 import { AppShell } from './AppShell';
@@ -30,6 +31,7 @@ export function ShellRoot() {
   const [state, setState] = useState<LoadState>({ status: 'loading' });
   const [cleanupTarget, setCleanupTarget] = useState<string | null>(readCleanupTarget);
   const [cleaning, setCleaning] = useState(false);
+  const [demoReset, setDemoReset] = useState(false);
   const [location, navigate] = useLocation();
   const search = useSearch();
   const qc = useQueryClient();
@@ -55,7 +57,7 @@ export function ShellRoot() {
     void localCache.setContext(null);
     const g = ++gen.current;
     setState({ status: 'loading' });
-    identityAdapter.load().then(
+    (identityAdapter.mode === 'fixture' ? identityAdapter.load() : ensureDemoContext().then(() => identityAdapter.load())).then(
       (identity) => { if (mounted.current && g === gen.current) apply(identity); },
       () => { if (mounted.current && g === gen.current) setState({ status: 'error' }); },
     );
@@ -67,6 +69,7 @@ export function ShellRoot() {
     revokeOfflineAuthorization();
     allowSessionAfterLogin();
     const g = ++gen.current;
+    if (identityAdapter.mode !== 'fixture') await ensureDemoContext();
     const identity = await identityAdapter.load();
     if (g !== gen.current || !mounted.current) throw new Error('Superseded identity load');
     if (!identity || identity.offlineRestored) { reportUnauthorized(); throw new Error('No online session after sign-in'); }
@@ -91,6 +94,19 @@ export function ShellRoot() {
 
   useEffect(() => { mounted.current = true; load(); return () => { mounted.current = false; }; }, [load]);
   useEffect(() => onUnauthorized(expire), [expire]);
+  useEffect(() => {
+    if (identityAdapter.mode === 'fixture') return;
+    const reset = () => {
+      ++gen.current;
+      principal.current = null;
+      clearPrivate();
+      setDemoReset(true);
+      setState({ status: 'ready', identity: null, expired: true });
+    };
+    window.addEventListener('amal:demo-reset', reset);
+    const stop = startDemoContextPolling();
+    return () => { stop(); window.removeEventListener('amal:demo-reset', reset); };
+  }, [clearPrivate]);
   useEffect(() => onPeerRevocation(() => {
     // Do not rebroadcast peer events (avoids a cross-tab revocation loop).
     gen.current++;
@@ -199,6 +215,7 @@ export function ShellRoot() {
 
   return (
     <AmalPreferencesProvider key="anonymous" i18n={i18n} userId={null}>
+      {demoReset && <p className="shell-fixture" role="alert">{t('offline:demoReset')}</p>}
       {retainedWork && <p className="shell-fixture" role="status">{t('offline:retained')}</p>}
       {state.status === 'loading' ? <ShellLoading />
         : state.status === 'error' ? <SessionError onRetry={load} />

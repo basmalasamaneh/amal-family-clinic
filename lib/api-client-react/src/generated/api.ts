@@ -60,6 +60,12 @@ import type {
   Consent,
   ConsentInput,
   ConsentState,
+  DemoContext,
+  DemoResetInput,
+  DemoResetReceipt,
+  DeveloperClinic,
+  DeveloperOutageInput,
+  DeveloperStatus,
   Device,
   DeviceInput,
   DoctorAuditPage,
@@ -162,6 +168,387 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
   }
   return result;
 };
+
+export const getGetDemoContextUrl = () => {
+
+
+
+
+  return `/api/demo/context`
+}
+
+/**
+ * Recovery-only generation discovery. Public generation grants no data or session access; clinic outage is exposed only for the authenticated clinic.
+ */
+export const getDemoContext = async ( options?: Parameters<typeof customFetch>[1]): Promise<DemoContext> => {
+
+  return customFetch<DemoContext>(getGetDemoContextUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetDemoContextQueryKey = () => {
+    return [
+    `/api/demo/context`
+    ] as const;
+    }
+
+
+export const getGetDemoContextQueryOptions = <TData = Awaited<ReturnType<typeof getDemoContext>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getDemoContext>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetDemoContextQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getDemoContext>>> = ({ signal }) => getDemoContext({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getDemoContext>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetDemoContextQueryResult = NonNullable<Awaited<ReturnType<typeof getDemoContext>>>
+export type GetDemoContextQueryError = ErrorType<unknown>
+
+
+
+export function useGetDemoContext<TData = Awaited<ReturnType<typeof getDemoContext>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getDemoContext>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetDemoContextQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetDeveloperStatusUrl = () => {
+
+
+
+
+  return `/api/admin/developer/status`
+}
+
+export const getDeveloperStatus = async ( options?: Parameters<typeof customFetch>[1]): Promise<DeveloperStatus> => {
+
+  return customFetch<DeveloperStatus>(getGetDeveloperStatusUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetDeveloperStatusQueryKey = () => {
+    return [
+    `/api/admin/developer/status`
+    ] as const;
+    }
+
+
+export const getGetDeveloperStatusQueryOptions = <TData = Awaited<ReturnType<typeof getDeveloperStatus>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getDeveloperStatus>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetDeveloperStatusQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getDeveloperStatus>>> = ({ signal }) => getDeveloperStatus({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getDeveloperStatus>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetDeveloperStatusQueryResult = NonNullable<Awaited<ReturnType<typeof getDeveloperStatus>>>
+export type GetDeveloperStatusQueryError = ErrorType<unknown>
+
+
+
+export function useGetDeveloperStatus<TData = Awaited<ReturnType<typeof getDeveloperStatus>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getDeveloperStatus>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetDeveloperStatusQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getSetDeveloperOutageUrl = (clinicId: number,) => {
+
+
+
+
+  return `/api/admin/developer/clinics/${clinicId}/outage`
+}
+
+export const setDeveloperOutage = async (clinicId: number,
+    developerOutageInput: DeveloperOutageInput, options?: Parameters<typeof customFetch>[1]): Promise<DeveloperClinic> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<DeveloperClinic>(getSetDeveloperOutageUrl(clinicId),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(developerOutageInput)
+  }
+);}
+
+
+
+
+
+export const getSetDeveloperOutageMutationKey = () => ['setDeveloperOutage'] as const;
+
+export const getSetDeveloperOutageMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof setDeveloperOutage>>, TError,SetDeveloperOutageMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof setDeveloperOutage>>, TError,SetDeveloperOutageMutationVariables, TContext> => {
+
+const mutationKey = getSetDeveloperOutageMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof setDeveloperOutage>>, SetDeveloperOutageMutationVariables> = (props) => {
+          const {clinicId,data} = props ?? {};
+
+          return  setDeveloperOutage(clinicId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SetDeveloperOutageMutationResult = NonNullable<Awaited<ReturnType<typeof setDeveloperOutage>>>
+    export type SetDeveloperOutageMutationBody = BodyType<DeveloperOutageInput>
+    export type SetDeveloperOutageMutationError = ErrorType<unknown>
+    export type SetDeveloperOutageMutationVariables = {clinicId: number;data: BodyType<DeveloperOutageInput>}
+
+    export const useSetDeveloperOutage = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof setDeveloperOutage>>, TError,SetDeveloperOutageMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof setDeveloperOutage>>,
+        TError,
+        SetDeveloperOutageMutationVariables,
+        TContext
+      > => {
+      return useMutation(getSetDeveloperOutageMutationOptions(options));
+    }
+
+export const getResetDeveloperDemoUrl = () => {
+
+
+
+
+  return `/api/admin/developer/reset`
+}
+
+export const resetDeveloperDemo = async (demoResetInput: DemoResetInput, options?: Parameters<typeof customFetch>[1]): Promise<DemoResetReceipt> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<DemoResetReceipt>(getResetDeveloperDemoUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(demoResetInput)
+  }
+);}
+
+
+
+
+
+export const getResetDeveloperDemoMutationKey = () => ['resetDeveloperDemo'] as const;
+
+export const getResetDeveloperDemoMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof resetDeveloperDemo>>, TError,ResetDeveloperDemoMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof resetDeveloperDemo>>, TError,ResetDeveloperDemoMutationVariables, TContext> => {
+
+const mutationKey = getResetDeveloperDemoMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof resetDeveloperDemo>>, ResetDeveloperDemoMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  resetDeveloperDemo(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ResetDeveloperDemoMutationResult = NonNullable<Awaited<ReturnType<typeof resetDeveloperDemo>>>
+    export type ResetDeveloperDemoMutationBody = BodyType<DemoResetInput>
+    export type ResetDeveloperDemoMutationError = ErrorType<unknown>
+    export type ResetDeveloperDemoMutationVariables = {data: BodyType<DemoResetInput>}
+
+    export const useResetDeveloperDemo = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof resetDeveloperDemo>>, TError,ResetDeveloperDemoMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof resetDeveloperDemo>>,
+        TError,
+        ResetDeveloperDemoMutationVariables,
+        TContext
+      > => {
+      return useMutation(getResetDeveloperDemoMutationOptions(options));
+    }
+
+export const getGetDeveloperResetReceiptUrl = (requestId: string,) => {
+
+
+
+
+  return `/api/admin/developer/resets/${requestId}`
+}
+
+export const getDeveloperResetReceipt = async (requestId: string, options?: Parameters<typeof customFetch>[1]): Promise<DemoResetReceipt> => {
+
+  return customFetch<DemoResetReceipt>(getGetDeveloperResetReceiptUrl(requestId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetDeveloperResetReceiptQueryKey = (requestId: string,) => {
+    return [
+    `/api/admin/developer/resets/${requestId}`
+    ] as const;
+    }
+
+
+export const getGetDeveloperResetReceiptQueryOptions = <TData = Awaited<ReturnType<typeof getDeveloperResetReceipt>>, TError = ErrorType<ApiFailure>>(requestId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getDeveloperResetReceipt>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetDeveloperResetReceiptQueryKey(requestId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getDeveloperResetReceipt>>> = ({ signal }) => getDeveloperResetReceipt(requestId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: requestId !== null && requestId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getDeveloperResetReceipt>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetDeveloperResetReceiptQueryResult = NonNullable<Awaited<ReturnType<typeof getDeveloperResetReceipt>>>
+export type GetDeveloperResetReceiptQueryError = ErrorType<ApiFailure>
+
+
+
+export function useGetDeveloperResetReceipt<TData = Awaited<ReturnType<typeof getDeveloperResetReceipt>>, TError = ErrorType<ApiFailure>>(
+ requestId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getDeveloperResetReceipt>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetDeveloperResetReceiptQueryOptions(requestId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export const getGetClinicAdoptionUrl = (id: number,) => {
 

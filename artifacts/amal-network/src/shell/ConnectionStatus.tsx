@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
 import Dexie from 'dexie';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'wouter';
@@ -10,12 +10,14 @@ import { connectionState, summarizeQueue, type QueueSummary } from './connection
 import { formatNumber } from './formatting';
 import { demoPath } from './identity';
 import './connection-messages';
+import { isDemoReachable, subscribeDemoReachability } from '../auth/demo-context';
 
 type Load = { scope: string; state: 'loading' | 'locked' | 'error' | 'ready'; counts: QueueSummary | null };
 export function ConnectionStatus({ userId, clinicId, queueAvailable }: { userId: string; clinicId: number | null; queueAvailable: boolean }) {
   const { t } = useTranslation('connection');
   const { locale, digitPreference } = useAmalPreferences();
   const online = useOnlineStatus();
+  const reachable = useSyncExternalStore(subscribeDemoReachability, isDemoReachable, isDemoReachable);
   const scope = `${userId}:${clinicId}`;
   const [load, setLoad] = useState<Load>({ scope, state: 'loading', counts: null });
   useEffect(() => {
@@ -65,7 +67,7 @@ export function ConnectionStatus({ userId, clinicId, queueAvailable }: { userId:
     return () => { disposed = true; generation++; subscription?.unsubscribe(); unsubscribe(); unsubscribeStorage(); };
   }, [scope, userId, clinicId]);
   const current = load.scope === scope ? load : { state: 'loading' as const, counts: null };
-  const state = connectionState(online, current.state, current.counts);
+  const state = connectionState(online && reachable, current.state, current.counts);
   const Icon = state === 'attention' || state === 'error' ? AlertTriangle : state === 'loading' ? LoaderCircle : state === 'locked' ? LockKeyhole : online ? Wifi : WifiOff;
   const waiting = current.counts ? t('waiting', { count: current.counts.waiting, n: formatNumber(current.counts.waiting, locale, digitPreference) }) : null;
   return <div className="connection-status">
@@ -73,6 +75,7 @@ export function ConnectionStatus({ userId, clinicId, queueAvailable }: { userId:
       <Icon size={16} aria-hidden="true" /><span>{t(state)}{state !== 'online' && state !== 'offline' && ` · ${t(online ? 'online' : 'offline')}`}{waiting && ` · ${waiting}`}</span>
     </div>
     <small>{t('caveat')}</small>
+    {online && !reachable && <p role="status">{t('offline:demoUnavailable')}</p>}
     {!online && <p>{t('cached')} {t('coverage')}</p>}
     {queueAvailable && current.state === 'ready' && (!online || !!current.counts?.waiting || state === 'attention') &&
       <Link href={demoPath('/desk/sync')}>{t('queue')}</Link>}

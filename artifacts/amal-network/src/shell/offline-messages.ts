@@ -1,6 +1,8 @@
 import { i18n } from '../i18n';
 
 i18n.addResourceBundle('en', 'offline', {
+  demoReset: 'The demo was reset. Old demo records and unsent changes were removed. Sign in again to continue.',
+  demoUnavailable: 'The clinic service is unavailable. Authorized local bookings remain on this device until a successful connection check.',
   online: 'Browser online',
   offline: 'Browser offline',
   connectivity: 'Browser connectivity only; does not indicate server availability or synchronization.',
@@ -19,6 +21,8 @@ i18n.addResourceBundle('en', 'offline', {
   cleanupUnknownDescription: 'This browser is blocking the storage needed to check whether private records remain. Private pages and sign-in are locked. Allow site storage and reopen Amal. Do not clear site data: it may contain unsent work.',
 }, true, true);
 i18n.addResourceBundle('ar', 'offline', {
+  demoReset: 'أُعيد ضبط العرض التجريبي. أُزيلت السجلات التجريبية القديمة والتغييرات غير المرسلة. سجّل الدخول مجدداً للمتابعة.',
+  demoUnavailable: 'خدمة العيادة غير متاحة. تبقى الحجوزات المحلية المصرّح بها على هذا الجهاز حتى نجاح فحص الاتصال.',
   online: 'المتصفح متصل',
   offline: 'المتصفح غير متصل',
   connectivity: 'اتصال المتصفح فقط؛ لا يدل على توفر الخادم أو نجاح المزامنة.',

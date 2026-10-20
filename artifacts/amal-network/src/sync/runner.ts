@@ -128,6 +128,7 @@ export class SyncRunner {
         const proposals = unwrap(await this.cache.listBookings(s.ticket)).sort((a, b) => a.sequence - b.sequence);
         for (const p of proposals) {
           this.current(s);
+          if (!this.online()) throw new SyncFailure('network');
           if (p.outcome === 'applied') continue;
           if (p.outcome === 'conflict' || p.outcome === 'rejected') break;
           const op = unwrap(await this.cache.beginBookingDelivery(s.ticket, p.operationId));

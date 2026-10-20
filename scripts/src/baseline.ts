@@ -1,10 +1,16 @@
 import pg from "pg";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { root } from "./seed-source";
 import { runtimeConnectionString } from "@workspace/db/runtime-connection";
 
 export function queries() {
-  return readFileSync(root + "docs/data/exploration.sql", "utf8")
+  // import.meta.url changes when the API server is bundled; use the existing
+  // checked-in exploration queries, never a second population mapping.
+  const path = [root + "docs/data/exploration.sql", resolve("docs/data/exploration.sql"),
+    resolve("../../docs/data/exploration.sql")].find(existsSync);
+  if (!path) throw new Error("Demo population exploration queries are missing");
+  return readFileSync(path, "utf8")
     .split(/-- (Q\d+):/).slice(1).reduce<{ id: string; sql: string }[]>((all, value, i, parts) => {
       if (i % 2 === 0) all.push({ id: value, sql: parts[i+1]!.replace(/^[^\n]*\n/, "") });
       return all;

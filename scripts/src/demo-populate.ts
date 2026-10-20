@@ -5,7 +5,7 @@ import { fixtureInstant, minorAsOf, normalizeName, populateFixtures } from "./de
 import { adminClient, lockOperational, operationalCounts, requireDemo, transaction, verifySource } from "./operational-support";
 
 /** Shared entry point for initial population, rerun and reset, in caller's locked transaction. */
-export async function populate(client: pg.Client) {
+export async function populate(client: pg.Client, options: { restrictedReset?: boolean } = {}) {
   await lockOperational(client);
   const observations = await baseline(client);
   const mapping = new Map<number, string>();
@@ -50,7 +50,10 @@ export async function populate(client: pg.Client) {
     FROM public.patient_visit_history ON CONFLICT (visit_id) DO NOTHING`);
   // PostgreSQL setval is nontransactional: ALTER SEQUENCE RESTART is transactional.
   // Never move a sequence backwards on reruns, even after operational deletes.
-  for (const [table, key] of [
+  if (options.restrictedReset) {
+    // Fixed allowlist helper: runtime login is never a sequence/table owner.
+    await client.query("SELECT operational_meta.advance_demo_sequences()");
+  } else for (const [table, key] of [
     ["clinics", "clinic_id"], ["doctors", "doctor_id"], ["patients", "patient_id"],
     ["appointments", "appointment_id"], ["patient_visit_history", "visit_id"],
   ]) {

@@ -18,6 +18,18 @@ const DEFAULT_JSON_ACCEPT = "application/json, application/problem+json";
 let _baseUrl: string | null = null;
 let _authTokenGetter: AuthTokenGetter | null = null;
 let _csrfToken: string | null = null;
+let _demoGeneration: string | null = null;
+let _demoRevision = 0;
+let _demoRecovery: (() => Promise<void>) | null = null;
+let _demoOutage: (() => void) | null = null;
+export function setDemoGeneration(generation: string | null): void {
+  if (_demoGeneration !== generation) { _demoGeneration = generation; ++_demoRevision; }
+}
+export function invalidateDemoResponses(): void { ++_demoRevision; }
+export function configureDemoTransport(recover: () => Promise<void>, outage: () => void): void {
+  _demoRecovery = recover;
+  _demoOutage = outage;
+}
 
 /** Set from login/PIN/GET /me; clear on logout. Never store session credentials here. */
 export function setCsrfToken(token: string | null): void {
@@ -365,16 +377,33 @@ export async function customFetch<T = unknown>(
   }
 
   const requestInfo = { method, url: resolveUrl(input) };
+  const path = new URL(requestInfo.url, "http://localhost").pathname;
+  const operational = path.startsWith("/api/") &&
+    !/^\/api\/(?:demo\/context|me|healthz|admin\/developer(?:\/|$))/.test(path) &&
+    (!path.startsWith("/api/auth/") || path.startsWith("/api/auth/devices"));
+  const revision = _demoRevision;
+  if (operational && _demoGeneration) headers.set("X-Amal-Demo-Generation", _demoGeneration);
 
   if (!["GET", "HEAD", "OPTIONS"].includes(method) && _csrfToken && !headers.has("X-CSRF-Token")) {
     headers.set("X-CSRF-Token", _csrfToken);
   }
   const response = await fetch(input, { credentials: "include", ...init, method, headers });
+  const responseGeneration = response.headers.get("X-Amal-Demo-Generation");
+  if (operational && responseGeneration && _demoGeneration && responseGeneration !== _demoGeneration) {
+    await _demoRecovery?.();
+    throw new ApiError(response, { code: "DEMO_RESET_REQUIRED", messageKey: "error.demoResetRequired" }, requestInfo);
+  }
 
   if (!response.ok) {
     const errorData = await parseErrorBody(response, method);
+    if (getStringField(errorData, "code") === "DEMO_RESET_REQUIRED") await _demoRecovery?.();
+    if (getStringField(errorData, "code") === "CLINIC_OUTAGE") _demoOutage?.();
     throw new ApiError(response, errorData, requestInfo);
   }
 
-  return (await parseSuccessBody(response, responseType, requestInfo)) as T;
+  const data = await parseSuccessBody(response, responseType, requestInfo);
+  if (path.startsWith("/api/") && path !== "/api/demo/context" && revision !== _demoRevision) {
+    throw new ApiError(response, { code: "DEMO_RESET_REQUIRED", messageKey: "error.demoResetRequired" }, requestInfo);
+  }
+  return data as T;
 }

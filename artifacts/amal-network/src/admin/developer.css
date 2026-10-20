@@ -1,0 +1,18 @@
+/* P3-09 developer tools. Logical properties only; amal-ui tokens only. */
+.dev-gen { display: inline-flex; align-items: center; gap: 8px; padding-block: 6px; padding-inline: 12px; border-radius: 999px; background: var(--amal-surface-2); font-size: var(--amal-text-sm); }
+.dev-gen__dot { inline-size: 8px; block-size: 8px; border-radius: 50%; background: var(--amal-success); }
+.dev-gen.is-stale .dev-gen__dot { background: var(--amal-warning); }
+.dev-card { display: flex; flex-direction: column; gap: 14px; padding-block: 20px; padding-inline: 20px; border: 1px solid var(--amal-border); border-radius: var(--amal-radius-card); background: var(--amal-surface); }
+.dev-card--danger { border-inline-start: 4px solid var(--amal-danger-strong); }
+.dev-card__title { margin: 0; font-size: var(--amal-text-xl); color: var(--amal-navy); }
+.dev-card__desc { margin: 0; color: var(--amal-muted); max-inline-size: 70ch; }
+.dev-row { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px; }
+.dev-row > .amal-field { flex: 1 1 260px; max-inline-size: 420px; }
+.dev-state { display: inline-flex; align-items: center; gap: 8px; min-block-size: 44px; padding-inline: 14px; border-radius: var(--amal-radius-control); font-weight: 700; border: 1px solid var(--amal-border); }
+.dev-state--on { border-color: var(--amal-danger-strong); color: var(--amal-danger-strong); background: color-mix(in srgb, var(--amal-danger-strong) 8%, var(--amal-surface)); }
+.dev-state--off { border-color: var(--amal-success); background: color-mix(in srgb, var(--amal-success) 8%, var(--amal-surface)); }
+.dev-state--unknown { color: var(--amal-muted); border-style: dashed; }
+.dev-warn { margin: 0; padding-inline-start: 20px; display: flex; flex-direction: column; gap: 6px; }
+.dev-confirm-input { inline-size: 100%; min-block-size: 44px; font-family: ui-monospace, Menlo, monospace; }
+.dev-card :focus-visible, .adm-dialog :focus-visible { outline: 3px solid var(--amal-focus-ring); outline-offset: 2px; }
+.dev-actions { display: flex; flex-wrap: wrap; gap: 8px; }

@@ -32,6 +32,49 @@
       }
     },
     "schemas": {
+      "DemoContext": {
+        "type": "object", "additionalProperties": false,
+        "required": ["enabled", "generation", "clinicId", "outage"],
+        "properties": {
+          "enabled": {"type": "boolean"},
+          "generation": {"type": ["string", "null"]},
+          "clinicId": {"type": ["integer", "null"]},
+          "outage": {"type": "boolean"}
+        }
+      },
+      "DeveloperClinic": {
+        "type": "object", "additionalProperties": false,
+        "required": ["id", "name", "outage"],
+        "properties": {"id": {"type": "integer"}, "name": {"type": "string"}, "outage": {"type": "boolean"}}
+      },
+      "DeveloperStatus": {
+        "type": "object", "additionalProperties": false,
+        "required": ["generation", "clinics"],
+        "properties": {"generation": {"type": "string"}, "clinics": {"type": "array", "items": {"$ref": "#/components/schemas/DeveloperClinic"}}}
+      },
+      "DeveloperOutageInput": {
+        "type": "object", "additionalProperties": false,
+        "required": ["enabled", "expectedGeneration"],
+        "properties": {"enabled": {"type": "boolean"}, "expectedGeneration": {"type": "string", "format": "uuid"}}
+      },
+      "DemoResetInput": {
+        "type": "object", "additionalProperties": false,
+        "required": ["requestId", "expectedGeneration", "confirmation"],
+        "properties": {
+          "requestId": {"type": "string", "format": "uuid"},
+          "expectedGeneration": {"type": "string", "format": "uuid"},
+          "confirmation": {"type": "string", "enum": ["RESET-OPERATIONAL-DEMO-DATA"]}
+        }
+      },
+      "DemoResetReceipt": {
+        "type": "object", "additionalProperties": false,
+        "required": ["requestId", "previousGeneration", "generation", "completedAt", "reauthenticationRequired"],
+        "properties": {
+          "requestId": {"type": "string"}, "previousGeneration": {"type": "string"},
+          "generation": {"type": "string"}, "completedAt": {"type": "string"},
+          "reauthenticationRequired": {"type": "boolean"}
+        }
+      },
       "AdoptionResultMetric": {
         "type": "object", "additionalProperties": false,
         "required": ["available", "reason", "value", "units", "sampleCount", "coverage", "provenance"],
@@ -7833,6 +7876,44 @@
     }
   },
   "paths": {
+    "/demo/context": {
+      "get": {
+        "operationId": "getDemoContext",
+        "description": "Recovery-only generation discovery. Public generation grants no data or session access; clinic outage is exposed only for the authenticated clinic.",
+        "responses": {"200": {"description": "Demo context", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/DemoContext"}}}}}
+      }
+    },
+    "/admin/developer/status": {
+      "get": {
+        "operationId": "getDeveloperStatus", "security": [{"sessionCookie": []}],
+        "responses": {"200": {"description": "Authorized operational clinic status", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/DeveloperStatus"}}}}}
+      }
+    },
+    "/admin/developer/clinics/{clinicId}/outage": {
+      "put": {
+        "operationId": "setDeveloperOutage", "security": [{"sessionCookie": [], "csrfToken": []}],
+        "parameters": [{"name": "clinicId", "in": "path", "required": true, "schema": {"type": "integer", "minimum": 1, "maximum": 2147483647}}],
+        "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/DeveloperOutageInput"}}}},
+        "responses": {"200": {"description": "Reconciled clinic status", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/DeveloperClinic"}}}}}
+      }
+    },
+    "/admin/developer/reset": {
+      "post": {
+        "operationId": "resetDeveloperDemo", "security": [{"sessionCookie": [], "csrfToken": []}],
+        "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/DemoResetInput"}}}},
+        "responses": {"200": {"description": "Committed reset; sign in again", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/DemoResetReceipt"}}}}}
+      }
+    },
+    "/admin/developer/resets/{requestId}": {
+      "get": {
+        "operationId": "getDeveloperResetReceipt", "security": [{"sessionCookie": []}],
+        "parameters": [{"name": "requestId", "in": "path", "required": true, "schema": {"type": "string", "format": "uuid"}}],
+        "responses": {
+          "200": {"description": "Committed reset receipt", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/DemoResetReceipt"}}}},
+          "404": {"description": "No committed receipt", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ApiFailure"}}}}
+        }
+      }
+    },
     "/clinics/{id}/adoption": {
       "get": {
         "operationId": "getClinicAdoption", "tags": ["clinics"], "summary": "Read persisted clinic adoption",

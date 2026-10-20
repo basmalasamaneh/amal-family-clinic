@@ -9,6 +9,75 @@ import * as zod from 'zod';
 
 
 /**
+ * Recovery-only generation discovery. Public generation grants no data or session access; clinic outage is exposed only for the authenticated clinic.
+ */
+export const GetDemoContextResponse = zod.object({
+  "enabled": zod.boolean(),
+  "generation": zod.string().nullable(),
+  "clinicId": zod.number().int().nullable(),
+  "outage": zod.boolean()
+}).strict()
+
+
+export const GetDeveloperStatusResponse = zod.object({
+  "generation": zod.string(),
+  "clinics": zod.array(zod.object({
+  "id": zod.number().int(),
+  "name": zod.string(),
+  "outage": zod.boolean()
+}).strict())
+}).strict()
+
+
+export const setDeveloperOutagePathClinicIdMax = 2147483647;
+
+
+
+export const SetDeveloperOutageParams = zod.object({
+  "clinicId": zod.coerce.number().int().min(1).max(setDeveloperOutagePathClinicIdMax)
+}).strict()
+
+export const SetDeveloperOutageBody = zod.object({
+  "enabled": zod.boolean(),
+  "expectedGeneration": zod.string().uuid()
+}).strict()
+
+export const SetDeveloperOutageResponse = zod.object({
+  "id": zod.number().int(),
+  "name": zod.string(),
+  "outage": zod.boolean()
+}).strict()
+
+
+export const ResetDeveloperDemoBody = zod.object({
+  "requestId": zod.string().uuid(),
+  "expectedGeneration": zod.string().uuid(),
+  "confirmation": zod.enum(['RESET-OPERATIONAL-DEMO-DATA'])
+}).strict()
+
+export const ResetDeveloperDemoResponse = zod.object({
+  "requestId": zod.string(),
+  "previousGeneration": zod.string(),
+  "generation": zod.string(),
+  "completedAt": zod.string(),
+  "reauthenticationRequired": zod.boolean()
+}).strict()
+
+
+export const GetDeveloperResetReceiptParams = zod.object({
+  "requestId": zod.coerce.string().uuid()
+}).strict()
+
+export const GetDeveloperResetReceiptResponse = zod.object({
+  "requestId": zod.string(),
+  "previousGeneration": zod.string(),
+  "generation": zod.string(),
+  "completedAt": zod.string(),
+  "reauthenticationRequired": zod.boolean()
+}).strict()
+
+
+/**
  * Authenticated doctor/front-desk, own clinic only. Capabilities reflect explicit clinic-manager assignment; no privilege is inferred from being a doctor.
  * @summary Read persisted clinic adoption
  */

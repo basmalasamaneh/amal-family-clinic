@@ -1,4 +1,5 @@
 import { pool } from "@workspace/db";
+import type pg from "pg";
 import { extractAlerts } from "./extract";
 
 export class ExtractionError extends Error {
@@ -11,6 +12,15 @@ export async function extractVisit(visitId: number): Promise<number> {
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
+    const count = await extractVisitInTransaction(client, visitId);
+    await client.query("COMMIT");
+    return count;
+  } catch (error) { await client.query("ROLLBACK"); throw error; }
+  finally { client.release(); }
+}
+
+/** Same extraction implementation, composed into the atomic demo reset. */
+export async function extractVisitInTransaction(client: Pick<pg.Client, "query">, visitId: number): Promise<number> {
     const { rows: [visit] } = await client.query(`SELECT patient_id,diagnosis_notes
       FROM operational.patient_visit_history WHERE visit_id=$1 FOR UPDATE`, [visitId]);
     if (!visit) throw new ExtractionError("alerts.error.visitNotFound");
@@ -38,10 +48,7 @@ export async function extractVisit(visitId: number): Promise<number> {
       [visitId, visit.patient_id, a.kind, a.labelKey, a.sourceNoteExcerpt, a.ruleId,
         a.dictionaryVersion, JSON.stringify(a.labelParams), a.excerptStart, a.excerptEnd, fixtureKeys.get(a.ruleId) ?? null]);
     }
-    await client.query("COMMIT");
     return alerts.length;
-  } catch (error) { await client.query("ROLLBACK"); throw error; }
-  finally { client.release(); }
 }
 
 /** Finite initialization run: snapshot the upper ID, then process bounded pages.

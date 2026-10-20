@@ -3,6 +3,7 @@
   "compileOnSave": false,
   "files": [],
   "references": [
+    { "path": "./scripts" },
     {
       "path": "./lib/db"
     },

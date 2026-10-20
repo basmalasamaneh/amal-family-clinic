@@ -5,6 +5,52 @@
  * Amal Network Section 12. Authentication, appointments and clinic-local patient CRUD/search are implemented; other domain services remain contracts/mocks. UTC ISO instants, required date-only DOB, Asia/Hebron display. Local patient endpoints return demographics only to doctors/front-desk, never clinical history or admin patient access. Separate network services require consent and exclude Lite clinics. Lists use opaque cursor plus limit (1–100, default 25); null nextCursor ends pagination. Administration endpoints are implemented against operational tables, with account deactivation and transactional audit. Network health reports persisted receipt-time telemetry with explicit unknown queue coverage.
  * OpenAPI spec version: 0.2.0
  */
+export interface DemoContext {
+  enabled: boolean;
+  /** @nullable */
+  generation: string | null;
+  /** @nullable */
+  clinicId: number | null;
+  outage: boolean;
+}
+
+export interface DeveloperClinic {
+  id: number;
+  name: string;
+  outage: boolean;
+}
+
+export interface DeveloperStatus {
+  generation: string;
+  clinics: DeveloperClinic[];
+}
+
+export interface DeveloperOutageInput {
+  enabled: boolean;
+  expectedGeneration: string;
+}
+
+export type DemoResetInputConfirmation = typeof DemoResetInputConfirmation[keyof typeof DemoResetInputConfirmation];
+
+
+export const DemoResetInputConfirmation = {
+  'RESET-OPERATIONAL-DEMO-DATA': 'RESET-OPERATIONAL-DEMO-DATA',
+} as const;
+
+export interface DemoResetInput {
+  requestId: string;
+  expectedGeneration: string;
+  confirmation: DemoResetInputConfirmation;
+}
+
+export interface DemoResetReceipt {
+  requestId: string;
+  previousGeneration: string;
+  generation: string;
+  completedAt: string;
+  reauthenticationRequired: boolean;
+}
+
 /**
  * @nullable
  */

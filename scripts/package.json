@@ -9,6 +9,7 @@
     "seed:verify": "tsx ./src/seed-verify.ts",
     "baseline": "tsx ./src/baseline.ts",
     "operational:migrate": "tsx ./src/operational-migrate.ts",
+    "developer:migrate": "tsx ./src/developer-migrate.ts",
     "demo:populate": "tsx ./src/demo-with-alerts.ts populate",
     "demo:reset": "tsx ./src/demo-with-alerts.ts reset",
     "demo:recipes": "tsx ./src/demo-recipes.ts",

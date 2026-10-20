@@ -12,6 +12,7 @@ import { reportUnauthorized } from '../auth/session-events';
 import './booking-messages';
 import { syncClient, wakeSync } from '../sync/client';
 import { browserQueueLock } from '../sync/runner';
+import { isDemoReachable } from '../auth/demo-context';
 
 class LocalBookingError extends Error {
   constructor(readonly code: string) { super(code); }
@@ -50,7 +51,7 @@ const preparing = new Map<string, Promise<void>>();
 /** Complete authorized pages only. Never infer coverage from a partial calendar response. */
 export async function prepareBookingCache(): Promise<void> {
   const ticket = await readyScope();
-  if (!navigator.onLine) return;
+  if (!navigator.onLine || !isDemoReachable()) return;
   const key = `${ticket.userId}:${ticket.clinicId}:${ticket.generation}`;
   const existing = preparing.get(key);
   if (existing) return existing;

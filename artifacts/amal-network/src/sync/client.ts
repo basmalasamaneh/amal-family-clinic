@@ -2,6 +2,7 @@ import { getSyncState, pushSync, pullSync, listSyncConflicts, resolveSync } from
 import { localCache } from '../offline';
 import { reportUnauthorized } from '../auth/session-events';
 import { SyncRunner, browserQueueLock } from './runner';
+import { isDemoReachable, subscribeDemoReachability } from '../auth/demo-context';
 
 export const syncClient = new SyncRunner(localCache, {
   state: signal => getSyncState({ signal }),
@@ -9,8 +10,9 @@ export const syncClient = new SyncRunner(localCache, {
   pull: (since, signal) => pullSync(since ? { since } : {}, { signal }),
   conflicts: (cursor, signal) => listSyncConflicts({ status: 'all', limit: 100, ...(cursor ? { cursor } : {}) }, { signal }),
   resolve: (input, signal) => resolveSync(input, { signal }),
-}, browserQueueLock, () => navigator.onLine, reportUnauthorized,
+}, browserQueueLock, () => navigator.onLine && isDemoReachable(), reportUnauthorized,
 () => window.dispatchEvent(new CustomEvent('amal:appointments-changed')));
+subscribeDemoReachability(() => syncClient.refresh());
 
 // Wake other tabs without private information. The server and scoped IDB tickets
 // remain authoritative; this pulse grants neither identity nor API reachability.

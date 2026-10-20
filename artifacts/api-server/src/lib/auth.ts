@@ -4,6 +4,7 @@ import { pool } from "@workspace/db";
 import bcrypt from "bcryptjs";
 import type { PoolClient } from "pg";
 import { fail } from "./auth-errors";
+import { checkClinicOutage } from "../developer/boundary";
 
 export const digest = (value: string) => createHash("sha256").update(value).digest("hex");
 const token = () => randomBytes(32).toString("base64url");
@@ -106,6 +107,7 @@ const authentication = (readOnly: boolean): RequestHandler => async (req, _res, 
     req.auth = { id: r.user_id, email: r.email, role: roles[r.role as keyof typeof roles], clinicId: r.clinic_id, doctorId: r.doctor_id, locale: r.locale, theme: r.theme,
       sessionDigest: r.token_digest, csrfToken: r.csrf_token, device: r.device_id ? { id: r.device_id, clinicId: r.clinic_id } : null,
       expiresAt: r.absolute_expires_at ?? new Date(r.last_seen_at.getTime()+1800000), absoluteExpiresAt: r.absolute_expires_at, pinVerifiedAt: r.pin_verified_at };
+    await checkClinicOutage(req);
     next();
   } catch (e) { next(e); }
 };
