@@ -24,14 +24,18 @@ async function snapshot(client: PoolClient, p: Period, source: "before" | "after
  * read transaction so a waiting refresh cannot later overwrite newer evidence
  * with a snapshot taken before its predecessor committed.
  */
-export async function refreshKpis(raw: unknown, now = new Date()) {
+export async function refreshKpis(raw: unknown, now = new Date(), persist = true) {
   const query = parseKpiQuery(raw, now);
   const client = await pool.connect();
   let locked = false, releaseError: Error | undefined;
   try {
-    await client.query("SELECT pg_advisory_lock(761929)");
-    locked = true;
-    await client.query("BEGIN ISOLATION LEVEL REPEATABLE READ");
+    if (persist) {
+      await client.query("SELECT pg_advisory_lock(761929)");
+      locked = true;
+    }
+    // HTTP GET is a pure projection. Only the existing refresh CLI persists
+    // derived snapshots; the read path retains a consistent database snapshot.
+    await client.query(`BEGIN ISOLATION LEVEL REPEATABLE READ${persist ? "" : " READ ONLY"}`);
     if (query.clinicId !== null) {
       const exists = await client.query("SELECT 1 FROM operational.clinics WHERE clinic_id=$1", [query.clinicId]);
       if (!exists.rowCount) throw fail(400, "VALIDATION", "validation");
@@ -56,15 +60,17 @@ export async function refreshKpis(raw: unknown, now = new Date()) {
       after: { period: query.period, provenance: operationalProvenance, metrics: after, telemetry },
       adoption,
     };
-    for (const [source, p, metrics, provenance] of [
-      ["before", BASELINE_PERIOD, before, baselineProvenance],
-      ["after", query.period, after, operationalProvenance],
-    ] as const) {
-      await snapshot(client, p, source, "appointments", query.clinicId, metrics.totalAppointments, { metrics, provenance }, generatedAt);
+    if (persist) {
+      for (const [source, p, metrics, provenance] of [
+        ["before", BASELINE_PERIOD, before, baselineProvenance],
+        ["after", query.period, after, operationalProvenance],
+      ] as const) {
+        await snapshot(client, p, source, "appointments", query.clinicId, metrics.totalAppointments, { metrics, provenance }, generatedAt);
+      }
+      await snapshot(client, query.period, "after", "telemetry", query.clinicId, null, { metrics: telemetry, provenance: operationalProvenance }, generatedAt);
+      await snapshot(client, query.period, "after", "adoption", query.clinicId, adoption.clinics.length,
+        { metrics: adoption, provenance: "Current state as of generated_at, not period transition history." }, generatedAt);
     }
-    await snapshot(client, query.period, "after", "telemetry", query.clinicId, null, { metrics: telemetry, provenance: operationalProvenance }, generatedAt);
-    await snapshot(client, query.period, "after", "adoption", query.clinicId, adoption.clinics.length,
-      { metrics: adoption, provenance: "Current state as of generated_at, not period transition history." }, generatedAt);
     await client.query("COMMIT");
     return result;
   } catch (error) {

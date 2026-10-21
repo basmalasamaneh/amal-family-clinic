@@ -29,3 +29,4 @@
 - [Clinic lifecycle authority](clinic-lifecycle-authority.md) — voluntary lifecycle management requires explicit clinic delegation; departure retains local access, not sharing.
 - [Developer reset scope](demo-reset-scope.md) — user approved adding the missing restricted reset capability within Developer Tools, not production tooling.
 - [Generated validation errors](generated-validation-errors.md) — Zod 3 generated request errors need explicit mapping; Zod 4 instanceof misses them.
+- [Authentication lock timing](auth-lock-clock.md) — evaluate deadlines after acquiring locks; dependent checks must reuse the lock-owning connection.

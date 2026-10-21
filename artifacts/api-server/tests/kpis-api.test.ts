@@ -82,9 +82,14 @@ test("KPI access is administrator-only with stable errors and strict filters", a
     assert.equal(result.body.messageKey, "error.validation");
   }
 });
-test("API baseline and saved evidence reconcile against independent SQL", async () => {
+test("API GET is pure; explicit refresh persists evidence that reconciles against independent SQL", async () => {
+  const snapshotState = async () => (await admin.query(`SELECT count(*)::integer AS count,
+    md5(string_agg(row_to_json(s)::text,E'\\n' ORDER BY row_to_json(s)::text)) AS hash
+    FROM operational.kpi_snapshots s`)).rows;
+  const snapshotsBefore = await snapshotState();
   const response = await request("?range=month&date=2026-09-09", adminToken);
   assert.equal(response.status, 200);
+  assert.deepEqual(await snapshotState(), snapshotsBefore, "GET must not persist or update KPI snapshots");
   const result = response.body;
   assert.equal(result.before.metrics.totalAppointments, 102);
   assert.equal(result.before.metrics.noShow.percent, 21.6);
@@ -96,6 +101,8 @@ test("API baseline and saved evidence reconcile against independent SQL", async 
   [result.periodStart, result.periodEnd]);
   assert.equal(result.appointments, expected.n);
   assert.equal(result.noShowRate, expected.ratio === null ? null : Number(expected.ratio));
+  const refreshed = await refreshKpis({ range: "month", date: "2026-09-09" });
+  assert.deepEqual(refreshed.after.metrics, result.after.metrics);
   const { rows: [saved] } = await admin.query(`SELECT evidence FROM operational.kpi_snapshots
     WHERE date='2026-09-01' AND period_end='2026-10-01' AND metric='appointments'
     AND source='after' AND calculation_version=$1 AND clinic_id IS NULL`, [result.calculationVersion]);
@@ -207,12 +214,13 @@ test("lookup auth, strict API, concurrent daily increments, midnight attribution
     assert.equal((await post(doctorToken, { durationMs: 1 }, "wrong")).status, 403);
     assert.equal((await post(doctorToken, { durationMs: 1, clinicId: 999 })).status, 400);
     assert.equal((await post(doctorToken, { durationMs: -1 })).status, 400);
-    // Invalid variant paths are rejected without audits; successful API receipt
-    // is checked below with a zero bucket and restored to its previous evidence.
+    // Unknown query fields are rejected even on Express's valid case/trailing-
+    // slash variants; the equivalent queryless variant remains a valid receipt.
     const today = parseKpiQuery({ range: "day" }).period.startDate;
     const { rows: [saved] } = await admin.query("SELECT id,evidence FROM operational.kpi_snapshots WHERE metric='lookup_duration_ms' AND clinic_id=$1 AND date=$2", [clinicId, today]);
     try {
-      assert.equal((await post(doctorToken, { durationMs: 0 }, session.csrf_token, "/KPIS/LOOKUP-DURATION/?ignored=true")).status, 204);
+      assert.equal((await post(doctorToken, { durationMs: 0 }, session.csrf_token, "/KPIS/LOOKUP-DURATION/?ignored=true")).status, 400);
+      assert.equal((await post(doctorToken, { durationMs: 0 }, session.csrf_token, "/KPIS/LOOKUP-DURATION/")).status, 204);
     } finally {
       if (saved) await admin.query("UPDATE operational.kpi_snapshots SET evidence=$2 WHERE id=$1", [saved.id, saved.evidence]);
       else await admin.query("DELETE FROM operational.kpi_snapshots WHERE metric='lookup_duration_ms' AND clinic_id=$1 AND date=$2", [clinicId, today]);

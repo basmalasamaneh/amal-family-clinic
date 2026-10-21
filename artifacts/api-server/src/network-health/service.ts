@@ -77,13 +77,16 @@ export async function networkHealth(auth: Auth) {
     if (actor.role !== "admin") throw forbidden();
     const { rows: [clock] } = await client.query<{ now: Date }>("SELECT clock_timestamp() AS now");
     const { rows: clinics } = await client.query<{ clinic_id: number; clinic_name: string; network_mode: "full" | "lite" }>(
-      "SELECT clinic_id,clinic_name,network_mode FROM operational.clinics ORDER BY clinic_id");
+      `SELECT clinic_id,clinic_name,network_mode FROM operational.clinics
+        WHERE ($1::integer IS NULL OR clinic_id=$1) ORDER BY clinic_id`, [actor.clinicId]);
     const { rows: devices } = await client.query<DeviceRow>(`SELECT d.id,d.clinic_id,d.label,a.credential_digest,a.revoked_at,
       h.heartbeat_sequence,h.last_heartbeat_at,h.last_successful_sync_at,h.unsubmitted_operation_count
       FROM operational.devices d LEFT JOIN operational.auth_devices a ON a.device_id=d.id
-      LEFT JOIN operational.device_network_health h ON h.device_id=d.id ORDER BY d.id`);
+      LEFT JOIN operational.device_network_health h ON h.device_id=d.id
+      WHERE ($1::integer IS NULL OR d.clinic_id=$1) ORDER BY d.id`, [actor.clinicId]);
     const { rows: conflicts } = await client.query<{ clinic_id: number; count: number }>(
-      "SELECT clinic_id,count(*)::integer AS count FROM operational.sync_conflicts WHERE status='open' GROUP BY clinic_id");
+      `SELECT clinic_id,count(*)::integer AS count FROM operational.sync_conflicts
+        WHERE status='open' AND ($1::integer IS NULL OR clinic_id=$1) GROUP BY clinic_id`, [actor.clinicId]);
     const result = clinics.map(clinic => {
       const local = devices.filter(d => d.clinic_id === clinic.clinic_id).map(d => {
         const trustStatus = !d.credential_digest ? "untrusted" as const : d.revoked_at ? "revoked" as const : "trusted" as const;

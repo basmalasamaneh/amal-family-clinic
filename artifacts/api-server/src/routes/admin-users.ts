@@ -11,7 +11,7 @@ import {
 } from "@workspace/api-zod";
 import {
   authenticate, auditAdministration, csrf, enforceScope, forbidden,
-  lockAdministration, newCredential, requireRoles, roles, type Auth,
+  lockAdministration, newCredential, requireRoles, resetPinFailures, roles, type Auth,
 } from "../lib/auth";
 import { fail } from "../lib/auth-errors";
 
@@ -184,8 +184,7 @@ router.patch("/admin/users/:id", csrf, async (req, res) => {
     if (next.doctorId !== null) await client.query("UPDATE operational.doctors SET user_id=$1 WHERE doctor_id=$2", [userId, next.doctorId]);
     // Even preference-only admin edits invalidate existing authority immediately.
     await client.query("UPDATE operational.auth_sessions SET revoked_at=COALESCE(revoked_at,now()) WHERE user_id=$1", [userId]);
-    if (pinHash) await client.query(`INSERT INTO operational.auth_pin_state(user_id,failures,locked_until) VALUES($1,0,NULL)
-      ON CONFLICT(user_id) DO UPDATE SET failures=0,locked_until=NULL`, [userId]);
+    if (pinHash) await resetPinFailures(client, userId);
     await auditAdministration(client, "admin.user.updated", req.auth!, user.clinic_id, userId,
       [...new Set(Object.keys(body).map(k => k === "password" || k === "pin" ? "credential" : k))].sort());
     return responseContract(UpdateAdminUserResponse, safeUser(user));
@@ -216,8 +215,7 @@ router.post("/admin/users/:id/reset-pin", csrf, async (req, res) => {
     scope(req.auth!, user.clinic_id);
     if (user.role !== "receptionist") throw fail(400, "PIN_ROLE_REQUIRED", "validation");
     await client.query("UPDATE operational.users SET pin_hash=$2 WHERE id=$1", [userId, hash]);
-    await client.query(`INSERT INTO operational.auth_pin_state(user_id,failures,locked_until) VALUES($1,0,NULL)
-      ON CONFLICT(user_id) DO UPDATE SET failures=0,locked_until=NULL`, [userId]);
+    await resetPinFailures(client, userId);
     await auditAdministration(client, "admin.user.pin_reset", req.auth!, user.clinic_id, userId, ["credential"]);
   });
   responseContract(ResetAdminUserPinResponse, undefined);

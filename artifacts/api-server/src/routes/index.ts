@@ -18,8 +18,10 @@ import adoptionRouter from "./adoption";
 import adoptionResultsRouter from "./adoption-results";
 import developerRouter from "./developer";
 import { demoBoundary } from "../developer/boundary";
+import { validateRouteInputs } from "../lib/route-validation";
 
 const router: IRouter = Router();
+router.use(validateRouteInputs);
 router.use(demoBoundary);
 router.use(developerRouter);
 

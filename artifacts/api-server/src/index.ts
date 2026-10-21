@@ -15,7 +15,7 @@ if (Number.isNaN(port) || port <= 0) {
   throw new Error(`Invalid PORT value: "${rawPort}"`);
 }
 
-app.listen(port, (err) => {
+const server = app.listen(port, (err) => {
   if (err) {
     logger.error({ err }, "Error listening on port");
     process.exit(1);
@@ -23,3 +23,8 @@ app.listen(port, (err) => {
 
   logger.info({ port }, "Server listening");
 });
+// Bound incomplete/slow requests and aggregate request headers at the HTTP edge.
+server.requestTimeout = 30_000;
+server.headersTimeout = 15_000;
+server.maxHeadersCount = 64;
+server.keepAliveTimeout = 5_000;

@@ -12,6 +12,10 @@
     "developer:migrate": "tsx ./src/developer-migrate.ts",
     "demo:populate": "tsx ./src/demo-with-alerts.ts populate",
     "demo:reset": "tsx ./src/demo-with-alerts.ts reset",
+    "demo:seed:guarded": "tsx ./src/security-demo-seed.ts",
+    "security:backup": "tsx ./src/security-backup.ts",
+    "security:restore-drill": "tsx ./src/security-restore-drill.ts",
+    "security:backup:test": "tsx ./src/security-backup-test.ts",
     "demo:recipes": "tsx ./src/demo-recipes.ts",
     "operational:test": "tsx ./src/operational-test.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
