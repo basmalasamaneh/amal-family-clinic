@@ -719,7 +719,7 @@
 .shell-top__walkin .shell-walkin { min-block-size: 44px; max-inline-size: 100%; white-space: normal; }
 .shell-top__main > .shell-top__end {
   grid-area: utilities;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
   justify-content: flex-end;
   margin: 0;
   gap: 6px;
@@ -756,7 +756,9 @@
 }
 .shell-top__status .connection-status > p { flex-basis: 100%; }
 .shell-top__status .connection-status > a { margin-inline-start: auto; }
-@container shell-toolbar (max-width: 1200px) {
+/* Reserve enough room for clinic, search and Walk-in before showing duplicated
+   preferences and the account name. They remain available in the user menu. */
+@container shell-toolbar (max-width: 1500px) {
   .shell-top__prefs { display: none; }
   .shell-top__end .shell-user__name {
     position: absolute; inline-size: 1px; block-size: 1px;
