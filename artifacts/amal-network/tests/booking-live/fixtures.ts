@@ -119,8 +119,19 @@ export const test = base.extend<{ f: BookingFixture; offlineJourney: boolean }>(
         await query('DELETE FROM operational.appointment_operations WHERE clinic_id=$1 OR actor_id=$2 OR device_id=ANY($3::integer[])', [clinic, user, devices]);
         await query('DELETE FROM operational.appointment_holds WHERE clinic_id=$1 OR owner_id=$2', [clinic, user]);
         await query('SET LOCAL ROLE amal_demo_reset');
+        // Cancellation creates waitlist history even when this fixture has no
+        // waitlist entries/offers. Remove only history for its own opportunities
+        // before their source appointments; retain all FK/append-only guards.
+        await query(`DELETE FROM operational.waitlist_transitions t
+          USING operational.waitlist_opportunities o, operational.appointments a
+          WHERE t.opportunity_id=o.id AND o.source_appointment_id=a.appointment_id
+            AND t.clinic_id=$1 AND o.clinic_id=$1 AND a.clinic_id=$1`, [clinic]);
         await query('DELETE FROM operational.audit_log WHERE clinic_id=$1 OR user_id=$2 OR patient_id=ANY($3::integer[])', [clinic, user, patients]);
         await query('RESET ROLE');
+        await query(`DELETE FROM operational.waitlist_opportunities o
+          USING operational.appointments a
+          WHERE o.source_appointment_id=a.appointment_id
+            AND o.clinic_id=$1 AND a.clinic_id=$1`, [clinic]);
         await query('DELETE FROM operational.appointments WHERE clinic_id=$1', [clinic]);
         await query('DELETE FROM operational.sync_changes WHERE clinic_id=$1', [clinic]);
         await query('DELETE FROM operational.patient_clinic_access WHERE clinic_id=$1', [clinic]);
