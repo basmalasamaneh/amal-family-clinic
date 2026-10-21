@@ -1,8 +1,8 @@
 {
   "id": "./",
-  "name": "Amal Network",
-  "short_name": "Amal",
-  "description": "Amal Network for Amal Family Clinic Group",
+  "name": "Amal Family Clinic",
+  "short_name": "AFC",
+  "description": "Amal Family Clinic",
   "lang": "en",
   "dir": "ltr",
   "start_url": "./",
@@ -11,8 +11,7 @@
   "theme_color": "#0B5F69",
   "background_color": "#F7FAFC",
   "icons": [
-    { "src": "icons/amal-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
-    { "src": "icons/amal-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
-    { "src": "icons/amal-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+    { "src": "amal-logo-mark.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "icons/amal-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
   ]
 }

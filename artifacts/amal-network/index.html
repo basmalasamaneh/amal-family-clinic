@@ -3,8 +3,8 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Amal Network · شبكة أمل</title>
-    <meta name="description" content="Amal Network · شبكة أمل — design foundation and UI kit for Amal Family Clinic Group." />
+    <title>عيادة أمل العائلية</title>
+    <meta name="description" content="عيادة أمل العائلية · Amal Family Clinic" />
     <meta name="robots" content="noindex" />
     <meta name="theme-color" content="#0B5F69" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -19,6 +19,7 @@
           var l = localStorage.getItem('amal.locale'); var t = localStorage.getItem('amal.theme');
           var h = document.documentElement;
           if (l === 'en') { h.lang = 'en'; h.dir = 'ltr'; }
+          document.title = window.matchMedia('(max-width: 767px)').matches ? 'AFC' : l === 'en' ? 'Amal Family Clinic' : 'عيادة أمل العائلية';
           if (t === 'dark') { h.dataset.theme = 'dark'; h.classList.add('dark'); }
         } catch (e) {}
       })();

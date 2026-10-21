@@ -244,7 +244,6 @@ function ShellLoading() {
 function SessionError({ onRetry }: { onRetry: () => void }) {
   const { t } = useTranslation();
   const online = useOnlineStatus();
-  useEffect(() => { document.title = `${t('shell.states.error.title')} · ${t('app.name')}`; }, [t]);
   return (
     <main className="shell-session" data-testid="state-error">
       <AmalLogo />

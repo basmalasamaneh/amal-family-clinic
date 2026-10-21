@@ -1,4 +1,4 @@
-import { type ReactNode } from 'react';
+import { useEffect, type ReactNode } from 'react';
 import { MutationCache, QueryCache, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { isAuthFailure, isUnauthorized } from '@/auth/errors';
 import { reportUnauthorized } from '@/auth/session-events';
@@ -41,6 +41,17 @@ const queryClient = new QueryClient({
 });
 
 function App() {
+  useEffect(() => {
+    const smallScreen = window.matchMedia('(max-width: 767px)');
+    const updateTitle = () => { document.title = smallScreen.matches ? 'AFC' : i18n.t('app.name'); };
+    updateTitle();
+    smallScreen.addEventListener('change', updateTitle);
+    i18n.on('languageChanged', updateTitle);
+    return () => {
+      smallScreen.removeEventListener('change', updateTitle);
+      i18n.off('languageChanged', updateTitle);
+    };
+  }, []);
   return (
     <QueryClientProvider client={queryClient}>
     <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, '')}>

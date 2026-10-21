@@ -1,13 +1,13 @@
 {
   "app": {
-    "name": "Amal Network",
+    "name": "Amal Family Clinic",
     "skip": "Skip to content",
     "kitTitle": "UI kit"
   },
   "kit": {
     "eyebrow": "Design foundation · v0.1",
     "title": "One calm language for connected care",
-    "lede": "Tokens and primitives shared by every Amal Network screen. Arabic first, readable at the reception desk, steady in light and dark.",
+    "lede": "Tokens and primitives shared by every Amal Family Clinic screen. Arabic first, readable at the reception desk, steady in light and dark.",
     "demoNotice": "Everything on this page is a local demonstration. Nothing is saved and no clinical data is read.",
     "toc": "On this page",
     "sections": {
@@ -130,7 +130,7 @@
       "clear": "Clear all",
       "cleared": "List cleared"
     },
-    "footer": "Amal Family Clinic Group · design foundation",
+    "footer": "Amal Family Clinic · design foundation",
     "g": {
       "intro": "Shared components used across the product. Toggle language and theme above; the table offers loading, error and empty states.",
       "matrixIntro": "The same components in all four combinations: Arabic and English, Light and Dark.",
@@ -213,7 +213,7 @@
   },
   "shell": {
     "skip": "Skip to main content",
-    "brand": "Amal Network home",
+    "brand": "Amal Family Clinic home",
     "fixtureBanner": "Development fixture identity. This is not a real signed-in account.",
     "nav": {
       "label": "Main navigation",
@@ -312,7 +312,7 @@
       },
       "notFound": {
         "title": "Page not found",
-        "desc": "This address does not exist in Amal Network.",
+        "desc": "This address does not exist in Amal Family Clinic.",
         "back": "Go to my landing screen"
       },
       "error": {
@@ -347,7 +347,7 @@
     "validation": "Some details are not in the expected format. Check them and try again.",
     "internal": "The server had a problem. Check the current state before trying again.",
     "deviceUntrusted": "This device is not registered for reception sign-in.",
-    "network": "Could not reach Amal Network. Check the connection and try again.",
+    "network": "Could not reach Amal Family Clinic. Check the connection and try again.",
     "unknown": "The request did not complete as expected. Check the current state before trying again."
   },
   "auth": {
@@ -355,7 +355,7 @@
     "lede": "Use the sign-in method your clinic set up for you.",
     "expired": "Your session ended. Sign in again to continue where you were.",
     "brand": {
-      "kicker": "Amal Network",
+      "kicker": "Amal Family Clinic",
       "line": "One patient, many clinics, and a decision that stays with the patient.",
       "sub": "Reception, doctors and administrators each see only what their role needs."
     },
@@ -424,7 +424,7 @@
     "done": "Finish",
     "dismiss": "Close tour",
     "welcome": {
-      "title": "Welcome to Amal Network",
+      "title": "Welcome to Amal Family Clinic",
       "front-desk": "This workspace is set up for reception at your clinic. Many screens are still being built and are marked as placeholders.",
       "doctor": "This workspace is set up for doctors. Many screens are still being built and are marked as placeholders.",
       "admin": "This workspace is set up for administrators. Administrative access does not include patients' clinical content."
@@ -452,15 +452,15 @@
     "navLink": "Your data",
     "title": "Your data, your decision",
     "eyebrow": "For patients, families and staff",
-    "lede": "Amal Network connects clinics so the next doctor can start informed. Nothing about you is shared between clinics unless you agree, and you can change your mind.",
-    "status": "This page describes how Amal Network is designed to work. Sections marked Planned describe protections that are part of the design but are not yet active in this version.",
+    "lede": "Amal Family Clinic connects clinics so the next doctor can start informed. Nothing about you is shared between clinics unless you agree, and you can change your mind.",
+    "status": "This page describes how Amal Family Clinic is designed to work. Sections marked Planned describe protections that are part of the design but are not yet active in this version.",
     "planned": "Planned",
     "toc": "On this page",
     "backLogin": "Back to sign in",
     "backApp": "Back to my workspace",
     "noAnalytics": {
       "title": "No doctor-performance analytics",
-      "body": "Amal Network does not rank, score or compare doctors. Patient records are never used to measure how a doctor performs."
+      "body": "Amal Family Clinic does not rank, score or compare doctors. Patient records are never used to measure how a doctor performs."
     },
     "stored": {
       "title": "What is stored",
@@ -571,7 +571,7 @@
         "d": "Once a withdrawal is recorded, the design is that the next lookup from another clinic no longer shows your information."
       }
     },
-    "foot": "This page explains the design of Amal Network in plain language. It is not a legal statement."
+    "foot": "This page explains the design of Amal Family Clinic in plain language. It is not a legal statement."
   },
   "calendar": {
     "mock": "Demo data · {{scenario}}",

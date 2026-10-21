@@ -9,7 +9,7 @@ import { DaySheet } from '@/day-sheet/DaySheet';
 import './offline-messages';
 import { usePrivateCacheContext } from './private-cache-lifecycle';
 import { localCache } from '@/offline';
-import { AmalLogo, AmalMark, Avatar, Breadcrumbs, Button, DensitySwitch, EmptyState, Icon, IconChip, PageHeader, LanguageSwitch, Segmented, ThemeSwitch, useAmalPreferences } from '@workspace/amal-ui';
+import { AmalLogo, Avatar, Breadcrumbs, Button, DensitySwitch, EmptyState, Icon, IconChip, PageHeader, LanguageSwitch, Segmented, ThemeSwitch, useAmalPreferences } from '@workspace/amal-ui';
 import { groupOf, groupRoutes, sectionOf } from './nav-groups';
 import { formatInstant, formatNumber } from './formatting';
 import { demoPath, type ShellClinic, type ShellIdentity } from './identity';
@@ -82,7 +82,6 @@ function AppShellContent({ identity, fixture, onRefresh, onLogout }: Props) {
   const first = useRef(true);
   useEffect(() => {
     if (res.kind === 'landing') return;
-    document.title = `${title} · ${t('app.name')}`;
     setAnnounce(t('shell.page.announce', { title }));
     if (first.current) { first.current = false; return; }
     document.getElementById('page-title')?.focus();
@@ -103,8 +102,7 @@ function AppShellContent({ identity, fixture, onRefresh, onLogout }: Props) {
       <aside className="shell-side" data-testid="nav-sidebar" data-tour="nav-side" data-collapsed={collapsed || undefined}>
         <div className="shell-side__top">
           <Link href={demoPath('/')} className="shell-side__brand" aria-label={t('shell.brand')} data-testid="link-brand">
-            <AmalMark size={32} />
-            <span className="shell-side__brandname" aria-hidden="true">{t('app.name')}</span>
+            <AmalLogo />
           </Link>
           <button type="button" className="shell-side__collapse" aria-pressed={collapsed} aria-label={collapsed ? t('shell.nav.expand') : t('shell.nav.collapse')} title={collapsed ? t('shell.nav.expand') : t('shell.nav.collapse')} onClick={toggleCollapsed} data-testid="button-nav-collapse">
             <Icon name={collapsed ? 'expand' : 'collapse'} size={18} />

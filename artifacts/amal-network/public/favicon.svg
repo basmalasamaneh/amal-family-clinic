@@ -1,17 +1,1 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#139AA6"/>
-      <stop offset="1" stop-color="#0B5F69"/>
-    </linearGradient>
-    <clipPath id="badge"><rect width="512" height="512" rx="116"/></clipPath>
-  </defs>
-  <rect width="512" height="512" rx="116" fill="url(#bg)"/>
-  <g clip-path="url(#badge)">
-    <circle cx="256" cy="486" r="150" fill="#F5B544"/>
-    <circle cx="256" cy="486" r="198" fill="none" stroke="#F5B544" stroke-opacity=".55" stroke-width="10"/>
-    <circle cx="256" cy="486" r="246" fill="none" stroke="#F5B544" stroke-opacity=".28" stroke-width="10"/>
-  </g>
-  <rect x="226" y="108" width="60" height="176" rx="18" fill="#FFFFFF"/>
-  <rect x="168" y="166" width="176" height="60" rx="18" fill="#FFFFFF"/>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#14A0AC"/><stop offset="1" stop-color="#0A5F68"/></linearGradient></defs><rect width="128" height="128" rx="34" fill="url(#g)"/><path d="M38.396 72.296H26.344L24.412 78.0H16.178L27.862000000000002 45.708H36.97L48.653999999999996 78.0H40.328ZM36.372 66.224 32.370000000000005 54.402 28.414 66.224ZM74.218 45.708V52.010000000000005H61.062V58.818H70.906V64.936H61.062V78.0H53.196V45.708ZM94.262 45.34Q100.012 45.34 104.106 48.376000000000005Q108.2 51.412 109.58 56.656H100.932Q99.96600000000001 54.632000000000005 98.19500000000001 53.574000000000005Q96.424 52.516000000000005 94.17 52.516000000000005Q90.536 52.516000000000005 88.28200000000001 55.04600000000001Q86.028 57.576 86.028 61.808Q86.028 66.04 88.28200000000001 68.57Q90.536 71.1 94.17 71.1Q96.424 71.1 98.19500000000001 70.042Q99.96600000000001 68.984 100.932 66.96000000000001H109.58Q108.2 72.204 104.106 75.217Q100.012 78.23 94.262 78.23Q89.57 78.23 85.86699999999999 76.137Q82.164 74.044 80.094 70.318Q78.024 66.592 78.024 61.808Q78.024 57.024 80.094 53.275Q82.164 49.525999999999996 85.86699999999999 47.433Q89.57 45.34 94.262 45.34Z" fill="#fff"/><path d="M17.442 96 H110.55799999999999" stroke="#F5B544" stroke-width="7" stroke-linecap="round"/><circle cx="109.55799999999999" cy="30" r="8" fill="#F5B544"/></svg>

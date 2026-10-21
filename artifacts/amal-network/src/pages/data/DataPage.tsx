@@ -24,7 +24,7 @@ export function DataPage({ signedIn, home }: { signedIn: boolean; home: string }
   const { t } = useTranslation();
   const { locale, digitPreference } = useAmalPreferences();
   const num = (n: number) => formatNumber(n, locale, digitPreference);
-  useEffect(() => { document.title = `${t('data.title')} · ${t('app.name')}`; document.getElementById('data-title')?.focus(); }, [t]);
+  useEffect(() => { document.getElementById('data-title')?.focus(); }, [t]);
   const Planned = () => <span className="data-planned">{t('data.planned')}</span>;
   return (
     <div className="data" data-testid="page-data">

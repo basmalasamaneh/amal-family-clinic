@@ -24,7 +24,6 @@ export function LoginPage({ notice, onAuthenticated }: Props) {
   const { t } = useTranslation();
   const [mode, setMode] = useState<Mode>('password');
   const [submitting, setSubmitting] = useState(false);
-  useEffect(() => { document.title = `${t('auth.title')} · ${t('app.name')}`; }, [t]);
   return (
     <div className="auth" data-testid="page-login">
       <a href="#auth-main" className="shell-skip">{t('shell.skip')}</a>

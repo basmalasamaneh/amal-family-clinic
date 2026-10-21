@@ -3,8 +3,8 @@ name: AFC brand asset intent
 description: Scope of the user's supplied AFC logos for design work.
 ---
 
-The user supplied the AFC logo set to keep for upcoming design work. The preserved originals are in docs/brand/afc/.
+The user supplied the AFC logo set and subsequently explicitly approved applying it to the app. The preserved originals are in docs/brand/afc/.
 
-**Why:** The request was to save important design files, not to replace the app's current logos or icons.
+**Why:** The initial upload was storage-only; the subsequent branding request authorized replacing visible branding with Amal Family Clinic / عيادة أمل العائلية and AFC in compact spaces.
 
-**How to apply:** Consult this set for subsequent design requests. Do not treat its upload alone as approval to replace live branding; preserve the source artwork and existing app behavior.
+**How to apply:** Use the supplied light/dark horizontal and compact lockups; preserve source artwork and existing app behavior. Branding changes do not authorize renaming clinic records or historical documents.

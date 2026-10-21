@@ -1,64 +1,26 @@
-import { useId } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AMAL_UI_NS } from '../i18n';
 
-/*
- * Inline renderings of assets/amal-logo-mark.svg and assets/amal-logo-horizontal.svg.
- * Artwork is unchanged; it is inlined so the wordmark <text> uses the page-loaded
- * IBM Plex Sans Arabic (an <img> SVG cannot see document web fonts and would fall back).
- * Gradient/clip ids are scoped per instance to avoid collisions.
- */
-function MarkArt({ uid }: { uid: string }) {
-  return (
-    <>
-      <rect width="512" height="512" rx="116" fill={`url(#${uid}-bg)`} />
-      <g clipPath={`url(#${uid}-badge)`}>
-        <circle cx="256" cy="486" r="150" fill="#F5B544" />
-        <circle cx="256" cy="486" r="198" fill="none" stroke="#F5B544" strokeOpacity=".55" strokeWidth="10" />
-        <circle cx="256" cy="486" r="246" fill="none" stroke="#F5B544" strokeOpacity=".28" strokeWidth="10" />
-      </g>
-      <rect x="226" y="108" width="60" height="176" rx="18" fill="#FFFFFF" />
-      <rect x="168" y="166" width="176" height="60" rx="18" fill="#FFFFFF" />
-    </>
-  );
-}
-function Defs({ uid }: { uid: string }) {
-  return (
-    <defs>
-      <linearGradient id={`${uid}-bg`} x1="0" y1="0" x2="1" y2="1">
-        <stop offset="0" stopColor="#139AA6" />
-        <stop offset="1" stopColor="#0B5F69" />
-      </linearGradient>
-      <clipPath id={`${uid}-badge`}><rect width="512" height="512" rx="116" /></clipPath>
-    </defs>
-  );
-}
+const mark = new URL('../assets/amal-logo-mark.svg', import.meta.url).href;
+const horizontal = new URL('../assets/amal-logo-horizontal.svg', import.meta.url).href;
+const horizontalDark = new URL('../assets/amal-logo-horizontal-dark.svg', import.meta.url).href;
+const compact = new URL('../assets/amal-logo-afc.svg', import.meta.url).href;
+const compactDark = new URL('../assets/amal-logo-afc-dark.svg', import.meta.url).href;
 
 export function AmalMark({ size = 40, className }: { size?: number; className?: string }) {
   const { t } = useTranslation(AMAL_UI_NS);
-  const uid = `amal${useId().replace(/:/g, '')}`;
-  return (
-    <svg viewBox="0 0 512 512" width={size} height={size} role="img" aria-label={t('brand.markLabel')} className={className}>
-      <Defs uid={uid} />
-      <MarkArt uid={uid} />
-    </svg>
-  );
+  return <img src={mark} width={size} height={size} alt={t('brand.markLabel')} className={className} />;
 }
 
-/** Horizontal lockup with theme-aware lettering and unchanged badge artwork. */
+/** Supplied outlined artwork; presentation selects the lockup and theme. */
 export function AmalLogo({ className }: { className?: string }) {
   const { t } = useTranslation(AMAL_UI_NS);
-  const uid = `amal${useId().replace(/:/g, '')}`;
   return (
-    <span className="amal-logo-island" data-testid="img-logo">
-      <svg viewBox="0 0 760 160" role="img" aria-label={t('brand.logoLabel')} className={className ?? 'amal-logo'} lang="en" direction="ltr">
-        <Defs uid={uid} />
-        <svg x="0" y="0" width="160" height="160" viewBox="0 0 512 512"><MarkArt uid={uid} /></svg>
-        <g fontFamily="'IBM Plex Sans Arabic','Segoe UI',Tahoma,Arial,sans-serif" aria-hidden="true">
-          <text x="190" y="78" fontSize="52" fontWeight="700" fill="var(--amal-navy, #0B2545)">Amal Family Clinic</text>
-          <text x="191" y="118" fontSize="26" fontWeight="500" fill="var(--amal-primary, #0E7C86)">Group · Three clinics, one chart</text>
-        </g>
-      </svg>
+    <span className="amal-logo-island" data-testid="img-logo" role="img" aria-label={t('brand.logoLabel')}>
+      <img src={horizontal} alt="" aria-hidden="true" className={`${className ?? 'amal-logo'} amal-logo-art amal-logo-art--horizontal amal-logo-art--light`} />
+      <img src={horizontalDark} alt="" aria-hidden="true" className={`${className ?? 'amal-logo'} amal-logo-art amal-logo-art--horizontal amal-logo-art--dark`} />
+      <img src={compact} alt="" aria-hidden="true" className={`${className ?? 'amal-logo'} amal-logo-art amal-logo-art--compact amal-logo-art--light`} />
+      <img src={compactDark} alt="" aria-hidden="true" className={`${className ?? 'amal-logo'} amal-logo-art amal-logo-art--compact amal-logo-art--dark`} />
     </span>
   );
 }

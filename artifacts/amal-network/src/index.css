@@ -124,6 +124,11 @@
 .shell-top { position: sticky; inset-block-start: 0; z-index: 30; display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding-block: 10px; padding-inline: 20px; background: color-mix(in srgb, var(--amal-bg) 94%, transparent); backdrop-filter: blur(8px); border-block-end: 1px solid var(--amal-border); }
 .shell-top__brand { display: none; }
 .shell-top__brand .amal-logo { block-size: 36px; }
+.shell-side__brand .amal-logo { block-size: 52px; max-inline-size: 100%; }
+.shell-side[data-collapsed] .amal-logo-island { --amal-logo-horizontal: none; --amal-logo-compact: block; }
+.shell-side[data-collapsed] .shell-side__brand { padding-inline: 0; }
+.shell-side[data-collapsed] .amal-logo { inline-size: 48px; block-size: auto; }
+.auth-top .amal-logo-island { --amal-logo-horizontal: block; --amal-logo-compact: none; }
 .shell-top__end { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-inline-start: auto; }
 .shell-top__prefs { display: flex; gap: 8px; }
 .shell-clinic { margin: 0; display: flex; align-items: center; gap: 8px; min-block-size: 44px; }

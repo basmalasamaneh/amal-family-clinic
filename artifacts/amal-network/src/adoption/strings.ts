@@ -4,7 +4,7 @@ export const adoptionEn = {
   lead: 'Your clinic decides whether to share through the network. Nothing here changes on its own, and nothing expires.',
   monitoring: {
     title: 'No monitoring of individual doctors',
-    body: 'Amal Network does not track, score or rank individual doctors. The results below are aggregate clinic-level service measurements.',
+    body: 'Amal Family Clinic does not track, score or rank individual doctors. The results below are aggregate clinic-level service measurements.',
     detail1: 'Aggregate measurements count clinic events, such as booking conflicts the system blocked, and how long network lookups took.',
     detail2: 'Like any medical system, Amal keeps security and access audit records: who opened which patient record and when. These protect patients and are not used to evaluate doctors.',
     detail3: 'We do not promise "no logs". We promise no doctor-performance analytics and no ranking.',
@@ -103,7 +103,7 @@ export const adoptionAr: typeof adoptionEn = {
   lead: 'عيادتك تقرر إن كانت ستشارك عبر الشبكة. لا شيء هنا يتغير من تلقاء نفسه، ولا شيء ينتهي.',
   monitoring: {
     title: 'لا مراقبة للأطباء أفراداً',
-    body: 'شبكة أمل لا تتتبع الأطباء أفراداً ولا تقيّمهم ولا ترتّبهم. النتائج أدناه قياسات خدمة إجمالية على مستوى العيادة.',
+    body: 'عيادة أمل العائلية لا تتتبع الأطباء أفراداً ولا تقيّمهم ولا ترتّبهم. النتائج أدناه قياسات خدمة إجمالية على مستوى العيادة.',
     detail1: 'القياسات الإجمالية تحصي أحداث العيادة، مثل تعارضات الحجز التي منعها النظام، ومدة عمليات البحث في الشبكة.',
     detail2: 'كأي نظام طبي، يحتفظ أمل بسجلات أمن ووصول: من فتح سجل أي مريض ومتى. هذه لحماية المرضى ولا تُستخدم لتقييم الأطباء.',
     detail3: 'لا نعد بعدم وجود سجلات. نعد بعدم وجود تحليلات لأداء الأطباء وبعدم الترتيب.',

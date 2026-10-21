@@ -102,7 +102,7 @@ export const kpiEn = {
   sources: {
     title: 'Bookings by source',
     window: 'Window',
-    phone: 'Phone', 'walk-in': 'Walk-in', calendar: 'Calendar app', 'amal-network': 'Amal Network', unknown: 'Unknown source',
+    phone: 'Phone', 'walk-in': 'Walk-in', calendar: 'Calendar app', 'amal-network': 'Amal Family Clinic', unknown: 'Unknown source',
     total: 'Total', centre: 'bookings',
     summary: '{{total}} bookings. Largest source: {{top}} with {{count}} ({{pct}}).',
     emptyTitle: 'No bookings in this window',
@@ -251,7 +251,7 @@ export const kpiAr: typeof kpiEn = {
   sources: {
     title: 'الحجوزات حسب المصدر',
     window: 'الفترة',
-    phone: 'هاتف', 'walk-in': 'حضور مباشر', calendar: 'تطبيق التقويم', 'amal-network': 'شبكة أمل', unknown: 'مصدر غير معروف',
+    phone: 'هاتف', 'walk-in': 'حضور مباشر', calendar: 'تطبيق التقويم', 'amal-network': 'عيادة أمل العائلية', unknown: 'مصدر غير معروف',
     total: 'المجموع', centre: 'حجز',
     summary: '{{total}} حجزًا. أكبر مصدر: {{top}} بعدد {{count}} ({{pct}}).',
     emptyTitle: 'لا حجوزات في هذه الفترة',
