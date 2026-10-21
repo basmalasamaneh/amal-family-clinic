@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
+import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { useLocation } from 'wouter';
 import { X } from 'lucide-react';
@@ -40,7 +41,9 @@ export function TourOverlay({ steps, onFinish }: { steps: TourStep[]; onFinish: 
     const el = step ? findTarget(step.targets) : null;
     if (!el) { setBox(null); return; }
     const r = el.getBoundingClientRect();
-    setBox({ top: r.top - frame.top, start: rtl ? frame.right - r.right : r.left - frame.left, inline: r.width, block: r.height });
+    const next = { top: r.top - frame.top, start: rtl ? frame.right - r.right : r.left - frame.left, inline: r.width, block: r.height };
+    setBox((prev) => prev && prev.top === next.top && prev.start === next.start
+      && prev.inline === next.inline && prev.block === next.block ? prev : next);
   }, [step, rtl]);
 
   useLayoutEffect(() => {
@@ -66,9 +69,14 @@ export function TourOverlay({ steps, onFinish }: { steps: TourStep[]; onFinish: 
     return () => observer.disconnect();
   }, [measure, step]);
   useEffect(() => {
+    // Targets can move without resizing (font loading, toolbar reflow, sidebar
+    // collapse). Track their position while the short-lived tour is mounted.
+    let frame = 0;
+    const track = () => { measure(); frame = requestAnimationFrame(track); };
+    frame = requestAnimationFrame(track);
     window.addEventListener('resize', measure);
     window.addEventListener('scroll', measure, true);
-    return () => { window.removeEventListener('resize', measure); window.removeEventListener('scroll', measure, true); };
+    return () => { cancelAnimationFrame(frame); window.removeEventListener('resize', measure); window.removeEventListener('scroll', measure, true); };
   }, [measure]);
   useEffect(() => { headRef.current?.focus({ preventScroll: true }); }, [index]);
 
@@ -122,9 +130,8 @@ export function TourOverlay({ steps, onFinish }: { steps: TourStep[]; onFinish: 
       style = { insetBlockStart: clampTop(below), insetInlineStart: clampStart(box.start) };
   }
 
-  return (
-    <>
-      <div ref={frameRef} aria-hidden="true" style={{ position: 'fixed', insetBlock: 0, insetInline: 0, visibility: 'hidden', pointerEvents: 'none' }} />
+  return createPortal(
+    <div ref={frameRef} className="tour-layer" dir={rtl ? 'rtl' : 'ltr'}>
       {box && <div className="tour-ring" aria-hidden="true" style={{ insetBlockStart: box.top - 4, insetInlineStart: box.start - 4, inlineSize: box.inline + 8, blockSize: box.block + 8 }} />}
       <div
         ref={cardRef}
@@ -148,6 +155,7 @@ export function TourOverlay({ steps, onFinish }: { steps: TourStep[]; onFinish: 
           <Button size="sm" onClick={() => (last ? finish('completed') : setIndex(index + 1))} data-testid="button-tour-next">{last ? t('tour.done') : t('tour.next')}</Button>
         </div>
       </div>
-    </>
+    </div>,
+    document.body,
   );
 }

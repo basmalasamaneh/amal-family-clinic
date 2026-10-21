@@ -21,3 +21,13 @@ width even when innerWidth and document clientWidth report equal values.
 
 **How to apply:** Verify highlight edges against actual target edges, not just
 card containment, with both ordinary and stable scrollbar gutters in RTL/LTR.
+
+Keep the measuring frame and rendered highlights in one positioning layer.
+Track position changes as well as size changes while a tour is visible.
+
+**Why:** A toolbar reflow can move a target without resizing it; ResizeObserver
+alone does not detect that movement. Tests of static bounds missed this case.
+
+**How to apply:** Include scrolled sticky headers and toolbar movement in tour
+alignment checks. Compare settled target/highlight geometry, not a fixed number
+of animation frames, since React may not commit the geometry update immediately.
