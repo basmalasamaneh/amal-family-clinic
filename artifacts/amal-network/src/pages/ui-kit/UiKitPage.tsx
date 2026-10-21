@@ -11,6 +11,8 @@ import { StatusSection } from './StatusSection';
 import { CardsSection } from './CardsSection';
 import { ToastsSection } from './ToastsSection';
 import { EmptySection } from './EmptySection';
+import { Section } from './Section';
+import { CombinationMatrix, ComponentsGallery } from './ComponentsGallery';
 
 export default function UiKitPage() {
   const { t } = useTranslation();
@@ -50,6 +52,8 @@ export default function UiKitPage() {
           <CardsSection index={5} />
           <ToastsSection index={6} />
           <EmptySection index={7} />
+          <Section id="components" index={8} intro={t('kit.g.intro')}><ComponentsGallery /></Section>
+          <Section id="matrix" index={9} intro={t('kit.g.matrixIntro')}><CombinationMatrix /></Section>
           <footer className="kit-footer">
             <AmalMark size={32} />
             <span>{t('kit.footer')}</span>

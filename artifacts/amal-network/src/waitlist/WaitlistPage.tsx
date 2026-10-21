@@ -6,7 +6,7 @@ import {
   getListWaitlistQueryKey, useCheckWaitlistOffer, useDecideWaitlistOffer, useListWaitlist,
   type ConflictPreview, type WaitlistOffer, type WaitlistSnapshot,
 } from '@workspace/api-client-react';
-import { EmptyState, useAmalPreferences } from '@workspace/amal-ui';
+import { EmptyState, PageHeader, useAmalPreferences } from '@workspace/amal-ui';
 import type { ShellClinic } from '@/shell/identity';
 import { formatInstant } from '@/shell/formatting';
 import { formatLocalDate, formatTime, localDateOf } from '@/calendar/dates';
@@ -32,13 +32,7 @@ export function WaitlistPage({ clinic, title, scope, fixture }: { clinic: ShellC
   const { t } = useTranslation('wl');
   return (
     <div className="wl-page" data-testid="page-waitlist">
-      <div className="wl-head">
-        <div>
-          <p className="shell-page__eyebrow">{t('eyebrow')}</p>
-          <h1 id="page-title" tabIndex={-1} className="shell-page__title"><ListOrdered size={30} aria-hidden="true" />{title}</h1>
-          <p className="wl-lede">{t('lede')}</p>
-        </div>
-      </div>
+      <PageHeader className="wl-head" icon={ListOrdered} section="reception" eyebrow={t('eyebrow')} title={title} description={t('lede')} />
       <div className="wl-note" role="note" data-testid="notice-waitlist-not-reservation"><Info size={20} aria-hidden="true" /><p>{t('notice')}</p></div>
       {clinic ? <WaitlistBody key={scope + '|' + clinic.id} clinic={clinic} scope={scope} fixture={fixture} />
         : <div data-testid="status-waitlist-no-clinic"><EmptyState title={t('noClinic.title')} description={t('noClinic.body')} /></div>}

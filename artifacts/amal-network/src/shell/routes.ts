@@ -1,8 +1,5 @@
 import type { LucideIcon } from 'lucide-react';
-import {
-  Activity, BarChart3, Building2, CalendarDays, CalendarPlus, CalendarRange, Code2, Copy, FileUp, Globe2, ListOrdered, Handshake, IdCard, MessageSquareText,
-  Printer, RefreshCcw, ScrollText, Search, ShieldCheck, Stethoscope, Users,
-} from 'lucide-react';
+import { AmalIcons as I } from '@workspace/amal-ui/icon-map';
 import type { ShellRole } from './identity';
 
 export interface ShellRoute {
@@ -16,31 +13,31 @@ export interface ShellRoute {
 
 /** Single source of truth for shell routes and navigation (master plan Section 11). */
 export const SHELL_ROUTES: readonly ShellRoute[] = [
-  { id: 'today', path: '/desk/today', roles: ['front-desk'], icon: CalendarDays },
-  { id: 'week', path: '/desk/week', roles: ['front-desk'], icon: CalendarRange },
-  { id: 'newBooking', path: '/desk/new-booking', roles: ['front-desk'], icon: CalendarPlus },
-  { id: 'patientLookup', path: '/desk/patients', roles: ['front-desk'], icon: Search },
-  { id: 'consent', path: '/desk/consent', roles: ['front-desk'], icon: ShieldCheck, navHidden: true },
-  { id: 'sync', path: '/desk/sync', roles: ['front-desk'], icon: RefreshCcw },
+  { id: 'today', path: '/desk/today', roles: ['front-desk'], icon: I.today },
+  { id: 'week', path: '/desk/week', roles: ['front-desk'], icon: I.week },
+  { id: 'newBooking', path: '/desk/new-booking', roles: ['front-desk'], icon: I.newBooking },
+  { id: 'patientLookup', path: '/desk/patients', roles: ['front-desk'], icon: I.patients },
+  { id: 'consent', path: '/desk/consent', roles: ['front-desk'], icon: I.consent, navHidden: true },
+  { id: 'sync', path: '/desk/sync', roles: ['front-desk'], icon: I.sync },
   // P2-14 waitlist: reception only; server derives clinic and authorizes.
-  { id: 'waitlist', path: '/desk/waitlist', roles: ['front-desk'], icon: ListOrdered },
-  { id: 'daySheet', path: '/desk/day-sheet', roles: ['front-desk'], icon: Printer },
-  { id: 'myDay', path: '/doctor/my-day', roles: ['doctor'], icon: Stethoscope },
-  { id: 'networkSearch', path: '/doctor/network-search', roles: ['doctor'], icon: Globe2 },
-  { id: 'patientCard', path: '/doctor/patient-card', roles: ['doctor'], icon: IdCard },
-  { id: 'privacy', path: '/doctor/privacy', roles: ['doctor'], icon: ShieldCheck },
+  { id: 'waitlist', path: '/desk/waitlist', roles: ['front-desk'], icon: I.waitlist },
+  { id: 'daySheet', path: '/desk/day-sheet', roles: ['front-desk'], icon: I.daySheet },
+  { id: 'myDay', path: '/doctor/my-day', roles: ['doctor'], icon: I.myDay },
+  { id: 'networkSearch', path: '/doctor/network-search', roles: ['doctor'], icon: I.networkSearch },
+  { id: 'patientCard', path: '/doctor/patient-card', roles: ['doctor'], icon: I.patientCard },
+  { id: 'privacy', path: '/doctor/privacy', roles: ['doctor'], icon: I.privacy },
   // P1-13 simulated reminders: own-clinic log; server enforces scope.
-  { id: 'messages', path: '/messages', roles: ['front-desk', 'admin'], icon: MessageSquareText },
-  { id: 'kpi', path: '/admin/kpi', roles: ['admin'], icon: BarChart3 },
-  { id: 'networkHealth', path: '/admin/network-health', roles: ['admin'], icon: Activity },
-  { id: 'usersDevices', path: '/admin/users-devices', roles: ['admin'], icon: Users },
-  { id: 'clinicsDoctors', path: '/admin/clinics-doctors', roles: ['admin'], icon: Building2 },
-  { id: 'audit', path: '/admin/audit', roles: ['admin'], icon: ScrollText },
-  { id: 'developer', path: '/admin/developer', roles: ['admin'], icon: Code2 },
+  { id: 'messages', path: '/messages', roles: ['front-desk', 'admin'], icon: I.messages },
+  { id: 'kpi', path: '/admin/kpi', roles: ['admin'], icon: I.kpi },
+  { id: 'networkHealth', path: '/admin/network-health', roles: ['admin'], icon: I.networkHealth },
+  { id: 'usersDevices', path: '/admin/users-devices', roles: ['admin'], icon: I.users },
+  { id: 'clinicsDoctors', path: '/admin/clinics-doctors', roles: ['admin'], icon: I.clinics },
+  { id: 'audit', path: '/admin/audit', roles: ['admin'], icon: I.changeLog },
+  { id: 'developer', path: '/admin/developer', roles: ['admin'], icon: I.developer },
   // P1-07 import/merge APIs authorize doctor and front-desk only; admin status grants no patient-level access.
-  { id: 'import', path: '/work/import', roles: ['front-desk', 'doctor'], icon: FileUp },
-  { id: 'adoption', path: '/work/adoption', roles: ['front-desk', 'doctor'], icon: Handshake },
-  { id: 'duplicates', path: '/work/duplicates', roles: ['front-desk', 'doctor'], icon: Copy },
+  { id: 'import', path: '/work/import', roles: ['front-desk', 'doctor'], icon: I.import },
+  { id: 'adoption', path: '/work/adoption', roles: ['front-desk', 'doctor'], icon: I.adoption },
+  { id: 'duplicates', path: '/work/duplicates', roles: ['front-desk', 'doctor'], icon: I.duplicates },
 ];
 
 export const KNOWN_ROLES: readonly ShellRole[] = ['admin', 'doctor', 'front-desk'];

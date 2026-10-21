@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { AmalLogo, LanguageSwitch, ThemeSwitch } from '@workspace/amal-ui';
+import { AmalLogo, DensitySwitch, LanguageSwitch, ThemeSwitch } from '@workspace/amal-ui';
 
 export function KitHeader() {
   const { t } = useTranslation();
@@ -13,6 +13,7 @@ export function KitHeader() {
         <div className="kit-header__controls">
           <LanguageSwitch />
           <ThemeSwitch />
+          <DensitySwitch />
         </div>
       </div>
     </header>

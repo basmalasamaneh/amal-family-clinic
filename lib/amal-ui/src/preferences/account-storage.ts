@@ -2,7 +2,9 @@ import type { AmalLocale } from '../i18n';
 import type { AmalTheme } from './storage';
 
 export type DigitPreference = 'latn' | 'arab';
-export interface DisplayPreferences { locale: AmalLocale; theme: AmalTheme; digitPreference: DigitPreference }
+export type Density = 'compact' | 'comfortable' | 'large';
+export const DENSITIES: readonly Density[] = ['compact', 'comfortable', 'large'];
+export interface DisplayPreferences { locale: AmalLocale; theme: AmalTheme; digitPreference: DigitPreference; /** null = role default (reception: large). */ density?: Density | null }
 export const DEFAULT_DISPLAY: DisplayPreferences = { locale: 'ar', theme: 'light', digitPreference: 'latn' };
 export interface PreferenceStorage {
   read(userId: string): DisplayPreferences;
@@ -20,6 +22,7 @@ export const browserPreferenceStorage: PreferenceStorage = {
         locale: p.locale === 'en' ? 'en' : 'ar',
         theme: p.theme === 'dark' ? 'dark' : 'light',
         digitPreference: p.digitPreference === 'arab' ? 'arab' : 'latn',
+        ...(p.density === 'compact' || p.density === 'comfortable' || p.density === 'large' ? { density: p.density } : {}),
       };
     } catch { return { ...DEFAULT_DISPLAY }; }
   },

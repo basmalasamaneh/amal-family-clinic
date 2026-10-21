@@ -18,7 +18,9 @@
       "status": "Status badges",
       "cards": "Cards",
       "toasts": "Toasts",
-      "empty": "Empty states"
+      "empty": "Empty states",
+      "components": "Shared components",
+      "matrix": "Four combinations"
     },
     "palette": {
       "intro": "Raw brand values are preserved exactly. Text always uses a measured pairing of at least 4.5:1.",
@@ -128,7 +130,81 @@
       "clear": "Clear all",
       "cleared": "List cleared"
     },
-    "footer": "Amal Family Clinic Group · design foundation"
+    "footer": "Amal Family Clinic Group · design foundation",
+    "g": {
+      "intro": "Shared components used across the product. Toggle language and theme above; the table offers loading, error and empty states.",
+      "matrixIntro": "The same components in all four combinations: Arabic and English, Light and Dark.",
+      "p1": "Layla Haddad",
+      "p2": "Omar Khoury",
+      "p3": "Sara Nasser",
+      "colName": "Patient",
+      "colPhone": "Phone",
+      "colStatus": "Status",
+      "colTime": "Time",
+      "eyebrow": "Reception · North Clinic",
+      "phDesc": "Today's appointments for this clinic, in arrival order.",
+      "print": "Print day sheet",
+      "newBooking": "New booking",
+      "stat1": "Appointments today",
+      "trend1": "6 more than last Monday",
+      "stat2": "Registered patients",
+      "stat3": "Network clinics",
+      "stat4": "Median lookup time",
+      "trend4": "0.3 s faster this week",
+      "tableTitle": "Appointments",
+      "tableDesc": "Sticky header, zebra rows, card view on request.",
+      "stateLabel": "Preview table state",
+      "state": {
+        "ready": "With data",
+        "loading": "Loading",
+        "error": "Error",
+        "empty": "Empty"
+      },
+      "filters": "Filters",
+      "filterPh": "Filter by name",
+      "tabs": "Appointment groups",
+      "tabAll": "All",
+      "tabWaiting": "Waiting",
+      "tabDone": "Seen",
+      "emptyTable": "No appointments match",
+      "open": "Open",
+      "patient": "Patient summary",
+      "phoneLine": "Phone:",
+      "alert1": "Penicillin allergy",
+      "alert2": "Prefers morning visits",
+      "timeline": "Access log preview",
+      "tl1": "Record opened by a clinician at South Clinic",
+      "tl2": "Appointment completed",
+      "tl3": "Consent confirmed at reception",
+      "form": "New booking",
+      "s1": "Patient",
+      "s2": "Time",
+      "s3": "Review",
+      "s4": "Confirm",
+      "fName": "Full name",
+      "fNameHint": "As written on the ID card.",
+      "fPhone": "Mobile number",
+      "fPhoneErr": "Enter the full number with country code.",
+      "cancelBooking": "Cancel booking",
+      "showToast": "Show toast",
+      "toastTitle": "Booking saved",
+      "toastDesc": "It will sync when the connection returns.",
+      "info": "Shared within the network",
+      "infoBody": "Only clinics with consent can see this record.",
+      "warn": "Waiting to sync",
+      "warnBody": "2 changes are stored on this device.",
+      "loading": "Loading state",
+      "empty": "Empty state",
+      "emptyTitle": "No messages yet",
+      "emptyDesc": "Reminders you send will appear here.",
+      "confirmTitle": "Cancel this booking?",
+      "confirmDesc": "The patient keeps their place on the waitlist.",
+      "keep": "Keep booking",
+      "theme": {
+        "light": "Light",
+        "dark": "Dark"
+      }
+    }
   },
   "notFound": {
     "title": "Page not found",
@@ -153,18 +229,20 @@
       "myDay": "My day",
       "networkSearch": "Network search",
       "patientCard": "Patient card",
-      "privacy": "Privacy settings",
+      "privacy": "Privacy & access log",
       "kpi": "KPI dashboard",
       "networkHealth": "Network health",
       "usersDevices": "Users & devices",
       "clinicsDoctors": "Clinics & doctors",
       "duplicates": "Duplicate patients",
-      "audit": "Audit log",
+      "audit": "Change log",
       "import": "Import wizard",
       "developer": "Developer tools",
       "uiKit": "UI kit",
       "messages": "Messages log",
-      "waitlist": "Waitlist"
+      "waitlist": "Waitlist",
+      "collapse": "Collapse sidebar",
+      "expand": "Expand sidebar"
     },
     "roles": {
       "admin": "Administrator",
@@ -242,7 +320,20 @@
         "desc": "The identity service did not respond. Your previous settings were not applied.",
         "retry": "Retry"
       }
-    }
+    },
+    "groups": {
+      "reception": "Reception",
+      "clinical": "Clinic",
+      "patients": "Patients",
+      "network": "Network",
+      "admin": "Administration"
+    },
+    "bell": {
+      "label": "Notifications",
+      "soon": "Notifications are coming soon"
+    },
+    "crumbs": "Breadcrumb",
+    "crumbsHome": "Home"
   },
   "error": {
     "patientReferenced": "This patient has protected records and cannot be deleted.",

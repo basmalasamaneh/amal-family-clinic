@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'wouter';
 import { ArrowLeft, BarChart3, Ban, ClipboardList, Contact, FileText, HeartHandshake, History, KeyRound, ShieldCheck, Stethoscope, type LucideIcon } from 'lucide-react';
-import { AmalLogo, Button, LanguageSwitch, ThemeSwitch, useAmalPreferences } from '@workspace/amal-ui';
+import { AmalLogo, Button, DataTable, LanguageSwitch, ThemeSwitch, useAmalPreferences } from '@workspace/amal-ui';
 import { formatNumber } from '@/shell/formatting';
 
 const STORED: { id: string; icon: LucideIcon }[] = [
@@ -77,19 +77,14 @@ export function DataPage({ signedIn, home }: { signedIn: boolean; home: string }
             <section id="data-who" tabIndex={-1} className="data-sec">
               <h2 className="data-sec__title"><span className="data-sec__num">{num(2)}</span>{t('data.who.title')}<Planned /></h2>
               <p className="data-sec__intro">{t('data.who.intro')}</p>
-              <div className="data-table-wrap" tabIndex={0} role="region" aria-label={t('data.who.title')}>
-                <table className="data-table" data-testid="table-visibility">
-                  <thead><tr><th scope="col">{t('data.who.role')}</th>{COLS.map((c) => <th key={c} scope="col">{t(`data.who.col.${c}`)}</th>)}</tr></thead>
-                  <tbody>
-                    {ROLES.map((r) => (
-                      <tr key={r}>
-                        <th scope="row">{t(`data.who.row.${r}`)}</th>
-                        {COLS.map((c) => <td key={c}><span className={`data-cell data-cell--${MATRIX[r][c]}`}>{t(`data.who.cell.${MATRIX[r][c]}`)}</span></td>)}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <DataTable
+                caption={t('data.who.title')} testId="datatable-visibility" tableTestId="table-visibility" tableClassName="data-table"
+                rows={[...ROLES]} rowKey={(r) => r} cardTitle={(r) => t(`data.who.row.${r}`)}
+                columns={[
+                  { key: 'role', header: t('data.who.role'), rowHeader: true, cell: (r) => t(`data.who.row.${r}`) },
+                  ...COLS.map((c) => ({ key: c, header: t(`data.who.col.${c}`), cell: (r: (typeof ROLES)[number]) => <span className={`data-cell data-cell--${MATRIX[r][c]}`}>{t(`data.who.cell.${MATRIX[r][c]}`)}</span> })),
+                ]}
+              />
               <ul className="data-notes">
                 <li>{t('data.who.n1')}</li><li>{t('data.who.n2')}</li><li>{t('data.who.n3')}</li>
               </ul>

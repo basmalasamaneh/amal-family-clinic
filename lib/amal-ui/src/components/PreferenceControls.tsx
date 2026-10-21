@@ -14,8 +14,8 @@ export function LanguageSwitch() {
       value={locale}
       onChange={(value: AmalLocale) => setLocale(value)}
       options={[
-        { value: 'ar', label: t('language.ar'), lang: 'ar', testId: 'button-locale-ar' },
-        { value: 'en', label: t('language.en'), lang: 'en', testId: 'button-locale-en' },
+        { value: 'ar', label: 'AR', ariaLabel: `AR ${t('language.ar')}`, lang: 'ar', testId: 'button-locale-ar' },
+        { value: 'en', label: 'EN', ariaLabel: `EN ${t('language.en')}`, lang: 'en', testId: 'button-locale-en' },
       ]}
     />
   );

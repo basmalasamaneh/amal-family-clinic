@@ -28,3 +28,22 @@ body {
     transition-duration: 0.01ms !important; scroll-behavior: auto !important;
   }
 }
+
+/* ---------- Typography by language (Arabic 1.7, Latin 1.5) ---------- */
+html:lang(en) { font-family: var(--amal-font-latin); line-height: var(--amal-leading-latin); }
+:lang(ar) { letter-spacing: 0 !important; }
+:where(em, i, cite, address, dfn, var) { font-style: normal; }
+:where(h1, h2, h3, h4, h5, h6) { font-weight: var(--amal-weight-semibold); }
+:where(label, th, dt) { font-weight: var(--amal-weight-medium); }
+:where(table, time, data, .amal-num, input[type='tel'], input[type='time'], input[type='number']) { font-variant-numeric: tabular-nums; }
+
+/* ---------- Display density (per user) ---------- */
+html[data-density='compact'] { --amal-density: 0.9333; }
+html[data-density='comfortable'] { --amal-density: 1; }
+html[data-density='large'] { --amal-density: 1.1; --amal-text-reception: 17px; }
+html[data-density='compact'] { --amal-text-reception: 16px; }
+
+/* ---------- Icons: lucide stroke 1.75 everywhere ---------- */
+svg.lucide { stroke-width: 1.75; }
+[dir='rtl'] .amal-icon--mirror { transform: scaleX(-1); }
+:where(bdi.amal-tel, .amal-tel) { direction: ltr; unicode-bidi: isolate; }

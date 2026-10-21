@@ -1,15 +1,16 @@
-import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, Redirect, useLocation, useSearch } from 'wouter';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import * as Dialog from '@radix-ui/react-dialog';
-import { DoorOpen, BookOpenText, CircleHelp, CircleUserRound, PlayCircle, ShieldCheck, FlaskConical, LogOut, MoreHorizontal, RotateCw, Search, X, ShieldX, UserX, FileQuestion } from 'lucide-react';
+import { DoorOpen, BookOpenText, CircleHelp, PlayCircle, ShieldCheck, FlaskConical, LogOut, MoreHorizontal, RotateCw, Search, X, ShieldX, UserX, FileQuestion } from 'lucide-react';
 import { ConnectionStatus } from './ConnectionStatus';
 import { DaySheet } from '@/day-sheet/DaySheet';
 import './offline-messages';
 import { usePrivateCacheContext } from './private-cache-lifecycle';
 import { localCache } from '@/offline';
-import { AmalLogo, AmalMark, Button, EmptyState, LanguageSwitch, Segmented, ThemeSwitch, useAmalPreferences } from '@workspace/amal-ui';
+import { AmalLogo, AmalMark, Avatar, Breadcrumbs, Button, DensitySwitch, EmptyState, Icon, IconChip, PageHeader, LanguageSwitch, Segmented, ThemeSwitch, useAmalPreferences } from '@workspace/amal-ui';
+import { groupOf, groupRoutes, sectionOf } from './nav-groups';
 import { formatInstant, formatNumber } from './formatting';
 import { demoPath, type ShellClinic, type ShellIdentity } from './identity';
 import { TourOverlay } from '@/tour/TourOverlay';
@@ -74,6 +75,8 @@ function AppShellContent({ identity, fixture, onRefresh, onLogout }: Props) {
   usePrivateCacheContext(identity, clinic?.id ?? null, fixture);
 
   const tour = useTour(identity.id, role);
+  const [collapsed, setCollapsed] = useState(() => { try { return window.localStorage.getItem('amal.nav.collapsed') === '1'; } catch { return false; } });
+  const toggleCollapsed = () => setCollapsed((c) => { try { window.localStorage.setItem('amal.nav.collapsed', c ? '0' : '1'); } catch { /* storage unavailable */ } return !c; });
   const title = titleFor(res, t);
   const [announce, setAnnounce] = useState('');
   const first = useRef(true);
@@ -85,26 +88,42 @@ function AppShellContent({ identity, fixture, onRefresh, onLogout }: Props) {
     document.getElementById('page-title')?.focus();
   }, [location, title, res.kind, t]);
 
+  const crumbs = res.kind === 'page' && !res.isLanding
+    ? [{ label: t(`shell.groups.${groupOf(res.route.id)}`) }, { label: title }]
+    : [{ label: title }];
+
   if (res.kind === 'landing') return <Redirect to={demoPath(res.to)} replace />;
 
   return (
     <WalkInProvider key={clinic?.id ?? 'none'} clinic={clinic} fixture={fixture} enabled={role === 'front-desk'}>
-    <div className="shell" data-testid="app-shell" data-role={identity.role ?? 'none'}>
+    <div className="shell" data-testid="app-shell" data-role={identity.role ?? 'none'} data-collapsed={collapsed || undefined}>
       <a href="#main" className="shell-skip" data-testid="link-skip">{t('shell.skip')}</a>
       <div className="shell-sr" role="status" aria-live="polite" data-testid="status-route-announce">{announce}</div>
 
-      <aside className="shell-side" data-testid="nav-sidebar" data-tour="nav-side">
-        <Link href={demoPath('/')} className="shell-side__brand" aria-label={t('shell.brand')} data-testid="link-brand">
-          <AmalMark size={36} />
-          <span aria-hidden="true">{t('app.name')}</span>
-        </Link>
+      <aside className="shell-side" data-testid="nav-sidebar" data-tour="nav-side" data-collapsed={collapsed || undefined}>
+        <div className="shell-side__top">
+          <Link href={demoPath('/')} className="shell-side__brand" aria-label={t('shell.brand')} data-testid="link-brand">
+            <AmalMark size={32} />
+            <span className="shell-side__brandname" aria-hidden="true">{t('app.name')}</span>
+          </Link>
+          <button type="button" className="shell-side__collapse" aria-pressed={collapsed} aria-label={collapsed ? t('shell.nav.expand') : t('shell.nav.collapse')} title={collapsed ? t('shell.nav.expand') : t('shell.nav.collapse')} onClick={toggleCollapsed} data-testid="button-nav-collapse">
+            <Icon name={collapsed ? 'expand' : 'collapse'} size={18} />
+          </button>
+        </div>
         <nav aria-label={t('shell.nav.label')}>
-          <ul className="shell-side__list">
-            {items.map((r) => <li key={r.id}><NavLink route={r} location={location} variant="side" /></li>)}
-          </ul>
+          {groupRoutes(items).map((g) => (
+            <div key={g.group} className="shell-side__group" role="group" aria-labelledby={`nav-g-${g.group}`}>
+              <p id={`nav-g-${g.group}`} className="shell-side__glabel">{t(`shell.groups.${g.group}`)}</p>
+              <ul className="shell-side__list">
+                {g.items.map((r) => <li key={r.id}><NavLink route={r} location={location} variant="side" /></li>)}
+              </ul>
+            </div>
+          ))}
         </nav>
-        <Link href={demoPath('/data')} className="shell-side__kit shell-side__data" data-testid="link-side-data"><ShieldCheck size={18} aria-hidden="true" />{t('data.navLink')}</Link>
-        <Link href="/ui-kit" className="shell-side__kit" data-testid="link-ui-kit">{t('shell.nav.uiKit')}</Link>
+        <div className="shell-side__foot">
+          <Link href={demoPath('/data')} className="shell-side__kit shell-side__data" data-testid="link-side-data" title={t('data.navLink')}><Icon name="shield" size={18} /><span className="shell-side__kitlabel">{t('data.navLink')}</span></Link>
+          <Link href="/ui-kit" className="shell-side__kit" data-testid="link-ui-kit" title={t('shell.nav.uiKit')}><Icon name="cardView" size={18} /><span className="shell-side__kitlabel">{t('shell.nav.uiKit')}</span></Link>
+        </div>
       </aside>
 
       <div className="shell-body">
@@ -120,12 +139,16 @@ function AppShellContent({ identity, fixture, onRefresh, onLogout }: Props) {
           {!(res.kind === 'page' && (res.route.id === 'networkSearch' || res.route.id === 'patientCard')) && <GlobalSearch key={clinicId ?? 'none'} />}
           <div className="shell-top__end">
             <ConnectionStatus userId={identity.id} clinicId={clinic?.id ?? null} queueAvailable={role === 'front-desk'} />
+            <button type="button" className="shell-iconbtn" aria-disabled="true" aria-label={t('shell.bell.label')} title={t('shell.bell.soon')} data-testid="button-notifications">
+              <Icon name="bell" size={19} />
+            </button>
             <div className="shell-top__prefs"><LanguageSwitch /><ThemeSwitch /></div>
             <HelpMenu onReplay={tour.start} canReplay={tour.steps.length > 0} />
             <UserMenu identity={identity} fixture={fixture} onLogout={onLogout} />
           </div>
         </header>
 
+        <div className="shell-crumbs"><Breadcrumbs label={t('shell.crumbs')} items={[{ label: t('shell.crumbsHome'), render: (c: ReactNode, cls: string) => <Link href={demoPath('/')} className={cls} data-testid="link-crumb-home">{c}</Link> }, ...crumbs]} /></div>
         <main id="main" tabIndex={-1} className="shell-main" key={role === 'admin' ? 'admin' : clinicId ?? 'none'}>
           <PageContent identity={identity} res={res} title={title} clinic={clinic} clinics={clinics} fixture={fixture} landing={landingFor(role)} scope={`${identity.id}:${role ?? 'none'}:${role === 'admin' ? 'all' : clinic?.id ?? 'none'}`} onRefresh={onRefresh} />
         </main>
@@ -160,10 +183,12 @@ function NavLink({ route, location, variant }: { route: ShellRoute; location: st
     <Link
       href={demoPath(calendarRoute && fromCalendar ? withCarry(route.path, search) : route.path)}
       className={`shell-nav shell-nav--${variant}${active ? ' is-active' : ''}`}
+      data-section={sectionOf(route.id)}
+      title={variant === 'side' ? t(`shell.nav.${route.id}`) : undefined}
       aria-current={active ? 'page' : undefined}
       data-testid={`link-nav-${variant}-${route.id}`}
     >
-      <Icon size={20} aria-hidden="true" />
+      {variant === 'side' ? <IconChip icon={Icon} section={sectionOf(route.id)} size="sm" /> : <Icon size={20} aria-hidden="true" />}
       <span className="shell-nav__label">{t(`shell.nav.${route.id}`)}</span>
     </Link>
   );
@@ -283,10 +308,11 @@ function UserMenu({ identity, fixture, onLogout }: { identity: ShellIdentity; fi
   const roleLabel = t(`shell.roles.${isKnownRole(identity.role) ? identity.role : 'none'}`);
   return (
     <Dialog.Root>
-      <Dialog.Trigger data-tour="user-menu" className="shell-user" aria-label={t('shell.user.open', { name: identity.name })} data-testid="button-user-menu">
-        <span className="shell-user__avatar" aria-hidden="true"><CircleUserRound size={22} /></span>
-        <span className="shell-user__name" aria-hidden="true"><bdi>{identity.name}</bdi></span>
-        <CircleUserRound size={18} aria-hidden="true" className="shell-user__icon" />
+      <Dialog.Trigger data-tour="user-menu" className="shell-user" data-testid="button-user-menu">
+        <Avatar name={identity.name} size="sm" className="shell-user__avatar" />
+        <span className="shell-user__name"><bdi>{identity.name}</bdi></span>
+        <span className="shell-sr">{t('shell.user.title')}</span>
+        <Icon name="chevronDown" size={16} className="shell-user__icon" />
       </Dialog.Trigger>
       <Dialog.Portal>
         <Dialog.Overlay className="shell-overlay" />
@@ -308,6 +334,7 @@ function UserMenu({ identity, fixture, onLogout }: { identity: ShellIdentity; fi
             <div className="shell-dialog__controls">
               <LanguageSwitch />
               <ThemeSwitch />
+              <DensitySwitch />
               <Segmented
                 label={t('shell.user.digits')}
                 value={digitPreference}
@@ -414,9 +441,7 @@ function PageContent({ identity, res, title, clinic, clinics, fixture, landing, 
     const isAdmin = res.route.roles.includes('admin');
     return (
       <article className="shell-page" data-testid={`page-${res.route.id}`}>
-        <p className="shell-page__eyebrow">{res.isLanding ? t('shell.page.landing') : t('shell.page.placeholder')}</p>
-        <h1 id="page-title" tabIndex={-1} className="shell-page__title"><Icon size={28} aria-hidden="true" />{title}</h1>
-        <p className="shell-page__body">{t('shell.page.body')}</p>
+        <PageHeader icon={Icon} section={sectionOf(res.route.id)} eyebrow={res.isLanding ? t('shell.page.landing') : t('shell.page.placeholder')} title={title} description={t('shell.page.body')} />
         <ul className="shell-page__meta">
           <li data-testid="text-page-clinic">{clinic ? t('shell.page.clinic', { clinic: '\u2068' + clinic.name + '\u2069' }) : t('shell.page.noClinic')}</li>
           <li data-testid="text-page-clock">{t('shell.page.clock', { time: formatInstant(now, locale, digitPreference) })}</li>

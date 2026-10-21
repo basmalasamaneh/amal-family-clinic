@@ -1,10 +1,29 @@
 {
-  "brand": { "logoLabel": "Amal Family Clinic Group logo", "markLabel": "Amal mark" },
-  "language": { "groupLabel": "Interface language", "ar": "العربية", "en": "English" },
-  "theme": { "groupLabel": "Interface theme", "light": "Light", "dark": "Dark" },
-  "button": { "loading": "Working…" },
-  "field": { "required": "required", "optional": "optional" },
-  "toast": { "region": "Notifications", "close": "Dismiss notification" },
+  "brand": {
+    "logoLabel": "Amal Family Clinic Group logo",
+    "markLabel": "Amal mark"
+  },
+  "language": {
+    "groupLabel": "Interface language",
+    "ar": "العربية",
+    "en": "English"
+  },
+  "theme": {
+    "groupLabel": "Interface theme",
+    "light": "Light",
+    "dark": "Dark"
+  },
+  "button": {
+    "loading": "Working…"
+  },
+  "field": {
+    "required": "required",
+    "optional": "optional"
+  },
+  "toast": {
+    "region": "Notifications",
+    "close": "Dismiss notification"
+  },
   "status": {
     "booked": "Booked",
     "completed": "Completed",
@@ -12,5 +31,40 @@
     "conflict": "Conflict",
     "sync": "Waiting to sync",
     "cancelled": "Cancelled"
+  },
+  "state": {
+    "loading": "Loading",
+    "error": "This could not be loaded.",
+    "retry": "Try again",
+    "empty": "Nothing here yet"
+  },
+  "table": {
+    "view": "View",
+    "table": "Table",
+    "cards": "Cards",
+    "actions": "Actions"
+  },
+  "filter": {
+    "reset": "Reset filters"
+  },
+  "stepper": {
+    "done": "completed",
+    "current": "current step",
+    "todo": "not started"
+  },
+  "dialog": {
+    "cancel": "Cancel"
+  },
+  "density": {
+    "groupLabel": "Display density",
+    "compact": "Compact",
+    "comfortable": "Comfortable",
+    "large": "Large"
+  },
+  "consent": {
+    "granted": "Sharing allowed",
+    "withdrawn": "Sharing withdrawn",
+    "pending": "Awaiting consent",
+    "unknown": "Consent unknown"
   }
 }

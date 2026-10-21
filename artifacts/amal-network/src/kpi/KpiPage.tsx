@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AlertTriangle, RotateCcw, ShieldAlert } from 'lucide-react';
-import { Segmented } from '@workspace/amal-ui';
+import { AmalIcons, PageHeader, Segmented } from '@workspace/amal-ui';
+const BarChart3 = AmalIcons.kpi;
 import { getGetKpisQueryKey, useGetKpis, type GetKpisParams, type KpiPeriod, type KpiResult } from '@workspace/api-client-react';
 import { describeApiError, isAuthFailure } from '@/auth/errors';
 import { hebronToday } from '@/doctor/model';
@@ -31,12 +32,9 @@ export function KpiPage({ title, clinics }: { title: string; clinics: ShellClini
 
   return (
     <section className="kpi" data-testid="page-kpi" aria-busy={q.isFetching}>
-      <header className="kpi-head">
-        <p className="kpi-eyebrow">{t('kpi.eyebrow')}</p>
-        <h1 id="page-title" tabIndex={-1} className="kpi-h1">{title}</h1>
-        <p className="kpi-lede">{t('kpi.lede')}</p>
+      <PageHeader className="kpi-head" icon={BarChart3} section="admin" eyebrow={t('kpi.eyebrow')} title={title} description={t('kpi.lede')}>
         <p className="kpi-noperf" data-testid="text-no-performance">{t('kpi.noPerformance')}</p>
-      </header>
+      </PageHeader>
 
       <form className="kpi-controls" aria-label={t('kpi.controls.label')} onSubmit={(e) => { e.preventDefault(); void q.refetch(); }}>
         <label className="kpi-date">

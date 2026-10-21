@@ -1,7 +1,8 @@
 import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Building2, Eye, EyeOff, Globe2, Lock, ScrollText, UserRound } from 'lucide-react';
-import { useAmalPreferences } from '@workspace/amal-ui';
+import { AmalIcons, PageHeader, useAmalPreferences } from '@workspace/amal-ui';
+const ShieldCheck = AmalIcons.privacy;
 import { getDoctorPrivacy, listDoctorAudit } from '@workspace/api-client-react';
 import type { ShellClinic } from '@/shell/identity';
 import { Empty, Skeleton } from '@/network/NetworkSearchPage';
@@ -28,10 +29,7 @@ export function PrivacyPage({ clinic, title, scope }: { clinic: ShellClinic | nu
 
   return (
     <section className="net doc" data-testid="page-privacy">
-      <header className="net-head">
-        <p className="net-eyebrow">{clinic && <><bdi>{clinic.name}</bdi> · </>}{t('doc.privacy.eyebrow')}</p>
-        <h1 id="page-title" tabIndex={-1} className="net-h1">{title}</h1>
-      </header>
+      <PageHeader icon={ShieldCheck} section="network" eyebrow={<>{clinic && <><bdi>{clinic.name}</bdi> · </>}{t('doc.privacy.eyebrow')}</>} title={title} />
 
       <aside className="doc-statement" aria-label={t('doc.privacy.statementLabel')} data-testid="text-no-performance">
         <p lang="ar" dir="rtl" data-testid="text-no-performance-ar">{t('doc.privacy.statement', { lng: 'ar' })}</p>
@@ -106,7 +104,7 @@ function AuditRow({ e }: { e: AuditItem }) {
       <span className="doc-audit__icon" aria-hidden="true"><Eye size={18} /></span>
       <div className="doc-audit__body">
         <p className="doc-audit__what">
-          <strong>{e.viewerName ? <bdi dir="auto" data-testid={`text-audit-viewer-${e.id}`}>{e.viewerName}</bdi> : <span data-testid={`text-audit-viewer-${e.id}`} className="doc-unknown">{t('doc.privacy.unknownViewer')}</span>}</strong>
+          <strong>{e.viewerName ? <span data-testid={`text-audit-viewer-${e.id}`}>{t('doc.privacy.viewerRoleGeneric')}</span> : <span data-testid={`text-audit-viewer-${e.id}`} className="doc-unknown">{t('doc.privacy.unknownViewer')}</span>}</strong>
           <span className="net-clinic"><Building2 size={14} aria-hidden="true" />{e.viewerClinicName ? <bdi dir="auto" data-testid={`text-audit-clinic-${e.id}`}>{e.viewerClinicName}</bdi> : <span data-testid={`text-audit-clinic-${e.id}`} className="doc-unknown">{t('doc.privacy.unknownClinic')}</span>}</span>
         </p>
         <p className="doc-audit__meta">

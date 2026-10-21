@@ -29,3 +29,8 @@ export function applyDocumentPreferences(locale: AmalLocale, theme: AmalTheme): 
   el.dataset.theme = theme;
   el.classList.toggle('dark', theme === 'dark');
 }
+
+/** Applies display density to <html data-density>; type scale tokens follow instantly. */
+export function applyDocumentDensity(density: 'compact' | 'comfortable' | 'large'): void {
+  document.documentElement.dataset.density = density;
+}

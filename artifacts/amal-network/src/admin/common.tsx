@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import * as Dialog from '@radix-ui/react-dialog';
 import * as AlertDialog from '@radix-ui/react-alert-dialog';
 import { AlertTriangle, WifiOff, X } from 'lucide-react';
-import { Button, EmptyState, useAmalPreferences } from '@workspace/amal-ui';
+import { Button, EmptyState, PageHeader, useAmalPreferences } from '@workspace/amal-ui';
 import {
   getGetKpisQueryKey, getGetNetworkHealthQueryKey, getListAdminClinicsQueryKey, getListAdminDevicesQueryKey, getListAdminDoctorsQueryKey, getListAdminUsersQueryKey, getListClinicsQueryKey,
   listAdminClinics, listAdminDoctors, type AdminClinic, type AdminDoctor,
@@ -101,17 +101,9 @@ export function PageHead({ id, title, lede, actions }: { id: string; title: stri
   const { t } = useTranslation();
   const online = useOnline();
   return (
-    <header className="adm-head">
-      <div className="adm-head__text">
-        <p className="adm-eyebrow">{t('adm.common.eyebrow')}</p>
-        <h1 id="page-title" tabIndex={-1} className="adm-h1" data-testid={`heading-${id}`}>{title}</h1>
-        <p className="adm-lede">{lede}</p>
-      </div>
-      <div className="adm-head__actions">
-        {!online && <span className="adm-offline" role="status" data-testid="status-admin-offline"><WifiOff size={16} aria-hidden="true" />{t('adm.common.offlineBadge')}</span>}
-        {actions}
-      </div>
-    </header>
+    <PageHeader className="adm-head" section="admin" eyebrow={t('adm.common.eyebrow')} title={title} titleTestId={`heading-${id}`} description={lede}
+      secondaryActions={!online ? <span className="adm-offline" role="status" data-testid="status-admin-offline"><WifiOff size={16} aria-hidden="true" />{t('adm.common.offlineBadge')}</span> : undefined}
+      primaryAction={actions} />
   );
 }
 

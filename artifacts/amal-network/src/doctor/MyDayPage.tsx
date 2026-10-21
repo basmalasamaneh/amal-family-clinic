@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLocation } from 'wouter';
 import { CalendarCheck, ChevronRight, Clock, UserRound } from 'lucide-react';
-import { useAmalPreferences } from '@workspace/amal-ui';
+import { AmalIcons, PageHeader, useAmalPreferences } from '@workspace/amal-ui';
+const Stethoscope = AmalIcons.myDay;
 import { getDoctorDay } from '@workspace/api-client-react';
 import type { ShellClinic } from '@/shell/identity';
 import { demoPath } from '@/shell/identity';
@@ -45,12 +46,10 @@ export function MyDayPage({ clinic, title, scope }: { clinic: ShellClinic | null
 
   return (
     <section className="net doc" data-testid="page-myDay" aria-busy={state.kind === 'loading'}>
-      <header className="net-head">
-        <p className="net-eyebrow">{clinic && <><bdi>{clinic.name}</bdi> · </>}{t('doc.day.eyebrow')}</p>
-        <h1 id="page-title" tabIndex={-1} className="net-h1">{title}</h1>
+      <PageHeader icon={Stethoscope} section="reception" eyebrow={<>{clinic && <><bdi>{clinic.name}</bdi> · </>}{t('doc.day.eyebrow')}</>} title={title}>
         <p className="doc-date" data-testid="text-day-date"><CalendarCheck size={18} aria-hidden="true" />{t('doc.day.dateLine', { date: formatVisitDay(shownDay, locale, digitPreference) })}</p>
         <p className="net-hint">{t('doc.day.scope')}</p>
-      </header>
+      </PageHeader>
       <p className="net-sr" role="status" aria-live="polite" data-testid="status-my-day">{state.kind === 'loading' ? t('doc.common.loading') : ''}</p>
 
       {state.kind === 'loading' && <Skeleton rows={3} />}

@@ -32,3 +32,4 @@
 - [Authentication lock timing](auth-lock-clock.md) — evaluate deadlines after acquiring locks; dependent checks must reuse the lock-owning connection.
 - [Demo scope and workbook approval](demo-publication-approval.md) — workbook is synthetic; user does not want publication at all, so deployment scope is preparation only.
 - [Owner self-testing data](practice-data.md) — realistic synthetic names without demo labels; preserve existing work and never fabricate success telemetry.
+- [Presentation redesign boundaries](presentation-redesign-boundaries.md) — preserve protected behavior and tests; existing Agent checkpoint accepted as recovery point.

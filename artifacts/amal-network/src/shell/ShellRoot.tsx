@@ -179,7 +179,7 @@ export function ShellRoot() {
     const id = state.identity;
     if (path === '/login') return <Redirect to={demoPath(safeReturnTo(params.get('next'), id.role))} replace />;
     return (
-      <AmalPreferencesProvider key={`${id.id}|${id.role ?? 'none'}`} i18n={i18n} userId={id.id}>
+      <AmalPreferencesProvider key={`${id.id}|${id.role ?? 'none'}`} i18n={i18n} userId={id.id} defaultDensity={id.role === 'front-desk' ? 'large' : 'comfortable'}>
         <ToastProvider>
           {retainedWork && <p className="shell-fixture" role="status">{t('offline:retained')}</p>}
           {id.offlineRestored && <p className="shell-fixture" role="status">{t('offline:continuation', { until: id.offlineAuthorizedUntil })}</p>}

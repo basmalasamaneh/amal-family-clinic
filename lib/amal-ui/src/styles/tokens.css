@@ -2,18 +2,32 @@
 :root {
   --amal-gold: #F5B544;
   --brand-gold: var(--amal-gold);
-  --amal-font-sans: 'IBM Plex Sans Arabic', 'Segoe UI', Tahoma, sans-serif;
-  --amal-text-xs: 12px;
-  --amal-text-sm: 14px;
-  --amal-text-base: 16px;
-  --amal-text-md: 18px;
-  --amal-text-lg: 20px;
-  --amal-text-xl: 24px;
-  --amal-text-2xl: 30px;
-  --amal-text-3xl: 38px;
-  --amal-text-body: 16px;
-  --amal-text-reception: 18px;
-  --amal-leading: 1.6;
+  --amal-print-paper: #FDFDFB;
+  --amal-print-ink: #111111;
+  --amal-print-rule: #777777;
+  --amal-font-sans: 'IBM Plex Sans Arabic', 'IBM Plex Sans', 'Segoe UI', Tahoma, sans-serif;
+  --amal-font-latin: 'IBM Plex Sans', 'IBM Plex Sans Arabic', 'Segoe UI', Tahoma, sans-serif;
+  --amal-density: 1;
+  --amal-text-xs: calc(12.5px * var(--amal-density));
+  --amal-text-sm: calc(13.5px * var(--amal-density));
+  --amal-text-table: calc(14px * var(--amal-density));
+  --amal-text-base: calc(15px * var(--amal-density));
+  --amal-text-md: calc(17px * var(--amal-density));
+  --amal-text-lg: calc(17px * var(--amal-density));
+  --amal-text-xl: calc(20px * var(--amal-density));
+  --amal-text-2xl: calc(26px * var(--amal-density));
+  --amal-text-3xl: calc(32px * var(--amal-density));
+  --amal-text-caption: calc(12.5px * var(--amal-density));
+  --amal-text-small: calc(13.5px * var(--amal-density));
+  --amal-text-body: calc(15px * var(--amal-density));
+  --amal-text-subheading: calc(17px * var(--amal-density));
+  --amal-text-heading: calc(20px * var(--amal-density));
+  --amal-text-title: calc(26px * var(--amal-density));
+  --amal-text-display: calc(32px * var(--amal-density));
+  --amal-text-body: calc(15px * var(--amal-density));
+  --amal-text-reception: 17px;
+  --amal-leading: 1.7;
+  --amal-leading-latin: 1.5;
   --amal-weight-regular: 400;
   --amal-weight-medium: 500;
   --amal-weight-semibold: 600;
@@ -24,7 +38,8 @@
   --amal-radius-base: 8px;
   --amal-space-base: 4px;
   --amal-space-target: 44px;
-  --amal-duration-fast: 120ms;
+  --amal-space-grid: 8px;
+  --amal-duration-fast: 150ms;
   --amal-duration-base: 200ms;
 }
 
@@ -88,6 +103,16 @@
   --amal-status-cancelled-fg: #4F5D66;
   --amal-status-cancelled-bg: #EDF1F3;
   --amal-status-cancelled-border: #8C9AA3;
+  --amal-accent-reception: #0E7C86;
+  --amal-accent-reception-soft: #E1F1F3;
+  --amal-accent-patients: #2F6FB3;
+  --amal-accent-patients-soft: #E8F1FA;
+  --amal-accent-network: #6D5BD0;
+  --amal-accent-network-soft: #EFECFB;
+  --amal-accent-admin: #475569;
+  --amal-accent-admin-soft: #EDF0F4;
+  --amal-shadow-card: 0 1px 2px rgb(11 37 69 / 0.04), 0 2px 8px rgb(11 37 69 / 0.04);
+  --amal-shadow-pop: 0 12px 32px -8px rgb(11 37 69 / 0.18);
 }
 
 [data-theme='dark'],
@@ -150,4 +175,14 @@
   --amal-status-cancelled-fg: #B4C5CE;
   --amal-status-cancelled-bg: #1B2C35;
   --amal-status-cancelled-border: #4E6672;
+  --amal-accent-reception: #3CC4CF;
+  --amal-accent-reception-soft: #123A44;
+  --amal-accent-patients: #6FA8E8;
+  --amal-accent-patients-soft: #15283D;
+  --amal-accent-network: #A99BF0;
+  --amal-accent-network-soft: #252047;
+  --amal-accent-admin: #A7B4C6;
+  --amal-accent-admin-soft: #1F2A37;
+  --amal-shadow-card: none;
+  --amal-shadow-pop: 0 0 0 1px rgb(38 65 77 / 1);
 }

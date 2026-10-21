@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState, type FormEvent, type Keyboard
 import { useTranslation } from 'react-i18next';
 import { useLocation } from 'wouter';
 import { ChevronDown, Globe2, Lock, RotateCcw, Search, SearchX, ShieldAlert, UserRound } from 'lucide-react';
-import { EmptyState, useAmalPreferences } from '@workspace/amal-ui';
+import { EmptyState, PageHeader, useAmalPreferences } from '@workspace/amal-ui';
 import { lookupNetwork, recordLookupDuration, type NetworkPatient } from '@workspace/api-client-react';
 import { LookupTiming, observePaintedCard } from './lookup-timing';
 import type { ShellClinic } from '@/shell/identity';
@@ -135,11 +135,9 @@ export function NetworkSearchPage({ clinic, title, scope }: { clinic: ShellClini
 
   return (
     <section className="net" data-testid="page-networkSearch" aria-busy={state.kind === 'loading'}>
-      <header className="net-head">
-        <p className="net-eyebrow">{clinic && <><bdi>{clinic.name}</bdi> · </>}{t('net.eyebrow')}</p>
-        <h1 id="page-title" tabIndex={-1} className="net-h1">{title}</h1>
+      <PageHeader icon={Globe2} section="network" eyebrow={<>{clinic && <><bdi>{clinic.name}</bdi> · </>}{t('net.eyebrow')}</>} title={title}>
         <p className="net-privacy"><Lock size={14} aria-hidden="true" />{t('net.privacy')}</p>
-      </header>
+      </PageHeader>
 
       <form role="search" className="net-search" onSubmit={submit} aria-label={t('net.search.label')}>
         <label className="net-search__field">

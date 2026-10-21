@@ -6,7 +6,7 @@ import {
   getGetReminderClinicPreferenceQueryKey, useGetReminderClinicPreference, useListReminderLog, useSetReminderClinicPreference,
   type ReminderLogEntry,
 } from '@workspace/api-client-react';
-import { EmptyState, useAmalPreferences } from '@workspace/amal-ui';
+import { EmptyState, PageHeader, useAmalPreferences } from '@workspace/amal-ui';
 import type { ShellClinic, ShellIdentity } from '@/shell/identity';
 import { formatInstant, formatNumber } from '@/shell/formatting';
 import { EMPTY_FILTERS, STATUSES, errorStatus, reasonKey, toParams, validateFilters, type LogFilters, type StatusFilter } from './model';
@@ -29,15 +29,13 @@ export function MessagesPage({ identity, clinic, title }: { identity: ShellIdent
   const own = messagesClinicFor(identity, clinic);
   return (
     <div className="rem-page" data-testid="page-messages">
-      <p className="shell-page__eyebrow">{t('eyebrow')}</p>
-      <h1 id="page-title" tabIndex={-1} className="shell-page__title"><MessageSquareText size={30} aria-hidden="true" />{title}</h1>
-      <p className="rem-lede">{t('lede')}</p>
+      <PageHeader icon={MessageSquareText} section="reception" eyebrow={t('eyebrow')} title={title} description={t('lede')} />
       <div className="rem-sim" role="note" data-testid="notice-simulation">
         <FlaskConical size={22} aria-hidden="true" />
         <div><p className="rem-sim__title">{t('sim.title')}</p><p>{t('sim.body')}</p></div>
       </div>
       {!own ? (
-        <div data-testid="status-messages-no-clinic"><EmptyState title={t('noClinic.title')} description={t('noClinic.body')} /></div>
+        <div data-testid="status-messages-no-clinic"><EmptyState headingLevel={2} title={t('noClinic.title')} description={t('noClinic.body')} /></div>
       ) : (
         // Keyed by clinic: filters, cursors and cached view reset on any clinic change.
         <ClinicMessages key={own.id} clinicId={own.id} clinicName={own.name} isAdmin={identity.role === 'admin'} />

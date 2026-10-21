@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
-export const SECTION_IDS = ['palette', 'type', 'buttons', 'inputs', 'status', 'cards', 'toasts', 'empty'] as const;
+export const SECTION_IDS = ['palette', 'type', 'buttons', 'inputs', 'status', 'cards', 'toasts', 'empty', 'components', 'matrix'] as const;
 export type SectionId = (typeof SECTION_IDS)[number];
 
 export function Section({ id, index, intro, children }: { id: SectionId; index: number; intro: string; children: ReactNode }) {

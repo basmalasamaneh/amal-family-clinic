@@ -1,0 +1,1412 @@
+{
+  "surface": "shell",
+  "locale": "en",
+  "theme": "dark",
+  "url": "https://bf3e32dc-54d0-4d6f-8c18-82dda6dba30b-00-2b6qfmcqqsbep.reed.replit.dev/desk/today?shellDemo=front-desk",
+  "screenshot": "shell-en-dark-FIXTURE.png",
+  "evidenceScope": "Existing DEV shellDemo fixture; presentation ONLY, not authenticated browser verification or operational data.",
+  "apiPolicy": "All /api requests fulfilled locally with 503; no backend reads or writes.",
+  "writes": [],
+  "browserErrors": [],
+  "axe": {
+    "testEngine": {
+      "name": "axe-core",
+      "version": "4.14.0"
+    },
+    "testEnvironment": {
+      "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/152.0.0.0 Safari/537.36",
+      "windowWidth": 1440,
+      "windowHeight": 1000,
+      "orientationAngle": 0,
+      "orientationType": "landscape-primary"
+    },
+    "violations": [
+      {
+        "id": "region",
+        "impact": "moderate",
+        "tags": [
+          "cat.keyboard",
+          "best-practice",
+          "RGAAv4",
+          "RGAA-9.2.1"
+        ],
+        "description": "Ensure all page content is contained by landmarks",
+        "help": "All page content should be contained by landmarks",
+        "helpUrl": "https://dequeuniversity.com/rules/axe/4.14/region?application=playwright",
+        "nodes": [
+          {
+            "any": [
+              {
+                "id": "region",
+                "data": {
+                  "isIframe": false
+                },
+                "relatedNodes": [],
+                "impact": "moderate",
+                "message": "Some page content is not contained by landmarks"
+              }
+            ],
+            "all": [],
+            "none": [],
+            "impact": "moderate",
+            "html": "<div class=\"banner-text\">",
+            "target": [
+              ".banner-text"
+            ],
+            "failureSummary": "Fix any of the following:\n  Some page content is not contained by landmarks"
+          }
+        ]
+      }
+    ],
+    "incomplete": [
+      {
+        "id": "color-contrast",
+        "impact": "serious",
+        "tags": [
+          "cat.color",
+          "wcag2aa",
+          "wcag143",
+          "TTv5",
+          "TT13.c",
+          "EN-301-549",
+          "EN-9.1.4.3",
+          "ACT",
+          "RGAAv4",
+          "RGAA-3.2.1"
+        ],
+        "description": "Ensure the contrast between foreground and background colors meets WCAG 2 AA minimum contrast ratio thresholds",
+        "help": "Elements must meet minimum color contrast ratio thresholds",
+        "helpUrl": "https://dequeuniversity.com/rules/axe/4.14/color-contrast?application=playwright",
+        "nodes": [
+          {
+            "any": [
+              {
+                "id": "color-contrast",
+                "data": {
+                  "contrastRatio": 0,
+                  "fontSize": "12.4pt (16.5px)",
+                  "fontWeight": "normal",
+                  "messageKey": "bgGradient",
+                  "expectedContrastRatio": "4.5:1"
+                },
+                "relatedNodes": [
+                  {
+                    "html": "<ul data-replit-metadata=\"artifacts/amal-network/src/calendar/CalendarPage.tsx:193:14\" data-component-name=\"ul\" class=\"cal-day__col\" aria-label=\"د. ليلى حداد\" style=\"--cal-lanes: 2;\">",
+                    "target": [
+                      "ul[aria-label=\"د. ليلى حداد\"]"
+                    ]
+                  }
+                ],
+                "impact": "serious",
+                "message": "Element's background color could not be determined due to a background gradient"
+              }
+            ],
+            "all": [],
+            "none": [],
+            "impact": "serious",
+            "html": "<span data-replit-metadata=\"artifacts/amal-network/src/calendar/CalendarPage.tsx:201:22\" data-component-name=\"span\" aria-hidden=\"true\">08:00</span>",
+            "target": [
+              "a[data-testid=\"slot-9100101-480\"] > span"
+            ],
+            "failureSummary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
+          },
+          {
+            "any": [
+              {
+                "id": "color-contrast",
+                "data": {
+                  "contrastRatio": 0,
+                  "fontSize": "12.4pt (16.5px)",
+                  "fontWeight": "normal",
+                  "messageKey": "bgGradient",
+                  "expectedContrastRatio": "4.5:1"
+                },
+                "relatedNodes": [
+                  {
+                    "html": "<ul data-replit-metadata=\"artifacts/amal-network/src/calendar/CalendarPage.tsx:193:14\" data-component-name=\"ul\" class=\"cal-day__col\" aria-label=\"د. ليلى حداد\" style=\"--cal-lanes: 2;\">",
+                    "target": [
+                      "ul[aria-label=\"د. ليلى حداد\"]"
+                    ]
+                  }
+                ],
+                "impact": "serious",
+                "message": "Element's background color could not be determined due to a background gradient"
+              }
+            ],
+            "all": [],
+            "none": [],
+            "impact": "serious",
+            "html": "<span data-replit-metadata=\"artifacts/amal-network/src/calendar/CalendarPage.tsx:201:22\" data-component-name=\"span\" aria-hidden=\"true\">08:30</span>",
+            "target": [
+              "a[data-testid=\"slot-9100101-510\"] > span"
+            ],
+            "failureSummary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
+          },
+          {
+            "any": [
+              {
+                "id": "color-contrast",
+                "data": {
+                  "contrastRatio": 0,
+                  "fontSize": "12.4pt (16.5px)",
+                  "fontWeight": "normal",
+                  "messageKey": "bgGradient",
+                  "expectedContrastRatio": "4.5:1"
+                },
+                "relatedNodes": [
+                  {
+                    "html": "<ul data-replit-metadata=\"artifacts/amal-network/src/calendar/CalendarPage.tsx:193:14\" data-component-name=\"ul\" class=\"cal-day__col\" aria-label=\"د. ليلى حداد\" style=\"--cal-lanes: 2;\">",
+                    "target": [
+                      "ul[aria-label=\"د. ليلى حداد\"]"
+                    ]
+                  }
+                ],
+                "impact": "serious",
+                "message": "Element's background color could not be determined due to a background gradient"
+              }
+            ],
+            "all": [],
+            "none": [],
+            "impact": "serious",
+            "html": "<span data-replit-metadata=\"artifacts/amal-network/src/calendar/CalendarPage.tsx:201:22\" data-component-name=\"span\" aria-hidden=\"true\">09:30</span>",
+            "target": [
+              "a[data-testid=\"slot-9100101-570\"] > span"
+            ],
+            "failureSummary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
+          },
+          {
+            "any": [
+              {
+                "id": "color-contrast",
+                "data": {
+                  "contrastRatio": 0,
+                  "fontSize": "12.4pt (16.5px)",
+                  "fontWeight": "normal",
+                  "messageKey": "bgGradient",
+                  "expectedContrastRatio": "4.5:1"
+                },
+                "relatedNodes": [
+                  {
+                    "html": "<ul data-replit-metadata=\"artifacts/amal-network/src/calendar/CalendarPage.tsx:193:14\" data-component-name=\"ul\" class=\"cal-day__col\" aria-label=\"د. ليلى حداد\" style=\"--cal-lanes: 2;\">",
+                    "target": [
+                      "ul[aria-label=\"د. ليلى حداد\"]"
+                    ]
+                  }
+                ],
+                "impact": "serious",
+                "message": "Element's background color could not be determined due to a background gradient"
+              }
+            ],
+            "all": [],
+            "none": [],
+            "impact": "serious",
+            "html": "<span data-replit-metadata=\"artifacts/amal-network/src/calendar/CalendarPage.tsx:201:22\" data-component-name=\"span\" aria-hidden=\"true\">11:00</span>",
+            "target": [
+              "a[data-testid=\"slot-9100101-660\"] > span"
+            ],
+            "failureSummary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
+          },
+          {
+            "any": [
+              {
+                "id": "color-contrast",
+                "data": {
+                  "contrastRatio": 0,
+                  "fontSize": "12.4pt (16.5px)",
+                  "fontWeight": "normal",
+                  "messageKey": "bgGradient",
+                  "expectedContrastRatio": "4.5:1"
+                },
+                "relatedNodes": [
+                  {
+                    "html": "<ul data-replit-metadata=\"artifacts/amal-network/src/calendar/CalendarPage.tsx:193:14\" data-component-name=\"ul\" class=\"cal-day__col\" aria-label=\"د. ليلى حداد\" style=\"--cal-lanes: 2;\">",
+                    "target": [
+                      "ul[aria-label=\"د. ليلى حداد\"]"
+                    ]
+                  }
+                ],
+                "impact": "serious",
+                "message": "Element's background color could not be determined due to a background gradient"
+              }
+            ],
+            "all": [],
+            "none": [],
+            "impact": "serious",
+            "html": "<span data-replit-metadata=\"artifacts/amal-network/src/calendar/CalendarPage.tsx:201:22\" data-component-name=\"span\" aria-hidden=\"true\">11:30</span>",
+            "target": [
+              "a[data-testid=\"slot-9100101-690\"] > span"
+            ],
+            "failureSummary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
+          },
+          {
+            "any": [
+              {
+                "id": "color-contrast",
+                "data": {
+                  "contrastRatio": 0,
+                  "fontSize": "12.4pt (16.5px)",
+                  "fontWeight": "normal",
+                  "messageKey": "bgGradient",
+                  "expectedContrastRatio": "4.5:1"
+                },
+                "relatedNodes": [
+                  {
+                    "html": "<ul data-replit-metadata=\"artifacts/amal-network/src/calendar/CalendarPage.tsx:193:14\" data-component-name=\"ul\" class=\"cal-day__col\" aria-label=\"د. ليلى حداد\" style=\"--cal-lanes: 2;\">",
+                    "target": [
+                      "ul[aria-label=\"د. ليلى حداد\"]"
+                    ]
+                  }
+                ],
+                "impact": "serious",
+                "message": "Element's background color could not be determined due to a background gradient"
+              }
+            ],
+            "all": [],
+            "none": [],
+            "impact": "serious",
+            "html": "<span data-replit-metadata=\"artifacts/amal-network/src/calendar/CalendarPage.tsx:201:22\" data-component-name=\"span\" aria-hidden=\"true\">12:00</span>",
+            "target": [
+              "a[data-testid=\"slot-9100101-720\"] > span"
+            ],
+            "failureSummary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
+          },
+          {
+            "any": [
+              {
+                "id": "color-contrast",
+                "data": {
+                  "contrastRatio": 0,
+                  "fontSize": "12.4pt (16.5px)",
+                  "fontWeight": "normal",
+                  "messageKey": "bgGradient",
+                  "expectedContrastRatio": "4.5:1"
+                },
+                "relatedNodes": [
+                  {
+                    "html": "<ul data-replit-metadata=\"artifacts/amal-network/src/calendar/CalendarPage.tsx:193:14\" data-component-name=\"ul\" class=\"cal-day__col\" aria-label=\"د. ليلى حداد\" style=\"--cal-lanes: 2;\">",
+                    "target": [
+                      "ul[aria-label=\"د. ليلى حداد\"]"
+                    ]
+                  }
+                ],
+                "impact": "serious",
+                "message": "Element's background color could not be determined due to a background gradient"
+              }
+            ],
+            "all": [],
+            "none": [],
+            "impact": "serious",
+            "html": "<span data-replit-metadata=\"artifacts/amal-network/src/calendar/CalendarPage.tsx:201:22\" data-component-name=\"span\" aria-hidden=\"true\">12:30</span>",
+            "target": [
+              "a[data-testid=\"slot-9100101-750\"] > span"
+            ],
+            "failureSummary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
+          },
+          {
+            "any": [
+              {
+                "id": "color-contrast",
+                "data": {
+                  "contrastRatio": 0,
+                  "fontSize": "12.4pt (16.5px)",
+                  "fontWeight": "normal",
+                  "messageKey": "bgGradient",
+                  "expectedContrastRatio": "4.5:1"
+                },
+                "relatedNodes": [
+                  {
+                    "html": "<ul data-replit-metadata=\"artifacts/amal-network/src/calendar/CalendarPage.tsx:193:14\" data-component-name=\"ul\" class=\"cal-day__col\" aria-label=\"د. ليلى حداد\" style=\"--cal-lanes: 2;\">",
+                    "target": [
+                      "ul[aria-label=\"د. ليلى حداد\"]"
+                    ]
+                  }
+                ],
+                "impact": "serious",
+                "message": "Element's background color could not be determined due to a background gradient"
+              }
+            ],
+            "all": [],
+            "none": [],
+            "impact": "serious",
+            "html": "<span data-replit-metadata=\"artifacts/amal-network/src/calendar/CalendarPage.tsx:201:22\" data-component-name=\"span\" aria-hidden=\"true\">13:00</span>",
+            "target": [
+              "a[data-testid=\"slot-9100101-780\"] > span"
+            ],
+            "failureSummary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
+          },
+          {
+            "any": [
+              {
+                "id": "color-contrast",
+                "data": {
+                  "contrastRatio": 0,
+                  "fontSize": "12.4pt (16.5px)",
+                  "fontWeight": "normal",
+                  "messageKey": "bgGradient",
+                  "expectedContrastRatio": "4.5:1"
+                },
+                "relatedNodes": [
+                  {
+                    "html": "<ul data-replit-metadata=\"artifacts/amal-network/src/calendar/CalendarPage.tsx:193:14\" data-component-name=\"ul\" class=\"cal-day__col\" aria-label=\"د. ليلى حداد\" style=\"--cal-lanes: 2;\">",
+                    "target": [
+                      "ul[aria-label=\"د. ليلى حداد\"]"
+                    ]
+                  }
+                ],
+                "impact": "serious",
+                "message": "Element's background color could not be determined due to a background gradient"
+              }
+            ],
+            "all": [],
+            "none": [],
+            "impact": "serious",
+            "html": "<span data-replit-metadata=\"artifacts/amal-network/src/calendar/CalendarPage.tsx:201:22\" data-component-name=\"span\" aria-hidden=\"true\">13:30</span>",
+            "target": [
+              "a[data-testid=\"slot-9100101-810\"] > span"
+            ],
+            "failureSummary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
+          },
+          {
+            "any": [
+              {
+                "id": "color-contrast",
+                "data": {
+                  "contrastRatio": 0,
+                  "fontSize": "12.4pt (16.5px)",
+                  "fontWeight": "normal",
+                  "messageKey": "bgGradient",
+                  "expectedContrastRatio": "4.5:1"
+                },
+                "relatedNodes": [
+                  {
+                    "html": "<ul data-replit-metadata=\"artifacts/amal-network/src/calendar/CalendarPage.tsx:193:14\" data-component-name=\"ul\" class=\"cal-day__col\" aria-label=\"د. ليلى حداد\" style=\"--cal-lanes: 2;\">",
+                    "target": [
+                      "ul[aria-label=\"د. ليلى حداد\"]"
+                    ]
+                  }
+                ],
+                "impact": "serious",
+                "message": "Element's background color could not be determined due to a background gradient"
+              }
+            ],
+            "all": [],
+            "none": [],
+            "impact": "serious",
+            "html": "<span data-replit-metadata=\"artifacts/amal-network/src/calendar/CalendarPage.tsx:201:22\" data-component-name=\"span\" aria-hidden=\"true\">14:00</span>",
+            "target": [
+              "a[data-testid=\"slot-9100101-840\"] > span"
+            ],
+            "failureSummary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
+          },
+          {
+            "any": [
+              {
+                "id": "color-contrast",
+                "data": {
+                  "contrastRatio": 0,
+                  "fontSize": "12.4pt (16.5px)",
+                  "fontWeight": "normal",
+                  "messageKey": "bgGradient",
+                  "expectedContrastRatio": "4.5:1"
+                },
+                "relatedNodes": [
+                  {
+                    "html": "<ul data-replit-metadata=\"artifacts/amal-network/src/calendar/CalendarPage.tsx:193:14\" data-component-name=\"ul\" class=\"cal-day__col\" aria-label=\"د. ليلى حداد\" style=\"--cal-lanes: 2;\">",
+                    "target": [
+                      "ul[aria-label=\"د. ليلى حداد\"]"
+                    ]
+                  }
+                ],
+                "impact": "serious",
+                "message": "Element's background color could not be determined due to a background gradient"
+              }
+            ],
+            "all": [],
+            "none": [],
+            "impact": "serious",
+            "html": "<span data-replit-metadata=\"artifacts/amal-network/src/calendar/CalendarPage.tsx:201:22\" data-component-name=\"span\" aria-hidden=\"true\">14:30</span>",
+            "target": [
+              "a[data-testid=\"slot-9100101-870\"] > span"
+            ],
+            "failureSummary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
+          },
+          {
+            "any": [
+              {
+                "id": "color-contrast",
+                "data": {
+                  "contrastRatio": 0,
+                  "fontSize": "12.4pt (16.5px)",
+                  "fontWeight": "normal",
+                  "messageKey": "bgGradient",
+                  "expectedContrastRatio": "4.5:1"
+                },
+                "relatedNodes": [
+                  {
+                    "html": "<ul data-replit-metadata=\"artifacts/amal-network/src/calendar/CalendarPage.tsx:193:14\" data-component-name=\"ul\" class=\"cal-day__col\" aria-label=\"د. ليلى حداد\" style=\"--cal-lanes: 2;\">",
+                    "target": [
+                      "ul[aria-label=\"د. ليلى حداد\"]"
+                    ]
+                  }
+                ],
+                "impact": "serious",
+                "message": "Element's background color could not be determined due to a background gradient"
+              }
+            ],
+            "all": [],
+            "none": [],
+            "impact": "serious",
+            "html": "<span data-replit-metadata=\"artifacts/amal-network/src/calendar/CalendarPage.tsx:201:22\" data-component-name=\"span\" aria-hidden=\"true\">15:00</span>",
+            "target": [
+              "a[data-testid=\"slot-9100101-900\"] > span"
+            ],
+            "failureSummary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
+          },
+          {
+            "any": [
+              {
+                "id": "color-contrast",
+                "data": {
+                  "contrastRatio": 0,
+                  "fontSize": "12.4pt (16.5px)",
+                  "fontWeight": "normal",
+                  "messageKey": "bgGradient",
+                  "expectedContrastRatio": "4.5:1"
+                },
+                "relatedNodes": [
+                  {
+                    "html": "<ul data-replit-metadata=\"artifacts/amal-network/src/calendar/CalendarPage.tsx:193:14\" data-component-name=\"ul\" class=\"cal-day__col\" aria-label=\"د. ليلى حداد\" style=\"--cal-lanes: 2;\">",
+                    "target": [
+                      "ul[aria-label=\"د. ليلى حداد\"]"
+                    ]
+                  }
+                ],
+                "impact": "serious",
+                "message": "Element's background color could not be determined due to a background gradient"
+              }
+            ],
+            "all": [],
+            "none": [],
+            "impact": "serious",
+            "html": "<span data-replit-metadata=\"artifacts/amal-network/src/calendar/CalendarPage.tsx:201:22\" data-component-name=\"span\" aria-hidden=\"true\">15:30</span>",
+            "target": [
+              "a[data-testid=\"slot-9100101-930\"] > span"
+            ],
+            "failureSummary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
+          },
+          {
+            "any": [
+              {
+                "id": "color-contrast",
+                "data": {
+                  "contrastRatio": 0,
+                  "fontSize": "12.4pt (16.5px)",
+                  "fontWeight": "normal",
+                  "messageKey": "bgGradient",
+                  "expectedContrastRatio": "4.5:1"
+                },
+                "relatedNodes": [
+                  {
+                    "html": "<ul data-replit-metadata=\"artifacts/amal-network/src/calendar/CalendarPage.tsx:193:14\" data-component-name=\"ul\" class=\"cal-day__col\" aria-label=\"Dr. Omar Nassar-Khalil\" style=\"--cal-lanes: 1;\">",
+                    "target": [
+                      "ul[aria-label=\"Dr. Omar Nassar-Khalil\"]"
+                    ]
+                  }
+                ],
+                "impact": "serious",
+                "message": "Element's background color could not be determined due to a background gradient"
+              }
+            ],
+            "all": [],
+            "none": [],
+            "impact": "serious",
+            "html": "<span data-replit-metadata=\"artifacts/amal-network/src/calendar/CalendarPage.tsx:201:22\" data-component-name=\"span\" aria-hidden=\"true\">08:00</span>",
+            "target": [
+              "a[data-testid=\"slot-9100102-480\"] > span"
+            ],
+            "failureSummary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
+          },
+          {
+            "any": [
+              {
+                "id": "color-contrast",
+                "data": {
+                  "contrastRatio": 0,
+                  "fontSize": "12.4pt (16.5px)",
+                  "fontWeight": "normal",
+                  "messageKey": "bgGradient",
+                  "expectedContrastRatio": "4.5:1"
+                },
+                "relatedNodes": [
+                  {
+                    "html": "<ul data-replit-metadata=\"artifacts/amal-network/src/calendar/CalendarPage.tsx:193:14\" data-component-name=\"ul\" class=\"cal-day__col\" aria-label=\"Dr. Omar Nassar-Khalil\" style=\"--cal-lanes: 1;\">",
+                    "target": [
+                      "ul[aria-label=\"Dr. Omar Nassar-Khalil\"]"
+                    ]
+                  }
+                ],
+                "impact": "serious",
+                "message": "Element's background color could not be determined due to a background gradient"
+              }
+            ],
+            "all": [],
+            "none": [],
+            "impact": "serious",
+            "html": "<span data-replit-metadata=\"artifacts/amal-network/src/calendar/CalendarPage.tsx:201:22\" data-component-name=\"span\" aria-hidden=\"true\">08:30</span>",
+            "target": [
+              "a[data-testid=\"slot-9100102-510\"] > span"
+            ],
+            "failureSummary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
+          },
+          {
+            "any": [
+              {
+                "id": "color-contrast",
+                "data": {
+                  "contrastRatio": 0,
+                  "fontSize": "12.4pt (16.5px)",
+                  "fontWeight": "normal",
+                  "messageKey": "bgGradient",
+                  "expectedContrastRatio": "4.5:1"
+                },
+                "relatedNodes": [
+                  {
+                    "html": "<ul data-replit-metadata=\"artifacts/amal-network/src/calendar/CalendarPage.tsx:193:14\" data-component-name=\"ul\" class=\"cal-day__col\" aria-label=\"Dr. Omar Nassar-Khalil\" style=\"--cal-lanes: 1;\">",
+                    "target": [
+                      "ul[aria-label=\"Dr. Omar Nassar-Khalil\"]"
+                    ]
+                  }
+                ],
+                "impact": "serious",
+                "message": "Element's background color could not be determined due to a background gradient"
+              }
+            ],
+            "all": [],
+            "none": [],
+            "impact": "serious",
+            "html": "<span data-replit-metadata=\"artifacts/amal-network/src/calendar/CalendarPage.tsx:201:22\" data-component-name=\"span\" aria-hidden=\"true\">09:00</span>",
+            "target": [
+              "a[data-testid=\"slot-9100102-540\"] > span"
+            ],
+            "failureSummary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
+          },
+          {
+            "any": [
+              {
+                "id": "color-contrast",
+                "data": {
+                  "contrastRatio": 0,
+                  "fontSize": "12.4pt (16.5px)",
+                  "fontWeight": "normal",
+                  "messageKey": "bgGradient",
+                  "expectedContrastRatio": "4.5:1"
+                },
+                "relatedNodes": [
+                  {
+                    "html": "<ul data-replit-metadata=\"artifacts/amal-network/src/calendar/CalendarPage.tsx:193:14\" data-component-name=\"ul\" class=\"cal-day__col\" aria-label=\"Dr. Omar Nassar-Khalil\" style=\"--cal-lanes: 1;\">",
+                    "target": [
+                      "ul[aria-label=\"Dr. Omar Nassar-Khalil\"]"
+                    ]
+                  }
+                ],
+                "impact": "serious",
+                "message": "Element's background color could not be determined due to a background gradient"
+              }
+            ],
+            "all": [],
+            "none": [],
+            "impact": "serious",
+            "html": "<span data-replit-metadata=\"artifacts/amal-network/src/calendar/CalendarPage.tsx:201:22\" data-component-name=\"span\" aria-hidden=\"true\">10:00</span>",
+            "target": [
+              "a[data-testid=\"slot-9100102-600\"] > span"
+            ],
+            "failureSummary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
+          },
+          {
+            "any": [
+              {
+                "id": "color-contrast",
+                "data": {
+                  "contrastRatio": 0,
+                  "fontSize": "12.4pt (16.5px)",
+                  "fontWeight": "normal",
+                  "messageKey": "bgGradient",
+                  "expectedContrastRatio": "4.5:1"
+                },
+                "relatedNodes": [
+                  {
+                    "html": "<ul data-replit-metadata=\"artifacts/amal-network/src/calendar/CalendarPage.tsx:193:14\" data-component-name=\"ul\" class=\"cal-day__col\" aria-label=\"Dr. Omar Nassar-Khalil\" style=\"--cal-lanes: 1;\">",
+                    "target": [
+                      "ul[aria-label=\"Dr. Omar Nassar-Khalil\"]"
+                    ]
+                  }
+                ],
+                "impact": "serious",
+                "message": "Element's background color could not be determined due to a background gradient"
+              }
+            ],
+            "all": [],
+            "none": [],
+            "impact": "serious",
+            "html": "<span data-replit-metadata=\"artifacts/amal-network/src/calendar/CalendarPage.tsx:201:22\" data-component-name=\"span\" aria-hidden=\"true\">10:30</span>",
+            "target": [
+              "a[data-testid=\"slot-9100102-630\"] > span"
+            ],
+            "failureSummary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
+          },
+          {
+            "any": [
+              {
+                "id": "color-contrast",
+                "data": {
+                  "contrastRatio": 0,
+                  "fontSize": "12.4pt (16.5px)",
+                  "fontWeight": "normal",
+                  "messageKey": "bgGradient",
+                  "expectedContrastRatio": "4.5:1"
+                },
+                "relatedNodes": [
+                  {
+                    "html": "<ul data-replit-metadata=\"artifacts/amal-network/src/calendar/CalendarPage.tsx:193:14\" data-component-name=\"ul\" class=\"cal-day__col\" aria-label=\"Dr. Omar Nassar-Khalil\" style=\"--cal-lanes: 1;\">",
+                    "target": [
+                      "ul[aria-label=\"Dr. Omar Nassar-Khalil\"]"
+                    ]
+                  }
+                ],
+                "impact": "serious",
+                "message": "Element's background color could not be determined due to a background gradient"
+              }
+            ],
+            "all": [],
+            "none": [],
+            "impact": "serious",
+            "html": "<span data-replit-metadata=\"artifacts/amal-network/src/calendar/CalendarPage.tsx:201:22\" data-component-name=\"span\" aria-hidden=\"true\">11:00</span>",
+            "target": [
+              "a[data-testid=\"slot-9100102-660\"] > span"
+            ],
+            "failureSummary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
+          },
+          {
+            "any": [
+              {
+                "id": "color-contrast",
+                "data": {
+                  "contrastRatio": 0,
+                  "fontSize": "12.4pt (16.5px)",
+                  "fontWeight": "normal",
+                  "messageKey": "bgGradient",
+                  "expectedContrastRatio": "4.5:1"
+                },
+                "relatedNodes": [
+                  {
+                    "html": "<ul data-replit-metadata=\"artifacts/amal-network/src/calendar/CalendarPage.tsx:193:14\" data-component-name=\"ul\" class=\"cal-day__col\" aria-label=\"Dr. Omar Nassar-Khalil\" style=\"--cal-lanes: 1;\">",
+                    "target": [
+                      "ul[aria-label=\"Dr. Omar Nassar-Khalil\"]"
+                    ]
+                  }
+                ],
+                "impact": "serious",
+                "message": "Element's background color could not be determined due to a background gradient"
+              }
+            ],
+            "all": [],
+            "none": [],
+            "impact": "serious",
+            "html": "<span data-replit-metadata=\"artifacts/amal-network/src/calendar/CalendarPage.tsx:201:22\" data-component-name=\"span\" aria-hidden=\"true\">11:30</span>",
+            "target": [
+              "a[data-testid=\"slot-9100102-690\"] > span"
+            ],
+            "failureSummary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
+          },
+          {
+            "any": [
+              {
+                "id": "color-contrast",
+                "data": {
+                  "contrastRatio": 0,
+                  "fontSize": "12.4pt (16.5px)",
+                  "fontWeight": "normal",
+                  "messageKey": "bgGradient",
+                  "expectedContrastRatio": "4.5:1"
+                },
+                "relatedNodes": [
+                  {
+                    "html": "<ul data-replit-metadata=\"artifacts/amal-network/src/calendar/CalendarPage.tsx:193:14\" data-component-name=\"ul\" class=\"cal-day__col\" aria-label=\"Dr. Omar Nassar-Khalil\" style=\"--cal-lanes: 1;\">",
+                    "target": [
+                      "ul[aria-label=\"Dr. Omar Nassar-Khalil\"]"
+                    ]
+                  }
+                ],
+                "impact": "serious",
+                "message": "Element's background color could not be determined due to a background gradient"
+              }
+            ],
+            "all": [],
+            "none": [],
+            "impact": "serious",
+            "html": "<span data-replit-metadata=\"artifacts/amal-network/src/calendar/CalendarPage.tsx:201:22\" data-component-name=\"span\" aria-hidden=\"true\">12:30</span>",
+            "target": [
+              "a[data-testid=\"slot-9100102-750\"] > span"
+            ],
+            "failureSummary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
+          },
+          {
+            "any": [
+              {
+                "id": "color-contrast",
+                "data": {
+                  "contrastRatio": 0,
+                  "fontSize": "12.4pt (16.5px)",
+                  "fontWeight": "normal",
+                  "messageKey": "bgGradient",
+                  "expectedContrastRatio": "4.5:1"
+                },
+                "relatedNodes": [
+                  {
+                    "html": "<ul data-replit-metadata=\"artifacts/amal-network/src/calendar/CalendarPage.tsx:193:14\" data-component-name=\"ul\" class=\"cal-day__col\" aria-label=\"Dr. Omar Nassar-Khalil\" style=\"--cal-lanes: 1;\">",
+                    "target": [
+                      "ul[aria-label=\"Dr. Omar Nassar-Khalil\"]"
+                    ]
+                  }
+                ],
+                "impact": "serious",
+                "message": "Element's background color could not be determined due to a background gradient"
+              }
+            ],
+            "all": [],
+            "none": [],
+            "impact": "serious",
+            "html": "<span data-replit-metadata=\"artifacts/amal-network/src/calendar/CalendarPage.tsx:201:22\" data-component-name=\"span\" aria-hidden=\"true\">14:00</span>",
+            "target": [
+              "a[data-testid=\"slot-9100102-840\"] > span"
+            ],
+            "failureSummary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
+          },
+          {
+            "any": [
+              {
+                "id": "color-contrast",
+                "data": {
+                  "contrastRatio": 0,
+                  "fontSize": "12.4pt (16.5px)",
+                  "fontWeight": "normal",
+                  "messageKey": "bgGradient",
+                  "expectedContrastRatio": "4.5:1"
+                },
+                "relatedNodes": [
+                  {
+                    "html": "<ul data-replit-metadata=\"artifacts/amal-network/src/calendar/CalendarPage.tsx:193:14\" data-component-name=\"ul\" class=\"cal-day__col\" aria-label=\"Dr. Omar Nassar-Khalil\" style=\"--cal-lanes: 1;\">",
+                    "target": [
+                      "ul[aria-label=\"Dr. Omar Nassar-Khalil\"]"
+                    ]
+                  }
+                ],
+                "impact": "serious",
+                "message": "Element's background color could not be determined due to a background gradient"
+              }
+            ],
+            "all": [],
+            "none": [],
+            "impact": "serious",
+            "html": "<span data-replit-metadata=\"artifacts/amal-network/src/calendar/CalendarPage.tsx:201:22\" data-component-name=\"span\" aria-hidden=\"true\">14:30</span>",
+            "target": [
+              "a[data-testid=\"slot-9100102-870\"] > span"
+            ],
+            "failureSummary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
+          },
+          {
+            "any": [
+              {
+                "id": "color-contrast",
+                "data": {
+                  "contrastRatio": 0,
+                  "fontSize": "12.4pt (16.5px)",
+                  "fontWeight": "normal",
+                  "messageKey": "bgGradient",
+                  "expectedContrastRatio": "4.5:1"
+                },
+                "relatedNodes": [
+                  {
+                    "html": "<ul data-replit-metadata=\"artifacts/amal-network/src/calendar/CalendarPage.tsx:193:14\" data-component-name=\"ul\" class=\"cal-day__col\" aria-label=\"Dr. Omar Nassar-Khalil\" style=\"--cal-lanes: 1;\">",
+                    "target": [
+                      "ul[aria-label=\"Dr. Omar Nassar-Khalil\"]"
+                    ]
+                  }
+                ],
+                "impact": "serious",
+                "message": "Element's background color could not be determined due to a background gradient"
+              }
+            ],
+            "all": [],
+            "none": [],
+            "impact": "serious",
+            "html": "<span data-replit-metadata=\"artifacts/amal-network/src/calendar/CalendarPage.tsx:201:22\" data-component-name=\"span\" aria-hidden=\"true\">15:00</span>",
+            "target": [
+              "a[data-testid=\"slot-9100102-900\"] > span"
+            ],
+            "failureSummary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
+          },
+          {
+            "any": [
+              {
+                "id": "color-contrast",
+                "data": {
+                  "contrastRatio": 0,
+                  "fontSize": "12.4pt (16.5px)",
+                  "fontWeight": "normal",
+                  "messageKey": "bgGradient",
+                  "expectedContrastRatio": "4.5:1"
+                },
+                "relatedNodes": [
+                  {
+                    "html": "<ul data-replit-metadata=\"artifacts/amal-network/src/calendar/CalendarPage.tsx:193:14\" data-component-name=\"ul\" class=\"cal-day__col\" aria-label=\"Dr. Omar Nassar-Khalil\" style=\"--cal-lanes: 1;\">",
+                    "target": [
+                      "ul[aria-label=\"Dr. Omar Nassar-Khalil\"]"
+                    ]
+                  }
+                ],
+                "impact": "serious",
+                "message": "Element's background color could not be determined due to a background gradient"
+              }
+            ],
+            "all": [],
+            "none": [],
+            "impact": "serious",
+            "html": "<span data-replit-metadata=\"artifacts/amal-network/src/calendar/CalendarPage.tsx:201:22\" data-component-name=\"span\" aria-hidden=\"true\">15:30</span>",
+            "target": [
+              "a[data-testid=\"slot-9100102-930\"] > span"
+            ],
+            "failureSummary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
+          },
+          {
+            "any": [
+              {
+                "id": "color-contrast",
+                "data": {
+                  "contrastRatio": 0,
+                  "fontSize": "12.4pt (16.5px)",
+                  "fontWeight": "normal",
+                  "messageKey": "bgGradient",
+                  "expectedContrastRatio": "4.5:1"
+                },
+                "relatedNodes": [
+                  {
+                    "html": "<ul data-replit-metadata=\"artifacts/amal-network/src/calendar/CalendarPage.tsx:193:14\" data-component-name=\"ul\" class=\"cal-day__col\" aria-label=\"د. يوسف «Joe» البرغوثي\" style=\"--cal-lanes: 1;\">",
+                    "target": [
+                      "ul[aria-label=\"د. يوسف «Joe» البرغوثي\"]"
+                    ]
+                  }
+                ],
+                "impact": "serious",
+                "message": "Element's background color could not be determined due to a background gradient"
+              }
+            ],
+            "all": [],
+            "none": [],
+            "impact": "serious",
+            "html": "<span data-replit-metadata=\"artifacts/amal-network/src/calendar/CalendarPage.tsx:201:22\" data-component-name=\"span\" aria-hidden=\"true\">08:00</span>",
+            "target": [
+              "a[data-testid=\"slot-9100103-480\"] > span"
+            ],
+            "failureSummary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
+          },
+          {
+            "any": [
+              {
+                "id": "color-contrast",
+                "data": {
+                  "contrastRatio": 0,
+                  "fontSize": "12.4pt (16.5px)",
+                  "fontWeight": "normal",
+                  "messageKey": "bgGradient",
+                  "expectedContrastRatio": "4.5:1"
+                },
+                "relatedNodes": [
+                  {
+                    "html": "<ul data-replit-metadata=\"artifacts/amal-network/src/calendar/CalendarPage.tsx:193:14\" data-component-name=\"ul\" class=\"cal-day__col\" aria-label=\"د. يوسف «Joe» البرغوثي\" style=\"--cal-lanes: 1;\">",
+                    "target": [
+                      "ul[aria-label=\"د. يوسف «Joe» البرغوثي\"]"
+                    ]
+                  }
+                ],
+                "impact": "serious",
+                "message": "Element's background color could not be determined due to a background gradient"
+              }
+            ],
+            "all": [],
+            "none": [],
+            "impact": "serious",
+            "html": "<span data-replit-metadata=\"artifacts/amal-network/src/calendar/CalendarPage.tsx:201:22\" data-component-name=\"span\" aria-hidden=\"true\">08:30</span>",
+            "target": [
+              "a[data-testid=\"slot-9100103-510\"] > span"
+            ],
+            "failureSummary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
+          },
+          {
+            "any": [
+              {
+                "id": "color-contrast",
+                "data": {
+                  "contrastRatio": 0,
+                  "fontSize": "12.4pt (16.5px)",
+                  "fontWeight": "normal",
+                  "messageKey": "bgGradient",
+                  "expectedContrastRatio": "4.5:1"
+                },
+                "relatedNodes": [
+                  {
+                    "html": "<ul data-replit-metadata=\"artifacts/amal-network/src/calendar/CalendarPage.tsx:193:14\" data-component-name=\"ul\" class=\"cal-day__col\" aria-label=\"د. يوسف «Joe» البرغوثي\" style=\"--cal-lanes: 1;\">",
+                    "target": [
+                      "ul[aria-label=\"د. يوسف «Joe» البرغوثي\"]"
+                    ]
+                  }
+                ],
+                "impact": "serious",
+                "message": "Element's background color could not be determined due to a background gradient"
+              }
+            ],
+            "all": [],
+            "none": [],
+            "impact": "serious",
+            "html": "<span data-replit-metadata=\"artifacts/amal-network/src/calendar/CalendarPage.tsx:201:22\" data-component-name=\"span\" aria-hidden=\"true\">09:00</span>",
+            "target": [
+              "a[data-testid=\"slot-9100103-540\"] > span"
+            ],
+            "failureSummary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
+          },
+          {
+            "any": [
+              {
+                "id": "color-contrast",
+                "data": {
+                  "contrastRatio": 0,
+                  "fontSize": "12.4pt (16.5px)",
+                  "fontWeight": "normal",
+                  "messageKey": "bgGradient",
+                  "expectedContrastRatio": "4.5:1"
+                },
+                "relatedNodes": [
+                  {
+                    "html": "<ul data-replit-metadata=\"artifacts/amal-network/src/calendar/CalendarPage.tsx:193:14\" data-component-name=\"ul\" class=\"cal-day__col\" aria-label=\"د. يوسف «Joe» البرغوثي\" style=\"--cal-lanes: 1;\">",
+                    "target": [
+                      "ul[aria-label=\"د. يوسف «Joe» البرغوثي\"]"
+                    ]
+                  }
+                ],
+                "impact": "serious",
+                "message": "Element's background color could not be determined due to a background gradient"
+              }
+            ],
+            "all": [],
+            "none": [],
+            "impact": "serious",
+            "html": "<span data-replit-metadata=\"artifacts/amal-network/src/calendar/CalendarPage.tsx:201:22\" data-component-name=\"span\" aria-hidden=\"true\">09:30</span>",
+            "target": [
+              "a[data-testid=\"slot-9100103-570\"] > span"
+            ],
+            "failureSummary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
+          },
+          {
+            "any": [
+              {
+                "id": "color-contrast",
+                "data": {
+                  "contrastRatio": 0,
+                  "fontSize": "12.4pt (16.5px)",
+                  "fontWeight": "normal",
+                  "messageKey": "bgGradient",
+                  "expectedContrastRatio": "4.5:1"
+                },
+                "relatedNodes": [
+                  {
+                    "html": "<ul data-replit-metadata=\"artifacts/amal-network/src/calendar/CalendarPage.tsx:193:14\" data-component-name=\"ul\" class=\"cal-day__col\" aria-label=\"د. يوسف «Joe» البرغوثي\" style=\"--cal-lanes: 1;\">",
+                    "target": [
+                      "ul[aria-label=\"د. يوسف «Joe» البرغوثي\"]"
+                    ]
+                  }
+                ],
+                "impact": "serious",
+                "message": "Element's background color could not be determined due to a background gradient"
+              }
+            ],
+            "all": [],
+            "none": [],
+            "impact": "serious",
+            "html": "<span data-replit-metadata=\"artifacts/amal-network/src/calendar/CalendarPage.tsx:201:22\" data-component-name=\"span\" aria-hidden=\"true\">10:00</span>",
+            "target": [
+              "a[data-testid=\"slot-9100103-600\"] > span"
+            ],
+            "failureSummary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
+          },
+          {
+            "any": [
+              {
+                "id": "color-contrast",
+                "data": {
+                  "contrastRatio": 0,
+                  "fontSize": "12.4pt (16.5px)",
+                  "fontWeight": "normal",
+                  "messageKey": "bgGradient",
+                  "expectedContrastRatio": "4.5:1"
+                },
+                "relatedNodes": [
+                  {
+                    "html": "<ul data-replit-metadata=\"artifacts/amal-network/src/calendar/CalendarPage.tsx:193:14\" data-component-name=\"ul\" class=\"cal-day__col\" aria-label=\"د. يوسف «Joe» البرغوثي\" style=\"--cal-lanes: 1;\">",
+                    "target": [
+                      "ul[aria-label=\"د. يوسف «Joe» البرغوثي\"]"
+                    ]
+                  }
+                ],
+                "impact": "serious",
+                "message": "Element's background color could not be determined due to a background gradient"
+              }
+            ],
+            "all": [],
+            "none": [],
+            "impact": "serious",
+            "html": "<span data-replit-metadata=\"artifacts/amal-network/src/calendar/CalendarPage.tsx:201:22\" data-component-name=\"span\" aria-hidden=\"true\">10:30</span>",
+            "target": [
+              "a[data-testid=\"slot-9100103-630\"] > span"
+            ],
+            "failureSummary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
+          },
+          {
+            "any": [
+              {
+                "id": "color-contrast",
+                "data": {
+                  "contrastRatio": 0,
+                  "fontSize": "12.4pt (16.5px)",
+                  "fontWeight": "normal",
+                  "messageKey": "bgGradient",
+                  "expectedContrastRatio": "4.5:1"
+                },
+                "relatedNodes": [
+                  {
+                    "html": "<ul data-replit-metadata=\"artifacts/amal-network/src/calendar/CalendarPage.tsx:193:14\" data-component-name=\"ul\" class=\"cal-day__col\" aria-label=\"د. يوسف «Joe» البرغوثي\" style=\"--cal-lanes: 1;\">",
+                    "target": [
+                      "ul[aria-label=\"د. يوسف «Joe» البرغوثي\"]"
+                    ]
+                  }
+                ],
+                "impact": "serious",
+                "message": "Element's background color could not be determined due to a background gradient"
+              }
+            ],
+            "all": [],
+            "none": [],
+            "impact": "serious",
+            "html": "<span data-replit-metadata=\"artifacts/amal-network/src/calendar/CalendarPage.tsx:201:22\" data-component-name=\"span\" aria-hidden=\"true\">11:00</span>",
+            "target": [
+              "a[data-testid=\"slot-9100103-660\"] > span"
+            ],
+            "failureSummary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
+          },
+          {
+            "any": [
+              {
+                "id": "color-contrast",
+                "data": {
+                  "contrastRatio": 0,
+                  "fontSize": "12.4pt (16.5px)",
+                  "fontWeight": "normal",
+                  "messageKey": "bgGradient",
+                  "expectedContrastRatio": "4.5:1"
+                },
+                "relatedNodes": [
+                  {
+                    "html": "<ul data-replit-metadata=\"artifacts/amal-network/src/calendar/CalendarPage.tsx:193:14\" data-component-name=\"ul\" class=\"cal-day__col\" aria-label=\"د. يوسف «Joe» البرغوثي\" style=\"--cal-lanes: 1;\">",
+                    "target": [
+                      "ul[aria-label=\"د. يوسف «Joe» البرغوثي\"]"
+                    ]
+                  }
+                ],
+                "impact": "serious",
+                "message": "Element's background color could not be determined due to a background gradient"
+              }
+            ],
+            "all": [],
+            "none": [],
+            "impact": "serious",
+            "html": "<span data-replit-metadata=\"artifacts/amal-network/src/calendar/CalendarPage.tsx:201:22\" data-component-name=\"span\" aria-hidden=\"true\">11:30</span>",
+            "target": [
+              "a[data-testid=\"slot-9100103-690\"] > span"
+            ],
+            "failureSummary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
+          },
+          {
+            "any": [
+              {
+                "id": "color-contrast",
+                "data": {
+                  "contrastRatio": 0,
+                  "fontSize": "12.4pt (16.5px)",
+                  "fontWeight": "normal",
+                  "messageKey": "bgGradient",
+                  "expectedContrastRatio": "4.5:1"
+                },
+                "relatedNodes": [
+                  {
+                    "html": "<ul data-replit-metadata=\"artifacts/amal-network/src/calendar/CalendarPage.tsx:193:14\" data-component-name=\"ul\" class=\"cal-day__col\" aria-label=\"د. يوسف «Joe» البرغوثي\" style=\"--cal-lanes: 1;\">",
+                    "target": [
+                      "ul[aria-label=\"د. يوسف «Joe» البرغوثي\"]"
+                    ]
+                  }
+                ],
+                "impact": "serious",
+                "message": "Element's background color could not be determined due to a background gradient"
+              }
+            ],
+            "all": [],
+            "none": [],
+            "impact": "serious",
+            "html": "<span data-replit-metadata=\"artifacts/amal-network/src/calendar/CalendarPage.tsx:201:22\" data-component-name=\"span\" aria-hidden=\"true\">12:00</span>",
+            "target": [
+              "a[data-testid=\"slot-9100103-720\"] > span"
+            ],
+            "failureSummary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
+          },
+          {
+            "any": [
+              {
+                "id": "color-contrast",
+                "data": {
+                  "contrastRatio": 0,
+                  "fontSize": "12.4pt (16.5px)",
+                  "fontWeight": "normal",
+                  "messageKey": "bgGradient",
+                  "expectedContrastRatio": "4.5:1"
+                },
+                "relatedNodes": [
+                  {
+                    "html": "<ul data-replit-metadata=\"artifacts/amal-network/src/calendar/CalendarPage.tsx:193:14\" data-component-name=\"ul\" class=\"cal-day__col\" aria-label=\"د. يوسف «Joe» البرغوثي\" style=\"--cal-lanes: 1;\">",
+                    "target": [
+                      "ul[aria-label=\"د. يوسف «Joe» البرغوثي\"]"
+                    ]
+                  }
+                ],
+                "impact": "serious",
+                "message": "Element's background color could not be determined due to a background gradient"
+              }
+            ],
+            "all": [],
+            "none": [],
+            "impact": "serious",
+            "html": "<span data-replit-metadata=\"artifacts/amal-network/src/calendar/CalendarPage.tsx:201:22\" data-component-name=\"span\" aria-hidden=\"true\">12:30</span>",
+            "target": [
+              "a[data-testid=\"slot-9100103-750\"] > span"
+            ],
+            "failureSummary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
+          },
+          {
+            "any": [
+              {
+                "id": "color-contrast",
+                "data": {
+                  "contrastRatio": 0,
+                  "fontSize": "12.4pt (16.5px)",
+                  "fontWeight": "normal",
+                  "messageKey": "bgGradient",
+                  "expectedContrastRatio": "4.5:1"
+                },
+                "relatedNodes": [
+                  {
+                    "html": "<ul data-replit-metadata=\"artifacts/amal-network/src/calendar/CalendarPage.tsx:193:14\" data-component-name=\"ul\" class=\"cal-day__col\" aria-label=\"د. يوسف «Joe» البرغوثي\" style=\"--cal-lanes: 1;\">",
+                    "target": [
+                      "ul[aria-label=\"د. يوسف «Joe» البرغوثي\"]"
+                    ]
+                  }
+                ],
+                "impact": "serious",
+                "message": "Element's background color could not be determined due to a background gradient"
+              }
+            ],
+            "all": [],
+            "none": [],
+            "impact": "serious",
+            "html": "<span data-replit-metadata=\"artifacts/amal-network/src/calendar/CalendarPage.tsx:201:22\" data-component-name=\"span\" aria-hidden=\"true\">13:00</span>",
+            "target": [
+              "a[data-testid=\"slot-9100103-780\"] > span"
+            ],
+            "failureSummary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
+          },
+          {
+            "any": [
+              {
+                "id": "color-contrast",
+                "data": {
+                  "contrastRatio": 0,
+                  "fontSize": "12.4pt (16.5px)",
+                  "fontWeight": "normal",
+                  "messageKey": "bgGradient",
+                  "expectedContrastRatio": "4.5:1"
+                },
+                "relatedNodes": [
+                  {
+                    "html": "<ul data-replit-metadata=\"artifacts/amal-network/src/calendar/CalendarPage.tsx:193:14\" data-component-name=\"ul\" class=\"cal-day__col\" aria-label=\"د. يوسف «Joe» البرغوثي\" style=\"--cal-lanes: 1;\">",
+                    "target": [
+                      "ul[aria-label=\"د. يوسف «Joe» البرغوثي\"]"
+                    ]
+                  }
+                ],
+                "impact": "serious",
+                "message": "Element's background color could not be determined due to a background gradient"
+              }
+            ],
+            "all": [],
+            "none": [],
+            "impact": "serious",
+            "html": "<span data-replit-metadata=\"artifacts/amal-network/src/calendar/CalendarPage.tsx:201:22\" data-component-name=\"span\" aria-hidden=\"true\">13:30</span>",
+            "target": [
+              "a[data-testid=\"slot-9100103-810\"] > span"
+            ],
+            "failureSummary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
+          },
+          {
+            "any": [
+              {
+                "id": "color-contrast",
+                "data": {
+                  "contrastRatio": 0,
+                  "fontSize": "12.4pt (16.5px)",
+                  "fontWeight": "normal",
+                  "messageKey": "bgGradient",
+                  "expectedContrastRatio": "4.5:1"
+                },
+                "relatedNodes": [
+                  {
+                    "html": "<ul data-replit-metadata=\"artifacts/amal-network/src/calendar/CalendarPage.tsx:193:14\" data-component-name=\"ul\" class=\"cal-day__col\" aria-label=\"د. يوسف «Joe» البرغوثي\" style=\"--cal-lanes: 1;\">",
+                    "target": [
+                      "ul[aria-label=\"د. يوسف «Joe» البرغوثي\"]"
+                    ]
+                  }
+                ],
+                "impact": "serious",
+                "message": "Element's background color could not be determined due to a background gradient"
+              }
+            ],
+            "all": [],
+            "none": [],
+            "impact": "serious",
+            "html": "<span data-replit-metadata=\"artifacts/amal-network/src/calendar/CalendarPage.tsx:201:22\" data-component-name=\"span\" aria-hidden=\"true\">14:30</span>",
+            "target": [
+              "a[data-testid=\"slot-9100103-870\"] > span"
+            ],
+            "failureSummary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
+          },
+          {
+            "any": [
+              {
+                "id": "color-contrast",
+                "data": {
+                  "contrastRatio": 0,
+                  "fontSize": "12.4pt (16.5px)",
+                  "fontWeight": "normal",
+                  "messageKey": "bgGradient",
+                  "expectedContrastRatio": "4.5:1"
+                },
+                "relatedNodes": [
+                  {
+                    "html": "<ul data-replit-metadata=\"artifacts/amal-network/src/calendar/CalendarPage.tsx:193:14\" data-component-name=\"ul\" class=\"cal-day__col\" aria-label=\"د. يوسف «Joe» البرغوثي\" style=\"--cal-lanes: 1;\">",
+                    "target": [
+                      "ul[aria-label=\"د. يوسف «Joe» البرغوثي\"]"
+                    ]
+                  }
+                ],
+                "impact": "serious",
+                "message": "Element's background color could not be determined due to a background gradient"
+              }
+            ],
+            "all": [],
+            "none": [],
+            "impact": "serious",
+            "html": "<span data-replit-metadata=\"artifacts/amal-network/src/calendar/CalendarPage.tsx:201:22\" data-component-name=\"span\" aria-hidden=\"true\">15:00</span>",
+            "target": [
+              "a[data-testid=\"slot-9100103-900\"] > span"
+            ],
+            "failureSummary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
+          },
+          {
+            "any": [
+              {
+                "id": "color-contrast",
+                "data": {
+                  "contrastRatio": 0,
+                  "fontSize": "12.4pt (16.5px)",
+                  "fontWeight": "normal",
+                  "messageKey": "bgGradient",
+                  "expectedContrastRatio": "4.5:1"
+                },
+                "relatedNodes": [
+                  {
+                    "html": "<ul data-replit-metadata=\"artifacts/amal-network/src/calendar/CalendarPage.tsx:193:14\" data-component-name=\"ul\" class=\"cal-day__col\" aria-label=\"د. يوسف «Joe» البرغوثي\" style=\"--cal-lanes: 1;\">",
+                    "target": [
+                      "ul[aria-label=\"د. يوسف «Joe» البرغوثي\"]"
+                    ]
+                  }
+                ],
+                "impact": "serious",
+                "message": "Element's background color could not be determined due to a background gradient"
+              }
+            ],
+            "all": [],
+            "none": [],
+            "impact": "serious",
+            "html": "<span data-replit-metadata=\"artifacts/amal-network/src/calendar/CalendarPage.tsx:201:22\" data-component-name=\"span\" aria-hidden=\"true\">15:30</span>",
+            "target": [
+              "a[data-testid=\"slot-9100103-930\"] > span"
+            ],
+            "failureSummary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
+          }
+        ]
+      }
+    ],
+    "passes": [
+      "aria-allowed-attr",
+      "aria-allowed-role",
+      "aria-conditional-attr",
+      "aria-deprecated-role",
+      "aria-hidden-body",
+      "aria-hidden-focus",
+      "aria-prohibited-attr",
+      "aria-required-attr",
+      "aria-roles",
+      "aria-valid-attr-value",
+      "aria-valid-attr",
+      "avoid-inline-spacing",
+      "button-name",
+      "bypass",
+      "color-contrast",
+      "document-title",
+      "duplicate-id-aria",
+      "empty-heading",
+      "form-field-multiple-labels",
+      "heading-order",
+      "html-has-lang",
+      "html-lang-valid",
+      "label-content-name-mismatch",
+      "label-title-only",
+      "label",
+      "landmark-banner-is-top-level",
+      "landmark-main-is-top-level",
+      "landmark-no-duplicate-banner",
+      "landmark-no-duplicate-main",
+      "landmark-one-main",
+      "landmark-unique",
+      "link-in-text-block",
+      "link-name",
+      "list",
+      "listitem",
+      "meta-viewport-large",
+      "meta-viewport",
+      "nested-interactive",
+      "page-has-heading-one",
+      "region",
+      "select-name",
+      "skip-link",
+      "svg-img-alt",
+      "tabindex",
+      "valid-lang"
+    ]
+  }
+}
