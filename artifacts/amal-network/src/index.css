@@ -536,6 +536,7 @@
   .shell-crumbs { padding-inline: 20px; }
   .shell-bottom { background: var(--amal-surface); border-block-start: 1px solid var(--amal-border); box-shadow: var(--amal-shadow-pop); }
   .shell-bottom .shell-nav { color: var(--amal-muted); }
+  .shell-bottom .shell-nav:hover { color: var(--amal-text); background: var(--amal-surface-2); }
   .shell-bottom .shell-nav.is-active { color: var(--amal-primary-text); background: var(--amal-primary-soft); }
   .shell-bottom .shell-nav.is-active svg { color: var(--amal-primary-text); }
   .shell-bottom :focus-visible { outline-color: var(--amal-focus-ring); }
