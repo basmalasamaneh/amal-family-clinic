@@ -131,18 +131,22 @@ function AppShellContent({ identity, fixture, onRefresh, onLogout }: Props) {
           </section>
         )}
         <header className="shell-top">
+          <div className="shell-top__main">
           <div className="shell-top__brand"><AmalLogo /></div>
           <ClinicSwitcher clinics={clinics} state={identity.clinicsState} value={clinicId} onChange={(id) => { void localCache.setContext(null); clearNetworkSelection(); clearConsentSelection(); setClinicId(id); }} onRetry={onRefresh} />
-          <WalkInButton />
           {!(res.kind === 'page' && (res.route.id === 'networkSearch' || res.route.id === 'patientCard')) && <GlobalSearch key={clinicId ?? 'none'} />}
+          <div className="shell-top__walkin"><WalkInButton /></div>
           <div className="shell-top__end">
-            <ConnectionStatus userId={identity.id} clinicId={clinic?.id ?? null} queueAvailable={role === 'front-desk'} />
             <button type="button" className="shell-iconbtn" aria-disabled="true" aria-label={t('shell.bell.label')} title={t('shell.bell.soon')} data-testid="button-notifications">
               <Icon name="bell" size={19} />
             </button>
             <div className="shell-top__prefs"><LanguageSwitch /><ThemeSwitch /></div>
             <HelpMenu onReplay={tour.start} canReplay={tour.steps.length > 0} />
             <UserMenu identity={identity} fixture={fixture} onLogout={onLogout} />
+          </div>
+          </div>
+          <div className="shell-top__status">
+            <ConnectionStatus userId={identity.id} clinicId={clinic?.id ?? null} queueAvailable={role === 'front-desk'} />
           </div>
         </header>
 

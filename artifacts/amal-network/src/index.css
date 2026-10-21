@@ -563,7 +563,7 @@
 .shell-side__kit:hover { background: var(--shell-nav-active-bg); color: var(--shell-nav-fg); }
 [data-theme='dark'] .shell-side { --shell-nav-bg: var(--amal-status-booked-bg); --shell-nav-fg: var(--amal-text); --shell-nav-accent: var(--amal-primary-text); }
 
-.shell-top { background: var(--amal-surface); padding-block: 12px; gap: 10px 16px; box-shadow: 0 2px 8px color-mix(in srgb, var(--amal-navy) 4%, transparent); }
+.shell-top { background: var(--amal-surface); padding-block: 0; gap: 0; box-shadow: 0 2px 8px color-mix(in srgb, var(--amal-navy) 4%, transparent); }
 .shell-top__end { min-inline-size: 0; max-inline-size: 100%; }
 .shell-top :is(button, select, .shell-pill) { min-block-size: 44px; }
 .shell-top__prefs button { min-inline-size: 44px; }
@@ -606,11 +606,7 @@
   .shell-side__group + .shell-side__group { padding-block-start: 12px; border-block-start: 1px solid var(--shell-nav-active-bg); }
 }
 @media (max-width: 767px) {
-  .shell-top { gap: 8px; }
-  .shell-top__end { margin-inline-start: 0; gap: 6px; flex-basis: 100%; }
-  .shell-top .connection-status { flex-basis: 100%; }
-  .shell-clinic { order: 0; }
-  .shell-search { flex-basis: 100%; }
+  .shell-top__end { margin-inline-start: 0; gap: 6px; }
   .shell-main, .shell-crumbs { padding-inline: 12px; }
   .shell-user { justify-content: center; padding-inline: 5px; }
 }
@@ -645,3 +641,115 @@
 .kit-combo__tag { margin: 0; align-self: flex-start; padding-block: 2px; padding-inline: 10px; border-radius: 999px; background: var(--amal-surface-2); color: var(--amal-muted); font-size: var(--amal-text-xs); font-weight: var(--amal-weight-medium); }
 .kit-combo .kit-row { margin-block-end: 0; }
 @media (max-width: 960px) { .kit-g-grid, .kit-combos { grid-template-columns: minmax(0, 1fr); } }
+
+/* Topbar: context and commands above a dedicated, always-readable status strip.
+   Container breakpoints follow the available workspace, including collapsed navigation. */
+.shell-top {
+  container: shell-toolbar / inline-size;
+  display: block;
+  padding: 0;
+}
+.shell-top__main {
+  display: grid;
+  grid-template-columns: minmax(260px, 1.1fr) minmax(240px, 1fr) auto auto;
+  grid-template-areas: "clinic search walkin utilities";
+  align-items: center;
+  gap: 16px;
+  padding: 16px 24px;
+}
+.shell-top__main > .shell-clinic {
+  grid-area: clinic;
+  order: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
+}
+.shell-top .shell-clinic__label { line-height: 1.4; }
+.shell-top .shell-clinic__name { line-height: 1.5; white-space: normal; }
+.shell-top .shell-clinic__select {
+  inline-size: 100%;
+  max-inline-size: none;
+  text-align: start;
+  text-overflow: ellipsis;
+}
+.shell-top__main > .shell-search { grid-area: search; order: 0; max-inline-size: none; }
+.shell-top__walkin { grid-area: walkin; min-inline-size: 0; }
+.shell-top__walkin:empty { display: none; }
+.shell-top__walkin .shell-walkin { min-block-size: 44px; max-inline-size: 100%; white-space: normal; }
+.shell-top__main > .shell-top__end {
+  grid-area: utilities;
+  flex-wrap: nowrap;
+  justify-content: flex-end;
+  margin: 0;
+  gap: 6px;
+}
+.shell-top__end > * { flex-shrink: 0; }
+.shell-top__end .shell-iconbtn { min-inline-size: 44px; min-block-size: 44px; }
+.shell-top__end .shell-user { max-inline-size: 180px; }
+.shell-top__end .shell-user__name { min-inline-size: 0; }
+.shell-top__prefs { display: flex; gap: 4px; }
+.shell-top__status {
+  padding: 8px 24px;
+  border-block-start: 1px solid var(--amal-border);
+  background: var(--amal-surface-2);
+}
+.shell-top__status .connection-status {
+  display: flex;
+  align-items: center;
+  gap: 6px 16px;
+  max-inline-size: none;
+}
+.shell-top__status .connection-status .shell-pill {
+  min-block-size: 28px;
+  padding: 3px 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  line-height: 1.5;
+}
+.shell-top__status .connection-status > small {
+  display: block;
+  flex: 1 1 240px;
+  max-inline-size: none;
+  line-height: 1.6;
+}
+.shell-top__status .connection-status > p { flex-basis: 100%; }
+.shell-top__status .connection-status > a { margin-inline-start: auto; }
+@container shell-toolbar (max-width: 1200px) {
+  .shell-top__prefs { display: none; }
+  .shell-top__end .shell-user__name {
+    position: absolute; inline-size: 1px; block-size: 1px;
+    overflow: hidden; clip-path: inset(50%); white-space: nowrap;
+  }
+  .shell-top__end .shell-user__icon { display: none; }
+  .shell-top__end .shell-user { padding-inline: 5px; }
+}
+@container shell-toolbar (max-width: 980px) {
+  .shell-top__main {
+    grid-template-columns: minmax(240px, 1fr) auto auto;
+    grid-template-areas: "clinic walkin utilities" "search search search";
+    gap: 12px 16px;
+  }
+}
+@container shell-toolbar (max-width: 650px) {
+  .shell-top__main {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: "clinic clinic" "search search" "walkin utilities";
+    padding: 12px 16px;
+  }
+  .shell-top__status { padding: 8px 16px; }
+  .shell-top__status .connection-status { align-items: flex-start; gap: 4px 12px; }
+  .shell-top__status .connection-status > small { flex-basis: 100%; }
+}
+@container shell-toolbar (max-width: 370px) {
+  .shell-top__main {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "clinic" "search" "walkin" "utilities";
+    padding-inline: 12px;
+    gap: 10px;
+  }
+  .shell-top__main > .shell-top__end { justify-content: flex-end; }
+  .shell-top__walkin .shell-walkin { inline-size: 100%; justify-content: center; }
+  .shell-top__status { padding-inline: 12px; }
+}
