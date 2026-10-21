@@ -46,6 +46,7 @@ import { SyncQueuePanel } from '@/sync/SyncQueuePanel';
 import { isKnownRole, landingFor, resolve, routesFor, type Resolution, type ShellRoute } from './routes';
 
 const BOTTOM_SLOTS = 4;
+type NavigationItem = ShellRoute & { schedule?: boolean };
 
 interface Props { identity: ShellIdentity; fixture: boolean; onRefresh: (strict?: boolean) => Promise<void>; onLogout: () => Promise<void> }
 
@@ -63,7 +64,9 @@ function AppShellContent({ identity, fixture, onRefresh, onLogout }: Props) {
   const role = isKnownRole(identity.role) ? identity.role : null;
   // Expiry/unmount must also clear transient selections, not just explicit logout.
   useEffect(() => () => { clearNetworkSelection(); clearConsentSelection(); }, [identity.id, role]);
-  const items = useMemo(() => routesFor(role).filter((r) => !r.navHidden), [role]);
+  const items = useMemo<NavigationItem[]>(() => routesFor(role)
+    .filter((r) => !r.navHidden && !(role === 'front-desk' && r.id === 'week'))
+    .map((r) => role === 'front-desk' && r.id === 'today' ? { ...r, schedule: true } : r), [role]);
   const res = resolve(location, role);
 
   const clinics = identity.clinics;
@@ -173,30 +176,32 @@ function titleFor(res: Resolution, t: (k: string) => string): string {
   }
 }
 
-function NavLink({ route, location, variant }: { route: ShellRoute; location: string; variant: 'side' | 'bottom' }) {
+function NavLink({ route, location, variant }: { route: NavigationItem; location: string; variant: 'side' | 'bottom' }) {
   const { t } = useTranslation();
   const Icon = route.icon;
   const search = useSearch();
-  const active = location === route.path;
   // Today/Week keep the selected date and doctor filter (validated again by the calendar page).
   const calendarRoute = route.id === 'today' || route.id === 'week';
   const fromCalendar = location === '/desk/today' || location === '/desk/week';
+  const active = location === route.path || !!route.schedule && fromCalendar;
+  const label = t(`shell.nav.${route.schedule ? 'schedule' : route.id}`);
+  const destination = route.schedule && fromCalendar ? location : route.path;
   return (
     <Link
-      href={demoPath(calendarRoute && fromCalendar ? withCarry(route.path, search) : route.path)}
+      href={demoPath(calendarRoute && fromCalendar ? withCarry(destination, search) : destination)}
       className={`shell-nav shell-nav--${variant}${active ? ' is-active' : ''}`}
       data-section={sectionOf(route.id)}
-      title={variant === 'side' ? t(`shell.nav.${route.id}`) : undefined}
+      title={variant === 'side' ? label : undefined}
       aria-current={active ? 'page' : undefined}
       data-testid={`link-nav-${variant}-${route.id}`}
     >
       {variant === 'side' ? <IconChip icon={Icon} section={sectionOf(route.id)} size="sm" /> : <Icon size={20} aria-hidden="true" />}
-      <span className="shell-nav__label">{t(`shell.nav.${route.id}`)}</span>
+      <span className="shell-nav__label">{label}</span>
     </Link>
   );
 }
 
-function BottomNav({ items, location }: { items: ShellRoute[]; location: string }) {
+function BottomNav({ items, location }: { items: NavigationItem[]; location: string }) {
   const { t } = useTranslation();
   const [, navigate] = useLocation();
   const needsMore = items.length > BOTTOM_SLOTS + 1;
