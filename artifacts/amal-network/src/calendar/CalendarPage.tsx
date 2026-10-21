@@ -11,6 +11,7 @@ import { bookingQuery } from './booking';
 import { AppointmentCard, CalSkeleton, DateNavigator, LocalCalendarNotice } from './components';
 import { setWalkInPageContext } from '@/reception/walkin-bus';
 import { useSchedule } from './use-schedule';
+import { WalkInHandoff } from '@/reception/WalkInHandoff';
 
 /** Keeps explicit dev demo params (calendarDemo) on calendar links; shellDemo is added by demoPath. */
 export function calHref(path: string, search: string): string {
@@ -106,6 +107,8 @@ export function CalendarPage({ view, clinic, fixture, title }: { view: 'day' | '
       </div>
 
       {load.state === 'ready' && <LocalCalendarNotice cache={load.data.localCache} />}
+      <div className="cal-workspace">
+      <div className="cal-workspace__schedule">
       {!clinic ? (
         <EmptyState headingLevel={2} illustration={<span className="shell-state__icon" aria-hidden="true"><Building2 size={40} /></span>} title={t('calendar.state.noClinic')} description={t('calendar.state.noClinicDesc')} />
       ) : load.state === 'loading' ? <CalSkeleton /> : load.state === 'error' ? (
@@ -125,6 +128,11 @@ export function CalendarPage({ view, clinic, fixture, title }: { view: 'day' | '
         <WeekGrid date={date} today={today} search={search} doctorId={doctorId} doctors={load.data.doctors}
           appointments={load.data.appointments.filter((a) => !doctorId || a.doctorId === doctorId)} />
       )}
+      </div>
+      <aside className="cal-workspace__rail">
+        <WalkInHandoff className="cal-walkin" testId="button-calendar-walkin" />
+      </aside>
+      </div>
     </section>
   );
 }
