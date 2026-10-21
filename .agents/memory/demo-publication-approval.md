@@ -14,6 +14,13 @@ The user subsequently stated: “i do not want to publish at all”.
 **Why:** This is a standing scope change, not a request to postpone publication.
 The earlier data-suitability approval does not authorize publication.
 
+The user repeated that they do not want the project published at all, then
+selected: “Complete the documentation-only handoff; exclude successful rehearsal.”
+
+**Why:** The owner explicitly accepted documentation-only delivery after the
+unsuccessful preview preflight. Do not ask for publication approval again or
+treat publication or a successful rehearsal as a remaining handoff requirement.
+
 **How to apply:** Keep this project unpublished. Treat deployment work as
 preparation only; do not provision production or propose publication follow-ups.
 The approval covers only the supplied workbook, not other datasets or changes
