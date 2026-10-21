@@ -122,7 +122,7 @@ function AppShellContent({ identity, fixture, onRefresh, onLogout }: Props) {
           ))}
         </nav>
         <div className="shell-side__foot">
-          <Link href={demoPath('/data')} className="shell-side__kit shell-side__data" data-testid="link-side-data" title={t('data.navLink')}><Icon name="shield" size={18} /><span className="shell-side__kitlabel">{t('data.navLink')}</span></Link>
+          <Link href={demoPath('/data')} className="shell-side__kit shell-side__data" data-tour="your-data" data-testid="link-side-data" title={t('data.navLink')}><Icon name="shield" size={18} /><span className="shell-side__kitlabel">{t('data.navLink')}</span></Link>
         </div>
       </aside>
 

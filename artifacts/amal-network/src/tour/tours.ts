@@ -7,7 +7,7 @@ const common = (role: ShellRole): TourStep[] => [
   { id: 'nav', targets: ['nav-side', 'nav-bottom'], titleKey: 'tour.nav.title', bodyKey: `tour.nav.${role}` },
   { id: 'account', targets: ['user-menu'], titleKey: 'tour.account.title', bodyKey: 'tour.account.body' },
   { id: 'help', targets: ['help'], titleKey: 'tour.help.title', bodyKey: 'tour.help.body' },
-  { id: 'data', targets: [], titleKey: 'tour.data.title', bodyKey: 'tour.data.body' },
+  { id: 'data', targets: ['your-data'], titleKey: 'tour.data.title', bodyKey: 'tour.data.body' },
 ];
 export function tourFor(role: ShellRole | null): TourStep[] { return role ? common(role) : []; }
 

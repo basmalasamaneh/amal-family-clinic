@@ -22,6 +22,7 @@ export function TourOverlay({ steps, onFinish }: { steps: TourStep[]; onFinish: 
   const [location] = useLocation();
   const [index, setIndex] = useState(0);
   const [box, setBox] = useState<Box | null>(null);
+  const [cardSize, setCardSize] = useState({ width: 360, height: 300 });
   const cardRef = useRef<HTMLDivElement>(null);
   const headRef = useRef<HTMLHeadingElement>(null);
   const restoreRef = useRef<Element | null>(typeof document !== 'undefined' ? document.activeElement : null);
@@ -36,13 +37,33 @@ export function TourOverlay({ steps, onFinish }: { steps: TourStep[]; onFinish: 
     setBox({ top: r.top, start: rtl ? window.innerWidth - r.right : r.left, inline: r.width, block: r.height });
   }, [step, rtl]);
 
-  useLayoutEffect(measure, [measure, location]);
+  useLayoutEffect(() => {
+    const el = step ? findTarget(step.targets) : null;
+    if (el) {
+      const r = el.getBoundingClientRect();
+      if (r.bottom <= 0 || r.top >= window.innerHeight || r.right <= 0 || r.left >= window.innerWidth)
+        el.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'instant' });
+    }
+    measure();
+  }, [measure, location]);
+  useLayoutEffect(() => {
+    const card = cardRef.current;
+    if (!card) return;
+    const observer = new ResizeObserver(() => {
+      setCardSize({ width: card.offsetWidth, height: card.offsetHeight });
+      measure();
+    });
+    observer.observe(card);
+    const target = step ? findTarget(step.targets) : null;
+    if (target) observer.observe(target);
+    return () => observer.disconnect();
+  }, [measure, step]);
   useEffect(() => {
     window.addEventListener('resize', measure);
     window.addEventListener('scroll', measure, true);
     return () => { window.removeEventListener('resize', measure); window.removeEventListener('scroll', measure, true); };
   }, [measure]);
-  useEffect(() => { headRef.current?.focus(); }, [index]);
+  useEffect(() => { headRef.current?.focus({ preventScroll: true }); }, [index]);
 
   const finish = useCallback((status: 'completed' | 'dismissed') => {
     onFinish(status);
@@ -71,17 +92,27 @@ export function TourOverlay({ steps, onFinish }: { steps: TourStep[]; onFinish: 
 
   const vw = typeof window !== 'undefined' ? window.innerWidth : 1024;
   const vh = typeof window !== 'undefined' ? window.innerHeight : 768;
-  const cardW = Math.min(360, vw - 24);
+  const cardW = Math.min(cardSize.width, vw - 24);
+  const cardH = Math.min(cardSize.height, vh - 24);
   let style: CSSProperties | undefined;
   if (box) {
     const clampStart = (s: number) => Math.max(12, Math.min(s, vw - cardW - 12));
-    if (box.block > vh * 0.5 && box.start + box.inline + cardW + 28 < vw) {
-      style = { insetBlockStart: 96, insetInlineStart: box.start + box.inline + 16 };
-    } else if (box.top + box.block + 220 < vh) {
-      style = { insetBlockStart: box.top + box.block + 12, insetInlineStart: clampStart(box.start) };
-    } else {
-      style = { insetBlockEnd: vh - box.top + 12, insetInlineStart: clampStart(box.start) };
-    }
+    const clampTop = (y: number) => Math.max(12, Math.min(y, vh - cardH - 12));
+    const after = box.start + box.inline + 16;
+    const before = box.start - cardW - 16;
+    const below = box.top + box.block + 12;
+    const above = box.top - cardH - 12;
+    // Logical inline coordinates keep the same placement rules in RTL and LTR.
+    if (box.block > vh * 0.5 && after + cardW <= vw - 12)
+      style = { insetBlockStart: clampTop(box.top + 24), insetInlineStart: after };
+    else if (below + cardH <= vh - 12)
+      style = { insetBlockStart: clampTop(below), insetInlineStart: clampStart(box.start) };
+    else if (above >= 12)
+      style = { insetBlockStart: above, insetInlineStart: clampStart(box.start) };
+    else if (before >= 12)
+      style = { insetBlockStart: clampTop(box.top), insetInlineStart: before };
+    else
+      style = { insetBlockStart: clampTop(below), insetInlineStart: clampStart(box.start) };
   }
 
   return (
