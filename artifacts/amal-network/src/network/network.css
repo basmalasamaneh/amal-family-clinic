@@ -87,12 +87,12 @@
 .net-flags { display: flex; flex-direction: column; gap: 8px; }
 .net-dot { flex: none; inline-size: 10px; block-size: 10px; border-radius: 50%; background: var(--tone); }
 
-.net-tone-0 { --tone: var(--amal-primary); }
-.net-tone-1 { --tone: var(--amal-primary-text); }
-.net-tone-2 { --tone: var(--amal-info); }
-.net-tone-3 { --tone: var(--amal-success); }
-.net-tone-4 { --tone: var(--amal-navy); }
-.net-tone-5 { --tone: var(--amal-warning); }
+/* Preserve model.ts's stable six-slot assignment. Clinic identity uses the
+   shared informational accents, never the warning/danger status palette.
+   Names remain the identifier: a finite colour palette is not unique identity. */
+.net-tone-0, .net-tone-3 { --tone: var(--amal-accent-reception); --tone-soft: var(--amal-accent-reception-soft); }
+.net-tone-1, .net-tone-4 { --tone: var(--amal-accent-patients); --tone-soft: var(--amal-accent-patients-soft); }
+.net-tone-2, .net-tone-5 { --tone: var(--amal-accent-network); --tone-soft: var(--amal-accent-network-soft); }
 
 @keyframes net-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 @keyframes net-pulse { 50% { opacity: .45; } }
@@ -104,3 +104,81 @@
 }
 /* P2-11: gold empty variant centres the shared EmptyState. */
 .net-empty--gold { align-items: stretch; }
+
+/* Reading-first clinical workspace. Presentation only; shared tokens adapt
+   to light/dark and logical spacing follows the document's RTL/LTR direction. */
+.net { gap: 24px; line-height: 1.65; }
+.net :where(svg) { flex-shrink: 0; }
+.net-head { gap: 8px; }
+.net-h1 { line-height: 1.4; }
+.net-h2 { line-height: 1.5; }
+.net-back { min-block-size: 44px; padding-inline: 4px; }
+.net-privacy, .net-identity { line-height: 1.7; border-radius: var(--amal-radius-control); }
+.net-search { padding: 20px; gap: 12px; }
+.net-search__field input { line-height: 1.6; }
+.net-search .net-hint { padding-inline: 2px; }
+.net-count { color: var(--amal-navy); padding-inline: 4px; }
+.net-results { gap: 16px; }
+.net-card { padding: 18px; gap: 16px; }
+.net-card:focus-within { border-color: var(--amal-primary); }
+.net-hit { min-block-size: 44px; gap: 14px; padding: 8px; }
+.net-hit__main { gap: 10px; }
+.net-hit__name { font-size: var(--amal-text-xl); line-height: 1.5; }
+.net-hit__sum { line-height: 1.8; overflow-wrap: anywhere; }
+.net-hit__meta { gap: 8px; }
+.net-tag { padding-block: 3px; padding-inline: 10px; line-height: 1.6; }
+.net-card__side { padding-block-start: 8px; }
+.net-card__flags { padding-block-start: 16px; border-block-start: 1px solid var(--amal-border); gap: 12px; }
+.net-consent { padding-block: 6px; padding-inline: 12px; line-height: 1.6; white-space: normal; }
+.net-consent svg { align-self: flex-start; margin-block-start: 3px; }
+.net-flag { padding: 14px 16px; gap: 10px; }
+.net-flag__chip { gap: 8px; line-height: 1.7; overflow-wrap: anywhere; }
+.net-flag__kind { padding-inline-end: 8px; border-inline-end: 1px solid var(--amal-border); }
+.net-flag__quote { gap: 8px; padding-block: 4px; padding-inline-start: 12px; font-style: normal; line-height: 1.85; }
+.net-flag__quote svg { margin-block-start: 5px; }
+.net-flag__quote bdi { min-inline-size: 0; }
+.net-flag__meta { gap: 6px; padding-block-start: 10px; border-block-start: 1px solid var(--amal-border); overflow-wrap: anywhere; line-height: 1.75; }
+.net-flag__disc { font-size: var(--amal-text-sm); }
+.net-noflags { padding: 16px; line-height: 1.8; background: var(--amal-surface); }
+.net-noflags strong { color: var(--amal-text); }
+.net-empty { padding-block: 36px; padding-inline: 32px; gap: 14px; }
+.net-empty__mark { margin-block-end: 4px; }
+.net-empty__desc { line-height: 1.85; overflow-wrap: anywhere; }
+.net-empty[role='alert'] .net-empty__mark { color: var(--amal-danger-strong); background: var(--amal-surface-2); }
+.net .amal-btn { min-block-size: 44px; }
+.net-dossier { gap: 24px; padding: 28px; }
+.net-id { gap: 18px; align-items: center; }
+.net-id__txt { gap: 10px; min-inline-size: min(180px, 100%); }
+.net-id__name { line-height: 1.5; }
+.net-id__consent { gap: 10px; }
+.net-identity { padding-block: 10px; padding-inline: 14px; margin: 0; }
+.net-timeline { gap: 12px; padding-block-start: 24px; border-block-start-style: solid; }
+.net-tl { margin-block-start: 12px; }
+.net-tl__item { gap: 14px; padding-block-end: 24px; }
+.net-tl__item:last-child { padding-block-end: 0; }
+.net-tl__node { margin-block-start: 22px; }
+.net-tl__item::before { inset-block-start: 36px; inset-block-end: -22px; }
+.net-tl__body { padding: 18px; gap: 14px; }
+.net-tl__when { gap: 8px 16px; line-height: 1.7; }
+.net-tl__when .net-hint { font-weight: 400; }
+.net-tl__who { gap: 10px; padding-block-end: 14px; border-block-end: 1px solid var(--amal-border); }
+.net-clinic { padding-block: 4px; padding-inline: 10px; border-radius: var(--amal-radius-control); background: var(--tone-soft); border-inline-start: 3px solid var(--tone); overflow-wrap: anywhere; }
+.net-clinic bdi { min-inline-size: 0; }
+.net-tl__doc { flex-basis: 100%; line-height: 1.75; overflow-wrap: anywhere; }
+.net-note { padding: 16px; }
+.net-note__h { margin-block-end: 10px; }
+.net-note p { line-height: 1.9; }
+.net-flags { gap: 12px; }
+.net-skel { padding: 24px; gap: 14px; }
+@media (max-width: 767px) {
+  .net { gap: 20px; }
+  .net-search, .net-card { padding: 14px; }
+  .net-card__side { padding-block-start: 0; padding-inline-start: 8px; }
+  .net-dossier { padding: 16px; gap: 20px; }
+  .net-id { gap: 12px; }
+  .net-id__consent { flex-basis: 100%; max-inline-size: none; padding-block-start: 12px; border-block-start: 1px solid var(--amal-border); }
+  .net-tl__item { grid-template-columns: 24px minmax(0, 1fr); gap: 4px; }
+  .net-tl__body { padding: 12px; }
+  .net-flag { padding: 12px; }
+  .net-empty { padding-block: 28px; padding-inline: 20px; }
+}
