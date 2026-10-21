@@ -15,6 +15,8 @@ that a production environment has been provisioned.
 
 - Deployment service reports no active deployment and no published URL.
 - Production secret inspection reports `SESSION_SECRET` exists (value not read).
+- All three reserved private demo credential secrets are saved; existence only
+  was verified. Values were not read, tested, or used to provision accounts.
 - No production database has been provisioned or populated by this work.
 - No source seed rows, development accounts, sessions, or device trust changed.
 - Existing guarded demo seeding permits only explicitly marked disposable
@@ -109,6 +111,7 @@ login derivation and must be coordinated with database-role credentials.
 
 - Owner has not approved publication.
 - Production initialization and private account bootstrap are not yet established.
-- Private credential input and production-only secret scoping require completion.
+- Private credential input is complete; production-only scoping and validation
+  by the future provisioning process remain unverified.
 - Production schema/roles, exact origin, region/visibility and runtime verification
   remain unverified.
