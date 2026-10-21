@@ -1,0 +1,68 @@
+COMMON RULES (apply to this prompt and every later one)
+- Create a checkpoint first. Do not print or write any secret value anywhere.
+- Seed tables (clinics, doctors, patients, appointments, patient_visit_history,
+  calendar_app_export) are READ-ONLY. Never change them.
+- Do NOT change: the conflict engine and its tests, sync and offline logic, consent and
+  visibility rules, authentication, the test-isolation setup, or existing API contracts
+  (additive changes only, and only when this prompt says so).
+- Do not weaken, delete or skip any test, and do not add skip, only or expected-to-fail markers.
+  The test count must not decrease. If visual snapshot tests exist, regenerate them ONLY for
+  screens that intentionally changed, and list each regenerated snapshot and why.
+- No analytics per doctor anywhere. Behavioural metrics only network-wide.
+- All text via i18n (Arabic default, English), CSS logical properties only, tokens only (no
+  hard-coded colors), Light and Dark.
+- When done: run the full test suite, confirm the conflict-engine and offline tests passed, confirm demo
+  login works for each role, confirm demo data is unchanged, list every file you changed, then stop and wait.
+
+TASK: PROFESSIONAL DESIGN SYSTEM AND APP SHELL (presentation only, no logic changes)
+
+Goal: make the whole app look like a polished, modern, calm, formal SaaS product that is
+clearly not a basic or default template. Keep every behavior identical.
+
+1. Typography (smaller, still very clear). Arabic: IBM Plex Sans Arabic. English: IBM Plex Sans.
+   Self-hosted (@fontsource), weights 400/500/600/700, included in the service worker precache.
+   Scale: caption 12.5, small 13.5, table and card text 14, body 15, subheading 17, heading 20,
+   page title 26, display 32. Line-height 1.7 Arabic, 1.5 English. Weights: body 400, labels 500,
+   headings 600. No italics and no letter-spacing on Arabic. Tabular numbers in tables, times,
+   KPIs. Add a user setting "Display density": Compact / Comfortable (default) / Large. Reception
+   screens default to Large (body 16 to 17) because they run on tablets in busy mornings. The
+   setting is stored per user and applies instantly.
+2. Colors (tokens, Light / Dark). Keep the existing tokens (primary #0E7C86 / #3CC4CF, navy,
+   bg, surface, surface-2, border, text, muted, success, warning, danger, info; gold only for
+   brand moments). Add section accent colors used ONLY for icon chips and small highlights:
+   Reception teal #0E7C86, Patients blue #2F6FB3, Network violet #6D5BD0, Admin slate #475569,
+   each with a soft tint background (Light and Dark versions). Status colors never change
+   meaning. Never use gold or an accent as a status color. Contrast: text 4.5:1, UI 3:1.
+3. Visual direction. Clean, spacious, restrained. 12 px radius cards, 8 px controls, 16 px
+   dialogs. Thin borders plus very soft shadows in Light; in Dark use lighter surfaces instead
+   of shadows. Soft section backgrounds, consistent 8 px spacing grid, generous whitespace.
+   Motion 150 to 200 ms, respects prefers-reduced-motion. lucide-react icons only, stroke 1.75,
+   one central icon map. Directional icons mirror in RTL, others never.
+4. App shell. Sidebar with grouped sections (small group labels), icon + label, active state with
+   a tinted pill and a colored icon chip, collapsible, bottom bar on phones. Top bar: clinic
+   switcher, a search field placeholder (the real search comes later), a notification bell slot,
+   language toggle (AR | EN), theme toggle, user menu. Breadcrumbs under the top bar. A
+   reusable PageHeader (title, one-line description, primary and secondary actions).
+5. Shared components (build once, reuse everywhere, replace one-off look-alikes): StatCard (icon
+   chip, value, label, optional trend), SectionCard, InfoCard, DataTable (sticky header, zebra,
+   row actions, built-in empty/loading/error states, card/table view toggle), Avatar (initials,
+   tinted color from the name), StatusBadge, ConsentBadge, KeyAlertChip, Tabs, Timeline,
+   FilterBar, EmptyState (gold sun illustration), Skeleton, Toast, ConfirmDialog, Stepper,
+   FormField. Update /ui-kit to show all of them in 4 combinations.
+6. Names. In the UI only (labels, titles, menu items, AR and EN strings; NOT routes, API paths,
+   table names or code identifiers):
+   - "Audit log" / "سجل التدقيق" becomes TWO pages: "Access Log" / "سجل الاطلاع" (who opened a
+     patient record from another clinic, with clinic, role, time and action; never doctor
+     names) and "Change Log" / "سجل التغييرات" (configuration, account and device changes).
+   - Never use the words "activity", "tracking" or "monitoring" for people.
+   - Keep the page "Who viewed my record" as is.
+7. Arabic RTL correctness. html lang and dir switch immediately. Patient names, phone numbers,
+   times and emails are wrapped in <bdi> or dir="auto", and phone numbers always render LTR
+   inside RTL text. Latin digits by default. Table text aligns to the start, numeric columns to
+   the end. Charts, steppers, timelines, progress bars and drawers mirror. Tooltips, dropdowns and
+   popovers open on the correct side. Keyboard focus order follows the visual order in RTL.
+8. Verification. Screenshots of the shell and the /ui-kit in 4 combinations (AR/EN x Light/Dark)
+   in /docs/screenshots/ui-1/, an automated check that fails on any hex color or physical
+   left/right CSS outside the tokens, a contrast test over all token pairs, axe with 0 critical
+   or serious issues, and a Playwright test that reloads with the network off and proves both
+   fonts still render.
