@@ -322,6 +322,7 @@
 .data-toc__link:hover { background: var(--amal-primary-soft); color: var(--amal-primary-text); }
 .data-toc__num { font-size: var(--amal-text-xs); color: var(--amal-muted); font-variant-numeric: tabular-nums; }
 .data-sec { padding-block: 32px; border-block-start: 1px solid var(--amal-border); scroll-margin-block-start: 80px; }
+.data-sec:focus-visible { outline: 3px solid var(--amal-focus-ring); outline-offset: 2px; }
 .data-sec__title { display: flex; flex-wrap: wrap; align-items: baseline; gap: 12px; margin: 0 0 8px; font-size: var(--amal-text-2xl); color: var(--amal-navy); }
 .data-sec__num { font-size: var(--amal-text-sm); color: var(--amal-primary-text); font-variant-numeric: tabular-nums; }
 .data-sec__intro { margin-block: 0 20px; color: var(--amal-muted); max-inline-size: 64ch; }

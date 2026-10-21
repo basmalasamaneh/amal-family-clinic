@@ -83,7 +83,8 @@ async function restartPush(actor: Actor, operations: unknown[]) {
     import { pool } from "@workspace/db";
     let text = ""; for await (const chunk of process.stdin) text += chunk;
     const input = JSON.parse(text);
-    const req = { cookies: { amal_session: input.session, amal_device: input.device } };
+     const req = { method: "POST", originalUrl: "/api/sync/push", path: "/sync/push",
+       cookies: { amal_session: input.session, amal_device: input.device } };
     try {
       await new Promise((resolve, reject) => authenticate(req, {}, error => error ? reject(error) : resolve()));
       process.stdout.write(JSON.stringify(await pushSync(req.auth, { operations: input.operations })));
@@ -471,6 +472,115 @@ test("sync API: ordered durable operations, explicit resolutions and scoped curs
       operations: [createOp(2, { ...booking(31), startsAt: "2091-03-24T03:30:00+03:00" })],
     })).status, 400);
   });
+  await t.test("reloaded conflicts recompute alternatives from current bookings, holds and network authority without changing evidence", async () => {
+    const actor = await makeActor(), saved = await conflict(actor, 120, 14);
+    const stored = (await admin.query("SELECT * FROM operational.sync_conflicts WHERE id=$1", [saved.id])).rows[0];
+    const read = async () => {
+      const response = await request(actor, "/sync/conflicts");
+      assert.equal(response.status, 200, JSON.stringify(response.data));
+      const item = response.data.items.find((row: { id: string }) => row.id === saved.id);
+      assert(item);
+      const check = await request(actor, "/appointments/check", "POST", saved.input);
+      assert.equal(check.status, 200);
+      assert.deepEqual(item.reasons, check.data.conflicts, "deliver current authorized preview, not stored slots");
+      return item.reasons.flatMap((reason: { suggestedSlots: { startsAt: string; endsAt: string }[] }) => reason.suggestedSlots);
+    };
+    const beforeRead = await evidence();
+    const first = await read();
+    assert(first.length > 0, "reload must retain selectable move alternatives");
+    assert.deepEqual(await evidence(), beforeRead, "reading suggestions must not mutate the operation ledger/feed/audits");
+    const occupied = first[0]!;
+    await direct(desk, { ...booking(120, 13), ...occupied });
+    const afterBooking = await read();
+    assert(!afterBooking.some((slot: { startsAt: string }) => slot.startsAt === occupied.startsAt));
+    const heldSlot = afterBooking[0]!;
+    const held = await request(desk, "/appointments/holds", "POST", {
+      clientOpId: randomUUID(), clinicId: saved.input.clinicId, doctorId: saved.input.doctorId,
+      patientId: saved.input.patientId, ...heldSlot,
+    });
+    assert.equal(held.status, 201, JSON.stringify(held.data));
+    assert(!(await read()).some((slot: { startsAt: string }) => slot.startsAt === heldSlot.startsAt));
+    await admin.query("UPDATE operational.appointment_holds SET expires_at=now()-interval '1 second' WHERE token=$1", [held.data.token]);
+    assert((await read()).some((slot: { startsAt: string }) => slot.startsAt === heldSlot.startsAt));
+    // A remote patient's booking may influence suggestions only while both clinics
+    // currently publish/consume Full scheduling data.
+    await direct(remote, { ...booking(120, 14, doctorIds[2]!, clinicIds[1]!), ...heldSlot });
+    assert(!(await read()).some((slot: { startsAt: string }) => slot.startsAt === heldSlot.startsAt));
+    try {
+      for (const clinicId of [clinicIds[0]!, clinicIds[1]!]) {
+        await admin.query("UPDATE operational.clinics SET adoption_state='lite',network_mode='lite' WHERE clinic_id=$1", [clinicId]);
+        assert((await read()).some((slot: { startsAt: string }) => slot.startsAt === heldSlot.startsAt),
+          "restricted remote occupancy must not suppress a fresh local alternative");
+        await admin.query("UPDATE operational.clinics SET adoption_state='full',network_mode='full' WHERE clinic_id=$1", [clinicId]);
+      }
+    } finally {
+      await admin.query("UPDATE operational.clinics SET adoption_state='full',network_mode='full' WHERE clinic_id=ANY($1::integer[])", [clinicIds]);
+    }
+    assert.deepEqual((await admin.query("SELECT * FROM operational.sync_conflicts WHERE id=$1", [saved.id])).rows[0], stored,
+      "fresh delivery must preserve original proposal, reasons, status and version");
+    const alternatives = await read();
+    const resolved = await request(actor, "/sync/resolve", "POST", {
+      clientOpId: randomUUID(), conflictId: saved.id, expectedVersion: 1, action: "move-self", ...alternatives[0],
+    });
+    assert.equal(resolved.status, 200, JSON.stringify(resolved.data));
+    assert.equal(resolved.data.status, "resolved", "fresh alternatives remain usable by the unchanged explicit move contract");
+  });
+  await t.test("historical merged-patient proposal cannot abort a page or restore stale alternatives for it", async () => {
+    const actor = await makeActor();
+    const freshPatient = async () => {
+      const { rows: [row] } = await admin.query(`INSERT INTO operational.patients
+        (patient_name,phone,dob,name_normalized,created_clinic_id)
+        VALUES($1,'sync-fixture-phone','1980-01-01',$1,$2) RETURNING patient_id`,
+      [`sync-test-${randomUUID()}`, clinicIds[0]]);
+      patientIds.push(row.patient_id);
+      return row.patient_id as number;
+    };
+    const source = await freshPatient(), target = await freshPatient();
+    await direct(desk, booking(160));
+    const historicalInput = { ...booking(160), patientId: source };
+    const historical = await request(actor, "/appointments", "POST", historicalInput);
+    assert.equal(historical.status, 409);
+    const historicalId = (await admin.query("SELECT conflict_id FROM operational.appointment_operations WHERE client_op_id=$1",
+      [historicalInput.clientOpId])).rows[0]?.conflict_id;
+    assert(historicalId);
+    // Reproduce a pre-fix historical merge, not a newly permitted merge. The
+    // durable proposal/evidence remain byte-for-byte original.
+    const stored = (await admin.query("SELECT * FROM operational.sync_conflicts WHERE id=$1", [historicalId])).rows[0];
+    assert(stored.reasons.flatMap((r: any) => r.suggestedSlots ?? []).length > 0);
+    await admin.query("UPDATE operational.patients SET merged_into_id=$2 WHERE patient_id=$1", [source, target]);
+    await direct(desk, booking(162));
+    const actionableInput = { ...booking(162), patientId: target };
+    const actionable = await request(actor, "/appointments", "POST", actionableInput);
+    assert.equal(actionable.status, 409);
+    const actionableId = (await admin.query("SELECT conflict_id FROM operational.appointment_operations WHERE client_op_id=$1",
+      [actionableInput.clientOpId])).rows[0]?.conflict_id;
+    assert(actionableId);
+    const beforeRead = await evidence();
+    const page = await request(actor, "/sync/conflicts?limit=2");
+    assert.equal(page.status, 200, JSON.stringify(page.data));
+    assert.deepEqual(page.data.items.map((r: any) => r.id), [historicalId, actionableId]);
+    assert.equal(page.data.nextCursor, null);
+    const [ineligible, current] = page.data.items;
+    assert.deepEqual(ineligible.reasons, [{ code: "INVALID_BOOKING_REFERENCE", messageKey: "error.validation", params: {}, conflictId: historicalId }]);
+    assert.deepEqual(ineligible.operation.payload, historicalInput);
+    assert.equal(ineligible.status, "open");
+    assert.equal(ineligible.version, 1);
+    const checked = await request(actor, "/appointments/check", "POST", actionableInput);
+    assert.equal(checked.status, 200);
+    assert.deepEqual(current.reasons, checked.data.conflicts);
+    const slots = current.reasons.flatMap((r: any) => r.suggestedSlots ?? []);
+    assert(slots.length > 0, "unrelated actionable conflict retains fresh alternatives");
+    assert.deepEqual(await evidence(), beforeRead);
+    assert.deepEqual((await admin.query("SELECT * FROM operational.sync_conflicts WHERE id=$1", [historicalId])).rows[0], stored);
+    const resolved = await request(actor, "/sync/resolve", "POST", {
+      clientOpId: randomUUID(), conflictId: actionableId, expectedVersion: 1, action: "move-self", ...slots[0],
+    });
+    assert.equal(resolved.status, 200, JSON.stringify(resolved.data));
+    assert.equal(resolved.data.status, "resolved");
+    const remaining = await request(actor, "/sync/conflicts");
+    assert.equal(remaining.status, 200);
+    assert.deepEqual(remaining.data.items.map((r: any) => r.id), [historicalId]);
+  });
   await t.test("cached conflicts and operation replays do not redisclose remote existence after downgrade", async () => {
     const actor = await makeActor();
     await direct(remote, booking(90, 15, doctorIds[2]!, clinicIds[1]!));
@@ -554,8 +664,10 @@ test("sync API: ordered durable operations, explicit resolutions and scoped curs
       if (!since) since = null;
       assert(changes.length < 1000, "Pagination must make progress");
     } while (since);
-    const expected = (await admin.query(`SELECT id::text FROM operational.sync_changes
-      WHERE clinic_id=$1 AND (kind='appointment' OR (payload->>'actorId')::int=$2) ORDER BY id`, [actor.clinicId, actor.id])).rows.map(r => r.id);
+    const expected = (await admin.query(`SELECT changes.id::text AS id FROM operational.sync_changes AS changes
+      WHERE clinic_id=$1 AND (kind='appointment' OR (payload->>'actorId')::int=$2) ORDER BY changes.id`, [actor.clinicId, actor.id])).rows.map(r => r.id);
+    assert(changes.every((change, i) => i === 0 || BigInt(changes[i - 1]!.id) < BigInt(change.id)),
+      "Pull positions must increase numerically across digit boundaries, never lexicographically");
     assert.deepEqual(changes.map(c => c.id), expected, "Cursor never advances past an undelivered authorized event");
     assert.equal(new Set(changes.map(c => c.id)).size, changes.length);
     for (const change of changes) {

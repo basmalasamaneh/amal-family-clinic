@@ -17,7 +17,7 @@ export default defineConfig({
   reporter: [['list'], ['json', { outputFile: 'generated-artifacts/offline-live/results.json' }]],
   use: { ...booking.use, baseURL: 'http://127.0.0.1:4189', serviceWorkers: 'allow' },
   webServer: {
-    command: 'PORT=4189 BASE_PATH=/ PWA_VERIFY=1 pnpm --filter @workspace/amal-network build && NODE_ENV=development AUTH_ALLOWED_ORIGINS=http://127.0.0.1:4189 pnpm exec tsx tests/offline/server.ts',
+    command: 'NODE_ENV=production PORT=4189 BASE_PATH=/ PWA_VERIFY=1 pnpm --filter @workspace/amal-network build && NODE_ENV=development AUTH_ALLOWED_ORIGINS=http://127.0.0.1:4189 pnpm exec tsx tests/offline/server.ts',
     url: 'http://127.0.0.1:4189',
     reuseExistingServer: false,
     timeout: 120_000,

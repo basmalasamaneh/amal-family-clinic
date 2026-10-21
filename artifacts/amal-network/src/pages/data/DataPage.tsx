@@ -60,7 +60,7 @@ export function DataPage({ signedIn, home }: { signedIn: boolean; home: string }
             <ol>{SECTIONS.map((s, i) => <li key={s}><a href={`#data-${s}`} className="data-toc__link"><span className="data-toc__num">{num(i + 1)}</span>{t(`data.${s}.title`)}</a></li>)}</ol>
           </nav>
           <div className="data-body">
-            <section id="data-stored" className="data-sec">
+            <section id="data-stored" tabIndex={-1} className="data-sec">
               <h2 className="data-sec__title"><span className="data-sec__num">{num(1)}</span>{t('data.stored.title')}</h2>
               <p className="data-sec__intro">{t('data.stored.intro')}</p>
               <ul className="data-grid">
@@ -74,7 +74,7 @@ export function DataPage({ signedIn, home }: { signedIn: boolean; home: string }
               </ul>
             </section>
 
-            <section id="data-who" className="data-sec">
+            <section id="data-who" tabIndex={-1} className="data-sec">
               <h2 className="data-sec__title"><span className="data-sec__num">{num(2)}</span>{t('data.who.title')}<Planned /></h2>
               <p className="data-sec__intro">{t('data.who.intro')}</p>
               <div className="data-table-wrap" tabIndex={0} role="region" aria-label={t('data.who.title')}>
@@ -95,7 +95,7 @@ export function DataPage({ signedIn, home }: { signedIn: boolean; home: string }
               </ul>
             </section>
 
-            <section id="data-consent" className="data-sec">
+            <section id="data-consent" tabIndex={-1} className="data-sec">
               <h2 className="data-sec__title"><span className="data-sec__num">{num(3)}</span>{t('data.consent.title')}<Planned /></h2>
               <ol className="data-levels">
                 {(['none', 'basic', 'clinical'] as const).map((l) => (
@@ -109,12 +109,12 @@ export function DataPage({ signedIn, home }: { signedIn: boolean; home: string }
               </ul>
             </section>
 
-            <section id="data-audit" className="data-sec">
+            <section id="data-audit" tabIndex={-1} className="data-sec">
               <h2 className="data-sec__title"><span className="data-sec__num">{num(4)}</span>{t('data.audit.title')}<Planned /></h2>
               <p className="data-sec__intro">{t('data.audit.body')}</p>
             </section>
 
-            <section id="data-choices" className="data-sec">
+            <section id="data-choices" tabIndex={-1} className="data-sec">
               <h2 className="data-sec__title"><span className="data-sec__num">{num(5)}</span>{t('data.choices.title')}</h2>
               <div className="data-choices">
                 {(['withdraw', 'export'] as const).map((c) => (

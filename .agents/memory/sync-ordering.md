@@ -33,3 +33,13 @@ the pull cursor has advanced, permanently hiding updates.
 under the same authenticated-device lock. Preserve tombstone evidence across
 bootstrap and never treat a cached original proposal as proof a deleted canonical
 appointment still exists.
+
+Cursor feeds must sort by the underlying numeric key, not a text-projected
+output alias.
+
+**Why:** PostgreSQL can resolve an unqualified ORDER BY to the selected text
+alias, causing lexical ordering while cursor comparisons remain numeric. That
+can skip or replay events despite a seemingly correct ORDER BY.
+
+**How to apply:** Qualify numeric source keys and include digit-boundary cursor
+tests (9→10, 99→100) whenever a wire contract serializes IDs as strings.

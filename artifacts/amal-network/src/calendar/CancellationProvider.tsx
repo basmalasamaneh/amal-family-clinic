@@ -38,12 +38,29 @@ export function CancellationProvider({ children, clinicNames }: { children: Reac
   const [target, setTarget] = useState<CalendarAppointment | null>(null);
   const [editing, setEditing] = useState<CalendarAppointment | null>(null);
   const [updated, setUpdated] = useState(false);
-  const editTrigger = useRef<HTMLElement | null>(null);
   const trigger = useRef<HTMLElement | null>(null);
+  const [focusAppointmentId, setFocusAppointmentId] = useState<number | null>(null);
   const [now, setNow] = useState(Date.now);
   useEffect(() => {
+    if (focusAppointmentId === null) return;
+    // A successful edit reloads the local calendar and temporarily unmounts
+    // its cards. Use the existing ticker to wait for that render, not a stale
+    // trigger node or a single animation frame during the loading skeleton.
+    const frame = requestAnimationFrame(() => {
+      const card = document.querySelector<HTMLElement>(`[data-testid="card-appointment-${focusAppointmentId}"]`);
+      if (card && !card.matches(':disabled')) {
+        card.focus();
+        setFocusAppointmentId(null);
+      } else if (!document.querySelector('[data-testid="state-calendar-loading"]')) {
+        document.getElementById('page-title')?.focus();
+        setFocusAppointmentId(null);
+      }
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [focusAppointmentId, now]);
+  useEffect(() => {
     const timer = setInterval(() => setNow(Date.now()), 250);
-    const clear = () => { store.clear(); setTarget(null); setEditing(null); setUpdated(false); setSuccess(false); setCreated(null); };
+    const clear = () => { store.clear(); setTarget(null); setEditing(null); setUpdated(false); setSuccess(false); setCreated(null); setFocusAppointmentId(null); };
     const onCreated = (event: Event) => {
       const detail = (event as CustomEvent<{ kind?: string; simulated?: boolean }>).detail;
       if (detail?.kind === 'created') setCreated(detail.simulated ? 'simulated' : 'created');
@@ -69,7 +86,9 @@ export function CancellationProvider({ children, clinicNames }: { children: Reac
       {entries.map((item) => <div key={item.target.id} className="cancel-notice">
         <strong>{t('appointment', { id: item.target.id })}</strong>
         <p role="status">{item.state === 'pending' ? t('pending', { seconds: Math.max(0, Math.ceil((item.deadline - now) / 1000)) }) : t(item.state === 'sending' ? 'sending' : 'failed')}</p>
-        {item.state === 'pending' && <button className="cal-btn" data-cancellation-undo={item.target.id} onClick={() => store.undo(item.target.id)}>{t('undo')}</button>}
+        {item.state === 'pending' && <button className="cal-btn" data-cancellation-undo={item.target.id} onClick={() => {
+          if (store.undo(item.target.id)) setFocusAppointmentId(item.target.id);
+        }}>{t('undo')}</button>}
         {item.state === 'failed' && <><button className="cal-btn" onClick={() => store.retry(item.target.id)}>{t('retry')}</button><button className="cal-btn" onClick={() => store.dismiss(item.target.id)}>{t('dismiss')}</button></>}
       </div>)}
     </section>
@@ -92,7 +111,7 @@ export function CancellationProvider({ children, clinicNames }: { children: Reac
               store.schedule({ id: target.id, clinicId: target.clinicId, version: target.version! }); setSuccess(false); setTarget(null);
             }}>{t('confirm')}</button>}
             {allowed && target && <button type="button" className="cal-btn" data-testid="button-edit-appointment" onClick={() => {
-              editTrigger.current = trigger.current; setUpdated(false); setEditing(target); setTarget(null);
+              setUpdated(false); setEditing(target); setTarget(null);
             }}><CalendarClock aria-hidden="true" />{t('ed.action', { ns: 'translation' })}</button>}
             <WalkInHandoff className="cal-btn" testId="button-cancel-walkin" />
             <Dialog.Close className="cal-btn" aria-label={t('close')}><X aria-hidden="true" /></Dialog.Close>
@@ -102,11 +121,7 @@ export function CancellationProvider({ children, clinicNames }: { children: Reac
     </Dialog.Root>
     {editing && <EditAppointmentDrawer target={editing} clinicName={clinicNameOf(editing.clinicId)} onClose={(a) => {
       setEditing(null); if (a) setUpdated(true);
-      requestAnimationFrame(() => {
-        const el = editTrigger.current;
-        if (el?.isConnected && !el.matches(':disabled')) el.focus();
-        else (document.querySelector<HTMLElement>(`[data-testid="card-appointment-${a?.id ?? editing.id}"]`) ?? document.getElementById('page-title'))?.focus();
-      });
+      setFocusAppointmentId(a?.id ?? editing.id);
     }} />}
   </Context.Provider>;
 }

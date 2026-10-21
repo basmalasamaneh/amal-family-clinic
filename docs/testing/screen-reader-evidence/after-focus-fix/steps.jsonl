@@ -1,0 +1,15 @@
+{"time":"2026-10-21T05:45:12.955Z","step":"en: fresh real public password login"}
+{"time":"2026-10-21T05:45:17.442Z","step":"en: empty-submit button focus (no input refocus)"}
+{"time":"2026-10-21T05:45:19.252Z","step":"en: keyboard Enter empty submit; automatic announcement window starts"}
+{"time":"2026-10-21T05:45:19.275Z","step":"en: automatic first-invalid focus assertion passed","focusedTestId":"input-email","elapsedMs":22}
+{"time":"2026-10-21T05:45:22.776Z","step":"en: automatic announcement window ends; no manual field refocus occurred"}
+{"time":"2026-10-21T05:45:22.777Z","step":"en: keyboard Tab from automatically focused email to password"}
+{"time":"2026-10-21T05:45:25.590Z","step":"en: password description observation ends"}
+{"time":"2026-10-21T05:45:25.590Z","step":"ar: fresh real public password login"}
+{"time":"2026-10-21T05:45:28.570Z","step":"ar: empty-submit button focus (no input refocus)"}
+{"time":"2026-10-21T05:45:30.377Z","step":"ar: keyboard Enter empty submit; automatic announcement window starts"}
+{"time":"2026-10-21T05:45:30.395Z","step":"ar: automatic first-invalid focus assertion passed","focusedTestId":"input-email","elapsedMs":17}
+{"time":"2026-10-21T05:45:33.897Z","step":"ar: automatic announcement window ends; no manual field refocus occurred"}
+{"time":"2026-10-21T05:45:33.897Z","step":"ar: keyboard Tab from automatically focused email to password"}
+{"time":"2026-10-21T05:45:36.708Z","step":"ar: password description observation ends"}
+{"time":"2026-10-21T05:45:36.709Z","step":"completed focused real password retest","blockedWrites":0}

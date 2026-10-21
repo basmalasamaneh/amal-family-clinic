@@ -1,0 +1,16 @@
+driver_exit=0
+direct_atspi_bus=1
+orca_version=Orca version 48.2, AT-SPI2 version: 2.56.2
+speech_dispatcher_version=speech-dispatcher 0.12.1
+Copyright (C) 2002-2012 Brailcom, o.p.s.
+This is free software; you can redistribute it and/or modify it
+under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2, or (at your option)
+any later version. Please see COPYING for more details.
+
+speech_output_lines=179
+atspi_focus_event_lines=1015
+chromium_script_event_lines=4925
+
+Speech startup errors (infrastructure only):
+/tmp/amal-orca-audit.hnTzqe/orca.log:** (gst-plugin-scanner:7736): CRITICAL **: 05:33:23.327: pygobject initialization failed: could not import gobject (error was: ModuleNotFoundError("No module named 'gi'"))

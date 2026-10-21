@@ -1,0 +1,95 @@
+Initial representative screen-reader setup: HISTORICAL BLOCKER
+
+SUPERSEDED by the explicitly authorized direct-private-bus alternative.
+See executed-audit.txt, announcements.txt, steps.jsonl and environment.txt.
+The two failures below remain preserved as historical evidence; statements
+about no browser/reader execution describe these initial attempts only.
+
+Scope
+-----
+Requested reader: Orca 48.2 (installed Nix executable), Speech Dispatcher 0.12.1,
+private Xvfb display and private dbus-run-session, Chromium wrapper
+/repl/tools/bin/chromium. Real public /login and /data were the planned targets.
+No authenticated fixture was executed. No credentials were used. No browser was
+launched by this audit because AT-SPI setup failed before that stage.
+
+Exactly two bounded setup approaches were executed; stopped after the second.
+There are NO speech/announcement transcripts, human listening observations, or
+AT-SPI focus-event observations from these attempts. This is not an AX-tree
+audit or an accessibility pass. Login/data labels, focus, dynamic validation,
+PIN device-context alerts and English/Arabic locale changes remain unverified
+by an actual reader in this environment.
+
+Approach 1
+----------
+Command: bash scripts/screen-reader-audit.sh
+The initial script invoked:
+  timeout 240 dbus-run-session -- bash "$0" --inside-session
+Sanitized infrastructure excerpt:
+  Failed to start message bus: Failed to open "/etc/dbus-1/session.conf":
+  No such file or directory
+  dbus-run-session: EOF reading address from bus daemon
+Exit status: 127. Orca/Chromium/AT-SPI not reached.
+
+Approach 2 (default launcher path; not successful --direct-atspi path)
+---------------------------
+Command: bash scripts/screen-reader-audit.sh
+Adjusted only audit setup: passed the installed Nix D-Bus session.conf explicitly:
+  DBUS_ROOT="$(dirname "$(dirname "$(command -v dbus-run-session)")")"
+  dbus-run-session --config-file="$DBUS_ROOT/share/dbus-1/session.conf" ...
+The private session bus started. Xvfb started on an allocated private display.
+The AT-SPI 2.56.2 bus launcher and org.a11y.Bus.GetAddress then failed:
+  Error org.a11y.Bus.Error: Failed to spawn child process
+  "/run/current-system/sw/bin/dbus-daemon" (No such file or directory)
+  Failed to launch bus: Failed to spawn child process
+  /run/current-system/sw/bin/dbus-daemon (No such file or directory)
+Exit status: 1. No actual accessibility bus, reader, browser, or synthesis reached.
+Display/session processes were cleaned up and temporary raw infrastructure
+files removed. No raw auth/network logs, tokens, or private DOM were collected.
+
+Reproducible harness and requirements
+------------------------------------
+From workspace root:
+  bash -n scripts/screen-reader-audit.sh
+  node --check scripts/src/screen-reader-audit.mjs
+  bash scripts/screen-reader-audit.sh
+
+Requires an already-running public app at http://localhost:80, installed Orca,
+speech-dispatcher, dbus-run-session, Xvfb, @playwright/test, and the Chromium
+wrapper. The default script path fails at the missing AT-SPI launcher
+dependency in this environment; it is runnable but NOT a claim of completion.
+The infrastructure owner must provide a Nix AT-SPI build whose dbus-daemon
+path actually exists, or another supported accessibility-bus configuration,
+before that launcher path can work. No global filesystem workaround,
+production fix, workflow restart, or app-server restart was attempted.
+Subsequently the parent explicitly authorized one narrow direct-private-bus
+alternative, which succeeded; see executed-audit.txt for actual results.
+
+After infrastructure repair, the harness is designed to use an isolated fresh
+browser profile, reject non-read-only network methods, leave password/email
+empty, and save only:
+  steps.jsonl       probe names, times and section-focus booleans
+  announcements.txt filtered real Orca SPEECH OUTPUT lines
+  environment.txt   infrastructure/result counters and sanitized failures
+These future files must be reviewed before sharing. Do not treat planned
+probes, event counts, or DOM focus booleans as evidence of spoken output.
+
+Planned coverage (NOT EXECUTED)
+------------------------------
+Real login: English sequential Tab order; en/ar email/password labels;
+empty-submit validation announcements and refocus descriptions; empty password
+visibility toggle state; real unauthenticated reception PIN context error;
+locale switch while the alert is mounted; data-link keyboard navigation.
+Real data: ar/en heading-on-arrival, five TOC link labels and keyboard fragment
+focus targets, visibility-table region label, Orca next-heading key, back link,
+and heading focus after locale change.
+
+Evidence interpretation on any future successful run
+---------------------------------------------------
+Orca SPEECH OUTPUT is a reader-generated announcement/synthesis-request
+transcript, not human listening and not proof of audible output or voice
+pronunciation. Speech Dispatcher/audio/Arabic voice availability must be
+reported separately. A real reader must receive AT-SPI application/focus events
+and produce correlated announcements before this task can be marked executed.
+Authenticated-role workflows, mobile reader behavior, exhaustive reading order,
+and voice intelligibility are outside this representative public-page harness.

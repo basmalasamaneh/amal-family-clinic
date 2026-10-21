@@ -14,5 +14,5 @@ app.use('/api', (req: any, res: any, next: any) => {
 });
 const root = resolve('artifacts/amal-network/dist/pwa-verification');
 app.use(express.static(root, { etag: false, setHeaders: (res: any) => res.setHeader('Cache-Control', 'no-store') }));
-app.get(/^\/(?:desk\/[a-z-]+|login)?$/, (_req: any, res: any) => res.sendFile(resolve(root, 'index.html')));
+app.get(/^\/(?:(?:desk|doctor|admin|work)\/[a-z-]+|login|data|ui-kit)?$/, (_req: any, res: any) => res.sendFile(resolve(root, 'index.html')));
 app.listen(4189, '127.0.0.1', () => console.log('Offline E2E real API/PWA ready'));

@@ -2,8 +2,8 @@ import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 import { z } from "zod/v4";
 import type { Auth } from "../lib/auth";
 import { forbidden } from "../lib/auth";
-import { fail } from "../lib/auth-errors";
-import { canonical, projectStoredOperationResult, transaction } from "../appointments/service";
+import { ApiError, fail } from "../lib/auth-errors";
+import { canonical, previewAppointmentOperation, projectStoredOperationResult, transaction } from "../appointments/service";
 
 const page = { limit: z.coerce.number().int().min(1).max(100).default(25) };
 const pullInput = z.object({ ...page, since: z.string().max(2048).optional() }).strict();
@@ -61,10 +61,10 @@ export async function pullSync(auth: Auth, raw: unknown) {
     const cursor = decode(input.since, { v: 1, kind: "pull", scope: scope(actor), filter: "" }, "0");
     if (!/^(0|[1-9][0-9]{0,18})$/.test(cursor.after) || BigInt(cursor.after) > 9223372036854775807n)
       throw fail(400, "INVALID_CURSOR", "invalidCursor");
-    const { rows } = await client.query(`SELECT id::text,kind,entity_id,payload FROM operational.sync_changes
+    const { rows } = await client.query(`SELECT changes.id::text AS id,kind,entity_id,payload FROM operational.sync_changes AS changes
       WHERE clinic_id=$1 AND ($2::integer IS NULL OR doctor_id=$2)
         AND (kind='appointment' OR (payload->>'actorId')::integer=$3)
-        AND id>$4::bigint ORDER BY id LIMIT $5`,
+        AND changes.id>$4::bigint ORDER BY changes.id LIMIT $5`,
     [actor.clinicId, actor.role === "doctor" ? actor.doctorId : null, actor.id, cursor.after, input.limit + 1]);
     const delivered = rows.slice(0, input.limit);
     const since = encode({ ...cursor, after: delivered.at(-1)?.id ?? cursor.after });
@@ -80,7 +80,7 @@ export async function pullSync(auth: Auth, raw: unknown) {
 
 export async function listSyncConflicts(auth: Auth, raw: unknown) {
   const input = conflictsInput.parse(raw);
-  return transaction(auth, async (client, actor) => {
+  return transaction(auth, async (client, actor, now) => {
     const cursor = decode(input.cursor, { v: 1, kind: "conflicts", scope: scope(actor), filter: input.status }, "0");
     if (!/^(0|[1-9][0-9]{0,18})$/.test(cursor.after) || BigInt(cursor.after) > 9223372036854775807n)
       throw fail(400, "INVALID_CURSOR", "invalidCursor");
@@ -117,6 +117,28 @@ export async function listSyncConflicts(auth: Auth, raw: unknown) {
         [reason.with.appointmentId, actor.clinicId, actor.role === "doctor" ? actor.doctorId : null]);
         if (!visible.length) continue;
         reasons.push({ ...reason, with: reason.with, suggestedSlots: [] });
+      }
+      if (row.status === "open") {
+        // Stored slots were computed under former authority. Replace scheduling
+        // evidence entirely with a fresh preview under this transaction's lock,
+        // current actor, relationships, clinic modes, occupancy and live holds.
+        // Keep durable business errors (e.g. VERSION_CONFLICT), not stale conflicts.
+        const schedulingTypes = new Set(["doctor-overlap", "patient-overlap", "same-day-other-clinic", "outside-hours", "slot-held"]);
+        const businessReasons = reasons.filter(reason => !schedulingTypes.has(reason.type));
+        try {
+          const fresh = await previewAppointmentOperation({ client, actor, now }, row.operation.target, row.operation.payload);
+          reasons.splice(0, reasons.length, ...businessReasons, ...fresh.conflicts);
+        } catch (error) {
+          // A durable proposal can outlive an eligible patient/doctor or its
+          // target appointment. Deliver an explicit, capability-free reason so
+          // one historical row cannot hide the rest of this bounded page.
+          // Never catch authorization, malformed stored data or server failures.
+          if (!(error instanceof ApiError) ||
+            !((error.status === 422 && error.code === "INVALID_BOOKING_REFERENCE") ||
+              (error.status === 404 && error.code === "NOT_FOUND" && /^update:[1-9][0-9]*$/.test(row.operation.target)))) throw error;
+          reasons.splice(0, reasons.length, ...businessReasons,
+            { code: error.code, messageKey: `error.${error.key}`, params: error.params, conflictId: row.id });
+        }
       }
       items.push({
         id: row.id, clientOpId: row.client_op_id, operation: { target: row.operation.target, payload: proposal },

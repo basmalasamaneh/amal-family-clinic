@@ -163,6 +163,7 @@ test('three UI bookings survive outage, committed-response loss, retry and expli
     const conflictId = String(first.conflicts[0]!.id);
     const card = page.getByTestId(`card-conflict-${conflictId}`);
     const radio = card.locator('[data-testid^="radio-move-"]').first();
+    await expect(radio, 'Conflict must offer a selectable move alternative').toBeVisible();
     const alternative = await radio.locator('..').locator('time').getAttribute('datetime');
     expect(alternative).toBeTruthy();
     expect(alternative).not.toBe(pending.proposals[2]!.input.startsAt);

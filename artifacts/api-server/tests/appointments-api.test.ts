@@ -138,7 +138,7 @@ test("appointment APIs: authenticated scope, transactions, idempotency, holds an
     const clinics = await request(desk, "/clinics");
     assert.equal(clinics.status, 200, JSON.stringify(clinics.data));
     assert.deepEqual(clinics.data.items.map((c: { id: number }) => c.id), [desk.clinicId]);
-    assert.deepEqual(Object.keys(clinics.data.items[0]).sort(), ["id", "name", "mode", "timezone"].sort());
+    assert.deepEqual(Object.keys(clinics.data.items[0]).sort(), ["id", "name", "mode", "timezone", "adoption"].sort());
     assert.equal((await request(desk, `/doctors?clinicId=${remoteDoctor.clinicId}`)).status, 403);
     assert.equal((await request(desk, `/doctors?clinicId=${desk.clinicId}&patientId=1`)).status, 400);
     const own = await request(doctor, `/doctors?clinicId=${doctor.clinicId}`);

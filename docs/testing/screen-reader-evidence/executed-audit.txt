@@ -1,0 +1,156 @@
+Actual representative Orca audit: EXECUTED, with limitations/findings
+=================================================================
+
+Execution and provenance
+------------------------
+The parent explicitly authorized one additional, narrow alternative after
+the two initial setup failures: bypass the broken org.a11y.Bus launcher.
+No other setup attempts or browser reruns were made.
+
+Static support check:
+  strings /nix/store/qrij2csr7p6jsfa40d7h4ckzqg4wd5w2-at-spi2-core-2.56.2/lib/libatspi.so.0 \
+    | grep -Fx AT_SPI_BUS_ADDRESS
+Result: AT_SPI_BUS_ADDRESS exists in the installed reader AT-SPI client library.
+The installed registry binary references atspi_get_a11y_bus. Chromium's wrapper
+and underlying executable were inspected for environment/library behavior;
+the runtime output, not a Chromium-string assertion, establishes that its
+public-page events reached Orca.
+
+Reproduction from workspace root, against the already-running public app:
+  bash -n scripts/screen-reader-audit.sh
+  node --check scripts/src/screen-reader-audit.mjs
+  bash scripts/screen-reader-audit.sh --direct-atspi
+
+The harness uses dbus-run-session with the installed explicit session.conf,
+then installed dbus-daemon --nofork with AT-SPI accessibility.conf on a second
+private bus. It exports the actual AT_SPI_BUS_ADDRESS, explicitly launches
+at-spi2-registryd and checks registry Peer.Ping before starting the real reader.
+It uses private Xvfb and a fresh headed Chromium profile. No global workaround,
+production changes, workflow restart, authentication, or fixture was used.
+
+Recorded interval: 2026-10-21 05:33:22–05:35:52 UTC (runtime clock).
+Reader: Orca 48.2, AT-SPI2 2.56.2.
+Speech Dispatcher: 0.12.1, espeak-ng configured, pulse output configured.
+Browser: installed /repl/tools/bin/chromium (Chromium 152 wrapper).
+Targets: real http://localhost:80/login and /data, Arabic and English.
+Driver completed all 76 step records with exit status 0. The enclosing shell
+returned 1 due solely to deleting read-only Nix-copied module directories;
+that cleanup issue was fixed in the harness without another browser execution.
+The remaining config-only temporary directory was then removed. No audit
+display, browser, reader, dispatcher, registry or bus process remained.
+
+Evidence is actual real-reader-generated announcement/synthesis-request text:
+179 Orca SPEECH OUTPUT lines, correlated by time with steps.jsonl. Debug counters
+recorded 1015 focus-pattern lines and 4925 Chromium-pattern lines. These are
+diagnostic substring counts, NOT unique accessibility event counts or pass
+counts. The actual page names, roles, states and errors in announcements.txt
+are the substantive reader evidence; no AX-tree snapshot was substituted.
+
+IMPORTANT: no human listened, no audio recording was made, and audible playback,
+Arabic voice availability/pronunciation, language switching of the synthesis
+voice and speech intelligibility were NOT verified. The voice dictionary
+{'established': False} is preserved exactly from Orca output; it is not evidence
+that audio was heard. A GStreamer scanner gi-import warning was recorded;
+reader-generated output continued. Do not label this a human listening test,
+full accessibility certification, or a blanket passing audit.
+
+Observed successes and exact sanitized transcript excerpts
+-----------------------------------------------------------
+English sequential keyboard traversal, starting from a focused skip link:
+  05:33:30.636096 'Skip to main content link.'
+  05:33:32.835694 'العربية toggle button not pressed.'
+  05:33:35.038415 'English toggle button pressed.'
+  05:33:37.246059 'Light toggle button pressed.'
+  05:33:39.446750 'Dark toggle button not pressed.'
+  05:33:41.663812 'Email and password toggle button pressed.'
+  05:33:43.882831 'Reception PIN toggle button not pressed.'
+  05:33:46.079384 'Email required entry required.'
+  05:33:48.290407 'Password required password text required.'
+  05:33:50.494462 'Show password toggle button not pressed.'
+  05:33:52.701790 'Sign in button.'
+  05:33:54.911520 'Your data, your decision What we store, who can see it and how to change your mind. link.'
+This is actual keyboard Tab traversal for those eleven transitions. Later
+targeted probes use DOM focus followed by actual keyboard Space/Enter; they
+are labeled focus probes in steps.jsonl, not claimed as complete Tab audits.
+
+Empty-password visibility toggle generated 'pressed' at 05:34:03.740668.
+No typed email, password or other credential was present.
+
+English validation became readable on targeted refocus after empty submit:
+  05:34:10.372582 'Email required entry required.'
+  05:34:10.372592 'invalid entry.'
+  05:34:10.372599 'Enter a valid email address.'
+  05:34:12.587247 'Password required entry required.'
+  05:34:12.587263 'invalid entry.'
+  05:34:12.587271 'Enter your password (up to 72 characters).'
+
+Real public unregistered-device error, without credentials or auth POST:
+  05:34:17.090396 'Checking this device'
+  05:34:17.247488 'This device is not registered for reception'
+  05:34:17.347738 'This device is not registered for reception PIN sign-in only works on a device your clinic administrator has registered. Doctors and administrators can use email and password instead. Devices cannot be registered from this screen.'
+The subsequent live Arabic locale switch while this error was mounted produced:
+  05:34:23.956129 'pressed'
+  05:34:24.027989 'هذا الجهاز غير مسجّل للاستقبال'
+Only the Arabic error title is evidenced here, not its complete description.
+
+Arabic field names and password validation:
+  05:34:30.565322 'البريد الإلكتروني مطلوب entry required.'
+  05:34:32.765036 'كلمة المرور مطلوب password text required.'
+  05:34:34.991162 'دخول button.'
+  05:34:41.609149 'invalid entry.'
+  05:34:41.609157 'أدخل كلمة المرور (حتى 72 حرفًا).'
+
+Public data keyboard navigation and locale-change arrival heading:
+  05:34:43.842100 'بياناتك، قرارك ما الذي نحفظه، ومن يراه، وكيف تغيّر رأيك. link.'
+  05:34:46.135837 'بياناتك، قرارك heading 1 clickable.'
+  05:34:48.345360 '1 ما الذي يُحفظ link.'
+  05:34:50.595705 '1ما الذي يُحفظ heading 2'
+  05:35:19.441286 'Your data, your decision heading 1 clickable.'
+  05:35:21.562056 '1 What is stored link.'
+  05:35:23.842205 '1What is stored heading 2'
+All five TOC targets in both locales had targetFocused:true in the driver
+and corresponding reader link/section/heading announcements. Planned sharing
+sections were actually announced with Planned / مخطط. Table regions produced:
+  05:35:10.476751 'من يرى ماذا landmark.'
+  05:35:43.710706 'Who can see what landmark.'
+Return links produced:
+  05:35:14.893965 'العودة لتسجيل الدخول link.'
+  05:35:48.171670 'Back to sign in link.'
+
+Findings / limitations requiring follow-up (no production fixes made)
+--------------------------------------------------------------------
+1. Empty-submit error discoverability gap in this representative run.
+   English submit at 05:34:08.116 and Arabic submit at 05:34:37.135 produced
+   no recorded automatic error announcement before the next focus probe
+   (~2.2 seconds). Error text was read on English field refocus and Arabic
+   password refocus. Recommend a separate focused investigation of submit
+   focus management/error summary or live announcement rather than claiming
+   all dynamic validation is automatically announced.
+2. Arabic email validation refocus at 05:34:39.343 has no corresponding new
+   SPEECH OUTPUT line. Its initial label is evidenced, but this run does not
+   establish the Arabic email error announcement. Treat as inconclusive.
+3. TOC navigation in both locales generated verbose section-content speech
+   followed almost immediately by its heading, sometimes concatenating
+   number/title/Planned without spacing. Example: '2Who can see whatPlanned
+   heading 2'. This is a reader-output usability observation; no audible
+   intelligibility assessment or severity certification was performed.
+4. Orca next-heading h probes from the table region produced no new transcript
+   line in either locale. They are NOT a passing heading-navigation result.
+   No table-cell/header navigation was executed; only region labels are covered.
+5. Initial login was Arabic, but only English received sequential Tab traversal.
+   Arabic received targeted focus/activation probes; no claim of full RTL
+   sequential focus-order validation.
+6. No authenticated-role, booking, reception workspace, admin workspace,
+   mobile reader, cross-browser reader or NVDA/VoiceOver behavior was tested.
+
+Privacy and evidence retention
+-----------------------------
+Fresh isolated browser, no credentials entered, no authenticated data, no raw
+API logs, no request/response bodies, no traces/screenshots/videos and no AX
+snapshots. Network interception rejects non-GET/HEAD/OPTIONS requests and logs
+only a fixed marker if blocked; no blocked-write marker occurred. Raw Orca
+and infrastructure logs were temporary and removed after retaining only
+SPEECH OUTPUT lines and diagnostic counters. announcements.txt was reviewed:
+it contains only reader startup/shutdown, public labels and public disclosure
+content, no credentials/session tokens. Exact absolute runtime temp paths in
+environment.txt identify disposable infrastructure only, not credentials.

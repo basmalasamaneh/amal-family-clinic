@@ -1,0 +1,16 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "4YR3l6ddo4oiZe5ZrgNld"
+uri = "file://generated-artifacts/bug-bash/amal-audit-evidence.html"
+type = "html"
+title = "Amal audit evidence — updated"
+description = "Final audit evidence including the historical-conflict/merge correction, targeted retests, seed protections, accessibility findings and performance limitations."
+logical_id = "cffe4f44-05d7-422a-9989-3a955dbbe38a"
+content_hash = "sha256:bb5566e8bc2e946ad91b00d510c0b3791a1b80609edc639af43de5a0de9b13ae"
+size = 278296
+mtime_ms = 1792565936740
+storage_uri = "gcs://replit-rams-assets-reed/rams/assets/repl:bf3e32dc-54d0-4d6f-8c18-82dda6dba30b/cffe4f44-05d7-422a-9989-3a955dbbe38a/738ef7d5-2eb0-4a52-91e3-20e378d3c527"
+storage_version_token = "1792565945682331"
+content_type = "text/html"

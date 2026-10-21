@@ -17,6 +17,18 @@ Use a Nix-wrapped Chromium for browser tests in Replit; Playwright's downloaded
 Linux executable may install successfully but fail to launch because native
 shared libraries are not on its search path.
 
+For actual Orca checks, a Nix AT-SPI launcher may reference a nonexistent
+system dbus-daemon even when D-Bus is installed. A private bus started with the
+installed daemon, exported through `AT_SPI_BUS_ADDRESS`, and an explicitly
+started registry can supply the real accessibility service.
+
+**Why:** The default session config and compiled launcher paths did not exist
+in the task container; direct private-bus startup produced real reader events.
+
+**How to apply:** Verify actual Orca announcement output, not just a browser
+accessibility tree. Keep temporary buses/displays isolated, clean them up, and
+distinguish reader synthesis requests from human listening.
+
 **Why:** Browser download success does not establish runtime compatibility on
 NixOS. Baselines made with a wrapped browser also depend on its version and fonts.
 

@@ -424,7 +424,9 @@ test("cancellation during second snapshot lock acquisition releases the first lo
       typeof error === "object" && error !== null && "code" in error && error.code === "LIFECYCLE_RETRY");
     const pids = await lifecycleWaits(blocker, 1, 761910);
     assert.equal(pids.length, 1);
-    await blocker.query("SELECT pg_cancel_backend($1)", [pids[0]]);
+    // Cancel as the runtime login that owns the pending query, not as the
+    // restricted fixture login (which must not receive pg_signal_backend).
+    await pool.query("SELECT pg_cancel_backend($1)", [pids[0]]);
     await rejected;
     await assertReleased(pids);
   } finally {

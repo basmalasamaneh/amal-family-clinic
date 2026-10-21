@@ -10,6 +10,9 @@ import { pool } from "@workspace/db";
 import { normalizeName } from "@workspace/db/patient-search";
 import type { Auth } from "../src/lib/auth";
 import { listPatientDuplicates, mergePatients, duplicateIdentity, previewPatientMerge } from "../src/patients/merge";
+import { createAppointment, updateAppointment } from "../src/appointments/service";
+import { listSyncConflicts } from "../src/sync/reads";
+import { resolveSync } from "../src/sync/service";
 
 if (process.env.NODE_ENV === "production" || process.env.REPLIT_DEPLOYMENT === "1") throw new Error("Merge tests prohibited in deployment");
 const admin = new pg.Client({ connectionString: process.env.DATABASE_URL });
@@ -75,6 +78,9 @@ after(async () => {
     await admin.query("BEGIN");
     await admin.query("SET LOCAL ROLE amal_demo_reset");
     await admin.query("DELETE FROM operational.audit_log WHERE user_id=$1", [user]);
+    await admin.query("DELETE FROM operational.sync_resolution_history WHERE actor_id=$1", [user]);
+    await admin.query("DELETE FROM operational.sync_conflicts WHERE actor_id=$1", [user]);
+    await admin.query("DELETE FROM operational.appointment_operations WHERE actor_id=$1", [user]);
     await admin.query("DELETE FROM operational.patient_merge_moves WHERE client_op_id=ANY($1::uuid[])", [operations]);
     await admin.query("DELETE FROM operational.patient_merge_operations WHERE client_op_id=ANY($1::uuid[])", [operations]);
     await admin.query("DELETE FROM operational.visit_alerts WHERE patient_id=ANY($1) OR visit_id=ANY($2)", [patients, visits]);
@@ -281,6 +287,82 @@ test("JSON staging references are blocked without reattributing manual confirmat
     VALUES($1,1,'{}',$2::jsonb)`, [batch, JSON.stringify({ review: { patientId: source } })]);
   await assert.rejects(mergePatients(auth, body(source, target)), code("MERGE_UNSAFE"));
   await unchanged(source, target);
+});
+for (const reference of ["proposal-patient", "update-target", "affected-appointment"] as const) {
+  test(`open modern conflict ${reference} blocks preview and commit until explicitly resolved`, async () => {
+    const [source, target] = await pair();
+    const other = await patient();
+    const startsAt = `2091-06-0${reference === "proposal-patient" ? "4" : reference === "update-target" ? "5" : "6"}T09:00:00.000Z`;
+    const endsAt = new Date(Date.parse(startsAt) + 30 * 60000).toISOString();
+    const affectedPatient = reference === "affected-appointment" ? source : other;
+    const { rows: [affected] } = await admin.query(`INSERT INTO operational.appointments
+      (clinic_id,doctor_id,patient_id,scheduled_at,duration_minutes,booking_method,status)
+      VALUES($1,$2,$3,$4,30,'phone','booked') RETURNING appointment_id`,
+    [clinic, doctor, affectedPatient, startsAt]);
+    let targetId: number | undefined;
+    if (reference === "update-target") {
+      targetId = (await admin.query(`INSERT INTO operational.appointments
+        (clinic_id,doctor_id,patient_id,scheduled_at,duration_minutes,booking_method,status)
+        VALUES($1,$2,$3,'2020-01-02T08:00Z',30,'phone','completed') RETURNING appointment_id`,
+      [clinic, doctor, source])).rows[0].appointment_id;
+    }
+    const clientOpId = randomUUID();
+    if (targetId) {
+      await assert.rejects(updateAppointment(auth, targetId, { clientOpId, expectedVersion: 2, startsAt, endsAt }), code("VERSION_CONFLICT"));
+    } else {
+      await assert.rejects(createAppointment(auth, { clientOpId, clinicId: clinic, doctorId: doctor,
+        patientId: reference === "proposal-patient" ? source : other, startsAt, endsAt, source: "phone" }), code("APPOINTMENT_CONFLICT"));
+    }
+    const { rows: [stored] } = await admin.query("SELECT * FROM operational.sync_conflicts WHERE client_op_id=$1", [clientOpId]);
+    assert(stored);
+    if (reference === "affected-appointment") {
+      assert(stored.reasons.some((r: any) => r.with?.appointmentId === affected.appointment_id));
+      assert(!JSON.stringify(stored.operation).includes(`"patientId":${source}`), "only affected appointment links this patient");
+    }
+    if (reference === "update-target") assert.equal(stored.operation.payload.patientId, undefined);
+    const preview = await previewPatientMerge(auth, { sourceId: source, targetId: target });
+    assert.equal(preview.canMerge, false);
+    assert.deepEqual(preview.blockers, ["MERGE_RESTRICTED"]);
+    await assert.rejects(mergePatients(auth, body(source, target)), code("MERGE_UNSAFE"));
+    await unchanged(source, target);
+    assert.deepEqual((await admin.query("SELECT * FROM operational.sync_conflicts WHERE id=$1", [stored.id])).rows[0], stored);
+    const item = (await listSyncConflicts(auth, { limit: 100 })).items.find(c => c.id === stored.id)!;
+    const slots = item.reasons.flatMap(r => r.suggestedSlots ?? []);
+    assert(slots.length > 0, "current authorized alternatives are available");
+    const resolved = await resolveSync(auth, { clientOpId: randomUUID(), conflictId: stored.id,
+      expectedVersion: 1, action: "move-self", ...slots[0], ...(targetId ? { targetExpectedVersion: 1 } : {}) });
+    assert.equal(resolved.status, "resolved");
+    assert.equal((await previewPatientMerge(auth, { sourceId: source, targetId: target })).canMerge, true);
+    await mergePatients(auth, body(source, target));
+    const final = (await admin.query("SELECT * FROM operational.sync_conflicts WHERE id=$1", [stored.id])).rows[0];
+    assert.equal(final.status, "resolved");
+    assert.deepEqual(final.operation, stored.operation, "merge never reattributes stored proposals");
+  });
+}
+test("merge waits for an in-flight modern conflict writer then rechecks blockers under the scheduling lock", async () => {
+  const [source, target] = await pair();
+  const writer = new pg.Client({ connectionString: process.env.DATABASE_URL });
+  await writer.connect();
+  let settled = false;
+  try {
+    await writer.query("BEGIN");
+    await writer.query("SELECT pg_advisory_xact_lock(761910)");
+    // A valid proposal outside working hours reliably produces durable conflict
+    // evidence while the writer keeps the same lock used by ordinary sync push.
+    await assert.rejects(createAppointment(auth, { clientOpId: randomUUID(), clinicId: clinic, doctorId: doctor,
+      patientId: source, startsAt: "2091-06-07T00:00:00.000Z", endsAt: "2091-06-07T00:30:00.000Z", source: "phone" },
+    { client: writer as any, actor: auth, now: new Date() }), code("APPOINTMENT_CONFLICT"));
+    const merging = mergePatients(auth, body(source, target)).finally(() => { settled = true; });
+    const rejected = assert.rejects(merging, code("MERGE_UNSAFE"));
+    await new Promise(resolve => setTimeout(resolve, 100));
+    assert.equal(settled, false);
+    await writer.query("COMMIT");
+    await rejected;
+    await unchanged(source, target);
+  } finally {
+    await writer.query("ROLLBACK");
+    await writer.end();
+  }
 });
 test("unsafe late unique collision rolls back earlier reference moves and journal", async () => {
   const [source, target] = await pair();

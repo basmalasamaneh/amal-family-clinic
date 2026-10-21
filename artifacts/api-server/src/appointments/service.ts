@@ -247,6 +247,28 @@ export async function checkAppointment(auth: Auth, raw: unknown) {
   return transaction(auth, async (client, actor, now) => (await preview(client, actor, now, input)).result);
 }
 export type AppointmentContext = { client: PoolClient; actor: Auth; now: Date };
+/** Re-evaluate a durable proposal for delivery, never its historical evidence.
+ * The caller must hold the scheduling transaction lock and refresh actor authority.
+ * Like explicit resolution, this ignores offline holds and evaluates updates
+ * against the current authorized target, without accepting its stale revision. */
+export async function previewAppointmentOperation(context: AppointmentContext, target: string, raw: unknown) {
+  const { client, actor, now } = context;
+  if (target === "create") {
+    const { holdToken: _hold, ...input } = createInput.parse(raw);
+    return (await preview(client, actor, now, input)).result;
+  }
+  if (!/^update:[1-9][0-9]*$/.test(target)) throw fail(400, "VALIDATION", "validation");
+  const id = Number(target.slice("update:".length));
+  const row = await existing(client, actor, id);
+  const { holdToken: _hold, expectedVersion: _version, ...input } = updateInput.parse(raw);
+  const candidate = {
+    ...project(row), ...input, appointmentId: id,
+    source: row.booking_method as Booking["source"],
+  };
+  const nextStatus = input.status ?? row.status;
+  const status = (input.startsAt !== undefined || input.endsAt !== undefined) && nextStatus !== "cancelled" ? "booked" : nextStatus;
+  return (await preview(client, actor, now, candidate, status)).result;
+}
 // A savepoint separates rollback of business work from durable conflict evidence.
 async function mutation<T>(auth: Auth, target: string, input: Booking | z.infer<typeof updateInput>,
   context: AppointmentContext | undefined, work: (client: PoolClient, actor: Auth, now: Date) => Promise<T>): Promise<T> {

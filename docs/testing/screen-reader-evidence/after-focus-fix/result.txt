@@ -1,0 +1,104 @@
+Focused post-fix real-Orca validation retest
+==========================================
+
+Result: PASS for the narrowly retested password-login first-invalid-field
+focus and automatic email-error announcement in BOTH English and Arabic.
+This supersedes initial audit findings 1 and 2 for empty password-form submit
+only; it does not change other initial audit findings or limitations.
+
+Scope / execution
+-----------------
+One focused real-reader execution against the restarted real public login.
+No rerun of the initial 76-step audit. No data-page, PIN screen-reader or
+authenticated-role checks in this execution.
+Orca 48.2, AT-SPI2 2.56.2, installed Chromium wrapper; same working private
+Xvfb/direct-private-accessibility-bus setup as the initial successful audit.
+Fresh browser context, no credentials entered, no screenshots/traces/video,
+no auth/session logging, and all non-read-only network methods blocked.
+No non-read-only requests were attempted (blockedWrites:0).
+No production code was changed by this audit worker.
+
+Actual interval: 2026-10-21 05:45:12–05:45:39 UTC (runtime clock).
+Driver and enclosing shell both exited 0. All audit processes and temporary
+directories were cleaned up. Original initial evidence remains unchanged.
+
+Reproduce from workspace root against the already-running app:
+  SR_EVIDENCE="$PWD/docs/testing/screen-reader-evidence/after-focus-fix" \
+  SR_DRIVER=scripts/src/screen-reader-validation-retest.mjs \
+  bash scripts/screen-reader-audit.sh --direct-atspi
+
+Automatic focus and speech observations BEFORE any field-refocus action
+----------------------------------------------------------------------
+English:
+  05:45:19.252 keyboard Enter on focused empty-submit button.
+  05:45:19.275 input-email focus assertion passed, elapsed 22ms.
+  05:45:19.317545 SPEECH OUTPUT: 'Email required entry required.'
+  05:45:19.317554 SPEECH OUTPUT: 'invalid entry.'
+  05:45:19.317562 SPEECH OUTPUT: 'Enter a valid email address.'
+  Observation window ended at 05:45:22.776; no manual field refocus occurred.
+
+Arabic:
+  05:45:30.377 keyboard Enter on focused empty-submit button.
+  05:45:30.395 input-email focus assertion passed, elapsed 17ms.
+  05:45:30.445058 SPEECH OUTPUT: 'البريد الإلكتروني مطلوب entry required.'
+  05:45:30.445068 SPEECH OUTPUT: 'invalid entry.'
+  05:45:30.445076 SPEECH OUTPUT: 'أدخل بريدًا إلكترونيًا صحيحًا.'
+  Observation window ended at 05:45:33.897; no manual field refocus occurred.
+
+The driver never calls focus() on either input. It focuses only the locale
+toggle and submit button, then uses keyboard Enter. App-driven input-email
+focus is asserted within a bounded 1000ms post-commit wait; the actual observed
+times above were 22ms/17ms. The 3.5-second announcement observation windows
+contain the localized error output before any subsequent navigation.
+
+Subsequent ordinary keyboard Tab, AFTER automatic-email observation:
+  05:45:22.777 English Tab to invalid password.
+  05:45:22.843150 SPEECH OUTPUT: 'Password required password text required.'
+  05:45:22.843159 SPEECH OUTPUT: 'invalid entry.'
+  05:45:22.843167 SPEECH OUTPUT: 'Enter your password (up to 72 characters).'
+  05:45:33.897 Arabic Tab to invalid password.
+  05:45:33.955466 SPEECH OUTPUT: 'كلمة المرور مطلوب password text required.'
+  05:45:33.955476 SPEECH OUTPUT: 'invalid entry.'
+  05:45:33.955484 SPEECH OUTPUT: 'أدخل كلمة المرور (حتى 72 حرفًا).'
+Password error speech is therefore evidenced ON keyboard navigation, not
+claimed as simultaneous automatic reading of every invalid field.
+
+Evidence and limitations
+------------------------
+announcements.txt contains 39 actual real-Orca SPEECH OUTPUT lines.
+steps.jsonl contains 15 timestamped driver records.
+environment.txt records driver_exit=0 and direct_atspi_bus=1.
+184 focus-pattern lines and 1167 Chromium-pattern lines are diagnostic debug
+substring counts, not unique event or pass counts. No AX snapshots substituted.
+
+These are reader-generated announcement/synthesis-request transcripts, NOT
+human listening. Audible output, Arabic pronunciation/intelligibility and
+voice-language selection were not verified. The same GStreamer scanner
+gi-import warning appeared while actual reader output continued. Public
+loading-status phrases in the transcript are not authenticated workspace data.
+
+Bounded automated UI regression (separate from actual-reader evidence)
+--------------------------------------------------------------------
+Added artifacts/amal-network/tests/auth-validation-focus.spec.ts.
+It runs four cases: en/ar x password/PIN, all fields empty. It asserts:
+- Submit moves focus to first-invalid email without test-side input focus.
+- Both invalid fields reference committed, visible localized error text.
+- Keyboard Tab reaches the second invalid field.
+- Zero non-read-only request attempts, with an additional 150ms bounded wait.
+- PIN cases make exactly one browser-mocked device-context GET.
+
+PIN cases use a clearly synthetic clinic response only in the test's network
+route. This is NOT a real trusted device, authenticated session, server PIN
+integration check, or PIN screen-reader check. No form credential was entered.
+
+Reproduce:
+  pnpm exec playwright test \
+    --config artifacts/amal-network/playwright.config.ts \
+    artifacts/amal-network/tests/auth-validation-focus.spec.ts \
+    --workers=1 --output generated-artifacts/sr-validation-retest --reporter=line
+
+Final result: 4 passed (7.2s).
+An initial test-only run passed password cases but failed PIN text assertions
+because the spec expected the words PIN / رمز; actual localized errors are
+"Enter exactly four digits." / "أدخل أربعة أرقام بالضبط.". Only those expectation
+patterns were corrected, then all four cases passed. No app fix was made.

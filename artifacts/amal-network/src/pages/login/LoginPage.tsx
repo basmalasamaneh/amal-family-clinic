@@ -11,6 +11,14 @@ type Mode = 'password' | 'pin';
 type Ctx = { status: 'loading' } | { status: 'trusted'; clinic: { id: number; name: string } } | { status: 'untrusted' } | { status: 'error' };
 interface Props { notice: 'expired' | null; onAuthenticated: () => Promise<void> }
 
+// Wait for React to commit the localized error descriptions before moving
+// focus, so assistive technology reads the invalid field and its explanation.
+function focusInvalidField(form: HTMLFormElement) {
+  requestAnimationFrame(() => {
+    if (form.isConnected) form.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus();
+  });
+}
+
 /** Real-API login. Credentials live only in component state; nothing is stored, logged or put in URLs. */
 export function LoginPage({ notice, onAuthenticated }: Props) {
   const { t } = useTranslation();
@@ -103,9 +111,11 @@ function PasswordForm({ onAuthenticated, onPending }: { onAuthenticated: () => P
   const { pending, error, run } = useSubmit(onAuthenticated, onPending);
   const emailErr = touched && !isPlausibleEmail(email.trim()) ? t('auth.validation.email') : undefined;
   const pwErr = touched && (password.length < 1 || password.length > 72) ? t('auth.validation.password') : undefined;
-  const submit = async (e: FormEvent) => {
+  const submit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault(); setTouched(true);
-    if (!isPlausibleEmail(email.trim()) || password.length < 1 || password.length > 72) return;
+    if (!isPlausibleEmail(email.trim()) || password.length < 1 || password.length > 72) {
+      focusInvalidField(e.currentTarget); return;
+    }
     const ok = await run(() => login({ email: email.trim(), password }));
     if (!ok) setPassword('');
   };
@@ -163,9 +173,11 @@ function PinForm({ onAuthenticated, onPending }: { onAuthenticated: () => Promis
 
   const emailErr = touched && !isPlausibleEmail(email.trim()) ? t('auth.validation.email') : undefined;
   const pinErr = touched && !isValidPin(pin) ? t('auth.validation.pin') : undefined;
-  const submit = async (e: FormEvent) => {
+  const submit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault(); setTouched(true);
-    if (!isPlausibleEmail(email.trim()) || !isValidPin(pin)) return;
+    if (!isPlausibleEmail(email.trim()) || !isValidPin(pin)) {
+      focusInvalidField(e.currentTarget); return;
+    }
     const ok = await run(() => loginPin({ email: email.trim(), pin }));
     if (!ok) setPin('');
   };

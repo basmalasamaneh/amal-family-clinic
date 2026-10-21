@@ -17,7 +17,7 @@
     "appointments:migrate": "tsx scripts/appointments-migrate.ts",
     "appointments:test": "tsx --test tests/appointments-api.test.ts",
     "sync:migrate": "tsx scripts/sync-migrate.ts",
-    "sync:test": "tsx --test --test-concurrency=1 tests/sync-api.test.ts",
+    "sync:test": "tsx --test --test-concurrency=1 tests/sync-api.test.ts tests/sync-conflict-suggestions.test.ts",
     "kpis:migrate": "tsx scripts/kpis-migrate.ts",
     "kpis:refresh": "tsx scripts/kpis-refresh.ts",
     "kpis:test": "tsx --test --test-concurrency=1 tests/kpis*.test.ts",

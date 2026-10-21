@@ -108,10 +108,15 @@ export const test = base.extend<{ f: BookingFixture; offlineJourney: boolean }>(
       let after: Fingerprint | null = null;
       try {
         await query('BEGIN');
+        // Closing Chromium does not cancel a request already executing in the
+        // API. Join the existing appointment/sync transaction coordinator before
+        // deleting owned rows. Earlier writes finish first; later transactions
+        // reauthorize only after these sessions have been removed at COMMIT.
+        await query('SELECT pg_advisory_xact_lock(761910)');
         await query('DELETE FROM operational.sync_resolution_history WHERE actor_id=$1', [user]);
         await query('DELETE FROM operational.sync_device_operations WHERE device_id=ANY($1::integer[])', [devices]);
         await query('DELETE FROM operational.sync_conflicts WHERE actor_id=$1', [user]);
-        await query('DELETE FROM operational.appointment_operations WHERE clinic_id=$1 OR actor_id=$2', [clinic, user]);
+        await query('DELETE FROM operational.appointment_operations WHERE clinic_id=$1 OR actor_id=$2 OR device_id=ANY($3::integer[])', [clinic, user, devices]);
         await query('DELETE FROM operational.appointment_holds WHERE clinic_id=$1 OR owner_id=$2', [clinic, user]);
         await query('SET LOCAL ROLE amal_demo_reset');
         await query('DELETE FROM operational.audit_log WHERE clinic_id=$1 OR user_id=$2 OR patient_id=ANY($3::integer[])', [clinic, user, patients]);

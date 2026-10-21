@@ -69,6 +69,9 @@ async function transaction<T>(auth: Auth, mutate: boolean, work: (client: PoolCl
   try {
     await client.query("BEGIN");
     await client.query(mutate ? "SELECT pg_advisory_xact_lock(160005)" : "SELECT pg_advisory_xact_lock_shared(160005)");
+    // Sync conflict creation/resolution and appointment writes take this same
+    // scheduling lock before reading references. Retain it through blocker
+    // checks and commit: an open modern conflict cannot race a patient merge.
     if (mutate) await client.query("SELECT pg_advisory_xact_lock(761910)");
     await client.query("SELECT operational.lock_patient_merge_access()");
     await currentActor(client, auth);
@@ -154,10 +157,17 @@ async function referenceBlockers(client: PoolClient, ids: number[]) {
     (EXISTS(SELECT 1 FROM operational.import_rows WHERE suggested_patient_id=ANY($1) OR confirmed_patient_id=ANY($1))
       OR EXISTS(SELECT 1 FROM operational.import_rows r,unnest($1::integer[]) AS selected(patient_id)
         WHERE jsonb_path_exists(r.staging,'$.**.patientId ? (@ == $id)',jsonb_build_object('id',selected.patient_id)))) AS imported,
-    EXISTS(SELECT 1 FROM operational.sync_operations s,unnest($1::integer[]) AS selected(patient_id)
+    (EXISTS(SELECT 1 FROM operational.sync_operations s,unnest($1::integer[]) AS selected(patient_id)
       WHERE s.status::text IN ('pending','conflict') AND (
         jsonb_path_exists(s.payload,'$.**.patientId ? (@ == $id)',jsonb_build_object('id',selected.patient_id))
-        OR jsonb_path_exists(s.payload,'$.**.patient_id ? (@ == $id)',jsonb_build_object('id',selected.patient_id)))) AS synced,
+        OR jsonb_path_exists(s.payload,'$.**.patient_id ? (@ == $id)',jsonb_build_object('id',selected.patient_id))))
+      OR EXISTS(SELECT 1 FROM operational.sync_conflicts c WHERE c.status='open' AND (
+        EXISTS(SELECT 1 FROM unnest($1::integer[]) AS selected(patient_id) WHERE
+          jsonb_path_exists(c.operation,'$.**.patientId ? (@ == $id)',jsonb_build_object('id',selected.patient_id))
+          OR jsonb_path_exists(c.operation,'$.**.patient_id ? (@ == $id)',jsonb_build_object('id',selected.patient_id)))
+        OR EXISTS(SELECT 1 FROM operational.appointments a WHERE a.patient_id=ANY($1) AND (
+          a.appointment_id=c.target_id
+          OR jsonb_path_exists(c.reasons,'$.**.appointmentId ? (@ == $id)',jsonb_build_object('id',a.appointment_id))))))) AS synced,
     EXISTS(SELECT 1 FROM operational.appointment_holds WHERE patient_id=ANY($1) AND expires_at>clock_timestamp()) AS held,
     EXISTS(SELECT 1 FROM operational.patients WHERE merged_into_id=ANY($1)) AS alias`, [ids]);
   if (blocked.consent) blockers.push("MERGE_CONSENT");

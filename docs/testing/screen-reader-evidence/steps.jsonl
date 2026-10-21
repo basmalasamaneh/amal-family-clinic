@@ -1,0 +1,76 @@
+{"time":"2026-10-21T05:33:22.243Z","step":"public login: initial Arabic page load"}
+{"time":"2026-10-21T05:33:26.125Z","step":"login locale to English: focus"}
+{"time":"2026-10-21T05:33:28.359Z","step":"login locale to English: activate with Space"}
+{"time":"2026-10-21T05:33:30.576Z","step":"English login skip link focus, then sequential Tab traversal"}
+{"time":"2026-10-21T05:33:32.792Z","step":"English login keyboard Tab 1"}
+{"time":"2026-10-21T05:33:34.999Z","step":"English login keyboard Tab 2"}
+{"time":"2026-10-21T05:33:37.204Z","step":"English login keyboard Tab 3"}
+{"time":"2026-10-21T05:33:39.410Z","step":"English login keyboard Tab 4"}
+{"time":"2026-10-21T05:33:41.617Z","step":"English login keyboard Tab 5"}
+{"time":"2026-10-21T05:33:43.824Z","step":"English login keyboard Tab 6"}
+{"time":"2026-10-21T05:33:46.036Z","step":"English login keyboard Tab 7"}
+{"time":"2026-10-21T05:33:48.244Z","step":"English login keyboard Tab 8"}
+{"time":"2026-10-21T05:33:50.452Z","step":"English login keyboard Tab 9"}
+{"time":"2026-10-21T05:33:52.657Z","step":"English login keyboard Tab 10"}
+{"time":"2026-10-21T05:33:54.864Z","step":"English login keyboard Tab 11"}
+{"time":"2026-10-21T05:33:57.071Z","step":"English email label probe"}
+{"time":"2026-10-21T05:33:59.280Z","step":"English password label probe (empty)"}
+{"time":"2026-10-21T05:34:01.490Z","step":"English password visibility toggle (empty): focus"}
+{"time":"2026-10-21T05:34:03.698Z","step":"English password visibility toggle (empty): activate with Space"}
+{"time":"2026-10-21T05:34:05.907Z","step":"English empty-submit button"}
+{"time":"2026-10-21T05:34:08.116Z","step":"English empty form Enter: client-side dynamic validation; no auth request"}
+{"time":"2026-10-21T05:34:10.326Z","step":"English invalid email refocus"}
+{"time":"2026-10-21T05:34:12.536Z","step":"English invalid password refocus"}
+{"time":"2026-10-21T05:34:14.744Z","step":"English reception PIN mode: real public device-context error: focus"}
+{"time":"2026-10-21T05:34:16.953Z","step":"English reception PIN mode: real public device-context error: activate with Space"}
+{"time":"2026-10-21T05:34:21.668Z","step":"login locale to Arabic with device alert mounted: focus"}
+{"time":"2026-10-21T05:34:23.876Z","step":"login locale to Arabic with device alert mounted: activate with Space"}
+{"time":"2026-10-21T05:34:26.089Z","step":"Arabic password mode: focus"}
+{"time":"2026-10-21T05:34:28.296Z","step":"Arabic password mode: activate with Space"}
+{"time":"2026-10-21T05:34:30.508Z","step":"Arabic email label probe"}
+{"time":"2026-10-21T05:34:32.716Z","step":"Arabic password label probe (empty)"}
+{"time":"2026-10-21T05:34:34.926Z","step":"Arabic empty-submit button"}
+{"time":"2026-10-21T05:34:37.135Z","step":"Arabic empty form Enter: client-side dynamic validation; no auth request"}
+{"time":"2026-10-21T05:34:39.343Z","step":"Arabic invalid email refocus"}
+{"time":"2026-10-21T05:34:41.552Z","step":"Arabic invalid password refocus"}
+{"time":"2026-10-21T05:34:43.765Z","step":"Arabic public data link"}
+{"time":"2026-10-21T05:34:45.974Z","step":"Arabic data navigation via keyboard Enter"}
+{"time":"2026-10-21T05:34:48.250Z","step":"ar data TOC stored: focus probe"}
+{"time":"2026-10-21T05:34:50.460Z","step":"ar data TOC stored: keyboard Enter"}
+{"time":"2026-10-21T05:34:52.694Z","step":"ar data TOC stored: focus result","targetFocused":true}
+{"time":"2026-10-21T05:34:52.695Z","step":"ar data TOC who: focus probe"}
+{"time":"2026-10-21T05:34:54.904Z","step":"ar data TOC who: keyboard Enter"}
+{"time":"2026-10-21T05:34:57.125Z","step":"ar data TOC who: focus result","targetFocused":true}
+{"time":"2026-10-21T05:34:57.125Z","step":"ar data TOC consent: focus probe"}
+{"time":"2026-10-21T05:34:59.332Z","step":"ar data TOC consent: keyboard Enter"}
+{"time":"2026-10-21T05:35:01.553Z","step":"ar data TOC consent: focus result","targetFocused":true}
+{"time":"2026-10-21T05:35:01.554Z","step":"ar data TOC audit: focus probe"}
+{"time":"2026-10-21T05:35:03.760Z","step":"ar data TOC audit: keyboard Enter"}
+{"time":"2026-10-21T05:35:05.982Z","step":"ar data TOC audit: focus result","targetFocused":true}
+{"time":"2026-10-21T05:35:05.982Z","step":"ar data TOC choices: focus probe"}
+{"time":"2026-10-21T05:35:08.197Z","step":"ar data TOC choices: keyboard Enter"}
+{"time":"2026-10-21T05:35:10.417Z","step":"ar data TOC choices: focus result","targetFocused":true}
+{"time":"2026-10-21T05:35:10.417Z","step":"ar data visibility table region focus probe"}
+{"time":"2026-10-21T05:35:12.626Z","step":"ar data Orca next-heading key h"}
+{"time":"2026-10-21T05:35:14.831Z","step":"ar data return-to-login link label probe"}
+{"time":"2026-10-21T05:35:17.041Z","step":"data locale to English: focus"}
+{"time":"2026-10-21T05:35:19.255Z","step":"data locale to English: activate with Space"}
+{"time":"2026-10-21T05:35:21.495Z","step":"en data TOC stored: focus probe"}
+{"time":"2026-10-21T05:35:23.704Z","step":"en data TOC stored: keyboard Enter"}
+{"time":"2026-10-21T05:35:25.927Z","step":"en data TOC stored: focus result","targetFocused":true}
+{"time":"2026-10-21T05:35:25.928Z","step":"en data TOC who: focus probe"}
+{"time":"2026-10-21T05:35:28.137Z","step":"en data TOC who: keyboard Enter"}
+{"time":"2026-10-21T05:35:30.358Z","step":"en data TOC who: focus result","targetFocused":true}
+{"time":"2026-10-21T05:35:30.358Z","step":"en data TOC consent: focus probe"}
+{"time":"2026-10-21T05:35:32.568Z","step":"en data TOC consent: keyboard Enter"}
+{"time":"2026-10-21T05:35:34.791Z","step":"en data TOC consent: focus result","targetFocused":true}
+{"time":"2026-10-21T05:35:34.794Z","step":"en data TOC audit: focus probe"}
+{"time":"2026-10-21T05:35:37.004Z","step":"en data TOC audit: keyboard Enter"}
+{"time":"2026-10-21T05:35:39.224Z","step":"en data TOC audit: focus result","targetFocused":true}
+{"time":"2026-10-21T05:35:39.224Z","step":"en data TOC choices: focus probe"}
+{"time":"2026-10-21T05:35:41.432Z","step":"en data TOC choices: keyboard Enter"}
+{"time":"2026-10-21T05:35:43.651Z","step":"en data TOC choices: focus result","targetFocused":true}
+{"time":"2026-10-21T05:35:43.651Z","step":"en data visibility table region focus probe"}
+{"time":"2026-10-21T05:35:45.864Z","step":"en data Orca next-heading key h"}
+{"time":"2026-10-21T05:35:48.082Z","step":"en data return-to-login link label probe"}
+{"time":"2026-10-21T05:35:50.309Z","step":"completed: only public read-only real pages; no authenticated fixture used"}

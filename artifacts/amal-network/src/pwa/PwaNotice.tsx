@@ -55,8 +55,8 @@ export function PwaNotice() {
 
   if (!notice) return null;
   return (
-    <aside className="pwa-notice" data-testid="pwa-notice">
-      <p role="status" aria-live="polite" aria-atomic="true">{t(notice)}</p>
+    <aside className="pwa-notice" data-testid="pwa-notice" aria-labelledby="pwa-notice-message">
+      <p id="pwa-notice-message" role="status" aria-live="polite" aria-atomic="true">{t(notice)}</p>
       <div className="pwa-notice__actions">
         {notice === 'error' && (
           <button type="button" onClick={() => { setNotice(null); setAttempt((n) => n + 1); }}>{t('retry')}</button>

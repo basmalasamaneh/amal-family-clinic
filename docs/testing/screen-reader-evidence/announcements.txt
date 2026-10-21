@@ -1,0 +1,179 @@
+05:33:23.563325 - SPEECH OUTPUT: 'Screen reader on.' {'established': False}
+05:33:23.660414 - SPEECH OUTPUT: 'تسجيل الدخول · شبكة أمل - Chromium frame 1 unfocused dialog' {'established': False}
+05:33:23.815597 - SPEECH OUTPUT: 'تسجيل الدخول · شبكة أمل document web' {'established': False}
+05:33:26.253362 - SPEECH OUTPUT: 'banner' {'established': False}
+05:33:26.253411 - SPEECH OUTPUT: 'لغة الواجهة panel' {'established': False}
+05:33:26.253427 - SPEECH OUTPUT: 'English toggle button not pressed.' {'established': False}
+05:33:28.426666 - SPEECH OUTPUT: 'pressed' {'established': False}
+05:33:30.636049 - SPEECH OUTPUT: 'leaving panel.' {'established': False}
+05:33:30.636082 - SPEECH OUTPUT: 'leaving banner.' {'established': False}
+05:33:30.636096 - SPEECH OUTPUT: 'Skip to main content link.' {'established': False}
+05:33:32.835640 - SPEECH OUTPUT: 'banner' {'established': False}
+05:33:32.835680 - SPEECH OUTPUT: 'Interface language panel' {'established': False}
+05:33:32.835694 - SPEECH OUTPUT: 'العربية toggle button not pressed.' {'established': False}
+05:33:35.038415 - SPEECH OUTPUT: 'English toggle button pressed.' {'established': False}
+05:33:37.246002 - SPEECH OUTPUT: 'leaving panel.' {'established': False}
+05:33:37.246045 - SPEECH OUTPUT: 'Interface theme panel' {'established': False}
+05:33:37.246059 - SPEECH OUTPUT: 'Light toggle button pressed.' {'established': False}
+05:33:39.446750 - SPEECH OUTPUT: 'Dark toggle button not pressed.' {'established': False}
+05:33:41.663704 - SPEECH OUTPUT: 'leaving panel.' {'established': False}
+05:33:41.663736 - SPEECH OUTPUT: 'leaving banner.' {'established': False}
+05:33:41.663763 - SPEECH OUTPUT: 'main content' {'established': False}
+05:33:41.663799 - SPEECH OUTPUT: 'Sign-in method panel' {'established': False}
+05:33:41.663812 - SPEECH OUTPUT: 'Email and password toggle button pressed.' {'established': False}
+05:33:43.882831 - SPEECH OUTPUT: 'Reception PIN toggle button not pressed.' {'established': False}
+05:33:46.079368 - SPEECH OUTPUT: 'leaving panel.' {'established': False}
+05:33:46.079384 - SPEECH OUTPUT: 'Email required entry required.' {'established': False}
+05:33:46.082449 - SPEECH OUTPUT: 'Focus mode' {'established': False}
+05:33:48.290407 - SPEECH OUTPUT: 'Password required password text required.' {'established': False}
+05:33:50.494462 - SPEECH OUTPUT: 'Show password toggle button not pressed.' {'established': False}
+05:33:50.504601 - SPEECH OUTPUT: 'Browse mode' {'established': False}
+05:33:52.701790 - SPEECH OUTPUT: 'Sign in button.' {'established': False}
+05:33:54.911506 - SPEECH OUTPUT: 'leaving form.' {'established': False}
+05:33:54.911520 - SPEECH OUTPUT: 'Your data, your decision What we store, who can see it and how to change your mind. link.' {'established': False}
+05:33:57.122789 - SPEECH OUTPUT: 'Email required entry required.' {'established': False}
+05:33:57.125476 - SPEECH OUTPUT: 'Focus mode' {'established': False}
+05:33:59.333536 - SPEECH OUTPUT: 'Password required password text required.' {'established': False}
+05:34:01.536105 - SPEECH OUTPUT: 'Show password toggle button not pressed.' {'established': False}
+05:34:01.538902 - SPEECH OUTPUT: 'Browse mode' {'established': False}
+05:34:03.740668 - SPEECH OUTPUT: 'pressed' {'established': False}
+05:34:05.950088 - SPEECH OUTPUT: 'Sign in button.' {'established': False}
+05:34:10.372582 - SPEECH OUTPUT: 'Email required entry required.' {'established': False}
+05:34:10.372592 - SPEECH OUTPUT: 'invalid entry.' {'established': False}
+05:34:10.372599 - SPEECH OUTPUT: 'Enter a valid email address.' {'established': False}
+05:34:10.376014 - SPEECH OUTPUT: 'Focus mode' {'established': False}
+05:34:12.587247 - SPEECH OUTPUT: 'Password required entry required.' {'established': False}
+05:34:12.587263 - SPEECH OUTPUT: 'invalid entry.' {'established': False}
+05:34:12.587271 - SPEECH OUTPUT: 'Enter your password (up to 72 characters).' {'established': False}
+05:34:14.811127 - SPEECH OUTPUT: 'leaving form.' {'established': False}
+05:34:14.811168 - SPEECH OUTPUT: 'Sign-in method panel' {'established': False}
+05:34:14.811181 - SPEECH OUTPUT: 'Reception PIN toggle button not pressed.' {'established': False}
+05:34:14.814910 - SPEECH OUTPUT: 'Browse mode' {'established': False}
+05:34:17.090396 - SPEECH OUTPUT: 'Checking this device' {'established': False}
+05:34:17.247488 - SPEECH OUTPUT: 'This device is not registered for reception' {'established': False}
+05:34:17.347738 - SPEECH OUTPUT: 'This device is not registered for reception PIN sign-in only works on a device your clinic administrator has registered. Doctors and administrators can use email and password instead. Devices cannot be registered from this screen.' {'established': False}
+05:34:21.755671 - SPEECH OUTPUT: 'leaving main content.' {'established': False}
+05:34:21.755702 - SPEECH OUTPUT: 'banner' {'established': False}
+05:34:21.755739 - SPEECH OUTPUT: 'Interface language panel' {'established': False}
+05:34:21.755752 - SPEECH OUTPUT: 'العربية toggle button not pressed.' {'established': False}
+05:34:23.956129 - SPEECH OUTPUT: 'pressed' {'established': False}
+05:34:24.027989 - SPEECH OUTPUT: 'هذا الجهاز غير مسجّل للاستقبال' {'established': False}
+05:34:26.166628 - SPEECH OUTPUT: 'leaving panel.' {'established': False}
+05:34:26.166660 - SPEECH OUTPUT: 'leaving banner.' {'established': False}
+05:34:26.166686 - SPEECH OUTPUT: 'main content' {'established': False}
+05:34:26.166724 - SPEECH OUTPUT: 'طريقة الدخول panel' {'established': False}
+05:34:26.166738 - SPEECH OUTPUT: 'البريد وكلمة المرور toggle button not pressed.' {'established': False}
+05:34:28.374058 - SPEECH OUTPUT: 'pressed' {'established': False}
+05:34:30.565305 - SPEECH OUTPUT: 'leaving panel.' {'established': False}
+05:34:30.565322 - SPEECH OUTPUT: 'البريد الإلكتروني مطلوب entry required.' {'established': False}
+05:34:30.568699 - SPEECH OUTPUT: 'Focus mode' {'established': False}
+05:34:32.765036 - SPEECH OUTPUT: 'كلمة المرور مطلوب password text required.' {'established': False}
+05:34:34.991162 - SPEECH OUTPUT: 'دخول button.' {'established': False}
+05:34:34.995019 - SPEECH OUTPUT: 'Browse mode' {'established': False}
+05:34:41.609139 - SPEECH OUTPUT: 'كلمة المرور مطلوب password text required.' {'established': False}
+05:34:41.609149 - SPEECH OUTPUT: 'invalid entry.' {'established': False}
+05:34:41.609157 - SPEECH OUTPUT: 'أدخل كلمة المرور (حتى 72 حرفًا).' {'established': False}
+05:34:41.612348 - SPEECH OUTPUT: 'Focus mode' {'established': False}
+05:34:43.842085 - SPEECH OUTPUT: 'leaving form.' {'established': False}
+05:34:43.842100 - SPEECH OUTPUT: 'بياناتك، قرارك ما الذي نحفظه، ومن يراه، وكيف تغيّر رأيك. link.' {'established': False}
+05:34:43.845527 - SPEECH OUTPUT: 'Browse mode' {'established': False}
+05:34:46.135820 - SPEECH OUTPUT: 'main content' {'established': False}
+05:34:46.135837 - SPEECH OUTPUT: 'بياناتك، قرارك heading 1 clickable.' {'established': False}
+05:34:48.345259 - SPEECH OUTPUT: 'main content' {'established': False}
+05:34:48.345316 - SPEECH OUTPUT: 'navigation في هذه الصفحة' {'established': False}
+05:34:48.345349 - SPEECH OUTPUT: 'List with 5 items' {'established': False}
+05:34:48.345360 - SPEECH OUTPUT: '1 ما الذي يُحفظ link.' {'established': False}
+05:34:50.535300 - SPEECH OUTPUT: 'leaving list.' {'established': False}
+05:34:50.535337 - SPEECH OUTPUT: 'leaving navigation.' {'established': False}
+05:34:50.535348 - SPEECH OUTPUT: '1 ما الذي يُحفظ فقط ما تحتاجه العيادة لرعايتك. الهوية والتواصل الاسم وتاريخ الميلاد ورقم الهاتف، ليجد الاستقبال الملف الصحيح. المواعيد الزيارات المحجوزة أو الحاضرة أو المكتملة أو الملغاة في العيادة. الملاحظات السريرية ما يكتبه الطبيب أثناء الزيارة، بما في ذلك التنبيهات المهمة كالحساسية. سجلات الموافقة مستوى المشاركة الذي اخترته ومتى، ومن أعطاه إن كان وليًا. حسابات الطاقم والأجهزة حسابات دخول الطاقم وأجهزة الاستقبال المسجّلة لكل عيادة. لا يسجّل المرضى الدخول. سجل الوصول سجل بمن فتح ملف مريض من عيادة أخرى ومتى.' {'established': False}
+05:34:50.535429 - SPEECH OUTPUT: 'clickable.' {'established': False}
+05:34:50.595705 - SPEECH OUTPUT: '1ما الذي يُحفظ heading 2' {'established': False}
+05:34:52.782139 - SPEECH OUTPUT: 'navigation في هذه الصفحة' {'established': False}
+05:34:52.782172 - SPEECH OUTPUT: 'List with 5 items' {'established': False}
+05:34:52.782183 - SPEECH OUTPUT: '2 من يرى ماذا link.' {'established': False}
+05:34:54.975224 - SPEECH OUTPUT: 'leaving list.' {'established': False}
+05:34:54.975293 - SPEECH OUTPUT: 'leaving navigation.' {'established': False}
+05:34:54.975304 - SPEECH OUTPUT: '2 من يرى ماذا مخطط يرى كل دور ما يحتاجه فقط. تحتفظ عيادتك بالسجلات التي أنشأتها لك. من يرى ماذا ينسّق الاستقبال المواعيد ولا يرى سجل الزيارات أو الملاحظات السريرية أبدًا. الموافقة الأساسية تُظهر للطبيب تاريخ زياراتك الأخرى وعيادتها وطبيبها. الموافقة السريرية تضيف الملاحظات والتنبيهات المهمة. يدير المسؤولون العيادات والمستخدمين والأجهزة. الصلاحية الإدارية ليست صلاحية سريرية.' {'established': False}
+05:34:54.975315 - SPEECH OUTPUT: 'clickable.' {'established': False}
+05:34:55.033106 - SPEECH OUTPUT: '2من يرى ماذامخطط heading 2' {'established': False}
+05:34:57.218388 - SPEECH OUTPUT: 'navigation في هذه الصفحة' {'established': False}
+05:34:57.218422 - SPEECH OUTPUT: 'List with 5 items' {'established': False}
+05:34:57.218434 - SPEECH OUTPUT: '3 مستويات الموافقة link.' {'established': False}
+05:34:59.410866 - SPEECH OUTPUT: 'leaving list.' {'established': False}
+05:34:59.410899 - SPEECH OUTPUT: 'leaving navigation.' {'established': False}
+05:34:59.410908 - SPEECH OUTPUT: '3 مستويات الموافقة مخطط لا مشاركة لا يُشارك شيء مع العيادات الأخرى. أساسية يرى أطباء العيادات الأخرى متى وأين تمت زيارتك. سريرية يرى الأطباء أيضًا ملاحظات الزيارات والتنبيهات المهمة. لا شيء قبل الموافقة. حتى تُسجَّل الموافقة، لا ترى أي عيادة أخرى سجلاتك. الأولياء. للطفل أو لمن لا يستطيع القرار، يعطي الولي الموافقة ويُسجَّل اسمه وصلته. العيادات المبسّطة.العيادات بوضع Lite تحتفظ بسجلاتها فقط ولا تشارك في الشبكة.' {'established': False}
+05:34:59.410919 - SPEECH OUTPUT: 'clickable.' {'established': False}
+05:34:59.499365 - SPEECH OUTPUT: '3مستويات الموافقةمخطط heading 2' {'established': False}
+05:35:01.632967 - SPEECH OUTPUT: 'navigation في هذه الصفحة' {'established': False}
+05:35:01.633002 - SPEECH OUTPUT: 'List with 5 items' {'established': False}
+05:35:01.633013 - SPEECH OUTPUT: '4 كل اطلاع بين العيادات يُسجَّل link.' {'established': False}
+05:35:03.829934 - SPEECH OUTPUT: 'leaving list.' {'established': False}
+05:35:03.829964 - SPEECH OUTPUT: 'leaving navigation.' {'established': False}
+05:35:03.829974 - SPEECH OUTPUT: '4 كل اطلاع بين العيادات يُسجَّل مخطط عندما يفتح طبيب ملفك من عيادة أخرى، صُمّم النظام ليسجّل الوصول مع الدور والعيادة والوقت، لتخبرك عيادتك بمن اطلع عليه.' {'established': False}
+05:35:03.829984 - SPEECH OUTPUT: 'clickable.' {'established': False}
+05:35:03.891160 - SPEECH OUTPUT: '4كل اطلاع بين العيادات يُسجَّلمخطط heading 2' {'established': False}
+05:35:06.068335 - SPEECH OUTPUT: 'navigation في هذه الصفحة' {'established': False}
+05:35:06.068373 - SPEECH OUTPUT: 'List with 5 items' {'established': False}
+05:35:06.068386 - SPEECH OUTPUT: '5 تغيير رأيك link.' {'established': False}
+05:35:08.280212 - SPEECH OUTPUT: 'leaving list.' {'established': False}
+05:35:08.280279 - SPEECH OUTPUT: 'leaving navigation.' {'established': False}
+05:35:08.280292 - SPEECH OUTPUT: '5 تغيير رأيك كيف تطلب اليوم تحدّث مع استقبال العيادة التي تزورها، حضوريًا أو عبر رقم الهاتف الذي تستخدمه للمواعيد. يسجّل الطاقم طلبك ويتولاه الطبيب أو المسؤول. السحب ليس حذفًا. سحب الموافقة يوقف المشاركة المستقبلية، ولا يحذف السجلات التي تحتفظ بها عيادتك نظاميًا عن رعايتك. متى يسري. بعد تسجيل السحب، صُمّم النظام بحيث لا يُظهر البحث التالي من عيادة أخرى معلوماتك.' {'established': False}
+05:35:08.280304 - SPEECH OUTPUT: 'clickable.' {'established': False}
+05:35:08.348650 - SPEECH OUTPUT: '5تغيير رأيك heading 2' {'established': False}
+05:35:10.476751 - SPEECH OUTPUT: 'من يرى ماذا landmark.' {'established': False}
+05:35:10.476762 - SPEECH OUTPUT: 'clickable.' {'established': False}
+05:35:14.893921 - SPEECH OUTPUT: 'leaving main content.' {'established': False}
+05:35:14.893952 - SPEECH OUTPUT: 'banner' {'established': False}
+05:35:14.893965 - SPEECH OUTPUT: 'العودة لتسجيل الدخول link.' {'established': False}
+05:35:17.113548 - SPEECH OUTPUT: 'لغة الواجهة panel' {'established': False}
+05:35:17.113604 - SPEECH OUTPUT: 'English toggle button not pressed.' {'established': False}
+05:35:19.441183 - SPEECH OUTPUT: 'leaving panel.' {'established': False}
+05:35:19.441214 - SPEECH OUTPUT: 'leaving banner.' {'established': False}
+05:35:19.441270 - SPEECH OUTPUT: 'main content' {'established': False}
+05:35:19.441286 - SPEECH OUTPUT: 'Your data, your decision heading 1 clickable.' {'established': False}
+05:35:21.562011 - SPEECH OUTPUT: 'navigation On this page' {'established': False}
+05:35:21.562045 - SPEECH OUTPUT: 'List with 5 items' {'established': False}
+05:35:21.562056 - SPEECH OUTPUT: '1 What is stored link.' {'established': False}
+05:35:23.782341 - SPEECH OUTPUT: 'leaving list.' {'established': False}
+05:35:23.782390 - SPEECH OUTPUT: 'leaving navigation.' {'established': False}
+05:35:23.782404 - SPEECH OUTPUT: '1 What is stored Only what a clinic needs to look after you. Identity and contact Name, date of birth and phone number, so reception can find the right record. Appointments Booked, arrived, completed or cancelled visits at a clinic. Clinical notes What a doctor writes during a visit, including key alerts such as allergies. Consent records Which sharing level you chose, when, and who gave it if a guardian did. Staff accounts and devices Staff sign-in accounts and the reception devices registered to each clinic. No patient logs in. Access log A record of who opened a patient record from another clinic, and when.' {'established': False}
+05:35:23.782419 - SPEECH OUTPUT: 'clickable.' {'established': False}
+05:35:23.842205 - SPEECH OUTPUT: '1What is stored heading 2' {'established': False}
+05:35:25.994895 - SPEECH OUTPUT: 'navigation On this page' {'established': False}
+05:35:25.994929 - SPEECH OUTPUT: 'List with 5 items' {'established': False}
+05:35:25.994942 - SPEECH OUTPUT: '2 Who can see what link.' {'established': False}
+05:35:28.208432 - SPEECH OUTPUT: 'leaving list.' {'established': False}
+05:35:28.208464 - SPEECH OUTPUT: 'leaving navigation.' {'established': False}
+05:35:28.208474 - SPEECH OUTPUT: '2 Who can see what Planned Each role sees only what it needs. Your own clinic keeps the records it created for you. Who can see what Reception coordinates appointments and never sees visit history or clinical notes. Basic consent shows a doctor the date, clinic and doctor of your other visits. Clinical consent adds notes and key alerts. Administrators manage clinics, users and devices. Administrative access is not clinical access.' {'established': False}
+05:35:28.208531 - SPEECH OUTPUT: 'clickable.' {'established': False}
+05:35:28.265931 - SPEECH OUTPUT: '2Who can see whatPlanned heading 2' {'established': False}
+05:35:30.432836 - SPEECH OUTPUT: 'navigation On this page' {'established': False}
+05:35:30.432869 - SPEECH OUTPUT: 'List with 5 items' {'established': False}
+05:35:30.432880 - SPEECH OUTPUT: '3 Consent levels link.' {'established': False}
+05:35:32.638012 - SPEECH OUTPUT: 'leaving list.' {'established': False}
+05:35:32.638042 - SPEECH OUTPUT: 'leaving navigation.' {'established': False}
+05:35:32.638052 - SPEECH OUTPUT: '3 Consent levels Planned None Nothing is shared with other clinics. Basic Other clinics' doctors can see when and where you were seen. Clinical Doctors can also see visit notes and key alerts. Nothing before consent. Until consent is recorded, no other clinic sees your records. Guardians. For a child or a person who cannot decide, a guardian gives consent and their name and relationship are recorded. Lite clinics.Clinics using Lite mode keep their own records only and are not part of network sharing.' {'established': False}
+05:35:32.638097 - SPEECH OUTPUT: 'clickable.' {'established': False}
+05:35:32.699763 - SPEECH OUTPUT: '3Consent levelsPlanned heading 2' {'established': False}
+05:35:34.863407 - SPEECH OUTPUT: 'navigation On this page' {'established': False}
+05:35:34.863441 - SPEECH OUTPUT: 'List with 5 items' {'established': False}
+05:35:34.863453 - SPEECH OUTPUT: '4 Every cross-clinic look is recorded link.' {'established': False}
+05:35:37.082526 - SPEECH OUTPUT: 'leaving list.' {'established': False}
+05:35:37.082557 - SPEECH OUTPUT: 'leaving navigation.' {'established': False}
+05:35:37.082566 - SPEECH OUTPUT: '4 Every cross-clinic look is recorded Planned When a doctor opens your record from another clinic, the access is designed to be logged with the role, clinic and time, so your clinic can tell you who viewed it.' {'established': False}
+05:35:37.082576 - SPEECH OUTPUT: 'clickable.' {'established': False}
+05:35:37.136367 - SPEECH OUTPUT: '4Every cross-clinic look is recordedPlanned heading 2' {'established': False}
+05:35:39.294926 - SPEECH OUTPUT: 'navigation On this page' {'established': False}
+05:35:39.295000 - SPEECH OUTPUT: 'List with 5 items' {'established': False}
+05:35:39.295012 - SPEECH OUTPUT: '5 Changing your mind link.' {'established': False}
+05:35:41.502523 - SPEECH OUTPUT: 'leaving list.' {'established': False}
+05:35:41.502554 - SPEECH OUTPUT: 'leaving navigation.' {'established': False}
+05:35:41.502564 - SPEECH OUTPUT: '5 Changing your mind How to ask today Speak to reception at the clinic you visit, in person or by the phone number you already use for appointments. Staff record your request and the doctor or administrator handles it. Withdrawal is not deletion. Withdrawing consent stops future sharing. It does not remove records your own clinic lawfully keeps about your care. When it takes effect. Once a withdrawal is recorded, the design is that the next lookup from another clinic no longer shows your information.' {'established': False}
+05:35:41.502573 - SPEECH OUTPUT: 'clickable.' {'established': False}
+05:35:41.557408 - SPEECH OUTPUT: '5Changing your mind heading 2' {'established': False}
+05:35:43.710706 - SPEECH OUTPUT: 'Who can see what landmark.' {'established': False}
+05:35:43.710716 - SPEECH OUTPUT: 'clickable.' {'established': False}
+05:35:48.171608 - SPEECH OUTPUT: 'leaving main content.' {'established': False}
+05:35:48.171655 - SPEECH OUTPUT: 'banner' {'established': False}
+05:35:48.171670 - SPEECH OUTPUT: 'Back to sign in link.' {'established': False}
+05:35:52.933563 - SPEECH OUTPUT: 'Screen reader off.' {'established': False}

@@ -1,0 +1,39 @@
+05:45:14.491257 - SPEECH OUTPUT: 'Screen reader on.' {'established': False}
+05:45:14.595560 - SPEECH OUTPUT: 'Amal Network · شبكة أمل - Chromium frame' {'established': False}
+05:45:14.758243 - SPEECH OUTPUT: 'document web' {'established': False}
+05:45:15.013474 - SPEECH OUTPUT: 'Finished loading Amal Network · شبكة أمل.' {'established': False}
+05:45:15.062050 - SPEECH OUTPUT: 'status bar'
+05:45:15.066825 - SPEECH OUTPUT: 'جارٍ تحميل مساحة عملك'
+05:45:15.107112 - SPEECH OUTPUT: 'جارٍ تحميل مساحة عملك' {'established': False}
+05:45:15.669771 - SPEECH OUTPUT: 'banner' {'established': False}
+05:45:15.669815 - SPEECH OUTPUT: 'لغة الواجهة panel' {'established': False}
+05:45:15.669831 - SPEECH OUTPUT: 'English toggle button pressed.' {'established': False}
+05:45:17.520833 - SPEECH OUTPUT: 'leaving panel.' {'established': False}
+05:45:17.520863 - SPEECH OUTPUT: 'leaving banner.' {'established': False}
+05:45:17.520891 - SPEECH OUTPUT: 'main content' {'established': False}
+05:45:17.520904 - SPEECH OUTPUT: 'Sign in button.' {'established': False}
+05:45:19.317545 - SPEECH OUTPUT: 'Email required entry required.' {'established': False}
+05:45:19.317554 - SPEECH OUTPUT: 'invalid entry.' {'established': False}
+05:45:19.317562 - SPEECH OUTPUT: 'Enter a valid email address.' {'established': False}
+05:45:19.321530 - SPEECH OUTPUT: 'Focus mode' {'established': False}
+05:45:22.843150 - SPEECH OUTPUT: 'Password required password text required.' {'established': False}
+05:45:22.843159 - SPEECH OUTPUT: 'invalid entry.' {'established': False}
+05:45:22.843167 - SPEECH OUTPUT: 'Enter your password (up to 72 characters).' {'established': False}
+05:45:26.234949 - SPEECH OUTPUT: 'Browse mode' {'established': False}
+05:45:26.311343 - SPEECH OUTPUT: 'status bar'
+05:45:26.313619 - SPEECH OUTPUT: 'جارٍ تحميل مساحة عملك'
+05:45:26.807783 - SPEECH OUTPUT: 'banner' {'established': False}
+05:45:26.807827 - SPEECH OUTPUT: 'لغة الواجهة panel' {'established': False}
+05:45:26.807842 - SPEECH OUTPUT: 'العربية toggle button pressed.' {'established': False}
+05:45:28.639387 - SPEECH OUTPUT: 'leaving panel.' {'established': False}
+05:45:28.639421 - SPEECH OUTPUT: 'leaving banner.' {'established': False}
+05:45:28.639450 - SPEECH OUTPUT: 'main content' {'established': False}
+05:45:28.639462 - SPEECH OUTPUT: 'دخول button.' {'established': False}
+05:45:30.445058 - SPEECH OUTPUT: 'البريد الإلكتروني مطلوب entry required.' {'established': False}
+05:45:30.445068 - SPEECH OUTPUT: 'invalid entry.' {'established': False}
+05:45:30.445076 - SPEECH OUTPUT: 'أدخل بريدًا إلكترونيًا صحيحًا.' {'established': False}
+05:45:30.449276 - SPEECH OUTPUT: 'Focus mode' {'established': False}
+05:45:33.955466 - SPEECH OUTPUT: 'كلمة المرور مطلوب password text required.' {'established': False}
+05:45:33.955476 - SPEECH OUTPUT: 'invalid entry.' {'established': False}
+05:45:33.955484 - SPEECH OUTPUT: 'أدخل كلمة المرور (حتى 72 حرفًا).' {'established': False}
+05:45:39.306683 - SPEECH OUTPUT: 'Screen reader off.' {'established': False}

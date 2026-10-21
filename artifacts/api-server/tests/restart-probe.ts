@@ -6,7 +6,8 @@ for await (const chunk of process.stdin) input += chunk;
 const probe = JSON.parse(input);
 try {
   if (probe.kind === "session") {
-    const req: any = { cookies: { amal_session: probe.session, amal_device: probe.device } };
+    const req: any = { originalUrl: "/api/me", method: "GET",
+      cookies: { amal_session: probe.session, amal_device: probe.device } };
     await authenticate(req, {} as any, (e?: any) => {
       process.stdout.write(JSON.stringify(e ? { status: e.status } : { id: req.auth.id }));
     });

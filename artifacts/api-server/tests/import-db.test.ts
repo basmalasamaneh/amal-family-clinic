@@ -13,6 +13,7 @@ if (process.env.NODE_ENV === "production" || process.env.REPLIT_DEPLOYMENT === "
 const admin = new pg.Client({ connectionString: process.env.DATABASE_URL });
 let actor: Auth, other: Auth, doctor: any, patient: any, clinic: any, baseline: unknown;
 const users: number[] = [], appointments: number[] = [], createdPatients: number[] = [], batches: number[] = [];
+const devices: number[] = [];
 const namespace = `import-test-${randomUUID()}`;
 let eventId = randomInt(100000000, 1000000000), dayOffset = 0;
 async function snapshot() {
@@ -25,8 +26,16 @@ async function snapshot() {
 async function makeActor(clinicId: number): Promise<Auth> {
   const { rows: [u] } = await admin.query("INSERT INTO operational.users(email,password_hash,role,clinic_id) VALUES($1,'unused','receptionist',$2) RETURNING id,email", [`${randomUUID()}@imports.test`, clinicId]);
   users.push(u.id);
+  // Booking now revalidates persisted session/device authority, not just Auth.
+  const device = (await admin.query("INSERT INTO operational.devices(clinic_id,label) VALUES($1,'import-test') RETURNING id", [clinicId])).rows[0].id;
+  devices.push(device);
+  await admin.query("INSERT INTO operational.auth_devices(device_id,credential_digest) VALUES($1,$2)", [device, randomUUID()]);
+  const sessionDigest = randomUUID();
+  await admin.query(`INSERT INTO operational.auth_sessions(token_digest,user_id,device_id,csrf_token,absolute_expires_at)
+    VALUES($1,$2,$3,'unused',now()+interval '1 hour')`, [sessionDigest, u.id, device]);
   return { id: u.id, email: u.email, role: "front-desk", clinicId, doctorId: null, locale: "en", theme: "light",
-    sessionDigest: "", csrfToken: "", device: null, expiresAt: new Date(Date.now() + 1000000), absoluteExpiresAt: null, pinVerifiedAt: new Date() };
+    sessionDigest, csrfToken: "unused", device: { id: device, clinicId },
+    expiresAt: new Date(Date.now() + 3600000), absoluteExpiresAt: new Date(Date.now() + 3600000), pinVerifiedAt: new Date() };
 }
 function slot() {
   // Distinct real working dates, based solely on operational clinic settings.
@@ -81,6 +90,9 @@ after(async () => {
   await admin.query("RESET ROLE");
   await admin.query("DELETE FROM operational.appointments WHERE created_by=ANY($1::integer[])", [users]);
   if (createdPatients.length) await admin.query("DELETE FROM operational.patients WHERE patient_id=ANY($1::integer[])", [createdPatients]);
+  await admin.query("DELETE FROM operational.auth_sessions WHERE user_id=ANY($1::integer[])", [users]);
+  await admin.query("DELETE FROM operational.auth_devices WHERE device_id=ANY($1::integer[])", [devices]);
+  await admin.query("DELETE FROM operational.devices WHERE id=ANY($1::integer[])", [devices]);
   await admin.query("DELETE FROM operational.users WHERE id=ANY($1::integer[])", [users]);
   assert.deepEqual(await snapshot(), baseline);
   } finally { await admin.end(); await pool.end(); }
@@ -202,7 +214,14 @@ test("report replay reauthorizes current actor and request key cannot be reused 
   const committed = await commit(await review(b));
   await admin.query("UPDATE operational.users SET role='administrator' WHERE id=$1", [actor.id]);
   try { await assert.rejects(importReport(actor, committed.id, "en"), (e: any) => e.status === 403); }
-  finally { await admin.query("UPDATE operational.users SET role='receptionist' WHERE id=$1", [actor.id]); }
+  finally {
+    await admin.query("UPDATE operational.users SET role='receptionist' WHERE id=$1", [actor.id]);
+    // Role changes revoke sessions by contract. Subsequent booking assertions
+    // need fresh persisted authority, not the now-revoked pre-change session.
+    actor.sessionDigest = randomUUID();
+    await admin.query(`INSERT INTO operational.auth_sessions(token_digest,user_id,device_id,csrf_token,absolute_expires_at)
+      VALUES($1,$2,$3,'unused',now()+interval '1 hour')`, [actor.sessionDigest, actor.id, actor.device!.id]);
+  }
 });
 test("late database failure rolls back new patients, appointments, provenance, audits and report together", async () => {
   const b = await upload([source()], `import-test-rollback-${randomUUID()}`);
@@ -329,7 +348,7 @@ test("both staged patient-overlap participants require their own warning acknowl
   assert.equal(committed.totals.created, 2);
   assert.equal(await count("appointments"), before.appointments + 2);
   const evidence = (await admin.query(`SELECT detail->>'overrideReason' reason FROM operational.audit_log
-    WHERE user_id=$1 AND action='import.row_committed' AND (detail->>'batchId')::integer=$2 ORDER BY detail->>'rowId'`,
+    WHERE user_id=$1 AND action='import.row_committed' AND (detail->>'batchId')::integer=$2 ORDER BY (detail->>'rowId')::integer`,
   [actor.id, b.id])).rows.map(r => r.reason);
   assert.deepEqual(evidence, ["First row reviewed handoff", "Second row reviewed handoff"]);
 });

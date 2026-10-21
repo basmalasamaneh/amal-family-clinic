@@ -6,7 +6,9 @@ export default defineConfig({
   forbidOnly: true,
   retries: 0,
   testDir: './tests/booking-live',
-  testMatch: '**/*.spec.ts',
+  // Explicit legacy server-preview UI contract. The supported production
+  // local-first journey lives in the root audit:booking configuration.
+  testMatch: ['lifecycle.spec.ts', 'collisions.spec.ts'],
   fullyParallel: false,
   workers: 1,
   timeout: 120_000,
