@@ -1,4 +1,5 @@
 import { patientScopeSql } from "../lib/patient-access";
+import { cancelAppointmentReminders, scheduleAppointmentReminders } from "../reminders/lifecycle";
 import { createHash, randomUUID } from "node:crypto";
 import type { PoolClient } from "pg";
 import { z } from "zod/v4";
@@ -338,6 +339,7 @@ export async function createAppointment(auth: Auth, raw: unknown, context?: Appo
       VALUES($1,$2,$3,$4,$5,$6,'booked',$7,$8) RETURNING *`, [input.clinicId, input.doctorId, input.patientId, input.startsAt, minutes, input.source, input.clientOpId, actor.id]);
     await auditOverride(client, actor, input, row!.appointment_id, input.clientOpId, result, "create", affectedAppointments);
     await consume(client, actor, input, holds, minutes);
+    await scheduleAppointmentReminders(client, row!.appointment_id, now);
     const response = project(row!);
     await record(client, actor, input.clientOpId, input.clinicId, input.doctorId, hash, response);
     return response;
@@ -358,10 +360,17 @@ export async function updateAppointment(auth: Auth, id: number, raw: unknown, co
     const evaluationStatus = (input.startsAt !== undefined || input.endsAt !== undefined) && nextStatus !== "cancelled" ? "booked" : nextStatus;
     const { result, minutes, holds, affectedAppointments } = await preview(client, actor, now, candidate, evaluationStatus);
     requireEligible(result);
-    const { rows: [updated] } = await client.query<Row>(`UPDATE operational.appointments SET scheduled_at=$2,duration_minutes=$3,status=$4,version=version+1,updated_at=clock_timestamp(),cancel_reason=COALESCE($5,cancel_reason)
+    const moved = candidate.startsAt !== row.scheduled_at.toISOString() || minutes !== row.duration_minutes;
+    const { rows: [updated] } = await client.query<Row>(`UPDATE operational.appointments SET
+      reminder_schedule_version=reminder_schedule_version+CASE WHEN scheduled_at<>$2::timestamptz OR duration_minutes<>$3 THEN 1 ELSE 0 END,
+      scheduled_at=$2,duration_minutes=$3,status=$4,version=version+1,updated_at=clock_timestamp(),cancel_reason=COALESCE($5,cancel_reason)
       WHERE appointment_id=$1 RETURNING *`, [id, candidate.startsAt, minutes, input.status ?? row.status, input.cancelReason ?? null]);
     await auditOverride(client, actor, candidate, id, input.clientOpId, result, "update", affectedAppointments);
     await consume(client, actor, candidate, holds, minutes);
+    if (moved || !["booked", "double_booked"].includes(updated!.status)) {
+      await cancelAppointmentReminders(client, id, now, moved ? "appointment_changed" : "appointment_inactive");
+    }
+    if (moved) await scheduleAppointmentReminders(client, id, now);
     const response = project(updated!);
     await record(client, actor, input.clientOpId, row.clinic_id, row.doctor_id, hash, response);
     return response;

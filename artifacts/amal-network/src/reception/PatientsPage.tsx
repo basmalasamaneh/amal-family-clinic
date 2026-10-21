@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useSearch } from 'wouter';
 import { ShieldCheck, AlertTriangle, CalendarClock, CalendarDays, DoorOpen, FlaskConical, IdCard, Lock, PhoneCall, RotateCcw, Search, UserPlus, UserRound, X } from 'lucide-react';
+import { ReminderOptOut } from '@/reminders/ReminderOptOut';
 import { EmptyState, useAmalPreferences } from '@workspace/amal-ui';
 import type { ShellClinic } from '@/shell/identity';
 import { demoPath } from '@/shell/identity';
@@ -185,6 +186,8 @@ function PatientDetail({ patient, clinic, api, doctorNames, headingRef, onClear,
         <Link href={demoPath(`/desk/consent?patientId=${patient.id}`)} onClick={() => selectConsentPatient(clinic.id, patient.id)} className="bk-btn" data-testid="link-patient-consent"><ShieldCheck size={18} aria-hidden="true" />{t('rx.detail.consent')}</Link>
         <Link href={demoPath(bookingQuery({ clinicId: clinic.id, source: 'phone' }))} className="bk-btn" data-testid="link-patient-phone-booking"><PhoneCall size={18} aria-hidden="true" />{t('rx.detail.phoneBooking')}</Link>
       </div>
+
+      <ReminderOptOut key={`${clinic.id}:${patient.id}`} patientId={patient.id} />
 
       <section className="rx-up" aria-labelledby="rx-up-h" data-testid="section-upcoming">
         <h3 id="rx-up-h" className="rx-h3"><CalendarClock size={20} aria-hidden="true" />{t('rx.up.title')}</h3>

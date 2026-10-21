@@ -18,7 +18,7 @@ test('every direct route is allowed only for its listed role', () => {
     for (const route of SHELL_ROUTES) assert.equal(resolve(route.path, role as null).kind, 'noRole');
   }
   assert.equal(resolve('/missing', 'admin').kind, 'notFound');
-  assert.equal(new Set(SHELL_ROUTES.map(r => r.path)).size, 20);
+  assert.equal(new Set(SHELL_ROUTES.map(r => r.path)).size, 21);
 });
 
 test('display preferences isolate stable identities, invalid fields and storage failures', () => {

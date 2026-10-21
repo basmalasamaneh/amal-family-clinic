@@ -5,6 +5,7 @@ import { canonicalPhone, normalizeName } from "@workspace/db/patient-search";
 import { enforceScope, forbidden, roles, type Auth } from "../lib/auth";
 import { fail } from "../lib/auth-errors";
 import { patientScopeSql } from "../lib/patient-access";
+import { scheduleAppointmentReminders } from "../reminders/lifecycle";
 import { evaluate, type Appointment } from "../appointments/engine";
 import { hebronDay, isMinor } from "../patients/demographics";
 import { importMessages } from "./messages";
@@ -385,6 +386,11 @@ export async function commitImport(auth: Auth, id: number, raw: unknown) {
           VALUES($1,$2,$3,$4,$5,'import',$6,$7) RETURNING appointment_id`,
         [m.clinicId, m.doctorId, review.patientId, m.startsAt, m.durationMinutes, m.status, a.id]);
         r.appointment_id = created.appointment_id; r.staging.outcome = "created";
+        // The import transaction already owns the scheduling lock. Only newly
+        // created, eligible future bookings schedule; associations/replays never
+        // backfill reminders on pre-existing or historical appointments.
+        const { rows: [clock] } = await c.query("SELECT clock_timestamp() AS now");
+        await scheduleAppointmentReminders(c, created.appointment_id, clock.now);
       }
       if (r.staging.outcome !== "source-replay") await c.query(`INSERT INTO operational.import_source_links(source_name,source_event_id,source_hash,appointment_id,batch_id,row_id)
         VALUES($1,$2,$3,$4,$5,$6)`, [sourceNamespace, r.source_event_id, sourceHash(r, b), r.appointment_id, id, r.id]);

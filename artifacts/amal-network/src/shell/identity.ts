@@ -19,6 +19,8 @@ export interface ShellIdentity {
   offlineRestored?: boolean;
   /** Online /me authority only; a login session is not a trusted sync device. */
   syncDeviceAuthorized?: boolean;
+  /** Server-assigned home clinic from /me; null when the account has none. Never chosen client-side. */
+  homeClinicId?: number | null;
 }
 export interface IdentityAdapter {
   mode: 'real' | 'fixture';
@@ -51,7 +53,8 @@ export const realIdentityAdapter: IdentityAdapter = {
     forgetOfflinePermit();
     if (!Number.isSafeInteger(identity.id) || identity.id <= 0 || typeof identity.email !== 'string') throw new Error('Invalid identity response');
     const result: ShellIdentity = { id: `account:${identity.id}`, name: identity.email, role: canonicalRole(identity.role), clinics: [], clinicsState: 'ready', expiresAt: identity.session?.expiresAt ?? null, csrfToken: identity.csrfToken,
-      syncDeviceAuthorized: identity.device !== null && identity.device.clinicId === identity.clinicId };
+      syncDeviceAuthorized: identity.device !== null && identity.device.clinicId === identity.clinicId,
+      homeClinicId: Number.isSafeInteger(identity.clinicId) && (identity.clinicId as number) > 0 ? identity.clinicId as number : null };
     if (!result.role) return result;
     try {
       let cursor: string | undefined;

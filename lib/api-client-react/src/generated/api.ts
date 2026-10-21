@@ -106,6 +106,7 @@ import type {
   ListDoctorsParams,
   ListPatientDuplicatesParams,
   ListPatientsParams,
+  ListReminderLogParams,
   ListSyncConflictsParams,
   LookupDurationInput,
   LookupNetworkParams,
@@ -133,6 +134,9 @@ import type {
   PinReentry,
   PullSyncParams,
   ReceptionContext,
+  ReminderClinicPreference,
+  ReminderLog,
+  ReminderPatientPreference,
   ResolutionInput,
   SyncBatch,
   SyncConflictPage,
@@ -168,6 +172,395 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
   }
   return result;
 };
+
+export const getListReminderLogUrl = (params: ListReminderLogParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/reminders/log?${stringifiedParams}` : `/api/reminders/log`
+}
+
+/**
+ * Simulation only; own-clinic admin/front-desk metadata, without patient identifiers. Date filters select intended due instants.
+ */
+export const listReminderLog = async (params: ListReminderLogParams, options?: Parameters<typeof customFetch>[1]): Promise<ReminderLog> => {
+
+  return customFetch<ReminderLog>(getListReminderLogUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListReminderLogQueryKey = (params?: ListReminderLogParams,) => {
+    return [
+    `/api/reminders/log`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListReminderLogQueryOptions = <TData = Awaited<ReturnType<typeof listReminderLog>>, TError = ErrorType<unknown>>(params: ListReminderLogParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listReminderLog>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListReminderLogQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listReminderLog>>> = ({ signal }) => listReminderLog(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listReminderLog>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListReminderLogQueryResult = NonNullable<Awaited<ReturnType<typeof listReminderLog>>>
+export type ListReminderLogQueryError = ErrorType<unknown>
+
+
+
+export function useListReminderLog<TData = Awaited<ReturnType<typeof listReminderLog>>, TError = ErrorType<unknown>>(
+ params: ListReminderLogParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listReminderLog>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListReminderLogQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetReminderClinicPreferenceUrl = (clinicId: number,) => {
+
+
+
+
+  return `/api/reminders/clinics/${clinicId}`
+}
+
+export const getReminderClinicPreference = async (clinicId: number, options?: Parameters<typeof customFetch>[1]): Promise<ReminderClinicPreference> => {
+
+  return customFetch<ReminderClinicPreference>(getGetReminderClinicPreferenceUrl(clinicId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetReminderClinicPreferenceQueryKey = (clinicId: number,) => {
+    return [
+    `/api/reminders/clinics/${clinicId}`
+    ] as const;
+    }
+
+
+export const getGetReminderClinicPreferenceQueryOptions = <TData = Awaited<ReturnType<typeof getReminderClinicPreference>>, TError = ErrorType<unknown>>(clinicId: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getReminderClinicPreference>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetReminderClinicPreferenceQueryKey(clinicId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getReminderClinicPreference>>> = ({ signal }) => getReminderClinicPreference(clinicId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: clinicId !== null && clinicId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getReminderClinicPreference>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetReminderClinicPreferenceQueryResult = NonNullable<Awaited<ReturnType<typeof getReminderClinicPreference>>>
+export type GetReminderClinicPreferenceQueryError = ErrorType<unknown>
+
+
+
+export function useGetReminderClinicPreference<TData = Awaited<ReturnType<typeof getReminderClinicPreference>>, TError = ErrorType<unknown>>(
+ clinicId: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getReminderClinicPreference>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetReminderClinicPreferenceQueryOptions(clinicId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getSetReminderClinicPreferenceUrl = (clinicId: number,) => {
+
+
+
+
+  return `/api/reminders/clinics/${clinicId}`
+}
+
+export const setReminderClinicPreference = async (clinicId: number,
+    reminderClinicPreference: ReminderClinicPreference, options?: Parameters<typeof customFetch>[1]): Promise<ReminderClinicPreference> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<ReminderClinicPreference>(getSetReminderClinicPreferenceUrl(clinicId),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(reminderClinicPreference)
+  }
+);}
+
+
+
+
+
+export const getSetReminderClinicPreferenceMutationKey = () => ['setReminderClinicPreference'] as const;
+
+export const getSetReminderClinicPreferenceMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof setReminderClinicPreference>>, TError,SetReminderClinicPreferenceMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof setReminderClinicPreference>>, TError,SetReminderClinicPreferenceMutationVariables, TContext> => {
+
+const mutationKey = getSetReminderClinicPreferenceMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof setReminderClinicPreference>>, SetReminderClinicPreferenceMutationVariables> = (props) => {
+          const {clinicId,data} = props ?? {};
+
+          return  setReminderClinicPreference(clinicId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SetReminderClinicPreferenceMutationResult = NonNullable<Awaited<ReturnType<typeof setReminderClinicPreference>>>
+    export type SetReminderClinicPreferenceMutationBody = BodyType<ReminderClinicPreference>
+    export type SetReminderClinicPreferenceMutationError = ErrorType<unknown>
+    export type SetReminderClinicPreferenceMutationVariables = {clinicId: number;data: BodyType<ReminderClinicPreference>}
+
+    export const useSetReminderClinicPreference = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof setReminderClinicPreference>>, TError,SetReminderClinicPreferenceMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof setReminderClinicPreference>>,
+        TError,
+        SetReminderClinicPreferenceMutationVariables,
+        TContext
+      > => {
+      return useMutation(getSetReminderClinicPreferenceMutationOptions(options));
+    }
+
+export const getGetReminderPatientPreferenceUrl = (patientId: number,) => {
+
+
+
+
+  return `/api/reminders/patients/${patientId}`
+}
+
+export const getReminderPatientPreference = async (patientId: number, options?: Parameters<typeof customFetch>[1]): Promise<ReminderPatientPreference> => {
+
+  return customFetch<ReminderPatientPreference>(getGetReminderPatientPreferenceUrl(patientId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetReminderPatientPreferenceQueryKey = (patientId: number,) => {
+    return [
+    `/api/reminders/patients/${patientId}`
+    ] as const;
+    }
+
+
+export const getGetReminderPatientPreferenceQueryOptions = <TData = Awaited<ReturnType<typeof getReminderPatientPreference>>, TError = ErrorType<unknown>>(patientId: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getReminderPatientPreference>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetReminderPatientPreferenceQueryKey(patientId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getReminderPatientPreference>>> = ({ signal }) => getReminderPatientPreference(patientId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: patientId !== null && patientId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getReminderPatientPreference>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetReminderPatientPreferenceQueryResult = NonNullable<Awaited<ReturnType<typeof getReminderPatientPreference>>>
+export type GetReminderPatientPreferenceQueryError = ErrorType<unknown>
+
+
+
+export function useGetReminderPatientPreference<TData = Awaited<ReturnType<typeof getReminderPatientPreference>>, TError = ErrorType<unknown>>(
+ patientId: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getReminderPatientPreference>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetReminderPatientPreferenceQueryOptions(patientId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getSetReminderPatientPreferenceUrl = (patientId: number,) => {
+
+
+
+
+  return `/api/reminders/patients/${patientId}`
+}
+
+export const setReminderPatientPreference = async (patientId: number,
+    reminderPatientPreference: ReminderPatientPreference, options?: Parameters<typeof customFetch>[1]): Promise<ReminderPatientPreference> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<ReminderPatientPreference>(getSetReminderPatientPreferenceUrl(patientId),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(reminderPatientPreference)
+  }
+);}
+
+
+
+
+
+export const getSetReminderPatientPreferenceMutationKey = () => ['setReminderPatientPreference'] as const;
+
+export const getSetReminderPatientPreferenceMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof setReminderPatientPreference>>, TError,SetReminderPatientPreferenceMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof setReminderPatientPreference>>, TError,SetReminderPatientPreferenceMutationVariables, TContext> => {
+
+const mutationKey = getSetReminderPatientPreferenceMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof setReminderPatientPreference>>, SetReminderPatientPreferenceMutationVariables> = (props) => {
+          const {patientId,data} = props ?? {};
+
+          return  setReminderPatientPreference(patientId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SetReminderPatientPreferenceMutationResult = NonNullable<Awaited<ReturnType<typeof setReminderPatientPreference>>>
+    export type SetReminderPatientPreferenceMutationBody = BodyType<ReminderPatientPreference>
+    export type SetReminderPatientPreferenceMutationError = ErrorType<unknown>
+    export type SetReminderPatientPreferenceMutationVariables = {patientId: number;data: BodyType<ReminderPatientPreference>}
+
+    export const useSetReminderPatientPreference = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof setReminderPatientPreference>>, TError,SetReminderPatientPreferenceMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof setReminderPatientPreference>>,
+        TError,
+        SetReminderPatientPreferenceMutationVariables,
+        TContext
+      > => {
+      return useMutation(getSetReminderPatientPreferenceMutationOptions(options));
+    }
 
 export const getGetDemoContextUrl = () => {
 

@@ -11,6 +11,11 @@ type RouteContract = { method: string; path: string; query: string[]; body: bool
 const route = (method: string, path: string, query = "", body = false): RouteContract =>
   ({ method, path, query: query ? query.split(" ") : [], body });
 export const routeContracts: RouteContract[] = [
+  route("GET", "/reminders/log", "clinicId limit cursor status from to"),
+  route("GET", "/reminders/clinics/:clinicId"),
+  route("PUT", "/reminders/clinics/:clinicId", "", true),
+  route("GET", "/reminders/patients/:patientId"),
+  route("PUT", "/reminders/patients/:patientId", "", true),
   route("GET", "/healthz"),
   route("GET", "/demo/context"),
   route("GET", "/admin/developer/status"),
@@ -126,7 +131,7 @@ export const validateRouteInputs: RequestHandler = (req, _res, next) => {
     contract.segments.forEach((segment, index) => {
       if (!segment.startsWith(":")) return;
       const value = segments[index]!;
-      if ([":id", ":clinicId"].includes(segment)) {
+      if ([":id", ":clinicId", ":patientId"].includes(segment)) {
         if (!/^[1-9]\d{0,9}$/.test(value) || Number(value) > 2147483647) throw invalid();
       } else if (!z.uuid().safeParse(value).success) throw invalid();
     });

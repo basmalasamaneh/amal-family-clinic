@@ -9,6 +9,95 @@ import * as zod from 'zod';
 
 
 /**
+ * Simulation only; own-clinic admin/front-desk metadata, without patient identifiers. Date filters select intended due instants.
+ */
+
+export const listReminderLogQueryLimitMax = 100;
+
+
+
+
+export const ListReminderLogQueryParams = zod.object({
+  "clinicId": zod.coerce.number().int().min(1),
+  "limit": zod.coerce.number().int().min(1).max(listReminderLogQueryLimitMax).optional(),
+  "cursor": zod.coerce.number().int().min(1).optional(),
+  "status": zod.enum(['scheduled', 'sent', 'cancelled']).optional(),
+  "from": zod.date().optional(),
+  "to": zod.date().optional()
+}).strict()
+
+export const ListReminderLogResponse = zod.object({
+  "items": zod.array(zod.object({
+  "id": zod.number().int(),
+  "status": zod.enum(['scheduled', 'sent', 'cancelled']),
+  "textAr": zod.string(),
+  "textEn": zod.string(),
+  "scheduledAt": zod.coerce.date(),
+  "sentAt": zod.string().nullable(),
+  "cancelledAt": zod.string().nullable(),
+  "cancellationReason": zod.string().nullable()
+}).strict()),
+  "nextCursor": zod.number().int().nullable()
+}).strict()
+
+
+
+
+
+export const GetReminderClinicPreferenceParams = zod.object({
+  "clinicId": zod.coerce.number().int().min(1)
+}).strict()
+
+export const GetReminderClinicPreferenceResponse = zod.object({
+  "enabled": zod.boolean()
+}).strict()
+
+
+
+
+
+export const SetReminderClinicPreferenceParams = zod.object({
+  "clinicId": zod.coerce.number().int().min(1)
+}).strict()
+
+export const SetReminderClinicPreferenceBody = zod.object({
+  "enabled": zod.boolean()
+}).strict()
+
+export const SetReminderClinicPreferenceResponse = zod.object({
+  "enabled": zod.boolean()
+}).strict()
+
+
+
+
+
+export const GetReminderPatientPreferenceParams = zod.object({
+  "patientId": zod.coerce.number().int().min(1)
+}).strict()
+
+export const GetReminderPatientPreferenceResponse = zod.object({
+  "optedOut": zod.boolean()
+}).strict()
+
+
+
+
+
+export const SetReminderPatientPreferenceParams = zod.object({
+  "patientId": zod.coerce.number().int().min(1)
+}).strict()
+
+export const SetReminderPatientPreferenceBody = zod.object({
+  "optedOut": zod.boolean()
+}).strict()
+
+export const SetReminderPatientPreferenceResponse = zod.object({
+  "optedOut": zod.boolean()
+}).strict()
+
+
+/**
  * Recovery-only generation discovery. Public generation grants no data or session access; clinic outage is exposed only for the authenticated clinic.
  */
 export const GetDemoContextResponse = zod.object({

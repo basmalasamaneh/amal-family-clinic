@@ -13,6 +13,7 @@ export const consentGivenBy = operational.enum("consent_given_by", ["patient", "
 export const alertKind = operational.enum("alert_kind", ["medication", "allergy", "condition"]);
 
 export const operationalAppointments = operational.table("appointments", {
+  reminder_schedule_version: integer("reminder_schedule_version").notNull().default(1),
   appointment_id: identity("appointment_id"),
   clinic_id: integer("clinic_id").notNull().references(() => operationalClinics.clinic_id),
   doctor_id: integer("doctor_id").notNull().references(() => operationalDoctors.doctor_id),

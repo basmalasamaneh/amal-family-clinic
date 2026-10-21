@@ -14,6 +14,16 @@ _Replace the heading above with the project's name, and this line with one sente
 - `docs/data/operational-demo.md` — schema mapping, exact fixture counts, guarded reset and scenario recipes
 - Required env: `DATABASE_URL` — Postgres connection string
 
+### Simulated reminders
+
+- Apply only the additive migration with `pnpm --filter @workspace/api-server reminders:migrate`; it changes operational tables only and performs no appointment backfill. Never run foundation bootstrap/reset to enable reminders.
+- Clinic `reminders_enabled` defaults to false; patient-wide `reminder_opt_out` defaults to false, independently of clinical-sharing consent. Tests explicitly enable their disposable clinic. Disable/opt-out cancels pending history; re-enable affects subsequent bookings/moves only. Identity merge preserves either patient's opt-out.
+- The API process runs a sequential 15-second simulator dispatcher, retrying safely if reminder schema is not yet installed. There is no provider, credential lookup, address payload or outbound messaging. Each bilingual record represents one simulated delivery.
+- Booking/move/cancel, preference changes and dispatch share scheduling transaction lock `761910`. The worker first obtains shared reset-admission lock `761930`, then scheduling lock, then row locks. A cancellation/opt-out committed first prevents dispatch; a committed simulated send remains history. Receipt and simulated status commit together, with no externally visible simulator effect before commit.
+- Schedule identity is `(appointment_id, schedule_version, offset_hours)`, separate from generic appointment revision. A real schedule change increments identity; replay does not. UTC offsets are 24/2 elapsed hours; missed windows become cancelled without catch-up, and nothing sends at/after appointment start. AR/EN snapshots format the instant in Asia/Hebron via date-fns-tz.
+- Restart-late policy: the 24-hour reminder expires when the 2-hour window arrives. An overdue 24-hour record is cancelled with `missed_window`, even across separate worker batches/restarts; only the latest relevant 2-hour reminder may simulate delivery before appointment start. At/after start both are cancelled. This prevents a recovery catch-up burst.
+- `pnpm --filter @workspace/api-server reminders:test` runs focused simulator/privacy/lifecycle coverage. Persisted statuses remain `pending`, `simulated`, `cancelled`; the UI labels them scheduled, sent (simulated), cancelled.
+
 ## Stack
 
 - pnpm workspaces, Node.js 24, TypeScript 5.9

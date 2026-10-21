@@ -91,6 +91,14 @@ export const operationalPatientMergeCandidates = operational.table("patient_merg
 ]);
 
 export const operationalNotifications = operational.table("notifications", {
+  schedule_version: integer("schedule_version"),
+  offset_hours: integer("offset_hours"),
+  text_ar: text("text_ar"),
+  text_en: text("text_en"),
+  sent_at: instant("sent_at"),
+  cancelled_at: instant("cancelled_at"),
+  cancellation_reason: text("cancellation_reason"),
+  receipt: jsonb("receipt"),
   id: identity(),
   fixture_key: fixtureKey(),
   clinic_id: integer("clinic_id").notNull().references(() => operationalClinics.clinic_id),
@@ -101,6 +109,7 @@ export const operationalNotifications = operational.table("notifications", {
   scheduled_at: instant("scheduled_at").notNull(),
 }, (t) => [
   foreignKey({ name: "notifications_appointment_patient_clinic_fk", columns: [t.appointment_id, t.patient_id, t.clinic_id], foreignColumns: [operationalAppointments.appointment_id, operationalAppointments.patient_id, operationalAppointments.clinic_id] }),
+  uniqueIndex("notifications_reminder_identity").on(t.appointment_id, t.schedule_version, t.offset_hours).where(sql`${t.schedule_version} IS NOT NULL`),
   check("notifications_message_check", sql`${t.message_key} ~ '^[a-z][A-Za-z0-9_.-]*$'`),
 ]);
 

@@ -11,6 +11,8 @@
     "deployment:test": "tsx --test tests/deployment-health.test.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.privacy.json --noEmit",
     "auth:migrate": "tsx scripts/auth-migrate.ts",
+    "reminders:migrate": "tsx scripts/reminders-migrate.ts",
+    "reminders:test": "tsx --test --test-concurrency=1 tests/reminders*.test.ts",
     "adoption:migrate": "tsx scripts/adoption-migrate.ts",
     "adoption:test": "tsx --test --test-concurrency=1 tests/adoption*.test.ts",
     "adoption:results:test": "tsx --test --test-concurrency=1 tests/adoption-results-api.test.ts",

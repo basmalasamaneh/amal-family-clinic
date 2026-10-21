@@ -18,6 +18,7 @@ export const fixtureKey = () => text("fixture_key").unique();
 export const nonblank = z.string().refine(v => v.trim().length > 0, "Must not be blank");
 
 export const operationalClinics = operational.table("clinics", {
+  reminders_enabled: boolean("reminders_enabled").notNull().default(false),
   clinic_id: identity("clinic_id"),
   clinic_name: text("clinic_name").notNull(),
   city: text("city").notNull(),
@@ -89,6 +90,7 @@ export const operationalDevices = operational.table("devices", {
 ]);
 
 export const operationalPatients = operational.table("patients", {
+  reminder_opt_out: boolean("reminder_opt_out").notNull().default(false),
   patient_id: identity("patient_id"),
   version: integer("version").notNull().default(1),
   created_clinic_id: integer("created_clinic_id").references(() => operationalClinics.clinic_id),

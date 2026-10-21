@@ -31,6 +31,7 @@ import { NetworkHealthPage } from '@/admin/NetworkHealthPage';
 import { UsersDevicesPage } from '@/admin/UsersDevicesPage';
 import { ClinicsDoctorsPage } from '@/admin/ClinicsDoctorsPage';
 import { AuditPage } from '@/admin/AuditPage';
+import { MessagesPage } from '@/reminders/MessagesPage';
 import { DeveloperToolsPage } from '@/admin/DeveloperToolsPage';
 import { clearSelection as clearNetworkSelection } from '@/network/model';
 import { clearConsentSelection } from '@/consent/model';
@@ -402,6 +403,7 @@ function PageContent({ identity, res, title, clinic, clinics, fixture, landing, 
   if (res.kind === 'page' && res.route.id === 'networkHealth') return <NetworkHealthPage key={scope} title={title} />;
   if (res.kind === 'page' && res.route.id === 'usersDevices') return <UsersDevicesPage key={scope} title={title} />;
   if (res.kind === 'page' && res.route.id === 'clinicsDoctors') return <ClinicsDoctorsPage key={scope} title={title} accountKey={scope.split(':').slice(0, -2).join(':')} onClinicsChanged={() => onRefresh(true)} />;
+  if (res.kind === 'page' && res.route.id === 'messages') return <MessagesPage key={scope} identity={identity} clinic={clinic} title={title} />;
   if (res.kind === 'page' && res.route.id === 'audit') return <AuditPage key={scope} title={title} />;
   if (res.kind === 'page' && res.route.id === 'developer') return <DeveloperToolsPage key={scope} title={title} />;
   if (res.kind === 'page' && res.route.id === 'newBooking') return <BookingHandoff clinic={clinic} fixture={fixture} title={title} />;

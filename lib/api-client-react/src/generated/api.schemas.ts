@@ -5,6 +5,43 @@
  * Amal Network Section 12. Authentication, appointments and clinic-local patient CRUD/search are implemented; other domain services remain contracts/mocks. UTC ISO instants, required date-only DOB, Asia/Hebron display. Local patient endpoints return demographics only to doctors/front-desk, never clinical history or admin patient access. Separate network services require consent and exclude Lite clinics. Lists use opaque cursor plus limit (1–100, default 25); null nextCursor ends pagination. Administration endpoints are implemented against operational tables, with account deactivation and transactional audit. Network health reports persisted receipt-time telemetry with explicit unknown queue coverage.
  * OpenAPI spec version: 0.2.0
  */
+export interface ReminderClinicPreference {
+  enabled: boolean;
+}
+
+export interface ReminderPatientPreference {
+  optedOut: boolean;
+}
+
+export type ReminderLogEntryStatus = typeof ReminderLogEntryStatus[keyof typeof ReminderLogEntryStatus];
+
+
+export const ReminderLogEntryStatus = {
+  scheduled: 'scheduled',
+  sent: 'sent',
+  cancelled: 'cancelled',
+} as const;
+
+export interface ReminderLogEntry {
+  id: number;
+  status: ReminderLogEntryStatus;
+  textAr: string;
+  textEn: string;
+  scheduledAt: string;
+  /** @nullable */
+  sentAt: string | null;
+  /** @nullable */
+  cancelledAt: string | null;
+  /** @nullable */
+  cancellationReason: string | null;
+}
+
+export interface ReminderLog {
+  items: ReminderLogEntry[];
+  /** @nullable */
+  nextCursor: number | null;
+}
+
 export interface DemoContext {
   enabled: boolean;
   /** @nullable */
@@ -3736,6 +3773,34 @@ export type ImportRateLimitResponse = ApiFailure;
  * Unexpected server failure; transaction rolled back
  */
 export type ImportInternalResponse = ApiFailure;
+
+export type ListReminderLogParams = {
+/**
+ * @minimum 1
+ */
+clinicId: number;
+/**
+ * @minimum 1
+ * @maximum 100
+ */
+limit?: number;
+/**
+ * @minimum 1
+ */
+cursor?: number;
+status?: ListReminderLogStatus;
+from?: string;
+to?: string;
+};
+
+export type ListReminderLogStatus = typeof ListReminderLogStatus[keyof typeof ListReminderLogStatus];
+
+
+export const ListReminderLogStatus = {
+  scheduled: 'scheduled',
+  sent: 'sent',
+  cancelled: 'cancelled',
+} as const;
 
 export type ListClinicsParams = {
 cursor?: string;

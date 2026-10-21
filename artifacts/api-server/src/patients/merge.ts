@@ -7,6 +7,7 @@ import { forbidden, type Auth } from "../lib/auth";
 import { fail } from "../lib/auth-errors";
 import { patientScopeSql } from "../lib/patient-access";
 import { validBirthDate } from "./demographics";
+import { setPatientReminderOptOut } from "../reminders/lifecycle";
 
 const positive = z.number().int().positive().max(2147483647);
 export const mergeInput = z.object({
@@ -269,6 +270,10 @@ export async function mergePatients(auth: Auth, raw: unknown) {
     const { rows: [s] } = await client.query("UPDATE operational.patients SET merged_into_id=$2 WHERE patient_id=$1 RETURNING version", [source.patient_id, target.patient_id]);
     const { rows: [t] } = await client.query("UPDATE operational.patients SET version=version WHERE patient_id=$1 RETURNING version", [target.patient_id]);
     const { rows: [clock] } = await client.query("SELECT clock_timestamp() AS at");
+    // Opt-out is patient-wide: consolidating identity must never silently opt in.
+    const { rows: [preferences] } = await client.query(`SELECT bool_or(reminder_opt_out) AS opted_out
+      FROM operational.patients WHERE patient_id=ANY($1::integer[])`, [[source.patient_id, target.patient_id]]);
+    if (preferences.opted_out) await setPatientReminderOptOut(client, target.patient_id, true, clock.at);
     const result = { sourceId: source.patient_id, targetId: target.patient_id, sourceVersion: s.version, targetVersion: t.version, mergedAt: clock.at.toISOString() };
     await client.query(`INSERT INTO operational.patient_merge_operations(client_op_id,actor_id,clinic_id,source_id,target_id,request_hash,reason,result)
       VALUES($1,$2,$3,$4,$5,$6,$7,$8::jsonb)`, [input.clientOpId, auth.id, auth.clinicId, source.patient_id, target.patient_id, requestHash, input.reason, JSON.stringify(result)]);

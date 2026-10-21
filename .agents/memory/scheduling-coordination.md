@@ -15,3 +15,13 @@ correctness for the small clinic network over maximum write throughput.
 **How to apply:** Reuse the appointment transaction service/protocol when adding
 a writer. If replacing coarse locking, preserve deterministic lock ordering
 across both doctor and patient identities and test multi-connection races.
+
+Reminder scheduling must cover every new appointment writer, not only the
+interactive booking service. Existing-record associations must not backfill.
+
+**Why:** Imports have an independent transactional insertion path; adding hooks
+only to interactive booking left eligible imported bookings without reminders.
+
+**How to apply:** When adding or modifying an appointment writer, verify its
+reminder effects inside the same scheduling-lock transaction and exercise that
+writer directly, including rollback and replay.

@@ -19,6 +19,7 @@ import adoptionResultsRouter from "./adoption-results";
 import developerRouter from "./developer";
 import { demoBoundary } from "../developer/boundary";
 import { validateRouteInputs } from "../lib/route-validation";
+import remindersRouter from "./reminders";
 
 const router: IRouter = Router();
 router.use(validateRouteInputs);
@@ -34,6 +35,7 @@ router.use(adminAuditRouter);
 router.use(adminDirectoryRouter);
 router.use(networkHealthRouter);
 router.use(appointmentsRouter);
+router.use(remindersRouter);
 router.use(syncRouter);
 router.use(kpisRouter);
 router.use(consentRouter);

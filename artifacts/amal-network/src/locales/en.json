@@ -162,7 +162,8 @@
       "audit": "Audit log",
       "import": "Import wizard",
       "developer": "Developer tools",
-      "uiKit": "UI kit"
+      "uiKit": "UI kit",
+      "messages": "Messages log"
     },
     "roles": {
       "admin": "Administrator",

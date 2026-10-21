@@ -1,6 +1,6 @@
 import type { LucideIcon } from 'lucide-react';
 import {
-  Activity, BarChart3, Building2, CalendarDays, CalendarPlus, CalendarRange, Code2, Copy, FileUp, Globe2, Handshake, IdCard,
+  Activity, BarChart3, Building2, CalendarDays, CalendarPlus, CalendarRange, Code2, Copy, FileUp, Globe2, Handshake, IdCard, MessageSquareText,
   Printer, RefreshCcw, ScrollText, Search, ShieldCheck, Stethoscope, Users,
 } from 'lucide-react';
 import type { ShellRole } from './identity';
@@ -27,6 +27,8 @@ export const SHELL_ROUTES: readonly ShellRoute[] = [
   { id: 'networkSearch', path: '/doctor/network-search', roles: ['doctor'], icon: Globe2 },
   { id: 'patientCard', path: '/doctor/patient-card', roles: ['doctor'], icon: IdCard },
   { id: 'privacy', path: '/doctor/privacy', roles: ['doctor'], icon: ShieldCheck },
+  // P1-13 simulated reminders: own-clinic log; server enforces scope.
+  { id: 'messages', path: '/messages', roles: ['front-desk', 'admin'], icon: MessageSquareText },
   { id: 'kpi', path: '/admin/kpi', roles: ['admin'], icon: BarChart3 },
   { id: 'networkHealth', path: '/admin/network-health', roles: ['admin'], icon: Activity },
   { id: 'usersDevices', path: '/admin/users-devices', roles: ['admin'], icon: Users },

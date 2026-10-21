@@ -1,5 +1,6 @@
 import app from "./app";
 import { logger } from "./lib/logger";
+import { startReminderWorker } from "./reminders/dispatcher";
 
 const rawPort = process.env["PORT"];
 
@@ -28,3 +29,5 @@ server.requestTimeout = 30_000;
 server.headersTimeout = 15_000;
 server.maxHeadersCount = 64;
 server.keepAliveTimeout = 5_000;
+const stopReminderWorker = startReminderWorker();
+server.on("close", stopReminderWorker);

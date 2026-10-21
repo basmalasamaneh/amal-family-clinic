@@ -32,6 +32,34 @@
       }
     },
     "schemas": {
+      "ReminderClinicPreference": {
+        "type": "object", "additionalProperties": false, "required": ["enabled"],
+        "properties": { "enabled": { "type": "boolean" } }
+      },
+      "ReminderPatientPreference": {
+        "type": "object", "additionalProperties": false, "required": ["optedOut"],
+        "properties": { "optedOut": { "type": "boolean" } }
+      },
+      "ReminderLogEntry": {
+        "type": "object", "additionalProperties": false,
+        "required": ["id", "status", "textAr", "textEn", "scheduledAt", "sentAt", "cancelledAt", "cancellationReason"],
+        "properties": {
+          "id": { "type": "integer" },
+          "status": { "type": "string", "enum": ["scheduled", "sent", "cancelled"] },
+          "textAr": { "type": "string" }, "textEn": { "type": "string" },
+          "scheduledAt": { "type": "string", "format": "date-time" },
+          "sentAt": { "type": ["string", "null"] },
+          "cancelledAt": { "type": ["string", "null"] },
+          "cancellationReason": { "type": ["string", "null"] }
+        }
+      },
+      "ReminderLog": {
+        "type": "object", "additionalProperties": false, "required": ["items", "nextCursor"],
+        "properties": {
+          "items": { "type": "array", "items": { "$ref": "#/components/schemas/ReminderLogEntry" } },
+          "nextCursor": { "type": ["integer", "null"] }
+        }
+      },
       "DemoContext": {
         "type": "object", "additionalProperties": false,
         "required": ["enabled", "generation", "clinicId", "outage"],
@@ -7876,6 +7904,45 @@
     }
   },
   "paths": {
+    "/reminders/log": {
+      "get": {
+        "operationId": "listReminderLog", "tags": ["Reminders"], "security": [{ "sessionCookie": [] }],
+        "description": "Simulation only; own-clinic admin/front-desk metadata, without patient identifiers. Date filters select intended due instants.",
+        "parameters": [
+          { "name": "clinicId", "in": "query", "required": true, "schema": { "type": "integer", "minimum": 1 } },
+          { "name": "limit", "in": "query", "schema": { "type": "integer", "minimum": 1, "maximum": 100 } },
+          { "name": "cursor", "in": "query", "schema": { "type": "integer", "minimum": 1 } },
+          { "name": "status", "in": "query", "schema": { "type": "string", "enum": ["scheduled", "sent", "cancelled"] } },
+          { "name": "from", "in": "query", "schema": { "type": "string", "format": "date-time" } },
+          { "name": "to", "in": "query", "schema": { "type": "string", "format": "date-time" } }
+        ],
+        "responses": { "200": { "description": "Private simulated reminder history", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ReminderLog" } } } } }
+      }
+    },
+    "/reminders/clinics/{clinicId}": {
+      "parameters": [{ "name": "clinicId", "in": "path", "required": true, "schema": { "type": "integer", "minimum": 1 } }],
+      "get": {
+        "operationId": "getReminderClinicPreference", "tags": ["Reminders"], "security": [{ "sessionCookie": [] }],
+        "responses": { "200": { "description": "Own clinic preference; default off", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ReminderClinicPreference" } } } } }
+      },
+      "put": {
+        "operationId": "setReminderClinicPreference", "tags": ["Reminders"], "security": [{ "sessionCookie": [], "csrfToken": [] }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ReminderClinicPreference" } } } },
+        "responses": { "200": { "description": "Admin-only preference; enabling never backfills", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ReminderClinicPreference" } } } } }
+      }
+    },
+    "/reminders/patients/{patientId}": {
+      "parameters": [{ "name": "patientId", "in": "path", "required": true, "schema": { "type": "integer", "minimum": 1 } }],
+      "get": {
+        "operationId": "getReminderPatientPreference", "tags": ["Reminders"], "security": [{ "sessionCookie": [] }],
+        "responses": { "200": { "description": "Front-desk local patient preference, patient-wide and independent of consent", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ReminderPatientPreference" } } } } }
+      },
+      "put": {
+        "operationId": "setReminderPatientPreference", "tags": ["Reminders"], "security": [{ "sessionCookie": [], "csrfToken": [] }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ReminderPatientPreference" } } } },
+        "responses": { "200": { "description": "Updated preference, without cross-clinic counts", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ReminderPatientPreference" } } } } }
+      }
+    },
     "/demo/context": {
       "get": {
         "operationId": "getDemoContext",

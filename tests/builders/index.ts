@@ -75,6 +75,7 @@ export function createDemoBuilders(input: ClinicContext, initialOptions: Builder
     const patient_name = values.patient_name ?? `Synthetic patient ${patient_id}`;
     if ((values.guardian_name == null) !== (values.guardian_relation == null)) throw new Error("Guardian details must be paired");
     const row: OperationalPatient = {
+      reminder_opt_out: false,
       version: 1,
       created_clinic_id: null,
       patient_name, phone: `000${patient_id}`, dob, minor_as_of,
@@ -124,7 +125,7 @@ export function createDemoBuilders(input: ClinicContext, initialOptions: Builder
     const row: OperationalAppointment = {
       scheduled_at: hebronInstant(asOf), booking_method: "amal_network", status: "booked",
       duration_minutes: 30, source_ref: null, client_op_id: null, conflict_state: "none",
-      created_at: stamp(), updated_at: stamp(), cancel_reason: null, version: 1,
+      created_at: stamp(), updated_at: stamp(), cancel_reason: null, version: 1, reminder_schedule_version: 1,
       ...structuredClone(options.appointment), ...structuredClone(overrides),
       appointment_id: id(), clinic_id: assignedDoctor.clinic_id, doctor_id: assignedDoctor.doctor_id,
       patient_id: assignedPatient.patient_id, created_by: null,
