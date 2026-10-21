@@ -65,7 +65,7 @@ function AppShellContent({ identity, fixture, onRefresh, onLogout }: Props) {
   // Expiry/unmount must also clear transient selections, not just explicit logout.
   useEffect(() => () => { clearNetworkSelection(); clearConsentSelection(); }, [identity.id, role]);
   const items = useMemo<NavigationItem[]>(() => routesFor(role)
-    .filter((r) => !r.navHidden && !(role === 'front-desk' && r.id === 'week'))
+    .filter((r) => !r.navHidden && !(role === 'front-desk' && ['week', 'newBooking', 'daySheet'].includes(r.id)))
     .map((r) => role === 'front-desk' && r.id === 'today' ? { ...r, schedule: true } : r), [role]);
   const res = resolve(location, role);
 

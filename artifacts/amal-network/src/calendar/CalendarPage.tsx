@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, type CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useLocation, useSearch } from 'wouter';
-import { AlertTriangle, Building2, CalendarDays, CalendarPlus, CalendarRange, Clock3, RotateCw, UserRoundPlus, UsersRound } from 'lucide-react';
+import { AlertTriangle, Building2, CalendarDays, CalendarPlus, CalendarRange, Clock3, Printer, RotateCw, UserRoundPlus, UsersRound } from 'lucide-react';
 import { EmptyState, useAmalPreferences } from '@workspace/amal-ui';
 import { demoPath, type ShellClinic } from '@/shell/identity';
 import { DEMO_DATE, resolveSchedulingAdapter, type CalendarAppointment, type CalendarDoctor, type ClinicHours } from './adapter';
@@ -103,6 +103,9 @@ export function CalendarPage({ view, clinic, fixture, title }: { view: 'day' | '
               <CalendarRange size={18} aria-hidden="true" />{t('calendar.view.week')}
             </Link>
           </div>
+          <Link href={demoPath('/desk/day-sheet')} className="cal-btn" data-testid="link-print-day-sheet">
+            <Printer size={18} aria-hidden="true" />{t('shell.nav.daySheet')}
+          </Link>
         </div>
       </div>
 
