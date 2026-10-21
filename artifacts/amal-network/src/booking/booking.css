@@ -79,6 +79,60 @@ textarea.bk-input { padding-block: 10px; min-block-size: 88px; resize: vertical;
 .bk-err { margin: 0; color: var(--amal-danger-strong); font-size: var(--amal-text-sm); font-weight: 600; }
 .bk-sr { position: absolute; inline-size: 1px; block-size: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 @keyframes bk-fade { from { opacity: 0; } }
+/* Visual refinement only: existing step classes and Radix presence drive states. */
+.bk-head { padding-block: 24px 16px; gap: 16px; }
+.bk-head, .bk-steps, .bk-foot { flex-shrink: 0; }
+.bk-title { line-height: 1.5; }
+.bk-body { min-block-size: 0; padding-block: 24px; gap: 24px; }
+.bk-fields { gap: 24px; }
+.bk-field { min-inline-size: 0; gap: 8px; }
+.bk-row { align-items: start; gap: 16px; }
+.bk-input { min-inline-size: 0; max-inline-size: 100%; padding-block: 8px; line-height: 1.5; border-color: var(--amal-muted); }
+.bk-input:hover:not(:disabled) { border-color: var(--amal-primary-text); }
+.bk-input:focus-visible { outline: 3px solid var(--amal-focus-ring); outline-offset: 2px; }
+.bk-input[aria-invalid='true'] { border-color: var(--amal-danger-strong); box-shadow: inset 0 0 0 1px var(--amal-danger-strong); }
+.bk-input:disabled { background: var(--amal-disabled-bg); color: var(--amal-disabled-fg); cursor: not-allowed; }
+.bk-input::placeholder { color: var(--amal-muted); opacity: 1; }
+.bk-err { padding-block: 8px; padding-inline: 12px; border-inline-start: 3px solid var(--amal-danger-strong); border-radius: var(--amal-radius-control); background: var(--amal-surface); overflow-wrap: anywhere; }
+.bk-search { border-color: var(--amal-muted); }
+.bk-step { position: relative; padding-block: 8px; border-block-end: 3px solid var(--amal-border); align-items: flex-start; }
+.bk-step__label { padding-block-start: 4px; overflow-wrap: anywhere; }
+.bk-step.is-current { border-block-end-color: var(--amal-primary-text); font-weight: 700; }
+.bk-step.is-done { border-block-end-color: var(--amal-primary); color: var(--amal-primary-text); }
+.bk-step.is-done .bk-step__n { background: var(--amal-primary-soft); }
+.bk-step:not(.is-current):not(.is-done) .bk-step__n { border-style: dashed; }
+.bk-foot { gap: 8px; padding-block: 16px calc(16px + env(safe-area-inset-bottom)); }
+.bk-btn { padding-block: 8px; line-height: 1.5; text-align: center; white-space: normal; transition: transform 140ms ease; }
+.bk-btn > svg { flex-shrink: 0; }
+.bk-btn:focus-visible, .bk-x:focus-visible { outline: 3px solid var(--amal-focus-ring); outline-offset: 2px; }
+.bk-btn:active:not(:disabled) { transform: translateY(1px); }
+.bk-btn--primary { background: var(--amal-primary); border-color: var(--amal-primary); color: var(--amal-on-primary); }
+.bk-btn--primary:hover:not(:disabled) { background: var(--amal-primary-strong); }
+.bk-x:hover:not(:disabled) { background: var(--amal-primary-soft); border-color: var(--amal-primary-text); }
+.bk-dialog { padding: 24px; gap: 16px; box-shadow: var(--amal-shadow-pop); overscroll-behavior: contain; }
+.bk-dialog__head { align-items: flex-start; }
+.bk-dialog .bk-field { gap: 8px; }
+.bk-dialog section.bk-field { padding-block-start: 16px; border-block-start: 1px solid var(--amal-border); }
+.bk-dialog h3.bk-label { margin: 0; }
+.bk-msg__body, .bk-review dd { min-inline-size: 0; overflow-wrap: anywhere; }
+.bk-check { align-items: flex-start; padding-block: 8px; }
+.bk-check input { flex-shrink: 0; margin-block-start: 2px; }
+.bk-dialog[data-state='open'] { animation: bk-fade 180ms ease-out; }
+.bk-overlay[data-state='closed'], .bk-dialog[data-state='closed'] { animation: bk-out 120ms ease-in both; }
+/* Drawers are removed by their owner on close; no synthetic exit lifecycle. */
+@keyframes bk-out { to { opacity: 0; } }
+@media (max-width: 767px) {
+  .bk-steps { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .bk-step { flex-direction: column; gap: 4px; }
+  .bk-step .bk-step__label { display: inline; font-size: var(--amal-text-xs); }
+  .bk-dialog { padding: 16px; }
+  .bk-foot > .bk-btn { flex: 1 1 auto; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .bk-dialog[data-state], .bk-overlay[data-state] { animation: none; }
+  .bk-btn { transition: none; }
+  .bk-btn:active:not(:disabled) { transform: none; }
+}
 @keyframes bk-slide { from { transform: translateX(32px); opacity: 0; } }
 @keyframes bk-slide-rtl { from { transform: translateX(-32px); opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .bk-drawer, .bk-overlay { animation: none; } .bk-skel { animation: none; } }

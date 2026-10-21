@@ -98,6 +98,41 @@
 .cs-pin { font-size: var(--amal-text-2xl); letter-spacing: .5em; text-align: center; font-variant-numeric: tabular-nums; }
 .cs-spin { animation: cs-spin 900ms linear infinite; }
 @keyframes cs-spin { to { transform: rotate(360deg); } }
+/* Retain the consent ladder, status labels and evidence semantics. */
+.cs-card { padding: 24px; gap: 16px; box-shadow: var(--amal-shadow-card); min-inline-size: 0; }
+.cs-form { gap: 24px; }
+.cs-col, .cs-who, .cs-fs, .cs-dialog { min-inline-size: 0; }
+.cs-now__level { line-height: 1.5; }
+.cs-fs legend { margin-block-end: 8px; }
+.cs-rung { padding: 16px; gap: 8px; }
+.cs-rung__txt { gap: 8px; overflow-wrap: anywhere; }
+.cs-seg label { flex: 1 1 120px; padding-block: 8px; }
+.cs-seg input { accent-color: var(--amal-primary-strong); flex-shrink: 0; }
+.cs-fs[aria-invalid='true'] { border-inline-start: 3px solid var(--amal-danger-strong); padding-inline-start: 12px; }
+.cs-guardian { padding: 16px; gap: 16px; }
+.cs-check { min-block-size: 44px; padding-block: 8px; }
+.cs-check input { flex-shrink: 0; }
+.cs-err { padding-block: 8px; padding-inline: 12px; border-inline-start: 3px solid var(--amal-danger-strong); border-radius: var(--amal-radius-control); background: var(--amal-surface); overflow-wrap: anywhere; }
+.cs-dialog, .cs-dialog * { box-sizing: border-box; }
+.cs-dialog { max-block-size: calc(100dvh - 32px); overflow-y: auto; overscroll-behavior: contain; gap: 16px; box-shadow: var(--amal-shadow-pop); }
+.cs-dialog :focus-visible, .cs-check input:focus-visible { outline: 3px solid var(--amal-focus-ring); outline-offset: 2px; }
+.cs-dialog .cs-btn-danger { background: var(--amal-danger); color: var(--amal-on-danger); border-color: var(--amal-danger); }
+.cs-dialog .cs-btn-danger:hover:not(:disabled) { background: var(--amal-danger-strong); }
+[data-theme='dark'] .cs-overlay { background: color-mix(in srgb, var(--amal-bg) 72%, transparent); }
+.cs-dialog[data-state='open'], .cs-overlay[data-state='open'] { animation: cs-fade-in 180ms ease-out; }
+.cs-dialog[data-state='closed'], .cs-overlay[data-state='closed'] { animation: cs-fade-out 120ms ease-in both; }
+/* PIN is conditionally unmounted; only entry can animate without changing logic. */
+@keyframes cs-fade-in { from { opacity: 0; } }
+@keyframes cs-fade-out { to { opacity: 0; } }
+@media (max-width: 767px) {
+  .cs-card, .cs-dialog { padding: 16px; }
+  .cs-form > .bk-btn--primary { align-self: stretch; }
+  .cs-dialog .rx-actions > .bk-btn { flex: 1 1 120px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cs-dialog[data-state], .cs-overlay[data-state] { animation: none; }
+  .cs-rung:hover:not(.is-off) { transform: none; }
+}
 @media (prefers-reduced-motion: reduce) { .cs-spin, .cs-access__item { animation: none; } .cs-rung { transition: none; } }
 @media (max-width: 767px) {
   .cs-grid { grid-template-columns: 1fr; }

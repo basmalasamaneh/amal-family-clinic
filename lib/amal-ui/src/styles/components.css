@@ -33,7 +33,7 @@
 [dir='rtl'] .amal-flip { transform: scaleX(-1); }
 
 /* ---------- Field ---------- */
-.amal-field { display: flex; flex-direction: column; gap: 8px; }
+.amal-field { display: flex; flex-direction: column; gap: 8px; min-inline-size: 0; }
 .amal-field__label { font-size: var(--amal-text-sm); font-weight: var(--amal-weight-semibold); color: var(--amal-text); }
 .amal-field__req { color: var(--amal-danger-strong); margin-inline-start: 4px; }
 .amal-field__opt { color: var(--amal-muted); font-weight: var(--amal-weight-regular); margin-inline-start: 6px; }
@@ -50,8 +50,19 @@
 .amal-input[aria-invalid='true'] { border-color: var(--amal-danger-strong); border-width: 2px; }
 .amal-input:disabled { background: var(--amal-disabled-bg); color: var(--amal-disabled-fg); border-color: var(--amal-border); cursor: not-allowed; }
 .amal-input[dir='ltr'] { text-align: start; }
+.amal-input { min-inline-size: 0; max-inline-size: 100%; min-block-size: 44px; font-family: inherit; line-height: 1.5; transition: none; }
+textarea.amal-input { min-block-size: 104px; resize: vertical; }
+.amal-input:focus-visible { outline: 3px solid var(--amal-focus-ring); outline-offset: 2px; }
+.amal-input[aria-invalid='true'] { border-width: 1px; box-shadow: inset 0 0 0 1px var(--amal-danger-strong); }
 .amal-field__hint { font-size: var(--amal-text-sm); color: var(--amal-muted); margin: 0; }
 .amal-field__error { font-size: var(--amal-text-sm); color: var(--amal-danger-strong); margin: 0; display: flex; gap: 6px; align-items: center; font-weight: var(--amal-weight-medium); }
+.amal-field__error { padding-block: 8px; padding-inline: 12px; border-inline-start: 3px solid var(--amal-danger-strong); border-radius: var(--amal-radius-control); background: var(--amal-surface); align-items: flex-start; overflow-wrap: anywhere; }
+.amal-field__error > svg { flex: none; margin-block-start: 2px; }
+.amal-field__hint, .amal-field__label { overflow-wrap: anywhere; }
+.amal-btn { min-block-size: 44px; white-space: normal; text-align: center; transition-property: transform, opacity; }
+.amal-btn > svg { flex-shrink: 0; }
+.amal-btn:focus-visible { outline: 3px solid var(--amal-focus-ring); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) { .amal-btn { transition: none; } .amal-btn:active:not(:disabled) { transform: none; } }
 
 /* ---------- Card ---------- */
 .amal-card {

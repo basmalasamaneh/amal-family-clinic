@@ -834,3 +834,35 @@
   .shell-top__walkin .shell-walkin { inline-size: 100%; justify-content: center; }
   .shell-top__status { padding-inline: 12px; }
 }
+
+/* Bespoke form controls: explicit opt-in selectors, never calendar geometry.
+   Shared amal-input/bk-input cover auth, reception, admin, waitlist and consent.
+   These cover import mapping, reminders, reporting and offline resolution. */
+.im-input.im-input,
+.rem-field :is(input, select),
+.kpi-date :is(input, select),
+.ds-field select,
+input.cr__slot {
+  box-sizing: border-box;
+  min-inline-size: 0;
+  max-inline-size: 100%;
+  min-block-size: 44px;
+  padding-block: 8px;
+  padding-inline: 12px;
+  font-family: inherit;
+  line-height: 1.5;
+  border: 1px solid var(--amal-muted);
+  border-radius: var(--amal-radius-control);
+  background: var(--amal-surface);
+  color: var(--amal-text);
+  color-scheme: light;
+}
+[data-theme='dark'] :is(.im-input.im-input, .rem-field input, .rem-field select, .kpi-date input, .kpi-date select, .ds-field select, input.cr__slot) { color-scheme: dark; }
+:is(.im-input.im-input, .rem-field input, .rem-field select, .kpi-date input, .kpi-date select, .ds-field select, input.cr__slot):focus-visible { outline: 3px solid var(--amal-focus-ring); outline-offset: 2px; }
+:is(.im-input.im-input, .rem-field input, .rem-field select, .kpi-date input, .kpi-date select, .ds-field select, input.cr__slot)[aria-invalid='true'] { border-color: var(--amal-danger-strong); box-shadow: inset 0 0 0 1px var(--amal-danger-strong); }
+:is(.im-input.im-input, .rem-field input, .rem-field select, .kpi-date input, .kpi-date select, .ds-field select, input.cr__slot):disabled { background: var(--amal-disabled-bg); color: var(--amal-disabled-fg); cursor: not-allowed; }
+.adm-field-error.adm-field-error, .im-field-err.im-field-err, .rem-inline-err.rem-inline-err { padding-block: 8px; padding-inline: 12px; border-inline-start: 3px solid var(--amal-danger-strong); border-radius: var(--amal-radius-control); background: var(--amal-surface); overflow-wrap: anywhere; }
+.im-form.im-form { gap: 16px; }
+.adm-form__row.adm-form__row { gap: 16px; align-items: start; }
+.rem-field.rem-field, .ds-field.ds-field { gap: 8px; }
+.net-search__field input { min-block-size: 44px; }
