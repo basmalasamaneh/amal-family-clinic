@@ -5,6 +5,9 @@ description: Confirmed immutable seed policy, operational copies, demo reset, an
 
 The user requires the six workbook tables to retain their sheet names, column names, source-compatible types, primary IDs, and all rows, and says: “Do not modify or delete these tables later.”
 
+The user confirmed that the workbook is entirely synthetic and approved for publication.
+This does not authorize publishing the application.
+
 **Why:** The user's direct instruction is stricter than Section 7 of the uploaded master plan, which proposes adding columns to existing tables.
 
 **How to apply:**

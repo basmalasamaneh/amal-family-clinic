@@ -12,3 +12,11 @@ REPLIT_DEPLOYMENT=1 as the published-project execution indicator.
 **How to apply:** Keep explicit demo opt-in and NODE_ENV production checks;
 use the documented deployment indicator for published execution. Never assume
 CLI guards make an administrator-selected database connection safe.
+
+Publication remains blocked until the user explicitly approves it, independently
+of preparation work and approval to publish the synthetic workbook.
+
+**Why:** The user explicitly requested deployment preparation without publication.
+
+**How to apply:** Prepare and verify without starting a deployment. Obtain separate
+publication approval before any release; never treat saved secrets as approval.
