@@ -361,8 +361,8 @@
     },
     "mode": {
       "label": "Sign-in method",
-      "password": "Email and password",
-      "pin": "Reception PIN"
+      "password": "Doctor or admin",
+      "pin": "Reception desk"
     },
     "email": "Email",
     "password": {
