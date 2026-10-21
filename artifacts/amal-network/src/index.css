@@ -1,6 +1,43 @@
 .auth-mode { border: 0; padding: 0; margin: 0; min-inline-size: 0; }
 .auth-main { box-sizing: border-box; }
 
+/* Account only: a compact identity card and clearly labelled preference rows. */
+.shell-dialog.account-dialog { inline-size: min(640px, calc(100vw - 24px)); padding: 28px; }
+.account-dialog .shell-dialog__head { margin-block-end: 22px; }
+.account-dialog .shell-dialog__title { min-inline-size: 0; }
+.account-dialog .shell-dialog__x { flex-shrink: 0; }
+.account-dialog .account-dialog__summary { margin: 0 0 24px; padding: 18px 20px; display: grid; gap: 16px; background: var(--amal-surface-2); border: 1px solid var(--amal-border); border-radius: var(--amal-radius-dialog); }
+.account-dialog .account-dialog__summary dt { margin-block-end: 4px; color: var(--amal-muted); font-size: var(--amal-text-sm); }
+.account-dialog .account-dialog__summary dd { margin: 0; min-inline-size: 0; overflow-wrap: anywhere; font-weight: 600; }
+.account-dialog .account-dialog__identity dd { font-size: var(--amal-text-xl); line-height: 1.5; color: var(--amal-navy); }
+.account-dialog .account-dialog__summary { grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); }
+.account-dialog .account-dialog__summary > div { min-inline-size: 0; }
+.account-dialog .account-dialog__identity { grid-column: 1 / -1; }
+.account-dialog .account-dialog__clinics { display: flex; flex-wrap: wrap; gap: 6px; }
+.account-dialog .shell-chip { max-inline-size: 100%; box-sizing: border-box; background: var(--amal-surface); border: 1px solid var(--amal-border); padding-block: 2px; }
+.account-dialog .shell-dialog__section { padding-block-start: 20px; }
+.account-dialog .shell-dialog__h { margin-block-end: 8px; }
+.account-dialog .account-dialog__row { display: grid; grid-template-columns: minmax(100px, 1fr) minmax(0, 3fr); align-items: center; gap: 12px 20px; padding-block: 14px; }
+.account-dialog .account-dialog__row + .account-dialog__row { border-block-start: 1px solid var(--amal-border); }
+.account-dialog .account-dialog__label { margin: 0; font-size: var(--amal-text-sm); font-weight: 600; }
+.account-dialog .account-dialog__control { min-inline-size: 0; display: grid; justify-items: start; gap: 10px; }
+.account-dialog .amal-seg { display: flex; flex-wrap: wrap; max-inline-size: 100%; min-inline-size: 0; box-sizing: border-box; }
+.account-dialog .amal-seg__btn { min-block-size: 44px; min-inline-size: 44px; white-space: normal; overflow-wrap: anywhere; flex: 1 1 auto; }
+.account-dialog .shell-dialog__preview { display: flex; flex-wrap: wrap; gap: 8px; align-items: baseline; }
+.account-dialog .shell-dialog__preview bdi { color: var(--amal-text); font-weight: 600; font-variant-numeric: tabular-nums; }
+.account-dialog .shell-dialog__foot { border-block-start: 1px solid var(--amal-border); padding-block-start: 20px; margin-block-start: 8px; display: flex; flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
+.account-dialog .shell-dialog__foot > .amal-btn { min-block-size: 44px; white-space: normal; max-inline-size: 100%; }
+.account-dialog .shell-dialog__foot > p { flex-basis: 100%; margin: 0; overflow-wrap: anywhere; }
+.account-dialog button:focus-visible { outline: 2px solid var(--amal-primary); outline-offset: 3px; }
+@media (max-width: 600px) {
+  .shell-dialog.account-dialog { padding: 20px; }
+  .account-dialog .account-dialog__summary { padding: 16px; }
+  .account-dialog .account-dialog__summary { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+  .account-dialog .account-dialog__row { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+  .account-dialog .account-dialog__control { justify-items: stretch; }
+  .account-dialog .shell-dialog__foot > .amal-btn { flex: 1 1 160px; }
+}
+
 /* Login only: a quiet teal welcome, with the shared auth screens left intact. */
 .auth.auth--login {
   display: flex;

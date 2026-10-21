@@ -322,25 +322,40 @@ function UserMenu({ identity, fixture, onLogout }: { identity: ShellIdentity; fi
       </Dialog.Trigger>
       <Dialog.Portal>
         <Dialog.Overlay className="shell-overlay" />
-        <Dialog.Content className="shell-dialog" data-testid="dialog-user" aria-describedby={undefined}>
+        <Dialog.Content className="shell-dialog account-dialog" data-testid="dialog-user" aria-describedby={undefined}>
           <div className="shell-dialog__head">
             <Dialog.Title className="shell-dialog__title">{t('shell.user.title')}</Dialog.Title>
             <Dialog.Close className="amal-btn amal-btn--icon shell-dialog__x" aria-label={t('shell.user.close')} data-testid="button-user-close">
               <X size={20} aria-hidden="true" />
             </Dialog.Close>
           </div>
-          <dl className="shell-dl">
-            <dt>{t('shell.user.identity')}</dt><dd data-testid="text-user-name"><bdi>{identity.name}</bdi></dd>
-            <dt>{t('shell.user.role')}</dt><dd data-testid="text-user-role">{roleLabel}</dd>
-            <dt>{t('shell.user.clinics')}</dt>
-            <dd data-testid="text-user-clinics">{identity.clinics.length ? identity.clinics.map((c) => <bdi key={c.id} className="shell-chip">{c.name}</bdi>) : t('shell.user.noClinics')}</dd>
+          <dl className="account-dialog__summary">
+            <div className="account-dialog__identity">
+              <dt>{t('shell.user.identity')}</dt><dd data-testid="text-user-name"><bdi>{identity.name}</bdi></dd>
+            </div>
+              <div><dt>{t('shell.user.role')}</dt><dd data-testid="text-user-role">{roleLabel}</dd></div>
+              <div><dt>{t('shell.user.clinics')}</dt>
+                <dd className="account-dialog__clinics" data-testid="text-user-clinics">{identity.clinics.length ? identity.clinics.map((c) => <bdi key={c.id} className="shell-chip">{c.name}</bdi>) : t('shell.user.noClinics')}</dd>
+              </div>
           </dl>
           <section className="shell-dialog__section" aria-labelledby="display-h">
             <h3 id="display-h" className="shell-dialog__h">{t('shell.user.display')}</h3>
-            <div className="shell-dialog__controls">
-              <LanguageSwitch />
-              <ThemeSwitch />
-              <DensitySwitch />
+            <div>
+              <div className="account-dialog__row">
+                <p className="account-dialog__label" id="account-language-label">{t('shell.user.language')}</p>
+                <div className="account-dialog__control" role="group" aria-labelledby="account-language-label"><LanguageSwitch /></div>
+              </div>
+              <div className="account-dialog__row">
+                <p className="account-dialog__label" id="account-theme-label">{t('shell.user.theme')}</p>
+                <div className="account-dialog__control" role="group" aria-labelledby="account-theme-label"><ThemeSwitch /></div>
+              </div>
+              <div className="account-dialog__row">
+                <p className="account-dialog__label" id="account-density-label">{t('shell.user.density')}</p>
+                <div className="account-dialog__control" role="group" aria-labelledby="account-density-label"><DensitySwitch /></div>
+              </div>
+              <div className="account-dialog__row">
+                <p className="account-dialog__label" id="account-numerals-label">{t('shell.user.numerals')}</p>
+                <div className="account-dialog__control" role="group" aria-labelledby="account-numerals-label" aria-describedby="account-numerals-preview">
               <Segmented
                 label={t('shell.user.digits')}
                 value={digitPreference}
@@ -350,9 +365,11 @@ function UserMenu({ identity, fixture, onLogout }: { identity: ShellIdentity; fi
                   { value: 'arab', label: t('shell.user.digitsArab'), testId: 'button-digits-arab' },
                 ]}
               />
-              <p className="shell-dialog__preview" data-testid="text-digit-preview">
+              <p className="shell-dialog__preview" id="account-numerals-preview" data-testid="text-digit-preview">
                 {t('shell.user.preview')}: <bdi>{formatNumber(1234.5, locale, digitPreference)}</bdi>
               </p>
+                </div>
+              </div>
             </div>
           </section>
           <div className="shell-dialog__foot">
