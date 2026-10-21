@@ -352,7 +352,7 @@
   },
   "auth": {
     "title": "Sign in",
-    "lede": "Use the sign-in method your clinic set up for you.",
+    "lede": "Welcome back. Sign in to your clinic.",
     "expired": "Your session ended. Sign in again to continue where you were.",
     "brand": {
       "kicker": "Amal Family Clinic",

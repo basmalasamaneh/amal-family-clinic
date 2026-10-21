@@ -1,5 +1,63 @@
 .auth-mode { border: 0; padding: 0; margin: 0; min-inline-size: 0; }
 .auth-main { box-sizing: border-box; }
+
+/* Login only: a quiet teal welcome, with the shared auth screens left intact. */
+.auth.auth--login {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-block-size: 100dvh;
+  box-sizing: border-box;
+  padding-block: 96px 48px;
+  padding-inline: 24px;
+  background:
+    radial-gradient(ellipse at 15% 15%, color-mix(in srgb, var(--amal-primary) 16%, transparent), transparent 65%),
+    radial-gradient(ellipse at 90% 90%, color-mix(in srgb, var(--amal-primary) 10%, transparent), transparent 60%),
+    var(--amal-bg);
+}
+.auth--login .auth-top {
+  position: absolute;
+  inset-block-start: 20px;
+  inset-inline-end: 24px;
+  padding: 0;
+}
+.auth--login .auth-top__prefs {
+  padding: 6px;
+  border: 1px solid var(--amal-border);
+  border-radius: 16px;
+  background: var(--amal-surface);
+}
+.auth--login .auth-top__prefs button { min-block-size: 44px; min-inline-size: 44px; }
+.auth--login .auth-main {
+  flex: none;
+  max-inline-size: 488px;
+  gap: 20px;
+  padding-block: 36px 24px;
+  padding-inline: 36px;
+  border: 1px solid var(--amal-border);
+  border-radius: 24px;
+  background: var(--amal-surface);
+  box-shadow: 0 18px 64px color-mix(in srgb, var(--amal-primary) 9%, transparent);
+}
+.auth--login .login-heading { display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center; }
+.auth--login .login-heading .amal-logo-island { --amal-logo-horizontal: block; --amal-logo-compact: none; margin-block-end: 14px; max-inline-size: 100%; }
+.auth--login .login-heading .amal-logo { block-size: auto; inline-size: 228px; max-inline-size: 100%; }
+.auth--login .auth-title { font-size: var(--amal-text-2xl); }
+.auth--login .auth-lede { font-size: var(--amal-text-sm); line-height: 1.7; }
+.auth--login .auth-form { gap: 18px; }
+.auth--login .auth-form > .amal-btn { min-block-size: 54px; font-weight: 700; }
+.auth--login .login-field { display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; }
+.auth--login .login-field > .amal-field { display: contents; }
+.auth--login .login-field .amal-field__label { grid-area: 1 / 1; }
+.auth--login .login-field .amal-input { grid-area: 2 / 1; min-block-size: 52px; padding-inline: 44px; inline-size: 100%; box-sizing: border-box; }
+.auth--login .login-field > svg { grid-area: 2 / 1; align-self: center; justify-self: start; margin-inline-start: 15px; color: var(--amal-muted); pointer-events: none; z-index: 1; }
+.auth--login .auth-data { margin-block-start: 0; border: 0; border-block-start: 1px solid var(--amal-border); border-radius: 0; padding-block: 20px 0; padding-inline: 0; }
+@media (max-width: 540px) {
+  .auth.auth--login { padding-block: 92px 24px; padding-inline: 16px; }
+  .auth--login .auth-top { inset-block-start: 16px; inset-inline-end: 16px; }
+  .auth--login .auth-main { padding-block: 28px 22px; padding-inline: 22px; border-radius: 20px; }
+}
 .shell-dialog, .help-item { box-sizing: border-box; }
 /* App-level layout for the /ui-kit page. All colours come from @workspace/amal-ui tokens. */
 .kit { min-block-size: 100dvh; }

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'wouter';
-import { AlertTriangle, Building2, Eye, EyeOff, KeyRound, LockKeyhole, MonitorSmartphone, RotateCw, ShieldCheck } from 'lucide-react';
+import { AlertTriangle, Building2, Eye, EyeOff, KeyRound, LockKeyhole, Mail, MonitorSmartphone, RotateCw, ShieldCheck } from 'lucide-react';
 import { getReceptionContext, login, loginPin, setCsrfToken } from '@workspace/api-client-react';
 import { AmalLogo, Button, LanguageSwitch, Segmented, ThemeSwitch, TextField } from '@workspace/amal-ui';
 import { describeApiError, type DescribedError } from '@/auth/errors';
@@ -25,22 +25,17 @@ export function LoginPage({ notice, onAuthenticated }: Props) {
   const [mode, setMode] = useState<Mode>('password');
   const [submitting, setSubmitting] = useState(false);
   return (
-    <div className="auth" data-testid="page-login">
+    <div className="auth auth--login" data-testid="page-login">
       <a href="#auth-main" className="shell-skip">{t('shell.skip')}</a>
-      <aside className="auth-brand" aria-hidden="true">
-        <div className="auth-brand__arcs" />
-        <p className="auth-brand__kicker">{t('auth.brand.kicker')}</p>
-        <p className="auth-brand__line">{t('auth.brand.line')}</p>
-        <p className="auth-brand__sub">{t('auth.brand.sub')}</p>
-      </aside>
-      <div className="auth-side">
         <header className="auth-top">
-          <AmalLogo />
           <div className="auth-top__prefs"><LanguageSwitch /><ThemeSwitch /></div>
         </header>
         <main id="auth-main" tabIndex={-1} className="auth-main">
+          <div className="login-heading">
+          <AmalLogo />
           <h1 className="auth-title">{t('auth.title')}</h1>
           <p className="auth-lede">{t('auth.lede')}</p>
+          </div>
           {notice === 'expired' && (
             <p className="auth-notice" role="status" data-testid="status-session-expired"><LockKeyhole size={18} aria-hidden="true" />{t('auth.expired')}</p>
           )}
@@ -61,7 +56,6 @@ export function LoginPage({ notice, onAuthenticated }: Props) {
             <span><strong>{t('data.title')}</strong><small>{t('auth.dataLink')}</small></span>
           </Link>
         </main>
-      </div>
     </div>
   );
 }
@@ -121,9 +115,15 @@ function PasswordForm({ onAuthenticated, onPending }: { onAuthenticated: () => P
   return (
     <form className="auth-form" onSubmit={submit} noValidate aria-busy={pending} data-testid="form-password">
       <p className="auth-form__hint">{t('auth.password.hint')}</p>
+      <div className="login-field">
       <TextField label={t('auth.email')} type="email" autoComplete="username" dir="ltr" required value={email} onChange={(e) => setEmail(e.target.value)} error={emailErr} data-testid="input-email" />
+      <Mail size={19} aria-hidden="true" />
+      </div>
       <div className="auth-pw">
+        <div className="login-field">
         <TextField label={t('auth.password.label')} type={show ? 'text' : 'password'} autoComplete="current-password" dir="ltr" required maxLength={72} value={password} onChange={(e) => setPassword(e.target.value)} error={pwErr} data-testid="input-password" id="auth-password" />
+        <LockKeyhole size={19} aria-hidden="true" />
+        </div>
         <button type="button" className="auth-pw__toggle" aria-pressed={show} aria-controls="auth-password" onClick={() => setShow(!show)} data-testid="button-toggle-password">
           {show ? <EyeOff size={16} aria-hidden="true" /> : <Eye size={16} aria-hidden="true" />}{show ? t('auth.password.hide') : t('auth.password.show')}
         </button>
@@ -190,11 +190,17 @@ function PinForm({ onAuthenticated, onPending }: { onAuthenticated: () => Promis
           <p className="auth-ctx__note">{t('auth.pin.clinicNote')}</p>
         </div>
       </div>
+      <div className="login-field">
       <TextField label={t('auth.email')} type="email" autoComplete="username" dir="ltr" required value={email} onChange={(e) => setEmail(e.target.value)} error={emailErr} hint={t('auth.pin.emailHint')} data-testid="input-pin-email" />
+      <Mail size={19} aria-hidden="true" />
+      </div>
+      <div className="login-field">
       <TextField
         label={t('auth.pin.label')} type="password" inputMode="numeric" autoComplete="off" dir="ltr" required maxLength={8}
         className="auth-pin" value={pin} onChange={(e) => setPin(normalizePin(e.target.value))} error={pinErr} hint={t('auth.pin.hint')} data-testid="input-pin"
       />
+      <KeyRound size={19} aria-hidden="true" />
+      </div>
       {error && <ErrorBox error={error} mode="pin" />}
       <Button type="submit" size="lg" loading={pending} disabled={pending} data-testid="button-submit-pin">{pending ? t('auth.pending') : t('auth.submit')}</Button>
     </form>
