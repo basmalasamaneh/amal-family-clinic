@@ -165,16 +165,18 @@ if (process.env.AMAL_BOUNDARY_CHILD === "1") {
           const shared = await Promise.all(Array.from({ length: 40 }, () => call(base, { path: "/api/me", headers: { cookie } })));
           assert(shared.every(r => r.status === 200), "Legitimate concurrent same-clinic requests below budget must work");
           await reset();
-          const burst = await Promise.all(Array.from({ length: 90 }, () => call(base, { path: "/api/healthz" })));
+          // Public documentation still traverses ordinary durable admission.
+          // Liveness intentionally does not depend on the counter database.
+          const burst = await Promise.all(Array.from({ length: 90 }, () => call(base, { path: "/docs/openapi.yaml" })));
           assert.equal(burst.filter(r => r.status === 200).length, 80);
           assert.equal(burst.filter(r => r.status === 429).length, 10);
           rate(burst.find(r => r.status === 429)!, 60);
-          rate(await call(base, { path: "/api/healthz", headers: { "x-forwarded-for": "203.0.113.77" } }), 60);
+          rate(await call(base, { path: "/docs/openapi.yaml", headers: { "x-forwarded-for": "203.0.113.77" } }), 60);
           assert.equal((await pool.query("SELECT attempts FROM operational.auth_throttles WHERE key_digest=$1", [digest("general:127.0.0.1")])).rows[0].attempts, 81, "Rejected attempts saturate rather than overflowing");
-          const restarted = await probe([{ path: "/api/healthz" }]);
+          const restarted = await probe([{ path: "/docs/openapi.yaml" }]);
           rate(restarted.results[0], 60);
           await admin.query("UPDATE operational.auth_throttles SET window_started_at=clock_timestamp()-interval '61 seconds' WHERE key_digest=$1", [digest("general:127.0.0.1")]);
-          assert.equal((await call(base, { path: "/api/healthz" })).status, 200);
+          assert.equal((await call(base, { path: "/docs/openapi.yaml" })).status, 200);
           assert.equal((await pool.query("SELECT attempts FROM operational.auth_throttles WHERE key_digest=$1", [digest("general:127.0.0.1")])).rows[0].attempts, 1);
         });
         await t.test("lookup/expensive/sync HTTP buckets are atomic, durable and independently renew", async () => {
@@ -234,7 +236,7 @@ if (process.env.AMAL_BOUNDARY_CHILD === "1") {
         await t.test("production HTTPS/cookie flags and explicit proxy configuration fail closed in fresh processes", async () => {
           await reset();
           const prod = { NODE_ENV: "production", AUTH_ALLOWED_ORIGINS: "https://boundary-test.local", AUTH_PROXY_HOPS: "0", AUTH_TRUSTED_PROXIES: "" };
-          const insecure = await probe([{ path: "/api/healthz", headers: { origin: "https://boundary-test.local", "x-forwarded-proto": "https" } }], prod);
+          const insecure = await probe([{ path: "/docs/openapi.yaml", headers: { origin: "https://boundary-test.local", "x-forwarded-proto": "https" } }], prod);
           error(insecure.results[0], 403, "FORBIDDEN");
           assert.match(insecure.results[0].headers["strict-transport-security"], /max-age=31536000/);
           const secure = await probe([{ ...login, headers: { ...login.headers, origin: "https://boundary-test.local", "x-forwarded-proto": "https" } }],

@@ -406,7 +406,7 @@ export const GetReceptionContextResponse = zod.object({
 
 
 /**
- * Returns server health status without authentication.
+ * Returns process liveness, not database readiness. Exact payload-free GET/HEAD /api/healthz probes are database-independent and may use internal plain HTTP; supplied Origin must still be allowed. Noncanonical URLs and payloads retain ordinary admission checks. No session or private data is returned. Operators must run the separate bounded database readiness command before declaring the service ready.
  * @summary health check
  */
 export const HealthCheckResponse = zod.object({

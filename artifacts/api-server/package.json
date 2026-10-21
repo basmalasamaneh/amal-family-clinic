@@ -7,6 +7,8 @@
     "dev": "export NODE_ENV=development && pnpm run build && pnpm run start",
     "build": "node ./build.mjs",
     "start": "node --enable-source-maps ./dist/index.mjs",
+    "readiness": "node ./dist/readiness.mjs",
+    "deployment:test": "tsx --test tests/deployment-health.test.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.privacy.json --noEmit",
     "auth:migrate": "tsx scripts/auth-migrate.ts",
     "adoption:migrate": "tsx scripts/adoption-migrate.ts",

@@ -11,6 +11,7 @@ import { isLookupTelemetryPath } from "./kpis/lookup";
 import helmet from "helmet";
 import { isIP } from "node:net";
 import { securityRateLimit } from "./lib/security-rate";
+import { deploymentLiveness } from "./routes/health";
 
 const app: Express = express();
 // Capture receipt before security checks, authentication or body parsing.
@@ -42,6 +43,9 @@ app.use(helmet({
 app.use((req, res, next) => {
   res.set({ "X-Content-Type-Options": "nosniff", "X-Frame-Options": "DENY", "Referrer-Policy": "no-referrer",
     "Content-Security-Policy": "default-src 'none'; frame-ancestors 'none'", "Cache-Control": "no-store" });
+  // Only the fixed public liveness response bypasses HTTPS/database admission.
+  // Preserve Origin enforcement even for probes; no cookies or private data.
+  if ((!req.get("origin") || origins.includes(req.get("origin")!)) && deploymentLiveness(req, res)) return;
   if (process.env.NODE_ENV === "production") {
     res.set("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
     if (!req.secure) { next(fail(403, "FORBIDDEN", "forbidden")); return; }
