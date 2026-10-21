@@ -14,3 +14,17 @@ mtime_ms = 1792565936740
 storage_uri = "gcs://replit-rams-assets-reed/rams/assets/repl:bf3e32dc-54d0-4d6f-8c18-82dda6dba30b/cffe4f44-05d7-422a-9989-3a955dbbe38a/738ef7d5-2eb0-4a52-91e3-20e378d3c527"
 storage_version_token = "1792565945682331"
 content_type = "text/html"
+
+[[outputs]]
+id = "cXyeAFOY-NyC_44LQ7yaL"
+uri = "file://docs/SELF_TEST_GUIDE.html"
+type = "html"
+title = "Amal — Complete Step-by-Step Testing Guide"
+description = "Printable 17-section guide: account list, first-session walkthrough, every feature checklist, expected results, and safety warnings. No passwords included."
+logical_id = "a1bffb54-5897-470f-bea1-3ab17ac553f8"
+content_hash = "sha256:24a45daedeb66174de3aa3f336f12626fc0832f654742d78d58461ba59049da1"
+size = 61015
+mtime_ms = 1792579275767
+storage_uri = "gcs://replit-rams-assets-reed/rams/assets/repl:bf3e32dc-54d0-4d6f-8c18-82dda6dba30b/a1bffb54-5897-470f-bea1-3ab17ac553f8/94b6a57a-3bb5-4dea-9d1e-aff0009fe328"
+storage_version_token = "1792579390629571"
+content_type = "text/html"

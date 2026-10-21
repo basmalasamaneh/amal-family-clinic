@@ -1,0 +1,2141 @@
+{
+  "clinics": [
+    {
+      "id": 1,
+      "mode": "full",
+      "name": "Amal Family Clinic - Downtown"
+    },
+    {
+      "id": 2,
+      "mode": "lite",
+      "name": "Amal Family Clinic - Al-Bireh"
+    },
+    {
+      "id": 3,
+      "mode": "full",
+      "name": "Amal Family Clinic - Nablus Road"
+    }
+  ],
+  "doctors": [
+    {
+      "id": 1,
+      "name": "Dr. Amal Khoury",
+      "clinicId": 1
+    },
+    {
+      "id": 2,
+      "name": "Dr. Nabil Sabbah",
+      "clinicId": 2
+    },
+    {
+      "id": 3,
+      "name": "Dr. Yasmin Odeh",
+      "clinicId": 3
+    },
+    {
+      "id": 4,
+      "name": "Dr. Hassan Tamimi",
+      "clinicId": 1
+    },
+    {
+      "id": 5,
+      "name": "Dr. Rula Masri",
+      "clinicId": 3
+    }
+  ],
+  "accounts": [
+    {
+      "role": "administrator",
+      "email": "admin@amal.example",
+      "clinicId": null,
+      "doctorId": null
+    },
+    {
+      "role": "doctor",
+      "email": "doctor.1@amal.example",
+      "clinicId": 1,
+      "doctorId": 1
+    },
+    {
+      "role": "doctor",
+      "email": "doctor.2@amal.example",
+      "clinicId": 2,
+      "doctorId": 2
+    },
+    {
+      "role": "doctor",
+      "email": "doctor.3@amal.example",
+      "clinicId": 3,
+      "doctorId": 3
+    },
+    {
+      "role": "doctor",
+      "email": "doctor.4@amal.example",
+      "clinicId": 1,
+      "doctorId": 4
+    },
+    {
+      "role": "doctor",
+      "email": "doctor.5@amal.example",
+      "clinicId": 3,
+      "doctorId": 5
+    },
+    {
+      "role": "receptionist",
+      "email": "reception.1@amal.example",
+      "clinicId": 1,
+      "doctorId": null
+    },
+    {
+      "role": "receptionist",
+      "email": "reception.2@amal.example",
+      "clinicId": 2,
+      "doctorId": null
+    },
+    {
+      "role": "receptionist",
+      "email": "reception.3@amal.example",
+      "clinicId": 3,
+      "doctorId": null
+    }
+  ],
+  "patients": [
+    {
+      "id": 115,
+      "dob": "1980-03-15",
+      "name": "ليان منصور",
+      "phone": "0598800100",
+      "clinicId": 1,
+      "doctorId": 1
+    },
+    {
+      "id": 116,
+      "dob": "1981-03-15",
+      "name": "يوسف عوض",
+      "phone": "0598800101",
+      "clinicId": 1,
+      "doctorId": 1
+    },
+    {
+      "id": 117,
+      "dob": "1982-03-15",
+      "name": "مريم ناصر",
+      "phone": "0598800102",
+      "clinicId": 1,
+      "doctorId": 1
+    },
+    {
+      "id": 118,
+      "dob": "1983-03-15",
+      "name": "عمر سليم",
+      "phone": "0598800103",
+      "clinicId": 1,
+      "doctorId": 1
+    },
+    {
+      "id": 119,
+      "dob": "1984-03-15",
+      "name": "سارة خليل",
+      "phone": "0598800104",
+      "clinicId": 1,
+      "doctorId": 1
+    },
+    {
+      "id": 120,
+      "dob": "1985-03-15",
+      "name": "آدم محمود",
+      "phone": "0598800105",
+      "clinicId": 1,
+      "doctorId": 1
+    },
+    {
+      "id": 121,
+      "dob": "1986-03-15",
+      "name": "نور إبراهيم",
+      "phone": "0598800106",
+      "clinicId": 2,
+      "doctorId": 2
+    },
+    {
+      "id": 122,
+      "dob": "1987-03-15",
+      "name": "كريم حمدان",
+      "phone": "0598800107",
+      "clinicId": 2,
+      "doctorId": 2
+    },
+    {
+      "id": 123,
+      "dob": "1988-03-15",
+      "name": "هبة ياسين",
+      "phone": "0598800108",
+      "clinicId": 2,
+      "doctorId": 2
+    },
+    {
+      "id": 124,
+      "dob": "1989-03-15",
+      "name": "رامي شاهين",
+      "phone": "0598800109",
+      "clinicId": 2,
+      "doctorId": 2
+    },
+    {
+      "id": 125,
+      "dob": "1990-03-15",
+      "name": "دانا مراد",
+      "phone": "0598800110",
+      "clinicId": 2,
+      "doctorId": 2
+    },
+    {
+      "id": 126,
+      "dob": "1991-03-15",
+      "name": "سامر حنا",
+      "phone": "0598800111",
+      "clinicId": 2,
+      "doctorId": 2
+    },
+    {
+      "id": 127,
+      "dob": "1992-03-15",
+      "name": "رنا قاسم",
+      "phone": "0598800112",
+      "clinicId": 3,
+      "doctorId": 3
+    },
+    {
+      "id": 128,
+      "dob": "1993-03-15",
+      "name": "مازن عيسى",
+      "phone": "0598800113",
+      "clinicId": 3,
+      "doctorId": 3
+    },
+    {
+      "id": 129,
+      "dob": "1994-03-15",
+      "name": "لينا فارس",
+      "phone": "0598800114",
+      "clinicId": 3,
+      "doctorId": 3
+    },
+    {
+      "id": 130,
+      "dob": "1995-03-15",
+      "name": "طارق زيدان",
+      "phone": "0598800115",
+      "clinicId": 3,
+      "doctorId": 3
+    },
+    {
+      "id": 131,
+      "dob": "1996-03-15",
+      "name": "هدى بركات",
+      "phone": "0598800116",
+      "clinicId": 3,
+      "doctorId": 3
+    },
+    {
+      "id": 132,
+      "dob": "1997-03-15",
+      "name": "باسم حمد",
+      "phone": "0598800117",
+      "clinicId": 3,
+      "doctorId": 3
+    },
+    {
+      "id": 133,
+      "dob": "1998-03-15",
+      "name": "سلمى رشيد",
+      "phone": "0598800118",
+      "clinicId": 1,
+      "doctorId": 4
+    },
+    {
+      "id": 134,
+      "dob": "1999-03-15",
+      "name": "خالد بدر",
+      "phone": "0598800119",
+      "clinicId": 1,
+      "doctorId": 4
+    },
+    {
+      "id": 135,
+      "dob": "2000-03-15",
+      "name": "ريما أمين",
+      "phone": "0598800120",
+      "clinicId": 1,
+      "doctorId": 4
+    },
+    {
+      "id": 136,
+      "dob": "2001-03-15",
+      "name": "نبيل صادق",
+      "phone": "0598800121",
+      "clinicId": 1,
+      "doctorId": 4
+    },
+    {
+      "id": 137,
+      "dob": "2002-03-15",
+      "name": "سناء شهاب",
+      "phone": "0598800122",
+      "clinicId": 1,
+      "doctorId": 4
+    },
+    {
+      "id": 138,
+      "dob": "2003-03-15",
+      "name": "علي شريف",
+      "phone": "0598800123",
+      "clinicId": 1,
+      "doctorId": 4
+    },
+    {
+      "id": 139,
+      "dob": "2004-03-15",
+      "name": "جنى بشير",
+      "phone": "0598800124",
+      "clinicId": 3,
+      "doctorId": 5
+    },
+    {
+      "id": 140,
+      "dob": "1980-03-15",
+      "name": "نادر يوسف",
+      "phone": "0598800125",
+      "clinicId": 3,
+      "doctorId": 5
+    },
+    {
+      "id": 141,
+      "dob": "1981-03-15",
+      "name": "عبير كامل",
+      "phone": "0598800126",
+      "clinicId": 3,
+      "doctorId": 5
+    },
+    {
+      "id": 142,
+      "dob": "1982-03-15",
+      "name": "وسيم حسين",
+      "phone": "0598800127",
+      "clinicId": 3,
+      "doctorId": 5
+    },
+    {
+      "id": 143,
+      "dob": "1983-03-15",
+      "name": "ملك صالح",
+      "phone": "0598800128",
+      "clinicId": 3,
+      "doctorId": 5
+    },
+    {
+      "id": 144,
+      "dob": "1984-03-15",
+      "name": "هادي عثمان",
+      "phone": "0598800129",
+      "clinicId": 3,
+      "doctorId": 5
+    }
+  ],
+  "preparedOn": "2026-10-21",
+  "appointments": [
+    {
+      "id": 111,
+      "local": "2026-10-18T08:30:00",
+      "status": "completed",
+      "clinicId": 1,
+      "doctorId": 1,
+      "patientId": 115
+    },
+    {
+      "id": 112,
+      "local": "2026-10-18T09:15:00",
+      "status": "completed",
+      "clinicId": 1,
+      "doctorId": 1,
+      "patientId": 116
+    },
+    {
+      "id": 113,
+      "local": "2026-10-18T10:00:00",
+      "status": "completed",
+      "clinicId": 1,
+      "doctorId": 1,
+      "patientId": 117
+    },
+    {
+      "id": 114,
+      "local": "2026-10-18T10:45:00",
+      "status": "no_show",
+      "clinicId": 1,
+      "doctorId": 1,
+      "patientId": 118
+    },
+    {
+      "id": 115,
+      "local": "2026-10-19T08:30:00",
+      "status": "completed",
+      "clinicId": 1,
+      "doctorId": 1,
+      "patientId": 115
+    },
+    {
+      "id": 116,
+      "local": "2026-10-19T09:15:00",
+      "status": "completed",
+      "clinicId": 1,
+      "doctorId": 1,
+      "patientId": 116
+    },
+    {
+      "id": 117,
+      "local": "2026-10-19T10:00:00",
+      "status": "completed",
+      "clinicId": 1,
+      "doctorId": 1,
+      "patientId": 117
+    },
+    {
+      "id": 118,
+      "local": "2026-10-19T10:45:00",
+      "status": "no_show",
+      "clinicId": 1,
+      "doctorId": 1,
+      "patientId": 118
+    },
+    {
+      "id": 119,
+      "local": "2026-10-20T08:30:00",
+      "status": "completed",
+      "clinicId": 1,
+      "doctorId": 1,
+      "patientId": 115
+    },
+    {
+      "id": 120,
+      "local": "2026-10-20T09:15:00",
+      "status": "completed",
+      "clinicId": 1,
+      "doctorId": 1,
+      "patientId": 116
+    },
+    {
+      "id": 121,
+      "local": "2026-10-20T10:00:00",
+      "status": "completed",
+      "clinicId": 1,
+      "doctorId": 1,
+      "patientId": 117
+    },
+    {
+      "id": 122,
+      "local": "2026-10-20T10:45:00",
+      "status": "no_show",
+      "clinicId": 1,
+      "doctorId": 1,
+      "patientId": 118
+    },
+    {
+      "id": 123,
+      "local": "2026-10-21T08:30:00",
+      "status": "completed",
+      "clinicId": 1,
+      "doctorId": 1,
+      "patientId": 115
+    },
+    {
+      "id": 124,
+      "local": "2026-10-21T09:15:00",
+      "status": "completed",
+      "clinicId": 1,
+      "doctorId": 1,
+      "patientId": 116
+    },
+    {
+      "id": 125,
+      "local": "2026-10-21T10:00:00",
+      "status": "completed",
+      "clinicId": 1,
+      "doctorId": 1,
+      "patientId": 117
+    },
+    {
+      "id": 126,
+      "local": "2026-10-21T10:45:00",
+      "status": "no_show",
+      "clinicId": 1,
+      "doctorId": 1,
+      "patientId": 118
+    },
+    {
+      "id": 127,
+      "local": "2026-10-22T08:30:00",
+      "status": "booked",
+      "clinicId": 1,
+      "doctorId": 1,
+      "patientId": 115
+    },
+    {
+      "id": 128,
+      "local": "2026-10-22T09:15:00",
+      "status": "booked",
+      "clinicId": 1,
+      "doctorId": 1,
+      "patientId": 116
+    },
+    {
+      "id": 129,
+      "local": "2026-10-22T10:00:00",
+      "status": "booked",
+      "clinicId": 1,
+      "doctorId": 1,
+      "patientId": 117
+    },
+    {
+      "id": 130,
+      "local": "2026-10-22T10:45:00",
+      "status": "booked",
+      "clinicId": 1,
+      "doctorId": 1,
+      "patientId": 118
+    },
+    {
+      "id": 131,
+      "local": "2026-10-23T08:30:00",
+      "status": "booked",
+      "clinicId": 1,
+      "doctorId": 1,
+      "patientId": 115
+    },
+    {
+      "id": 132,
+      "local": "2026-10-23T09:15:00",
+      "status": "booked",
+      "clinicId": 1,
+      "doctorId": 1,
+      "patientId": 116
+    },
+    {
+      "id": 133,
+      "local": "2026-10-23T10:00:00",
+      "status": "booked",
+      "clinicId": 1,
+      "doctorId": 1,
+      "patientId": 117
+    },
+    {
+      "id": 134,
+      "local": "2026-10-23T10:45:00",
+      "status": "booked",
+      "clinicId": 1,
+      "doctorId": 1,
+      "patientId": 118
+    },
+    {
+      "id": 135,
+      "local": "2026-10-24T08:30:00",
+      "status": "booked",
+      "clinicId": 1,
+      "doctorId": 1,
+      "patientId": 115
+    },
+    {
+      "id": 136,
+      "local": "2026-10-24T09:15:00",
+      "status": "booked",
+      "clinicId": 1,
+      "doctorId": 1,
+      "patientId": 116
+    },
+    {
+      "id": 137,
+      "local": "2026-10-24T10:00:00",
+      "status": "booked",
+      "clinicId": 1,
+      "doctorId": 1,
+      "patientId": 117
+    },
+    {
+      "id": 138,
+      "local": "2026-10-24T10:45:00",
+      "status": "booked",
+      "clinicId": 1,
+      "doctorId": 1,
+      "patientId": 118
+    },
+    {
+      "id": 139,
+      "local": "2026-10-25T08:30:00",
+      "status": "booked",
+      "clinicId": 1,
+      "doctorId": 1,
+      "patientId": 115
+    },
+    {
+      "id": 140,
+      "local": "2026-10-25T09:15:00",
+      "status": "booked",
+      "clinicId": 1,
+      "doctorId": 1,
+      "patientId": 116
+    },
+    {
+      "id": 141,
+      "local": "2026-10-25T10:00:00",
+      "status": "booked",
+      "clinicId": 1,
+      "doctorId": 1,
+      "patientId": 117
+    },
+    {
+      "id": 142,
+      "local": "2026-10-25T10:45:00",
+      "status": "booked",
+      "clinicId": 1,
+      "doctorId": 1,
+      "patientId": 118
+    },
+    {
+      "id": 143,
+      "local": "2026-10-26T08:30:00",
+      "status": "booked",
+      "clinicId": 1,
+      "doctorId": 1,
+      "patientId": 115
+    },
+    {
+      "id": 144,
+      "local": "2026-10-26T09:15:00",
+      "status": "booked",
+      "clinicId": 1,
+      "doctorId": 1,
+      "patientId": 116
+    },
+    {
+      "id": 145,
+      "local": "2026-10-26T10:00:00",
+      "status": "booked",
+      "clinicId": 1,
+      "doctorId": 1,
+      "patientId": 117
+    },
+    {
+      "id": 146,
+      "local": "2026-10-26T10:45:00",
+      "status": "booked",
+      "clinicId": 1,
+      "doctorId": 1,
+      "patientId": 118
+    },
+    {
+      "id": 147,
+      "local": "2026-10-27T08:30:00",
+      "status": "booked",
+      "clinicId": 1,
+      "doctorId": 1,
+      "patientId": 115
+    },
+    {
+      "id": 148,
+      "local": "2026-10-27T09:15:00",
+      "status": "booked",
+      "clinicId": 1,
+      "doctorId": 1,
+      "patientId": 116
+    },
+    {
+      "id": 149,
+      "local": "2026-10-27T10:00:00",
+      "status": "booked",
+      "clinicId": 1,
+      "doctorId": 1,
+      "patientId": 117
+    },
+    {
+      "id": 150,
+      "local": "2026-10-27T10:45:00",
+      "status": "booked",
+      "clinicId": 1,
+      "doctorId": 1,
+      "patientId": 118
+    },
+    {
+      "id": 151,
+      "local": "2026-10-28T08:30:00",
+      "status": "booked",
+      "clinicId": 1,
+      "doctorId": 1,
+      "patientId": 115
+    },
+    {
+      "id": 152,
+      "local": "2026-10-28T09:15:00",
+      "status": "booked",
+      "clinicId": 1,
+      "doctorId": 1,
+      "patientId": 116
+    },
+    {
+      "id": 153,
+      "local": "2026-10-28T10:00:00",
+      "status": "booked",
+      "clinicId": 1,
+      "doctorId": 1,
+      "patientId": 117
+    },
+    {
+      "id": 154,
+      "local": "2026-10-28T10:45:00",
+      "status": "booked",
+      "clinicId": 1,
+      "doctorId": 1,
+      "patientId": 118
+    },
+    {
+      "id": 155,
+      "local": "2026-10-18T08:30:00",
+      "status": "completed",
+      "clinicId": 2,
+      "doctorId": 2,
+      "patientId": 121
+    },
+    {
+      "id": 156,
+      "local": "2026-10-18T09:15:00",
+      "status": "completed",
+      "clinicId": 2,
+      "doctorId": 2,
+      "patientId": 122
+    },
+    {
+      "id": 157,
+      "local": "2026-10-18T10:00:00",
+      "status": "completed",
+      "clinicId": 2,
+      "doctorId": 2,
+      "patientId": 123
+    },
+    {
+      "id": 158,
+      "local": "2026-10-18T10:45:00",
+      "status": "no_show",
+      "clinicId": 2,
+      "doctorId": 2,
+      "patientId": 124
+    },
+    {
+      "id": 159,
+      "local": "2026-10-19T08:30:00",
+      "status": "completed",
+      "clinicId": 2,
+      "doctorId": 2,
+      "patientId": 121
+    },
+    {
+      "id": 160,
+      "local": "2026-10-19T09:15:00",
+      "status": "completed",
+      "clinicId": 2,
+      "doctorId": 2,
+      "patientId": 122
+    },
+    {
+      "id": 161,
+      "local": "2026-10-19T10:00:00",
+      "status": "completed",
+      "clinicId": 2,
+      "doctorId": 2,
+      "patientId": 123
+    },
+    {
+      "id": 162,
+      "local": "2026-10-19T10:45:00",
+      "status": "no_show",
+      "clinicId": 2,
+      "doctorId": 2,
+      "patientId": 124
+    },
+    {
+      "id": 163,
+      "local": "2026-10-20T08:30:00",
+      "status": "completed",
+      "clinicId": 2,
+      "doctorId": 2,
+      "patientId": 121
+    },
+    {
+      "id": 164,
+      "local": "2026-10-20T09:15:00",
+      "status": "completed",
+      "clinicId": 2,
+      "doctorId": 2,
+      "patientId": 122
+    },
+    {
+      "id": 165,
+      "local": "2026-10-20T10:00:00",
+      "status": "completed",
+      "clinicId": 2,
+      "doctorId": 2,
+      "patientId": 123
+    },
+    {
+      "id": 166,
+      "local": "2026-10-20T10:45:00",
+      "status": "no_show",
+      "clinicId": 2,
+      "doctorId": 2,
+      "patientId": 124
+    },
+    {
+      "id": 167,
+      "local": "2026-10-21T08:30:00",
+      "status": "completed",
+      "clinicId": 2,
+      "doctorId": 2,
+      "patientId": 121
+    },
+    {
+      "id": 168,
+      "local": "2026-10-21T09:15:00",
+      "status": "completed",
+      "clinicId": 2,
+      "doctorId": 2,
+      "patientId": 122
+    },
+    {
+      "id": 169,
+      "local": "2026-10-21T10:00:00",
+      "status": "completed",
+      "clinicId": 2,
+      "doctorId": 2,
+      "patientId": 123
+    },
+    {
+      "id": 170,
+      "local": "2026-10-21T10:45:00",
+      "status": "no_show",
+      "clinicId": 2,
+      "doctorId": 2,
+      "patientId": 124
+    },
+    {
+      "id": 171,
+      "local": "2026-10-22T08:30:00",
+      "status": "booked",
+      "clinicId": 2,
+      "doctorId": 2,
+      "patientId": 121
+    },
+    {
+      "id": 172,
+      "local": "2026-10-22T09:15:00",
+      "status": "booked",
+      "clinicId": 2,
+      "doctorId": 2,
+      "patientId": 122
+    },
+    {
+      "id": 173,
+      "local": "2026-10-22T10:00:00",
+      "status": "booked",
+      "clinicId": 2,
+      "doctorId": 2,
+      "patientId": 123
+    },
+    {
+      "id": 174,
+      "local": "2026-10-22T10:45:00",
+      "status": "booked",
+      "clinicId": 2,
+      "doctorId": 2,
+      "patientId": 124
+    },
+    {
+      "id": 175,
+      "local": "2026-10-23T08:30:00",
+      "status": "booked",
+      "clinicId": 2,
+      "doctorId": 2,
+      "patientId": 121
+    },
+    {
+      "id": 176,
+      "local": "2026-10-23T09:15:00",
+      "status": "booked",
+      "clinicId": 2,
+      "doctorId": 2,
+      "patientId": 122
+    },
+    {
+      "id": 177,
+      "local": "2026-10-23T10:00:00",
+      "status": "booked",
+      "clinicId": 2,
+      "doctorId": 2,
+      "patientId": 123
+    },
+    {
+      "id": 178,
+      "local": "2026-10-23T10:45:00",
+      "status": "booked",
+      "clinicId": 2,
+      "doctorId": 2,
+      "patientId": 124
+    },
+    {
+      "id": 179,
+      "local": "2026-10-24T08:30:00",
+      "status": "booked",
+      "clinicId": 2,
+      "doctorId": 2,
+      "patientId": 121
+    },
+    {
+      "id": 180,
+      "local": "2026-10-24T09:15:00",
+      "status": "booked",
+      "clinicId": 2,
+      "doctorId": 2,
+      "patientId": 122
+    },
+    {
+      "id": 181,
+      "local": "2026-10-24T10:00:00",
+      "status": "booked",
+      "clinicId": 2,
+      "doctorId": 2,
+      "patientId": 123
+    },
+    {
+      "id": 182,
+      "local": "2026-10-24T10:45:00",
+      "status": "booked",
+      "clinicId": 2,
+      "doctorId": 2,
+      "patientId": 124
+    },
+    {
+      "id": 183,
+      "local": "2026-10-25T08:30:00",
+      "status": "booked",
+      "clinicId": 2,
+      "doctorId": 2,
+      "patientId": 121
+    },
+    {
+      "id": 184,
+      "local": "2026-10-25T09:15:00",
+      "status": "booked",
+      "clinicId": 2,
+      "doctorId": 2,
+      "patientId": 122
+    },
+    {
+      "id": 185,
+      "local": "2026-10-25T10:00:00",
+      "status": "booked",
+      "clinicId": 2,
+      "doctorId": 2,
+      "patientId": 123
+    },
+    {
+      "id": 186,
+      "local": "2026-10-25T10:45:00",
+      "status": "booked",
+      "clinicId": 2,
+      "doctorId": 2,
+      "patientId": 124
+    },
+    {
+      "id": 187,
+      "local": "2026-10-26T08:30:00",
+      "status": "booked",
+      "clinicId": 2,
+      "doctorId": 2,
+      "patientId": 121
+    },
+    {
+      "id": 188,
+      "local": "2026-10-26T09:15:00",
+      "status": "booked",
+      "clinicId": 2,
+      "doctorId": 2,
+      "patientId": 122
+    },
+    {
+      "id": 189,
+      "local": "2026-10-26T10:00:00",
+      "status": "booked",
+      "clinicId": 2,
+      "doctorId": 2,
+      "patientId": 123
+    },
+    {
+      "id": 190,
+      "local": "2026-10-26T10:45:00",
+      "status": "booked",
+      "clinicId": 2,
+      "doctorId": 2,
+      "patientId": 124
+    },
+    {
+      "id": 191,
+      "local": "2026-10-27T08:30:00",
+      "status": "booked",
+      "clinicId": 2,
+      "doctorId": 2,
+      "patientId": 121
+    },
+    {
+      "id": 192,
+      "local": "2026-10-27T09:15:00",
+      "status": "booked",
+      "clinicId": 2,
+      "doctorId": 2,
+      "patientId": 122
+    },
+    {
+      "id": 193,
+      "local": "2026-10-27T10:00:00",
+      "status": "booked",
+      "clinicId": 2,
+      "doctorId": 2,
+      "patientId": 123
+    },
+    {
+      "id": 194,
+      "local": "2026-10-27T10:45:00",
+      "status": "booked",
+      "clinicId": 2,
+      "doctorId": 2,
+      "patientId": 124
+    },
+    {
+      "id": 195,
+      "local": "2026-10-28T08:30:00",
+      "status": "booked",
+      "clinicId": 2,
+      "doctorId": 2,
+      "patientId": 121
+    },
+    {
+      "id": 196,
+      "local": "2026-10-28T09:15:00",
+      "status": "booked",
+      "clinicId": 2,
+      "doctorId": 2,
+      "patientId": 122
+    },
+    {
+      "id": 197,
+      "local": "2026-10-28T10:00:00",
+      "status": "booked",
+      "clinicId": 2,
+      "doctorId": 2,
+      "patientId": 123
+    },
+    {
+      "id": 198,
+      "local": "2026-10-28T10:45:00",
+      "status": "booked",
+      "clinicId": 2,
+      "doctorId": 2,
+      "patientId": 124
+    },
+    {
+      "id": 199,
+      "local": "2026-10-18T08:30:00",
+      "status": "completed",
+      "clinicId": 3,
+      "doctorId": 3,
+      "patientId": 127
+    },
+    {
+      "id": 200,
+      "local": "2026-10-18T09:15:00",
+      "status": "completed",
+      "clinicId": 3,
+      "doctorId": 3,
+      "patientId": 128
+    },
+    {
+      "id": 201,
+      "local": "2026-10-18T10:00:00",
+      "status": "completed",
+      "clinicId": 3,
+      "doctorId": 3,
+      "patientId": 129
+    },
+    {
+      "id": 202,
+      "local": "2026-10-18T10:45:00",
+      "status": "no_show",
+      "clinicId": 3,
+      "doctorId": 3,
+      "patientId": 130
+    },
+    {
+      "id": 203,
+      "local": "2026-10-19T08:30:00",
+      "status": "completed",
+      "clinicId": 3,
+      "doctorId": 3,
+      "patientId": 127
+    },
+    {
+      "id": 204,
+      "local": "2026-10-19T09:15:00",
+      "status": "completed",
+      "clinicId": 3,
+      "doctorId": 3,
+      "patientId": 128
+    },
+    {
+      "id": 205,
+      "local": "2026-10-19T10:00:00",
+      "status": "completed",
+      "clinicId": 3,
+      "doctorId": 3,
+      "patientId": 129
+    },
+    {
+      "id": 206,
+      "local": "2026-10-19T10:45:00",
+      "status": "no_show",
+      "clinicId": 3,
+      "doctorId": 3,
+      "patientId": 130
+    },
+    {
+      "id": 207,
+      "local": "2026-10-20T08:30:00",
+      "status": "completed",
+      "clinicId": 3,
+      "doctorId": 3,
+      "patientId": 127
+    },
+    {
+      "id": 208,
+      "local": "2026-10-20T09:15:00",
+      "status": "completed",
+      "clinicId": 3,
+      "doctorId": 3,
+      "patientId": 128
+    },
+    {
+      "id": 209,
+      "local": "2026-10-20T10:00:00",
+      "status": "completed",
+      "clinicId": 3,
+      "doctorId": 3,
+      "patientId": 129
+    },
+    {
+      "id": 210,
+      "local": "2026-10-20T10:45:00",
+      "status": "no_show",
+      "clinicId": 3,
+      "doctorId": 3,
+      "patientId": 130
+    },
+    {
+      "id": 211,
+      "local": "2026-10-21T08:30:00",
+      "status": "completed",
+      "clinicId": 3,
+      "doctorId": 3,
+      "patientId": 127
+    },
+    {
+      "id": 212,
+      "local": "2026-10-21T09:15:00",
+      "status": "completed",
+      "clinicId": 3,
+      "doctorId": 3,
+      "patientId": 128
+    },
+    {
+      "id": 213,
+      "local": "2026-10-21T10:00:00",
+      "status": "completed",
+      "clinicId": 3,
+      "doctorId": 3,
+      "patientId": 129
+    },
+    {
+      "id": 214,
+      "local": "2026-10-21T10:45:00",
+      "status": "no_show",
+      "clinicId": 3,
+      "doctorId": 3,
+      "patientId": 130
+    },
+    {
+      "id": 215,
+      "local": "2026-10-22T08:30:00",
+      "status": "booked",
+      "clinicId": 3,
+      "doctorId": 3,
+      "patientId": 127
+    },
+    {
+      "id": 216,
+      "local": "2026-10-22T09:15:00",
+      "status": "booked",
+      "clinicId": 3,
+      "doctorId": 3,
+      "patientId": 128
+    },
+    {
+      "id": 217,
+      "local": "2026-10-22T10:00:00",
+      "status": "booked",
+      "clinicId": 3,
+      "doctorId": 3,
+      "patientId": 129
+    },
+    {
+      "id": 218,
+      "local": "2026-10-22T10:45:00",
+      "status": "booked",
+      "clinicId": 3,
+      "doctorId": 3,
+      "patientId": 130
+    },
+    {
+      "id": 219,
+      "local": "2026-10-23T08:30:00",
+      "status": "booked",
+      "clinicId": 3,
+      "doctorId": 3,
+      "patientId": 127
+    },
+    {
+      "id": 220,
+      "local": "2026-10-23T09:15:00",
+      "status": "booked",
+      "clinicId": 3,
+      "doctorId": 3,
+      "patientId": 128
+    },
+    {
+      "id": 221,
+      "local": "2026-10-23T10:00:00",
+      "status": "booked",
+      "clinicId": 3,
+      "doctorId": 3,
+      "patientId": 129
+    },
+    {
+      "id": 222,
+      "local": "2026-10-23T10:45:00",
+      "status": "booked",
+      "clinicId": 3,
+      "doctorId": 3,
+      "patientId": 130
+    },
+    {
+      "id": 223,
+      "local": "2026-10-24T08:30:00",
+      "status": "booked",
+      "clinicId": 3,
+      "doctorId": 3,
+      "patientId": 127
+    },
+    {
+      "id": 224,
+      "local": "2026-10-24T09:15:00",
+      "status": "booked",
+      "clinicId": 3,
+      "doctorId": 3,
+      "patientId": 128
+    },
+    {
+      "id": 225,
+      "local": "2026-10-24T10:00:00",
+      "status": "booked",
+      "clinicId": 3,
+      "doctorId": 3,
+      "patientId": 129
+    },
+    {
+      "id": 226,
+      "local": "2026-10-24T10:45:00",
+      "status": "booked",
+      "clinicId": 3,
+      "doctorId": 3,
+      "patientId": 130
+    },
+    {
+      "id": 227,
+      "local": "2026-10-25T08:30:00",
+      "status": "booked",
+      "clinicId": 3,
+      "doctorId": 3,
+      "patientId": 127
+    },
+    {
+      "id": 228,
+      "local": "2026-10-25T09:15:00",
+      "status": "booked",
+      "clinicId": 3,
+      "doctorId": 3,
+      "patientId": 128
+    },
+    {
+      "id": 229,
+      "local": "2026-10-25T10:00:00",
+      "status": "booked",
+      "clinicId": 3,
+      "doctorId": 3,
+      "patientId": 129
+    },
+    {
+      "id": 230,
+      "local": "2026-10-25T10:45:00",
+      "status": "booked",
+      "clinicId": 3,
+      "doctorId": 3,
+      "patientId": 130
+    },
+    {
+      "id": 231,
+      "local": "2026-10-26T08:30:00",
+      "status": "booked",
+      "clinicId": 3,
+      "doctorId": 3,
+      "patientId": 127
+    },
+    {
+      "id": 232,
+      "local": "2026-10-26T09:15:00",
+      "status": "booked",
+      "clinicId": 3,
+      "doctorId": 3,
+      "patientId": 128
+    },
+    {
+      "id": 233,
+      "local": "2026-10-26T10:00:00",
+      "status": "booked",
+      "clinicId": 3,
+      "doctorId": 3,
+      "patientId": 129
+    },
+    {
+      "id": 234,
+      "local": "2026-10-26T10:45:00",
+      "status": "booked",
+      "clinicId": 3,
+      "doctorId": 3,
+      "patientId": 130
+    },
+    {
+      "id": 235,
+      "local": "2026-10-27T08:30:00",
+      "status": "booked",
+      "clinicId": 3,
+      "doctorId": 3,
+      "patientId": 127
+    },
+    {
+      "id": 236,
+      "local": "2026-10-27T09:15:00",
+      "status": "booked",
+      "clinicId": 3,
+      "doctorId": 3,
+      "patientId": 128
+    },
+    {
+      "id": 237,
+      "local": "2026-10-27T10:00:00",
+      "status": "booked",
+      "clinicId": 3,
+      "doctorId": 3,
+      "patientId": 129
+    },
+    {
+      "id": 238,
+      "local": "2026-10-27T10:45:00",
+      "status": "booked",
+      "clinicId": 3,
+      "doctorId": 3,
+      "patientId": 130
+    },
+    {
+      "id": 239,
+      "local": "2026-10-28T08:30:00",
+      "status": "booked",
+      "clinicId": 3,
+      "doctorId": 3,
+      "patientId": 127
+    },
+    {
+      "id": 240,
+      "local": "2026-10-28T09:15:00",
+      "status": "booked",
+      "clinicId": 3,
+      "doctorId": 3,
+      "patientId": 128
+    },
+    {
+      "id": 241,
+      "local": "2026-10-28T10:00:00",
+      "status": "booked",
+      "clinicId": 3,
+      "doctorId": 3,
+      "patientId": 129
+    },
+    {
+      "id": 242,
+      "local": "2026-10-28T10:45:00",
+      "status": "booked",
+      "clinicId": 3,
+      "doctorId": 3,
+      "patientId": 130
+    },
+    {
+      "id": 243,
+      "local": "2026-10-18T08:30:00",
+      "status": "completed",
+      "clinicId": 1,
+      "doctorId": 4,
+      "patientId": 133
+    },
+    {
+      "id": 244,
+      "local": "2026-10-18T09:15:00",
+      "status": "completed",
+      "clinicId": 1,
+      "doctorId": 4,
+      "patientId": 134
+    },
+    {
+      "id": 245,
+      "local": "2026-10-18T10:00:00",
+      "status": "completed",
+      "clinicId": 1,
+      "doctorId": 4,
+      "patientId": 135
+    },
+    {
+      "id": 246,
+      "local": "2026-10-18T10:45:00",
+      "status": "no_show",
+      "clinicId": 1,
+      "doctorId": 4,
+      "patientId": 136
+    },
+    {
+      "id": 247,
+      "local": "2026-10-19T08:30:00",
+      "status": "completed",
+      "clinicId": 1,
+      "doctorId": 4,
+      "patientId": 133
+    },
+    {
+      "id": 248,
+      "local": "2026-10-19T09:15:00",
+      "status": "completed",
+      "clinicId": 1,
+      "doctorId": 4,
+      "patientId": 134
+    },
+    {
+      "id": 249,
+      "local": "2026-10-19T10:00:00",
+      "status": "completed",
+      "clinicId": 1,
+      "doctorId": 4,
+      "patientId": 135
+    },
+    {
+      "id": 250,
+      "local": "2026-10-19T10:45:00",
+      "status": "no_show",
+      "clinicId": 1,
+      "doctorId": 4,
+      "patientId": 136
+    },
+    {
+      "id": 251,
+      "local": "2026-10-20T08:30:00",
+      "status": "completed",
+      "clinicId": 1,
+      "doctorId": 4,
+      "patientId": 133
+    },
+    {
+      "id": 252,
+      "local": "2026-10-20T09:15:00",
+      "status": "completed",
+      "clinicId": 1,
+      "doctorId": 4,
+      "patientId": 134
+    },
+    {
+      "id": 253,
+      "local": "2026-10-20T10:00:00",
+      "status": "completed",
+      "clinicId": 1,
+      "doctorId": 4,
+      "patientId": 135
+    },
+    {
+      "id": 254,
+      "local": "2026-10-20T10:45:00",
+      "status": "no_show",
+      "clinicId": 1,
+      "doctorId": 4,
+      "patientId": 136
+    },
+    {
+      "id": 255,
+      "local": "2026-10-21T08:30:00",
+      "status": "completed",
+      "clinicId": 1,
+      "doctorId": 4,
+      "patientId": 133
+    },
+    {
+      "id": 256,
+      "local": "2026-10-21T09:15:00",
+      "status": "completed",
+      "clinicId": 1,
+      "doctorId": 4,
+      "patientId": 134
+    },
+    {
+      "id": 257,
+      "local": "2026-10-21T10:00:00",
+      "status": "completed",
+      "clinicId": 1,
+      "doctorId": 4,
+      "patientId": 135
+    },
+    {
+      "id": 258,
+      "local": "2026-10-21T10:45:00",
+      "status": "no_show",
+      "clinicId": 1,
+      "doctorId": 4,
+      "patientId": 136
+    },
+    {
+      "id": 259,
+      "local": "2026-10-22T08:30:00",
+      "status": "booked",
+      "clinicId": 1,
+      "doctorId": 4,
+      "patientId": 133
+    },
+    {
+      "id": 260,
+      "local": "2026-10-22T09:15:00",
+      "status": "booked",
+      "clinicId": 1,
+      "doctorId": 4,
+      "patientId": 134
+    },
+    {
+      "id": 261,
+      "local": "2026-10-22T10:00:00",
+      "status": "booked",
+      "clinicId": 1,
+      "doctorId": 4,
+      "patientId": 135
+    },
+    {
+      "id": 262,
+      "local": "2026-10-22T10:45:00",
+      "status": "booked",
+      "clinicId": 1,
+      "doctorId": 4,
+      "patientId": 136
+    },
+    {
+      "id": 263,
+      "local": "2026-10-23T08:30:00",
+      "status": "booked",
+      "clinicId": 1,
+      "doctorId": 4,
+      "patientId": 133
+    },
+    {
+      "id": 264,
+      "local": "2026-10-23T09:15:00",
+      "status": "booked",
+      "clinicId": 1,
+      "doctorId": 4,
+      "patientId": 134
+    },
+    {
+      "id": 265,
+      "local": "2026-10-23T10:00:00",
+      "status": "booked",
+      "clinicId": 1,
+      "doctorId": 4,
+      "patientId": 135
+    },
+    {
+      "id": 266,
+      "local": "2026-10-23T10:45:00",
+      "status": "booked",
+      "clinicId": 1,
+      "doctorId": 4,
+      "patientId": 136
+    },
+    {
+      "id": 267,
+      "local": "2026-10-24T08:30:00",
+      "status": "booked",
+      "clinicId": 1,
+      "doctorId": 4,
+      "patientId": 133
+    },
+    {
+      "id": 268,
+      "local": "2026-10-24T09:15:00",
+      "status": "booked",
+      "clinicId": 1,
+      "doctorId": 4,
+      "patientId": 134
+    },
+    {
+      "id": 269,
+      "local": "2026-10-24T10:00:00",
+      "status": "booked",
+      "clinicId": 1,
+      "doctorId": 4,
+      "patientId": 135
+    },
+    {
+      "id": 270,
+      "local": "2026-10-24T10:45:00",
+      "status": "booked",
+      "clinicId": 1,
+      "doctorId": 4,
+      "patientId": 136
+    },
+    {
+      "id": 271,
+      "local": "2026-10-25T08:30:00",
+      "status": "booked",
+      "clinicId": 1,
+      "doctorId": 4,
+      "patientId": 133
+    },
+    {
+      "id": 272,
+      "local": "2026-10-25T09:15:00",
+      "status": "booked",
+      "clinicId": 1,
+      "doctorId": 4,
+      "patientId": 134
+    },
+    {
+      "id": 273,
+      "local": "2026-10-25T10:00:00",
+      "status": "booked",
+      "clinicId": 1,
+      "doctorId": 4,
+      "patientId": 135
+    },
+    {
+      "id": 274,
+      "local": "2026-10-25T10:45:00",
+      "status": "booked",
+      "clinicId": 1,
+      "doctorId": 4,
+      "patientId": 136
+    },
+    {
+      "id": 275,
+      "local": "2026-10-26T08:30:00",
+      "status": "booked",
+      "clinicId": 1,
+      "doctorId": 4,
+      "patientId": 133
+    },
+    {
+      "id": 276,
+      "local": "2026-10-26T09:15:00",
+      "status": "booked",
+      "clinicId": 1,
+      "doctorId": 4,
+      "patientId": 134
+    },
+    {
+      "id": 277,
+      "local": "2026-10-26T10:00:00",
+      "status": "booked",
+      "clinicId": 1,
+      "doctorId": 4,
+      "patientId": 135
+    },
+    {
+      "id": 278,
+      "local": "2026-10-26T10:45:00",
+      "status": "booked",
+      "clinicId": 1,
+      "doctorId": 4,
+      "patientId": 136
+    },
+    {
+      "id": 279,
+      "local": "2026-10-27T08:30:00",
+      "status": "booked",
+      "clinicId": 1,
+      "doctorId": 4,
+      "patientId": 133
+    },
+    {
+      "id": 280,
+      "local": "2026-10-27T09:15:00",
+      "status": "booked",
+      "clinicId": 1,
+      "doctorId": 4,
+      "patientId": 134
+    },
+    {
+      "id": 281,
+      "local": "2026-10-27T10:00:00",
+      "status": "booked",
+      "clinicId": 1,
+      "doctorId": 4,
+      "patientId": 135
+    },
+    {
+      "id": 282,
+      "local": "2026-10-27T10:45:00",
+      "status": "booked",
+      "clinicId": 1,
+      "doctorId": 4,
+      "patientId": 136
+    },
+    {
+      "id": 283,
+      "local": "2026-10-28T08:30:00",
+      "status": "booked",
+      "clinicId": 1,
+      "doctorId": 4,
+      "patientId": 133
+    },
+    {
+      "id": 284,
+      "local": "2026-10-28T09:15:00",
+      "status": "booked",
+      "clinicId": 1,
+      "doctorId": 4,
+      "patientId": 134
+    },
+    {
+      "id": 285,
+      "local": "2026-10-28T10:00:00",
+      "status": "booked",
+      "clinicId": 1,
+      "doctorId": 4,
+      "patientId": 135
+    },
+    {
+      "id": 286,
+      "local": "2026-10-28T10:45:00",
+      "status": "booked",
+      "clinicId": 1,
+      "doctorId": 4,
+      "patientId": 136
+    },
+    {
+      "id": 287,
+      "local": "2026-10-18T08:30:00",
+      "status": "completed",
+      "clinicId": 3,
+      "doctorId": 5,
+      "patientId": 139
+    },
+    {
+      "id": 288,
+      "local": "2026-10-18T09:15:00",
+      "status": "completed",
+      "clinicId": 3,
+      "doctorId": 5,
+      "patientId": 140
+    },
+    {
+      "id": 289,
+      "local": "2026-10-18T10:00:00",
+      "status": "completed",
+      "clinicId": 3,
+      "doctorId": 5,
+      "patientId": 141
+    },
+    {
+      "id": 290,
+      "local": "2026-10-18T10:45:00",
+      "status": "no_show",
+      "clinicId": 3,
+      "doctorId": 5,
+      "patientId": 142
+    },
+    {
+      "id": 291,
+      "local": "2026-10-19T08:30:00",
+      "status": "completed",
+      "clinicId": 3,
+      "doctorId": 5,
+      "patientId": 139
+    },
+    {
+      "id": 292,
+      "local": "2026-10-19T09:15:00",
+      "status": "completed",
+      "clinicId": 3,
+      "doctorId": 5,
+      "patientId": 140
+    },
+    {
+      "id": 293,
+      "local": "2026-10-19T10:00:00",
+      "status": "completed",
+      "clinicId": 3,
+      "doctorId": 5,
+      "patientId": 141
+    },
+    {
+      "id": 294,
+      "local": "2026-10-19T10:45:00",
+      "status": "no_show",
+      "clinicId": 3,
+      "doctorId": 5,
+      "patientId": 142
+    },
+    {
+      "id": 295,
+      "local": "2026-10-20T08:30:00",
+      "status": "completed",
+      "clinicId": 3,
+      "doctorId": 5,
+      "patientId": 139
+    },
+    {
+      "id": 296,
+      "local": "2026-10-20T09:15:00",
+      "status": "completed",
+      "clinicId": 3,
+      "doctorId": 5,
+      "patientId": 140
+    },
+    {
+      "id": 297,
+      "local": "2026-10-20T10:00:00",
+      "status": "completed",
+      "clinicId": 3,
+      "doctorId": 5,
+      "patientId": 141
+    },
+    {
+      "id": 298,
+      "local": "2026-10-20T10:45:00",
+      "status": "no_show",
+      "clinicId": 3,
+      "doctorId": 5,
+      "patientId": 142
+    },
+    {
+      "id": 299,
+      "local": "2026-10-21T08:30:00",
+      "status": "completed",
+      "clinicId": 3,
+      "doctorId": 5,
+      "patientId": 139
+    },
+    {
+      "id": 300,
+      "local": "2026-10-21T09:15:00",
+      "status": "completed",
+      "clinicId": 3,
+      "doctorId": 5,
+      "patientId": 140
+    },
+    {
+      "id": 301,
+      "local": "2026-10-21T10:00:00",
+      "status": "completed",
+      "clinicId": 3,
+      "doctorId": 5,
+      "patientId": 141
+    },
+    {
+      "id": 302,
+      "local": "2026-10-21T10:45:00",
+      "status": "no_show",
+      "clinicId": 3,
+      "doctorId": 5,
+      "patientId": 142
+    },
+    {
+      "id": 303,
+      "local": "2026-10-22T08:30:00",
+      "status": "booked",
+      "clinicId": 3,
+      "doctorId": 5,
+      "patientId": 139
+    },
+    {
+      "id": 304,
+      "local": "2026-10-22T09:15:00",
+      "status": "booked",
+      "clinicId": 3,
+      "doctorId": 5,
+      "patientId": 140
+    },
+    {
+      "id": 305,
+      "local": "2026-10-22T10:00:00",
+      "status": "booked",
+      "clinicId": 3,
+      "doctorId": 5,
+      "patientId": 141
+    },
+    {
+      "id": 306,
+      "local": "2026-10-22T10:45:00",
+      "status": "booked",
+      "clinicId": 3,
+      "doctorId": 5,
+      "patientId": 142
+    },
+    {
+      "id": 307,
+      "local": "2026-10-23T08:30:00",
+      "status": "booked",
+      "clinicId": 3,
+      "doctorId": 5,
+      "patientId": 139
+    },
+    {
+      "id": 308,
+      "local": "2026-10-23T09:15:00",
+      "status": "booked",
+      "clinicId": 3,
+      "doctorId": 5,
+      "patientId": 140
+    },
+    {
+      "id": 309,
+      "local": "2026-10-23T10:00:00",
+      "status": "booked",
+      "clinicId": 3,
+      "doctorId": 5,
+      "patientId": 141
+    },
+    {
+      "id": 310,
+      "local": "2026-10-23T10:45:00",
+      "status": "booked",
+      "clinicId": 3,
+      "doctorId": 5,
+      "patientId": 142
+    },
+    {
+      "id": 311,
+      "local": "2026-10-24T08:30:00",
+      "status": "booked",
+      "clinicId": 3,
+      "doctorId": 5,
+      "patientId": 139
+    },
+    {
+      "id": 312,
+      "local": "2026-10-24T09:15:00",
+      "status": "booked",
+      "clinicId": 3,
+      "doctorId": 5,
+      "patientId": 140
+    },
+    {
+      "id": 313,
+      "local": "2026-10-24T10:00:00",
+      "status": "booked",
+      "clinicId": 3,
+      "doctorId": 5,
+      "patientId": 141
+    },
+    {
+      "id": 314,
+      "local": "2026-10-24T10:45:00",
+      "status": "booked",
+      "clinicId": 3,
+      "doctorId": 5,
+      "patientId": 142
+    },
+    {
+      "id": 315,
+      "local": "2026-10-25T08:30:00",
+      "status": "booked",
+      "clinicId": 3,
+      "doctorId": 5,
+      "patientId": 139
+    },
+    {
+      "id": 316,
+      "local": "2026-10-25T09:15:00",
+      "status": "booked",
+      "clinicId": 3,
+      "doctorId": 5,
+      "patientId": 140
+    },
+    {
+      "id": 317,
+      "local": "2026-10-25T10:00:00",
+      "status": "booked",
+      "clinicId": 3,
+      "doctorId": 5,
+      "patientId": 141
+    },
+    {
+      "id": 318,
+      "local": "2026-10-25T10:45:00",
+      "status": "booked",
+      "clinicId": 3,
+      "doctorId": 5,
+      "patientId": 142
+    },
+    {
+      "id": 319,
+      "local": "2026-10-26T08:30:00",
+      "status": "booked",
+      "clinicId": 3,
+      "doctorId": 5,
+      "patientId": 139
+    },
+    {
+      "id": 320,
+      "local": "2026-10-26T09:15:00",
+      "status": "booked",
+      "clinicId": 3,
+      "doctorId": 5,
+      "patientId": 140
+    },
+    {
+      "id": 321,
+      "local": "2026-10-26T10:00:00",
+      "status": "booked",
+      "clinicId": 3,
+      "doctorId": 5,
+      "patientId": 141
+    },
+    {
+      "id": 322,
+      "local": "2026-10-26T10:45:00",
+      "status": "booked",
+      "clinicId": 3,
+      "doctorId": 5,
+      "patientId": 142
+    },
+    {
+      "id": 323,
+      "local": "2026-10-27T08:30:00",
+      "status": "booked",
+      "clinicId": 3,
+      "doctorId": 5,
+      "patientId": 139
+    },
+    {
+      "id": 324,
+      "local": "2026-10-27T09:15:00",
+      "status": "booked",
+      "clinicId": 3,
+      "doctorId": 5,
+      "patientId": 140
+    },
+    {
+      "id": 325,
+      "local": "2026-10-27T10:00:00",
+      "status": "booked",
+      "clinicId": 3,
+      "doctorId": 5,
+      "patientId": 141
+    },
+    {
+      "id": 326,
+      "local": "2026-10-27T10:45:00",
+      "status": "booked",
+      "clinicId": 3,
+      "doctorId": 5,
+      "patientId": 142
+    },
+    {
+      "id": 327,
+      "local": "2026-10-28T08:30:00",
+      "status": "booked",
+      "clinicId": 3,
+      "doctorId": 5,
+      "patientId": 139
+    },
+    {
+      "id": 328,
+      "local": "2026-10-28T09:15:00",
+      "status": "booked",
+      "clinicId": 3,
+      "doctorId": 5,
+      "patientId": 140
+    },
+    {
+      "id": 329,
+      "local": "2026-10-28T10:00:00",
+      "status": "booked",
+      "clinicId": 3,
+      "doctorId": 5,
+      "patientId": 141
+    },
+    {
+      "id": 330,
+      "local": "2026-10-28T10:45:00",
+      "status": "booked",
+      "clinicId": 3,
+      "doctorId": 5,
+      "patientId": 142
+    }
+  ],
+  "duplicateIds": [
+    145,
+    146
+  ],
+  "waitlistCount": 10,
+  "clinicAdminAccounts": [
+    {
+      "role": "administrator",
+      "email": "manager.1@amal.example",
+      "clinicId": 1,
+      "doctorId": null
+    },
+    {
+      "role": "administrator",
+      "email": "manager.2@amal.example",
+      "clinicId": 2,
+      "doctorId": null
+    },
+    {
+      "role": "administrator",
+      "email": "manager.3@amal.example",
+      "clinicId": 3,
+      "doctorId": null
+    }
+  ],
+  "adoption": {
+    "managerDoctorSelection": "Principal seeded doctor in each clinic",
+    "trialClinicId": 2,
+    "resultClinicIds": [
+      1,
+      3
+    ],
+    "membershipsUnchanged": true
+  }
+}

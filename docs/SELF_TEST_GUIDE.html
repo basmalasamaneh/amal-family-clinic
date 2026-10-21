@@ -1,0 +1,362 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<title>Amal Network — owner self-test guide</title>
+<style>
+  :root{font-family:system-ui,-apple-system,"Segoe UI",Arial,sans-serif;color:#172f37;background:#edf3f3;font-size:15px;line-height:1.55}
+  *{box-sizing:border-box}body{margin:0}header,main,footer{max-width:1100px;margin:auto}
+  header{padding:30px 36px 24px;background:#123f46;color:white;border-bottom:5px solid #b6d5a8}
+  header p{margin:.4rem 0}h1{font-size:2rem;line-height:1.2;margin:0 0 14px}h2{font-size:1.45rem;color:#164b50;border-bottom:2px solid #b8d0cb;padding-bottom:8px;margin:38px 0 15px;break-after:avoid}
+  h3{font-size:1.12rem;margin:24px 0 10px;break-after:avoid}main{background:white;padding:24px 36px 42px}p{margin:10px 0}
+  a{color:#125e69;text-underline-offset:3px}header a{color:#e5f5e5}nav{background:#f1f7f5;border:1px solid #d0e0da;padding:16px 22px}
+  nav ol{columns:2;column-gap:35px;margin:0;padding-left:22px}nav li{break-inside:avoid;margin:5px 0}
+  li{margin:7px 0}ul,ol{padding-left:24px}.note,.warning{padding:12px 16px;border-left:5px solid #5b8a78;background:#f1f7f3;margin:16px 0}
+  .warning{border-color:#a66422;background:#fff6e9}table{border-collapse:collapse;width:100%;font-size:.91rem;margin:16px 0;table-layout:auto}
+  th,td{border:1px solid #becfcb;padding:9px 10px;vertical-align:top;overflow-wrap:anywhere}th{text-align:left;background:#e5f0ec;color:#173f44}tbody tr:nth-child(even){background:#f8fbfa}
+  tr{break-inside:avoid}thead{display:table-header-group}code{font-family:ui-monospace,Consolas,monospace;font-size:.92em;overflow-wrap:anywhere}
+  button{font:inherit;font-weight:650;cursor:pointer;background:white;color:#163f46;border:1px solid #c4dbd2;border-radius:6px;padding:10px 16px}
+  .toolbar{display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-top:18px}.badge{font-weight:700;letter-spacing:.1em;font-size:.75rem;text-transform:uppercase}
+  .record{border:1px dashed #73928b;padding:12px 16px;margin:15px 0;line-height:2}footer{padding:20px 36px;font-size:.85rem;color:#425e62}
+  .arabic{direction:rtl;unicode-bidi:isolate;font-family:Arial,sans-serif}strong{font-weight:700}
+  @media(max-width:650px){header,main{padding:22px 16px}h1{font-size:1.65rem}nav ol{columns:1}table{font-size:.8rem}th,td{padding:6px}h2{font-size:1.25rem}}
+  @page{size:A4;margin:15mm 12mm 17mm}
+  @media print{
+    :root{font-size:9pt;line-height:1.4;background:white;color:#111}body{background:white}header,main,footer{max-width:none;padding:0;background:white;color:#111}
+    header{border-bottom:2pt solid #444;padding-bottom:10pt}header a,a{color:#111}h1{font-size:21pt}h2{font-size:14pt;color:#111;margin-top:20pt}h3{font-size:11pt}
+    .toolbar{display:none}nav{background:white;border:1px solid #aaa;padding:9pt;margin-top:12pt}nav ol{columns:2}
+    table{font-size:8pt}th,td{padding:5pt;border-color:#aaa}th{color:#111;background:#eee}tbody tr:nth-child(even){background:white}
+    .note,.warning{background:white;border-color:#555;padding:8pt 10pt}footer{margin-top:15pt;border-top:1px solid #aaa;padding-top:8pt}
+    h2,h3{break-after:avoid}p,li{orphans:3;widows:3}tr{break-inside:avoid}a{text-decoration:none}
+  }
+</style>
+</head>
+<body>
+<header>
+  <p class="badge">Private workspace · owner acceptance checklist · English edition</p>
+  <h1>Amal Network — owner self-test guide</h1>
+  <p>Practical steps and expected results. <strong>This is not a report of tests passed.</strong> Do not publish the app or evidence.</p>
+  <p>Prepared-data reference: 21 October 2026, Asia/Hebron. Check current record state before each write.</p>
+  <div class="toolbar"><button type="button" onclick="window.print()">Print / Save PDF</button><span>Self-contained file; no internet, fonts or external scripts required.</span></div>
+</header>
+<main>
+<p>This printable edition covers the same owner-testing scope as <code>SELF_TEST_GUIDE.md</code>. Printing this guide is separate from printing the app's day sheet. Use your browser Print command if the button is unavailable.</p>
+<nav aria-label="Guide contents"><ol>
+<li><a href="#s1">Precautions and prepared accounts</a></li>
+<li><a href="#s2">Ordered first session</a></li>
+<li><a href="#s3">Role navigation map</a></li>
+<li><a href="#s4">Sign-in and trusted devices</a></li>
+<li><a href="#s5">Calendar and all booking flows</a></li>
+<li><a href="#s6">Patient registration and boundaries</a></li>
+<li><a href="#s7">Consent, doctor lookup, who viewed</a></li>
+<li><a href="#s8">Import all 24 rows</a></li>
+<li><a href="#s9">Duplicate review and blockers</a></li>
+<li><a href="#s10">Offline persistence and security</a></li>
+<li><a href="#s11">Day sheet printing</a></li>
+<li><a href="#s12">Simulated reminders</a></li>
+<li><a href="#s13">Cancellation waitlist</a></li>
+<li><a href="#s14">Administrator and honest KPIs</a></li>
+<li><a href="#s15">Voluntary adoption and accessibility</a></li>
+<li><a href="#s16">End-only disruptive checks</a></li>
+<li><a href="#s17">Evidence goals and failure checklist</a></li>
+</ol></nav>
+
+<section id="s1"><h2>1. Before touching any records</h2>
+<ul>
+<li>Open the private app already provided and <code>docs/SELF_TEST_DATA.json</code> for patient/appointment IDs, dates and assignments. Start with the twelve existing accounts below. No need to recreate prepared records. This guide contains <strong>no passwords, PIN values or device credentials</strong>.</li>
+<li>Existing owner-controlled operational data plus additive synthetic practice records are <strong>not assumed disposable or safe to reset</strong>. Preserve existing records; change only selected practice records. Use realistic names without “demo” or “test”; never contact a real patient or guess remote IDs.</li>
+<li>Reception at three locations, network administrator, three clinic administrators, five doctors, future booked appointments, ten waitlist entries, consent/history and exact duplicate pair already exist. Original import export has <strong>24 rows</strong>. Use manifest identity facts, never guesses.</li>
+<li>Only missing special cases need preparation: minor/guardian, different same-name people, merge blockers, Reem and safely linked cross-location patient. Create synthetic cases via existing UI where supported; otherwise record Blocked and obtain owner/developer assistance. Never manufacture access by booking guessed IDs.</li>
+<li>Use <strong>two separate browser profiles or different browsers</strong> for simultaneous users. Two ordinary tabs share sign-in cookies: one tab's sign-in/out can change the other. Use a third profile for doctor plus two reception users. Private windows may share one private cookie jar and discard offline storage; avoid them for persistence checks.</li>
+<li>Record profile A (first reception), B (second reception/doctor), C (administrator if needed). Enrollment belongs to the exact profile on the reception computer. Use <strong>Asia/Hebron</strong> times; calendar weeks start Saturday, KPI weeks Monday.</li>
+<li>Do not clear site storage/cookies, uninstall, merge, leave the network or reset during early checks. Do not run scripts, migrations or database commands. Missing/disabled features are <strong>Blocked</strong>, not passed.</li>
+</ul>
+<h3>Your paper record</h3>
+<p>Mark every check <strong>Pass / Fail / Blocked / Not run</strong>. Record ID, role/profile, clinic, Palestine time, synthetic record/operation IDs, exact actions, expected/actual result, screenshot filename and follow-up owner. Never capture credentials, PIN entry, cookies or private export contents.</p>
+<div class="warning"><strong>Stop immediately</strong> for wrong-person data, unauthorized clinical notes, a silently disappearing booking, duplicate accepted retry or unsafe merge. Preserve evidence/profile; do not hide a failure with reset.</div>
+<h3>Prepared practice data and account identifiers</h3>
+<p>Prepared for <strong>21 October 2026, Asia/Hebron</strong>, with <strong>12 practice accounts</strong>. Use the <strong>password you already saved</strong> for administrator/doctor accounts, and your <strong>saved four-digit reception PIN</strong> for reception. The three <code>manager.*</code> clinic-administrator accounts use your <strong>same saved administrator password</strong>. Sign-in fields are simply <strong>Email</strong>, <strong>Password</strong> or <strong>Four-digit PIN</strong>; there is no “demo login” field.</p>
+<table><thead><tr><th>Account email</th><th>Role / person</th><th>Assigned clinic and initial mode</th></tr></thead><tbody>
+<tr><td><code>admin@amal.example</code></td><td>Administrator</td><td>Network-wide; no home clinic</td></tr>
+<tr><td><code>manager.1@amal.example</code></td><td>Clinic administrator</td><td>1 — Amal Family Clinic - Downtown — Full</td></tr>
+<tr><td><code>manager.2@amal.example</code></td><td>Clinic administrator</td><td>2 — Amal Family Clinic - Al-Bireh — Lite</td></tr>
+<tr><td><code>manager.3@amal.example</code></td><td>Clinic administrator</td><td>3 — Amal Family Clinic - Nablus Road — Full</td></tr>
+<tr><td><code>doctor.1@amal.example</code></td><td>Dr. Amal Khoury</td><td>1 — Amal Family Clinic - Downtown — Full</td></tr>
+<tr><td><code>doctor.2@amal.example</code></td><td>Dr. Nabil Sabbah</td><td>2 — Amal Family Clinic - Al-Bireh — Lite</td></tr>
+<tr><td><code>doctor.3@amal.example</code></td><td>Dr. Yasmin Odeh</td><td>3 — Amal Family Clinic - Nablus Road — Full</td></tr>
+<tr><td><code>doctor.4@amal.example</code></td><td>Dr. Hassan Tamimi</td><td>1 — Amal Family Clinic - Downtown — Full</td></tr>
+<tr><td><code>doctor.5@amal.example</code></td><td>Dr. Rula Masri</td><td>3 — Amal Family Clinic - Nablus Road — Full</td></tr>
+<tr><td><code>reception.1@amal.example</code></td><td>Reception, Downtown</td><td>1 — Amal Family Clinic - Downtown — Full</td></tr>
+<tr><td><code>reception.2@amal.example</code></td><td>Reception, Al-Bireh</td><td>2 — Amal Family Clinic - Al-Bireh — Lite</td></tr>
+<tr><td><code>reception.3@amal.example</code></td><td>Reception, Nablus Road</td><td>3 — Amal Family Clinic - Nablus Road — Full</td></tr>
+</tbody></table>
+<ul>
+<li>Setup added <strong>32 synthetic patients</strong> (30 roster entries plus duplicate IDs <strong>145/146</strong>, both <bdi class="arabic">إياد نصار</bdi>), <strong>220 appointments</strong>, <strong>10 waitlist entries</strong>, <strong>10 visits</strong> (two per doctor) and <strong>10 Basic/Clinical consents</strong>. These are setup counts, not feature-test outcomes. Original seeds are unchanged.</li>
+<li>Appointments span <strong>18–28 October 2026</strong>: three prior days, setup day and seven future days. 21 October includes Completed/No-show, so select a future <strong>Booked</strong> appointment for edits/cancellation. Downtown/Dr. Amal: <bdi class="arabic">ليان منصور</bdi>, patient <strong>115</strong>, appointment <strong>127</strong>, <strong>22 October 08:30</strong>. Verify current state first.</li>
+<li>Orientation names: Downtown/Amal <bdi class="arabic">ليان منصور (115)</bdi>; Al-Bireh/Nabil <bdi class="arabic">نور إبراهيم (121)</bdi>; Nablus Road/Yasmin <bdi class="arabic">رنا قاسم (127)</bdi>; Downtown/Hassan <bdi class="arabic">سلمى رشيد (133)</bdi>; Nablus Road/Rula <bdi class="arabic">جنى بشير (139)</bdi>. Search the Arabic name or manifest phone. Patient IDs and appointment IDs are separate kinds of ID.</li>
+<li>Memberships were not changed: Nabil starts Lite. Adoption designates <strong>clinic 2 Trial, clinics 1/3 results clinics</strong> without changing membership modes. Explicit physician manager grants: <strong>Dr. Amal (1), Dr. Nabil (2), Dr. Yasmin (3)</strong>; Hassan/Rula are not managers. Clinic-administrator <code>manager.*</code> accounts are for admin/reminders, not substitutes for physician adoption grants. Do not upgrade Nabil to make early search work. Duplicate eligibility is not merge approval; special missing examples still require preparation.</li>
+<li>Simulated reminders are <strong>enabled at all three practice clinics</strong>; pending/cancelled entries use the real lifecycle, alerts extracted from ten added visits. Delivered reminders, sync conflicts and health observations were not fabricated and must arise from real actions/processing. Network-wide admin has no home clinic: Messages log no-clinic expected. Use prepared <code>manager.1</code>, <code>manager.2</code> or <code>manager.3</code> for that clinic's toggles, not just Clinic selector.</li>
+<li>Testing later? Use prepared dates for reads and obtain approved future slots for writes. Do not alter the computer clock.</li>
+</ul></section>
+
+<section id="s2"><h2>2. First session — do these in order</h2>
+<p>Allow an unhurried session. This is an order of work, not a time guarantee. Stop at missing prerequisites instead of inventing data.</p>
+<ol>
+<li><strong>Open online:</strong> at <code>/login</code>, administrator uses <strong>Email and password → Sign in</strong>. Check identity/role in <strong>Account and display</strong>; choose English initially.</li>
+<li><strong>Enroll reception profile A:</strong> on that actual profile sign in as administrator, <strong>Users &amp; devices → Devices → Enroll this browser</strong>, select clinic, enter allowed <strong>Device label</strong> (for example <code>reception-desk</code>), complete enrollment, then <strong>Sign out</strong>. Device cookie remains; administrator session does not.</li>
+<li><strong>Reception sign-in:</strong> choose <strong>Reception PIN</strong>; verify <strong>Trusted device for</strong> clinic; enter assigned <strong>Email / Four-digit PIN → Sign in</strong>. No free clinic impersonation. Separately enroll B if it will be reception.</li>
+<li><strong>Orient:</strong> <strong>Help → Replay the guided tour</strong>; try <strong>Next / Back / Skip tour</strong>, replay and <strong>Finish</strong>. Read <strong>Your data</strong>. <strong>There is no patient login or patient portal.</strong></li>
+<li><strong>Schedule:</strong> in <strong>Today → Choose a date</strong>, select <strong>22 October 2026</strong> for future Booked cases. Inspect <strong>Doctor / All doctors</strong>, switch <strong>Day / Week</strong> and back. Inspect 21 October's Completed/No-show examples separately.</li>
+<li><strong>Find:</strong> Downtown reception → <strong>Patient lookup</strong>, search <bdi class="arabic">ليان منصور</bdi>, select <strong>patient 115</strong> after matching manifest DOB/phone. <strong>Phone booking</strong> or <strong>New booking</strong>; choose <strong>Dr. Amal Khoury, 22 October 2026</strong>, a free time after morning visits (try <strong>11:30</strong>, proceed only if policy/availability allows). Follow <strong>Patient → Doctor and time → Review and confirm</strong>; read source/clinic/time.</li>
+<li><strong>Save and verify:</strong> <strong>Save locally · wait for sync</strong> means provisional. Open <strong>Sync &amp; conflicts</strong> and wait for <strong>Confirmed by server</strong>. If <strong>Confirm booking</strong> appears, independently reread too. Reload calendar and record appointment ID; toast alone is insufficient.</li>
+<li><strong>Edit:</strong> click confirmed card. Initial dialog says <strong>Cancel this appointment?</strong>; select <strong>Edit or reschedule</strong>, change time, <strong>Save changes</strong>. Same ID moves; original slot free; patient/doctor/clinic/source fixed.</li>
+<li><strong>Undo:</strong> card → <strong>Cancel appointment → Undo</strong> inside 10-second countdown. Booking remains after reload. Do not reload during this countdown check.</li>
+<li><strong>Cross-location:</strong> A and B at separate clinics try the prepared overlapping patient/time. <strong>Review conflicts</strong>, capture safe severity/redaction, select a suggested safe time and verify accepted outcome. See C4: patient warnings are not all hard blocks.</li>
+<li><strong>Doctor:</strong> separate doctor profile → <strong>Network search</strong>, authorized synthetic name, <strong>Search</strong>, open correct record. Time N4; inspect consent limits, not just name match.</li>
+<li><strong>Paper/evidence:</strong> reception <strong>Print day sheet</strong> for same date, inspect coverage/provisional labels → <strong>Print day sheet</strong>, cancel dialog or save synthetic-only PDF. Administrator records KPI window/calculation. No improvement claim yet.</li>
+</ol>
+<p>Record blockers and confirmed IDs, then continue comprehensive checks. Destructive checks remain last.</p></section>
+
+<section id="s3"><h2>3. Where each role can go</h2>
+<p>Desktop side navigation; mobile bottom navigation and <strong>More</strong>. <strong>Clinic</strong> selector appears only for multiple authorized clinics; one-clinic accounts see clinic text. Paths identify pages when translating.</p>
+<table><thead><tr><th>Role</th><th>English destination → address</th></tr></thead><tbody>
+<tr><td>Reception</td><td><strong>Today</strong> <code>/desk/today</code>; <strong>Week</strong> <code>/desk/week</code>; <strong>New booking</strong> <code>/desk/new-booking</code>; <strong>Patient lookup</strong> <code>/desk/patients</code></td></tr>
+<tr><td>Reception</td><td><strong>Sync &amp; conflicts</strong> <code>/desk/sync</code>; <strong>Waitlist</strong> <code>/desk/waitlist</code>; <strong>Print day sheet</strong> <code>/desk/day-sheet</code></td></tr>
+<tr><td>Reception, selected patient</td><td><strong>Sharing consent</strong> from Patient lookup → <code>/desk/consent</code>; typed address cannot select a patient</td></tr>
+<tr><td>Doctor</td><td><strong>My day</strong> <code>/doctor/my-day</code>; <strong>Network search</strong> <code>/doctor/network-search</code>; <strong>Patient card</strong> <code>/doctor/patient-card</code>; <strong>Privacy settings</strong> <code>/doctor/privacy</code></td></tr>
+<tr><td>Reception, doctor</td><td><strong>Import wizard</strong> <code>/work/import</code>; <strong>Duplicate patients</strong> <code>/work/duplicates</code>; <strong>Network choice</strong> <code>/work/adoption</code></td></tr>
+<tr><td>Reception, administrator</td><td><strong>Messages log</strong> <code>/messages</code>, assigned-clinic scope; no-home-clinic admin gets no-clinic state</td></tr>
+<tr><td>Administrator</td><td><strong>KPI dashboard</strong> <code>/admin/kpi</code>; <strong>Network health</strong> <code>/admin/network-health</code>; <strong>Users &amp; devices</strong> <code>/admin/users-devices</code>; <strong>Clinics &amp; doctors</strong> <code>/admin/clinics-doctors</code>; <strong>Audit log</strong> <code>/admin/audit</code>; <strong>Developer tools</strong> <code>/admin/developer</code></td></tr>
+<tr><td>Public/reference</td><td><strong>Your data, your decision</strong> <code>/data</code>; <strong>UI kit</strong> <code>/ui-kit</code>, visual component samples, not live bookings</td></tr>
+</tbody></table>
+<p><strong>The top-bar general search is a shell placeholder</strong>, not patient/network lookup. Use the named page's search.</p></section>
+
+<section id="s4"><h2>4. Authentication, trust and role boundaries</h2>
+<table><thead><tr><th>ID</th><th>Do this</th><th>Expected result / watch for</th></tr></thead><tbody>
+<tr><td>A1</td><td>Admin/doctor: <strong>Email and password → Sign in</strong>; check Account and display. Try <strong>Show password / Hide password</strong> privately.</td><td>Admin lands KPI dashboard; doctor My day. Role assigned, not chosen during sign-in. No screenshots of secrets.</td></tr>
+<tr><td>A2</td><td>Unenrolled fresh profile → <strong>Reception PIN</strong>.</td><td>“This device is not registered for reception.” <strong>Check again</strong> retries check, not enrollment.</td></tr>
+<tr><td>A3</td><td>Complete enrollment/sign-in; compare admin Devices record.</td><td>Trust only on exact profile and correct clinic. No displayed/copyable device credential.</td></tr>
+<tr><td>A4</td><td>With approval, one wrong PIN, invalid length, wrong-clinic reception account; then correct assigned account. Try Arabic/Latin digits.</td><td>Validation/denial; leading zeros preserved. Do not repeatedly guess: lockout/throttling can interrupt work.</td></tr>
+<tr><td>A5</td><td>Reception tries password login; doctor/reception opens admin route; admin opens doctor card/reception patient route.</td><td>Denied with no stale private content. Administrator has no clinical bypass.</td></tr>
+<tr><td>A6</td><td>Sign out, browser Back; later repeat with approved unsent proposal and retention choice.</td><td>Private views clear/lock. <strong>Sign out and retain unsent changes</strong> preserves work only for original account/clinic.</td></tr>
+<tr><td>A7</td><td>Prepared expired-session case: attempt protected action.</td><td>Sign-in/locked state, no false success; new login requires online. Reception absolute limit and doctor/admin idle expiry. Do not change clocks.</td></tr>
+<tr><td>A8</td><td>Sensitive consent/history/import/merge/export action: <strong>Confirm with your PIN</strong>; Cancel once, then Confirm.</td><td>Cancel applies nothing. PIN never exposed/prefilled/printed. Freshness prompts can recur.</td></tr>
+</tbody></table>
+<p>Device revocation, deactivation and PIN reset are at the end because they interrupt sessions.</p></section>
+
+<section id="s5"><h2>5. Calendar, booking, edit, reschedule, cancel and walk-in</h2>
+<table><thead><tr><th>ID</th><th>Do this</th><th>Expected result / watch for</th></tr></thead><tbody>
+<tr><td>C1</td><td>Today/Week: <strong>Previous day / Next day / Previous week / Next week / Today / Choose a date / Doctor / All doctors / Day / Week</strong>; open a Week day.</td><td>Correct Palestine dates, preserved selected doctor/date. Booked, Conflict, Completed, No-show, Cancelled and sync states distinct. Unknown never silently Booked.</td></tr>
+<tr><td>C2</td><td><strong>New booking</strong>; too-short/no-match/Arabic/same-name searches; select → <strong>Continue</strong>; Doctor, Date (Asia/Hebron), Start time, Duration.</td><td>Confirm phone/DOB, clinic and source. Close before final save: no appointment; any server hold released.</td></tr>
+<tr><td>C3</td><td>Same doctor occupied interval, including partial overlap; two profiles compete for free slot.</td><td>Doctor overlap/held-slot live conflict blocks save; blocking conflicts have no override. Hold expires and is not a booking; <strong>Check and hold again</strong> when offered. Two local proposals may wait, but server cannot accept incompatible doctor bookings.</td></tr>
+<tr><td>C4</td><td>Another clinic requests same patient's overlapping time, then same-day nonoverlap; <strong>Review conflicts</strong>.</td><td>Actual patient-overlap/same-day severity displayed, remote details redacted. Warning may allow <strong>I confirmed with the patient that the overlap is intended</strong> plus <strong>Reason (recorded in the audit log)</strong>. Blocking conflict never overridable. Prefer safe alternative. Offline remote checks wait for sync; warnings/overrides are not prevention.</td></tr>
+<tr><td>C5</td><td>Conflict dialog <strong>Nearest free times from the server → Use [time]</strong>; outside hours, invalid duration/time, midnight-crossing, supplied DST case.</td><td>Suggestions rechecked, empty suggestions explicit. Follow displayed outside-hours policy. Nonexistent times cannot silently shift. Repeated booking clock time states earlier occurrence; import rejects ambiguous clock times.</td></tr>
+<tr><td>C6</td><td>Confirm review; intentional double-click/retry once; revisit confirmed save.</td><td>Exactly one accepted operation. <strong>Save locally · wait for sync</strong> means proposal, not reservation. Uncertain outcome uses same-request retry, not another booking.</td></tr>
+<tr><td>C7</td><td>Top-bar <strong>Walk-in</strong>, or patient <strong>Walk-in for this patient</strong>; <strong>Nearest free time by doctor → Book [doctor] at [time]</strong>; <strong>Choose another doctor or time</strong>.</td><td>Correct patient/clinic/source; rechecks and same conflict rules. No doctor/free time gives honest empty state; walk-in is not a safety bypass.</td></tr>
+<tr><td>C8</td><td>Begin New patient, use <strong>Walk-in (keeps this form)</strong>, return <strong>Resume registration</strong>.</td><td>Unsaved draft retained, not saved. <strong>Discard</strong> intentionally discards draft. Registration remains separate from booking.</td></tr>
+<tr><td>C9</td><td>Confirmed booked card → <strong>Edit or reschedule</strong>; change date/time/duration → <strong>Save changes</strong>; try bad destination.</td><td>Same ID, original slot free, fixed patient/doctor/clinic/source. Only Booked reschedules; unsupported sources/statuses can refuse. Rejection keeps original. Offline reschedule saving not promised.</td></tr>
+<tr><td>C10</td><td>Two profiles open same editor; one saves then stale editor saves.</td><td><strong>Reload latest version</strong> preserves proposed time for review/recheck, never silent overwrite. Uncertain save locks form; <strong>Retry same request</strong>, not new change.</td></tr>
+<tr><td>C11</td><td>Card → <strong>Keep appointment</strong>; next <strong>Cancel appointment → Undo</strong> in 10 seconds; next cancel and wait.</td><td>First two keep booking. Final confirmed cancellation persists as Cancelled, not erased. Undo only before send; reload/account exit discards unsent cancellation, not an already-sent one.</td></tr>
+<tr><td>C12</td><td>Failed cancellation → <strong>Retry cancellation</strong> or <strong>Dismiss message</strong>, independently reread.</td><td>Same-request retry; dismissal is not success. Local pending cards are not confirmed editable/cancellable server appointments.</td></tr>
+</tbody></table>
+<div class="note"><strong>UI boundary:</strong> status badges exist, but no general “mark arrived/completed/no-show” editor or drag-to-reschedule control is delivered in the calendar. Do not invent these controls or a full clinical-record editor.</div></section>
+
+<section id="s6"><h2>6. Patients: registration, lookup and CRUD boundaries</h2>
+<table><thead><tr><th>ID</th><th>Do this</th><th>Expected result / watch for</th></tr></thead><tbody>
+<tr><td>P1</td><td><strong>Patient lookup → Find a patient</strong>; exact/partial name, phone spaces/leading zero, Arabic variants; <strong>Load more patients / Clear selection</strong>.</td><td>Authorized demographics only; same-name/family-phone records separate. ID, phone, DOB and birthday-based age, no reception clinical history/notes.</td></tr>
+<tr><td>P2</td><td><strong>New patient → Register new patient</strong>; missing/malformed fields, impossible/future DOB; then manifest facts → <strong>Save patient</strong>.</td><td>Validation, no estimated DOB, original phone format/leading zeros. Success selects patient but books nothing.</td></tr>
+<tr><td>P3</td><td>Minor: omit then provide <strong>Guardian name / Relationship to patient</strong>; change draft DOB to adult.</td><td>Guardian required under 18; stale adult guardian fields cleared. Registration grants no consent. Completed birthdays in Asia/Hebron.</td></tr>
+<tr><td>P4</td><td>Uncertain save → <strong>Retry same request / Restore the details that were sent</strong>; search if details changed.</td><td>No duplicate on identical retry. New request is not safe recovery. Offline registration is not queued booking.</td></tr>
+<tr><td>P5</td><td><strong>Upcoming appointments → Open in calendar / Show later appointments</strong>; <strong>Phone booking / Sharing consent</strong>.</td><td>This clinic's upcoming bookings only; intended context preserved. Not reception access to visit history.</td></tr>
+<tr><td>P6</td><td>Look for demographic edit/delete buttons.</td><td><strong>No patient edit/delete buttons in Patient lookup.</strong> UI covers create/read. Backend PATCH/DELETE needs separately supervised authorized API test; owner marks UI edit/delete Not available, not passed.</td></tr>
+</tbody></table>
+<p>For supervised API checks only: local authorized demographic updates, no admin patient access, no scope/consent/guardian changes through demographic PATCH. Seed-backed or referenced patients cannot be deleted. Appointments, visits, consents, audit, imports/merge, holds and notifications can block deletion with <strong>This patient has protected records and cannot be deleted.</strong> Only an approved unreferenced synthetic record may be considered. Never remove references to force deletion.</p></section>
+
+<section id="s7"><h2>7. Consent, doctor lookup, who viewed and privacy</h2>
+<table><thead><tr><th>ID</th><th>Do this</th><th>Expected result / watch for</th></tr></thead><tbody>
+<tr><td>N1</td><td>Reception selects patient → <strong>Sharing consent</strong>; read <strong>Sharing now</strong>; <strong>Record a decision → Sharing level / How was it given? → Record decision</strong>, PIN.</td><td>Authorized synthetic None/Basic/Clinical decisions. None: no remote sharing. Basic: date/clinic/doctor, no notes/flags. Clinical: may add notes/alerts. Minor guardian required even for None; unverified DOB only None. Evidence/history retained.</td></tr>
+<tr><td>N2</td><td>Full doctor searches adult at each level; card Visit timeline/notes/flags; repeat Lite doctor.</td><td>Full + consent + role/access required. Trial/Lite neither publishes nor consumes remote clinical records, even with Clinical consent. Reception/admin no clinical history. Own-clinic care records not erased.</td></tr>
+<tr><td>N3</td><td><strong>Network search → Search the network by patient name → Search</strong>; too short/no-match/Arabic/same-name; <strong>Show more matches</strong>; arrows/Enter.</td><td><strong>Name match, not verified</strong>; identity confirmation needed. Empty means nothing shared with viewer, not nonexistent patient. Error clears earlier results.</td></tr>
+<tr><td>N4</td><td>Three fresh foreground searches for authorized Reem. Stopwatch first query-changing keystroke to matching result card visibly painted. Separately time opening/reviewing correct card.</td><td>Record actual seconds/conditions. <strong>Under 10 seconds is a target, not assertion.</strong> Do not mix timing boundaries. KPI measures supported foreground result-card completion, not clinical decision speed; failed/hidden/abandoned attempts excluded.</td></tr>
+<tr><td>N5</td><td>Clinical card medication/allergy/condition flags, <strong>Original note excerpt</strong>, source/date.</td><td>Source-grounded, not verified diagnosis/advice. No flags ≠ no risk. Basic never reveals notes/flags. Not prescription or full EMR workflow.</td></tr>
+<tr><td>N6</td><td><strong>Withdraw consent</strong>; first <strong>Keep sharing</strong>, then <strong>Yes, withdraw</strong>. Doctor rerequests/reopens; also downgrade with a card open.</td><td>Future remote disclosure stops, own records/history retained, old grants not revived. Stale remote details clear on access recheck. Consent changes never queued offline.</td></tr>
+<tr><td>N7</td><td><strong>Who viewed my record</strong>: tick <strong>The patient (or guardian) is here and asked to see this. → Show views</strong>; PIN; <strong>Show older views / Hide views</strong>.</td><td>Successful cross-clinic views since auditing began, newest first. Local views/empty searches not listed. No unauthorized history; empty not lifetime guarantee.</td></tr>
+<tr><td>N8</td><td>Doctor <strong>My day → Open card</strong>; <strong>Privacy settings → Who viewed my patients</strong>.</td><td>Own doctor/clinic today's schedule only. Read-only mode/effective-sharing explanation. Scoped/capped audit, not complete lifetime history or performance ranking.</td></tr>
+<tr><td>N9</td><td>Direct patient-card/consent address without selection; change clinic/account or expire session.</td><td>Guard/denial; old patient details do not cross role, account, clinic or session.</td></tr>
+</tbody></table>
+<p>Unconfirmed consent → <strong>Check again with the same change</strong>; shared views clear during uncertainty. Do not enter a different decision to hide an error.</p></section>
+
+<section id="s8"><h2>8. Import wizard — manually review all 24 rows</h2>
+<p>Reception or authorized doctor only, not administrator clinical bypass. Use approved batch. Commit changes operational appointments.</p>
+<ol>
+<li><strong>Source → Stage existing export:</strong> record batch/version and <strong>24 staged rows</strong>. Staging is not importing. Separate upload: <strong>Export file (.json) → Stage uploaded file</strong>, supplied synthetic JSON only, 1–100 rows, maximum 128 KiB, exactly <code>event_id, doctor_email, patient_name_typed, start_time, end_time, event_status</code>. Workbook/calendar files unsupported.</li>
+<li><strong>Doctor mapping:</strong> every source email → <strong>Operational doctor</strong>. Confirm suggestions. Changed mapping must require affected rows to be re-reviewed.</li>
+<li><strong>Patient review → Show → All rows:</strong> <strong>Review</strong> each of all 24, even exact names. <strong>Confirm an existing patient → Verify identity using → Phone number / Date of birth</strong>, using separately supplied stated fact, not copying screen. Or <strong>Create a new patient</strong> with complete synthetic identity/guardian; otherwise <strong>Skip this row → Reason for skipping → Save decision</strong>.</li>
+<li><strong>Status mapping:</strong> fixed backend policy displayed; unsupported status requires skip/reason. Do not invent editable mappings.</li>
+<li><strong>Conflicts:</strong> inspect <strong>Within this export / With existing appointments / Clinic policy / Coincidences (information)</strong>; <strong>Resolve row [ID]</strong>, <strong>Reschedule this row</strong> or skip; <strong>Recheck conflicts</strong>. Same doctor/start is not identity proof. Doctor overlap blocks; permitted patient warnings need reason.</li>
+<li><strong>Commit &amp; report:</strong> reconcile Source rows, Included, Reviewed, Skipped, Blocked/open. All 24 manually decided, no blocker. <strong>24 reviewed is not 24 appointments created.</strong> Approved batch → <strong>Commit import</strong>, read irreversible confirmation/PIN → <strong>Download report</strong> in both <strong>Report language</strong> options. Check every outcome against saved/linked IDs.</li>
+</ol>
+<table><thead><tr><th>ID</th><th>Additional check</th><th>Expected result</th></tr></thead><tbody>
+<tr><td>I1</td><td><strong>Batch number → Open batch / Continue batch #[ID]</strong></td><td>Saved decisions retained; Next blocked while decisions open.</td></tr>
+<tr><td>I2</td><td>Wrong identity fact, missing new DOB, invalid local time, unsupported file/status/out-of-scope doctor.</td><td>Explicit error/skip, no guessed identity/auto-link/partial commit. Ambiguous/skipped DST import times rejected.</td></tr>
+<tr><td>I3</td><td>Prepared concurrent doctor/identity change after review.</td><td>Re-review/stale/version warning; no commit with stale verification.</td></tr>
+<tr><td>I4</td><td><strong>Associate with existing appointment</strong>; exact match and supplied mismatch.</td><td>Identity/doctor/time/status all match. New patient cannot attach to existing appointment.</td></tr>
+<tr><td>I5</td><td>Commit blocker then approved resolved batch.</td><td>First writes nothing; successful include set atomic. Report Created/Linked/Skipped/Already imported separately.</td></tr>
+<tr><td>I6</td><td>Uncertain commit → <strong>Retry same commit</strong>; approved identical-source reimport with review.</td><td>No duplicate on identical retry/replay. Changed event rejected for review, not overwritten. If pending commit cannot persist, keep page open.</td></tr>
+</tbody></table>
+<p>Keep a 24-line ledger: row/event ID, source name, patient ID or skip reason, verification method, doctor/status/time correction, final outcome/appointment ID. Verification facts do not belong in public issues.</p></section>
+
+<section id="s9"><h2>9. Duplicate patients — compare first, merge near the end</h2>
+<ul>
+<li><strong>D1:</strong> <strong>Duplicate patients → Eligible candidates → Compare</strong>. Matching normalized name + DOB + canonical phone needed; candidate does not automatically authorize merge. Prepared exact pair: <bdi class="arabic">إياد نصار</bdi> IDs 145/146.</li>
+<li><strong>D2:</strong> <strong>Compare any two patients</strong>, choose manifest's two different Samers. Expect <strong>Not a match</strong>, differing DOB/phone; keep both. Name/family phone alone never enough.</li>
+<li><strong>D3:</strong> Safe pair → <strong>Record to keep (survivor) → Check merge impact</strong>. Inspect source/survivor, authorized appointment counts and blockers. Clinical references withheld; visible counts not global totals.</li>
+<li><strong>D4:</strong> Prepared blockers: different identity/guardian/visibility rights, consent evidence, active holds, patient overlaps, import references, merged/alias chains, unknown references. Expect <strong>The server blocks this merge</strong> or specific error, no bypass. Unprepared cases are Blocked.</li>
+<li><strong>D5:</strong> Concurrent candidate edit must refresh/stale preview and require review; inaccessible record clears selection without partial details.</li>
+</ul>
+<div class="warning">Do not select <strong>Review and confirm → Merge records</strong> yet. Commit only at section 16. There is no owner UI unmerge.</div></section>
+
+<section id="s10"><h2>10. Offline booking persistence and security</h2>
+<p>Normal persistent profile, online first: verified sign-in, cached target date/roster/doctors. Note cache range/freshness. Ask setup owner to assist with real browser/device offline mode if unfamiliar. It differs from simulated clinic API outage.</p>
+<table><thead><tr><th>ID</th><th>Do this</th><th>Expected result / watch for</th></tr></thead><tbody>
+<tr><td>O1</td><td>Disconnect A only with verified session and cached range; inspect calendar/notices.</td><td>Explicit offline/cached state, no server-availability promise. Authorized covered-range local booking only; bad storage/cache disables unsafe saves.</td></tr>
+<tr><td>O2</td><td>Three distinct future proposals via <strong>Save locally · wait for sync</strong>. Write patient/doctor/time/local or Queue sequence IDs.</td><td>Three waiting/provisional items, no server hold. Remote conflicts deferred. No promised offline registration/consent/edit/admin/waitlist queue.</td></tr>
+<tr><td>O3</td><td>Navigate and reload offline after local saves finish.</td><td>Same proposals/identities persist where shell supported. Locked session never justifies bypass. Do not resubmit to recover invisible work.</td></tr>
+<tr><td>O4</td><td>Connected B takes doctor/time of one offline proposal. Reconnect A; observe <strong>Sync &amp; conflicts</strong>, no manual resubmit.</td><td>Automatic revalidation: prepared scenario two acknowledged, one explicit conflict before resolution, not incompatible confirmed bookings.</td></tr>
+<tr><td>O5</td><td><strong>Needs a decision</strong>: original proposal/current server/hidden conflict; <strong>Refresh conflicts</strong>.</td><td>Original retained, unauthorized remote details redacted. Waiting/rejected/conflicted/unreceived are not synonymous with lost.</td></tr>
+<tr><td>O6</td><td><strong>Move this appointment → Choose a new time → Confirm</strong>. On separately approved visible case inspect <strong>Keep this one and move the other</strong>.</td><td>Safe destination/version rechecked. Cannot move hidden/unverified other appointment. Stale resolution remains open for review.</td></tr>
+<tr><td>O7</td><td><strong>Call patient → Confirm → Hide number</strong>. Uncertain decision → <strong>Retry saved decision</strong>.</td><td>Phone only here; “Follow-up recorded. Call not yet confirmed.” App does not make/verify call. Same saved decision retry no duplicate.</td></tr>
+<tr><td>O8</td><td>Reconcile every operation after resolution; reload both profiles.</td><td>Each proposal exactly once as server record or retained explicit conflict/rejection/queue. Prepared final case: three resolved proposals plus unchanged competitor, no extras. Per-operation ledger required, not queue count alone.</td></tr>
+<tr><td>O9</td><td>Approved unsent proposal → <strong>Sign out and retain unsent changes</strong>; another account; original account/clinic online.</td><td>Other account no private work; original resumes. Do not clear site data. Cleanup errors lock pages: close other Amal tabs, <strong>Retry device data removal</strong>, do not share browser.</td></tr>
+</tbody></table>
+<h3>PWA and updates</h3>
+<p>Use browser <strong>Install App</strong> or Safari <strong>Share → Add to Home Screen</strong> only if offered. Load online and finish preparation first. Offline reload depends on production build/browser; development server does not install a service worker. Distinguish unavailable shell from queue-storage failure. First-ever offline login unsupported.</p>
+<p>Public-shell caching is not offline authentication, backup or permission to cache clinical APIs; authorized private local storage is separate. On update, save/reconcile, close <strong>all</strong> Amal tabs/standalone windows and reopen. <strong>Retry offline setup / Dismiss notice</strong> must not force unsafe reload. Storage clearing/eviction can lose work; never test on only copy of unsent work.</p></section>
+
+<section id="s11"><h2>11. Printable day sheet</h2>
+<ol>
+<li>Reception → <strong>Print day sheet</strong>; choose <strong>Day / Doctor / All doctors</strong>; <strong>Reload from device</strong> after schedule changes.</li>
+<li>Check clinic/date, generated/refreshed times, Time/Doctor/Patient/Status/Local state, totals and <strong>Provisional: not yet confirmed / Needs attention</strong>. Device-saved schedule is not guaranteed live server list.</li>
+<li>Complete/partial/missing coverage: <strong>Incomplete / Unavailable</strong> obvious. Missing-range empty list must not mean no appointments.</li>
+<li><strong>Print day sheet</strong> → preview Arabic RTL/English LTR, light/dark, long names/page breaks/provisional footer. No clinical notes, side nav or dialog overlays.</li>
+<li>Sign out/expire session: sheet clears/locks, printing disabled until authorized load. Secure paper/PDFs; collect shared-printer output.</li>
+</ol></section>
+
+<section id="s12"><h2>12. Reminders — simulation only</h2>
+<div class="warning"><strong>No SMS, WhatsApp or other message is actually sent.</strong> “Sent (simulated)” is simulator recording, not patient delivery. Never use real contact details or claim a messaging integration.</div>
+<table><thead><tr><th>ID</th><th>Do this</th><th>Expected result</th></tr></thead><tbody>
+<tr><td>R1</td><td>Reception <strong>Messages log</strong>, confirm clinic enabled. Sign in with matching prepared <code>manager.1@amal.example</code>, <code>manager.2@amal.example</code> or <code>manager.3@amal.example</code>: <strong>Clinic reminders</strong>; approved <strong>Turn reminders on</strong> only if off.</td><td>Product default off, prepared three clinics already on; future eligible bookings only. Network-wide admin no-clinic expected; use the matching prepared clinic administrator for toggles.</td></tr>
+<tr><td>R2</td><td>Future eligible appointment → <strong>Messages log → Refresh</strong>; Arabic/English content/due times.</td><td>24-hour/2-hour eligible windows in Palestine time; too-late windows honest. Simulator processing/time may require setup help; missing processor Blocked.</td></tr>
+<tr><td>R3</td><td><strong>Status / Due from / Due until → Apply / Clear; Newer / Older / Refresh</strong>; reversed/over-92-day range.</td><td>Scoped log, validation, honest empty/error; doctor route denied.</td></tr>
+<tr><td>R4</td><td>Move/cancel booking; patient <strong>Appointment reminders → Record opt-out / Resume reminders</strong>.</td><td>Pending reminders cancelled with reasons; eligible moved schedule replaced. Patient-wide opt-out separate from network consent; resume future only.</td></tr>
+<tr><td>R5</td><td>Later approved <strong>Turn reminders off</strong>; try <strong>Keep on</strong>, then <strong>Turn off</strong>.</td><td>Pending clinic reminders cancelled; history retained. Reenable never restores old cancelled reminders. Save R2 evidence first.</td></tr>
+</tbody></table></section>
+
+<section id="s13"><h2>13. Cancellation waitlist</h2>
+<p>Reception only; authorized patients, future matching doctor/day/window.</p>
+<ol>
+<li><strong>Waitlist → Add to waitlist</strong> or booking <strong>No fitting slot? Add to waitlist</strong>. Existing <strong>Patient / Doctor / Preferred days / From / To → Add to waitlist</strong>. Validate missing selections/bad or reversed times; clinic from session.</li>
+<li>Two matching patients in known order. Cancel eligible booking and let Undo countdown finish. Inspect <strong>Opened slots / Offers / Queue</strong>, server time/countdown.</li>
+<li>Next matching queue patient offered. <strong>Offer is not a reservation.</strong> Simulated/suppressed/pending/cancelled message labels honest; opt-out/disabled cannot claim delivery.</li>
+<li><strong>Patient accepted: check slot → Book this slot</strong> after reviewing availability/warnings; allowed warning requires reason, hard conflict blocks. Verify resulting appointment ID/fulfilled states.</li>
+<li>Separate cases: <strong>Patient declined</strong> retains place for later cancellations; expiry does not book; no match keeps normal slot free. B takes offered slot before acceptance: cannot confirm double booking.</li>
+<li>Fixed offered time; use booking for another time. Offline decisions/add disabled. Uncertainty → <strong>Retry the same request</strong>, fields locked. Retry state held on this screen only: prefer <strong>Keep open and retry</strong>, not <strong>Close anyway, I will check the waitlist first</strong>.</li>
+</ol></section>
+
+<section id="s14"><h2>14. Administrator oversight and honest KPI comparison</h2>
+<h3>Directory, users, devices, audit and health</h3>
+<table><thead><tr><th>ID</th><th>Do this</th><th>Expected result</th></tr></thead><tbody>
+<tr><td>M1</td><td><strong>Clinics &amp; doctors</strong> filters/pages/Edit; approved <strong>Add clinic → Details → Schedule &amp; network → Review → Create clinic</strong>.</td><td>Required fields, closing later than opening, no overnight hours. Trial/Lite initial permissions; admin cannot opt clinic into Full. New clinic appears health/selectors. Uncertain Create: inspect before repeat; another submit can duplicate clinic.</td></tr>
+<tr><td>M2</td><td><strong>Add doctor record</strong>; Doctor name/Specialty/Contact email; Edit synthetic entry.</td><td>Directory record <strong>no login</strong>. Unsafe linked-doctor move refused.</td></tr>
+<tr><td>M3</td><td><strong>Users &amp; devices → Users</strong>; search/filter/page; <strong>Add user</strong>, role/clinic/Linked doctor record, Language/Theme/Account active.</td><td>Valid assignment; unique suitable doctor linkage. Reception PIN, doctor/admin password privately supplied. Never put values in evidence.</td></tr>
+<tr><td>M4</td><td>Devices filters <strong>All devices / Trusted only / Revoked only</strong>; label/clinic/registration.</td><td>Scoped trust. Enroll this browser means current physical profile, not remotely named device.</td></tr>
+<tr><td>M5</td><td><strong>Audit log</strong> Event/Outcome/Actor account ID/From date/To date (inclusive) → <strong>Apply filters / Clear</strong>; newest/pages.</td><td>Corresponding allowed/denied admin/auth events with actor/clinic/target; no secrets/notes. Not patient Who viewed history.</td></tr>
+<tr><td>M6</td><td><strong>Network health → Refresh</strong>; device detail; approved outage/recovery.</td><td>Heartbeat/sync/mode/server conflicts/device trust/observed time. Browser Online not all clinics online. Unknown/incomplete queue coverage explicit, stale refresh labelled, not invented zero.</td></tr>
+</tbody></table>
+<p>Administrator mutations online only, never queued. Keep main administrator/device available; disruptive checks last.</p>
+<h3>Baseline versus after — evidence, not an invented success story</h3>
+<ol>
+<li>Before actions, <strong>KPI dashboard → Range (Day / Week / Month) / Window containing / Refresh</strong>. Record calculation/version, before/after windows, scope, definitions. After session repeat same operational window, record time/unrelated activity.</li>
+<li>Inspect <strong>Double-booking collisions, before and after</strong> both collision types; <strong>Conflicts actually prevented → Daily / Cumulative</strong>; <strong>Median patient lookup time</strong> (clinic selector if shown); <strong>Appointments lost while offline</strong>; booking sources before/after; no-show bars/weekday strip; adoption/network activity.</li>
+<li><strong>Show data table / Hide data table</strong> for applicable charts. Summary/graph/table agree; Arabic time direction correct. Missing observations gaps/unavailable, not invented zero.</li>
+<li>Immutable source reference <code>docs/data/baseline-summary.md</code>: <strong>3 clinics, 5 doctors, 25 patients, 102 appointments, 32 history rows, 24 export rows; 6 same-doctor exact-start unordered pairs; 2 same-patient exact-start cross-clinic pairs; 14 multi-clinic patient-days; 22/102 no-shows (21.6%)</strong>. These are source observations, not new test results or live roster counts.</li>
+<li>Exact-start ≠ interval-overlap; baseline all-status counts ≠ just Booked. Pair touches two clinics counted under both, so clinic bars nonadditive. Compare rates/definitions/exposure; unequal windows do not prove raw-total improvement.</li>
+<li>Previews/warnings/approved overrides/local blocks not automatically recorded prevented server commits. Missing supported telemetry remains <strong>Unavailable / Not measured</strong>. Do not substitute visits/results for logical lookups.</li>
+<li><strong>Zero loss requires O8 per-operation reconciliation.</strong> Server receipts do not measure all device losses. Missing loss metric ≠ zero. Synthetic Nabil Full click ≠ real month-one adoption.</li>
+</ol>
+<div class="record">Comparison ledger: Metric/definition ______; baseline source/window/value ______; pre-session operational window/value ______; post-session window/value ______; samples/coverage ______; controlled actions ______; limitations ______. Leave values blank or Unavailable until observed.</div></section>
+
+<section id="s15"><h2>15. Voluntary adoption and everyday accessibility</h2>
+<h3>Nabil: a choice, not pressure</h3>
+<ul>
+<li><strong>Network choice</strong>: read <strong>Where your clinic is now / What each choice means / No monitoring of individual doctors / Results from participating clinics</strong>.</li>
+<li>Trial/Lite local booking/conflict prevention remains; no remote clinical sharing. No deadline, penalty or automatic upgrade: Lite indefinitely valid. Security/access audit still exists; no performance analytics does not mean no logs.</li>
+<li>Non-manager read-only. Prepared manager: <strong>doctor.2@amal.example (Dr. Nabil, clinic 2)</strong>; Amal/Yasmin also manage their own clinics. Hassan/Rula are non-manager comparisons. Administrator cannot opt in on Nabil's behalf.</li>
+<li><strong>Not now, go back</strong> leaves state unchanged. Approved synthetic manager <strong>Choose Full</strong> applies immediately, not an informational link. Recheck status/consent-limited sharing; Full never grants patient consent.</li>
+<li>After Full evidence, <strong>Choose Lite</strong> restores local-only; recheck old remote card. Refresh never silently re-upgrades. Uncertain action → <strong>Refresh status / Retry the same action</strong>, not different transition.</li>
+<li>Results last seven complete days, aggregate source/coverage/sample count; unconfigured/absent evidence unavailable, not zero. No real Nabil consent or month-one success assertion. Export/leave last; leaving not required to “pass” onboarding.</li>
+</ul>
+<h3>AR/EN, RTL/LTR, light/dark, mobile and keyboard</h3>
+<p>Repeat booking, lookup, consent, sync, print and admin reads in <strong>English LTR / Arabic RTL × Light / Dark</strong>, mobile around 390px and desktop.</p>
+<ul>
+<li><strong>Account and display → Display settings</strong>, language/theme; <strong>Digits → Latin 123 / Arabic-Indic ١٢٣</strong>. Check mixed names, phone/date/IDs not reversed/clipped. Preferences must not leak to another account.</li>
+<li>Phone bottom nav/<strong>More</strong>, clinic context, <strong>Walk-in</strong>, drawers/errors/final actions. No sticky-bar overlap or hidden confirmations. Tables/calendar may scroll internally with labels retained.</li>
+<li>Tab/Shift+Tab through nav/results/time/dialogs/chart tables; Enter/Space activate, arrows/Enter for supported search, Escape/Close leaves without save. Visible focus restored logically after Close/Save/Undo.</li>
+<li>Zoom/enlarged text, dark contrast, warnings not color alone. Record issues; not blanket accessibility certification.</li>
+<li><strong>Help</strong> replay/dismiss changes no data. Public Your data explains consent/withdrawal; online patient withdrawal/download are not delivered self-service.</li>
+<li><strong>UI kit</strong> palette/type/buttons/inputs/statuses/cards/toasts/empty/error samples, language/theme; examples not saved bookings.</li>
+<li>Unknown page → <strong>Page not found</strong>; forbidden role → <strong>Access not permitted → Go to my landing screen</strong>. Retry for recoverable errors; no fabricated data.</li>
+</ul></section>
+
+<section id="s16"><h2>16. End-only checks — disruptive or irreversible</h2>
+<div class="warning"><strong>Save evidence and reconcile every device queue first. Existing operational data is not disposable. Explicit owner approval for each check.</strong> Prefer separately prepared practice account/clinic/pair. Stop if scope unclear.</div>
+<ol>
+<li><strong>Safe merge:</strong> fresh <strong>Check merge impact</strong>, survivor, <strong>Review and confirm → Confirm patient merge → Merge records</strong>, PIN if asked. One survivor, source tombstone, authorized references/provenance retained; immutable audit stays original IDs. <strong>Retry same merge</strong> for uncertainty, never reverse IDs. No unmerge UI.</li>
+<li><strong>Spare user:</strong> <strong>Edit → Save changes / Deactivate / Reactivate / Reset PIN</strong>, supplied private values. Session ends immediately; inactive denied, records retained; new PIN works. Unsafe assignments/last-admin removal refused. Do not use only administrator.</li>
+<li><strong>Spare device:</strong> <strong>Devices → Revoke</strong>. Reception session/trust end immediately. Cannot undo; enroll that browser again if needed.</li>
+<li><strong>Export before exit:</strong> manager <strong>Network choice → Download JSON export</strong>, fresh PIN if asked. Verify Downloads file readable/clinic-scoped and appropriate role-limited contents privately. Clinic JSON, not patient-summary PDF. Download is not verified backup.</li>
+<li><strong>Approved disposable clinic only:</strong> <strong>Leave network now is itself confirmation</strong>, no second dialog. Immediate Lite/local-only, remote views clear, local data/booking retained, export still works. Rejoining <strong>not offered here</strong>. Verify export after exit. Never exit main scene clinic early.</li>
+</ol>
+<h3>Developer tools — last of all; reset is not cleanup</h3>
+<p>Network-wide admin → <strong>Developer tools</strong>. Disabled/scoped-only access = Blocked; do not enable or deploy tools yourself.</p>
+<ul>
+<li><strong>Simulated clinic outage → Operational clinic → Simulate outage</strong>: selected clinic API outage, not browser offline/all clinics. Observe reception local continuity; other clinic remains usable. Different from O1.</li>
+<li><strong>Restore clinic</strong>; check fresh API/sync, restore every outage. Restore notice does not prove physical internet.</li>
+<li><strong>Reset demo data → Reset all demo data</strong> erases operational edits across <strong>every clinic</strong>: appointments/patients/consents/imports/admin changes, <strong>every device's unsent offline work</strong>; signs everyone out. Never use to resolve queues/hide errors.</li>
+<li>Normally inspect warning then <strong>Cancel</strong>. <strong>Never assume this workspace disposable.</strong> Only explicit owner decision to erase all existing operational data after evidence/retention needs resolved: type <strong>exact phrase shown by app</strong> → <strong>Reset everything</strong>. Do not assume translated/remembered phrase.</li>
+<li>Unknown result → retain context, <strong>Check again / Retry the same request</strong>, no new reset. Confirmed reset needs fresh sign-in/device preparation, invalidates old-generation work. <strong>Do not reset if any work must remain.</strong></li>
+</ul></section>
+
+<section id="s17"><h2>17. Screenshot goals and failure checklist</h2>
+<p>These are <strong>scenario goals</strong>, not evidence that checks have already run.</p>
+<table><thead><tr><th>Goal</th><th>Capture after performing</th><th>Does not prove</th></tr></thead><tbody>
+<tr><td>Cross-location safety</td><td>Two profiles/clinics; conflict severity/redaction; safe alternative and authoritative outcome</td><td>Warning alone is not zero incidents; overrides not prevention</td></tr>
+<tr><td>Doctor lookup under 10 seconds</td><td>Authorized Reem result/card and actual times/boundary in record</td><td>Still image cannot prove elapsed time or all future lookups</td></tr>
+<tr><td>Zero bookings lost</td><td>Offline Queue, explicit conflict, resolved IDs, three-operation ledger plus unchanged competitor</td><td>Empty queue/Online/KPI target alone not proof</td></tr>
+<tr><td>Nabil voluntary opt-in</td><td>Lite/no-deadline/no-ranking explanation, Not now unchanged, authorized synthetic Full if permitted</td><td>Synthetic click not real consent, forced onboarding or month-one adoption</td></tr>
+</tbody></table>
+<h3>Before reporting Pass, ask</h3>
+<ul>
+<li>Correct person/clinic/role after navigation, reload, language/concurrent change?</li>
+<li>Server acknowledgement/reread, not only local toast or temporary hold?</li>
+<li>Exactly one retry outcome; stale/uncertain/rejected actions explicit?</li>
+<li>Every booking proposal accounted for as server record or retained explicit queue/conflict/rejection?</li>
+<li>Remote details redacted; Basic/Lite/withdrawal enforced on subsequent requests?</li>
+<li>All 24 import rows manually reviewed; skipped/linked not counted as new appointments?</li>
+<li>Same-name people separate; unsafe merge/deletion blocked?</li>
+<li>Messages clearly simulation; safe waitlist expiry/competition; honest print coverage?</li>
+<li>Missing/stale metrics and adoption evidence not replaced with invented values?</li>
+<li>Outages restored, profiles/queues reconciled, printouts/downloads secured; destructive checks last?</li>
+</ul>
+<div class="record"><strong>Failure report:</strong> Check ID ____; timestamp Asia/Hebron ____; browser/device/profile ____; role/clinic ____; synthetic record/operation IDs ____; exact actions ____; expected/actual ____; state after refresh ____; screenshot ____; queue state ____; work to retain ____; safe next action ____.</div>
+<div class="record"><strong>Completion:</strong> First session ____; passed ____; failed ____; blocked/not run with reason ____; unresolved operations ____; evidence location ____; owner follow-up ____. <strong>No acceptance claim until owner completes this record.</strong></div>
+<h3>Source basis and limits</h3>
+<p>Current routes, shell/login, calendar/booking/reception, consent/network/doctor, import/duplicates, offline/sync/PWA, day-sheet, reminder/waitlist, admin/KPI/adoption components and English/Arabic strings under <code>artifacts/amal-network/src</code>. Prepared-account references: <code>docs/SELF_TEST_DATA.json</code>. Boundary references: patients, appointments, PWA, immutable baseline, import/merge, offline live, developer tools, clinic-export and KPI documents under <code>docs</code>.</p>
+<p>Older handoffs may predate reminders, waitlist or telemetry. Current controls and server permissions are authoritative. Missing sample scenarios, account setup, optional tools, simulator timing or installable build are explicit blockers, never fabricated successes. This guide makes no claim those features were tested.</p>
+</section>
+</main>
+<footer>Private owner checklist · no publication · no patient login · no credential values · preserve evidence before destructive checks</footer>
+</body>
+</html>

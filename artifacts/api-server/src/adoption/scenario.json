@@ -1,4 +1,7 @@
 {
-  "trialClinicId": null,
-  "resultClinicIds": null
+  "trialClinicId": 2,
+  "resultClinicIds": [
+    1,
+    3
+  ]
 }
