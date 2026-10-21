@@ -1,5 +1,18 @@
 # UI redesign verification
 
+## Subsequent dependency-only correction
+
+The Vite plugin type mismatch is resolved. Scoped package-extension peer metadata
+binds the two affected Replit plugins to the application's Vite 7 major without
+changing the test runner's Vite dependency. Both Amal and the mockup sandbox now
+resolve those plugin imports to Vite 7.3.7.
+
+`pnpm run typecheck` passed across shared libraries, Amal, API server, mockup
+sandbox, scripts, and the test harness after this correction. Earlier typecheck
+failure descriptions below are historical. No application logic, test assertions,
+API contracts, Secrets, or database records were changed in this correction.
+Other regression failures and unverified journeys remain unresolved.
+
 ## Main-agent verification supplement
 
 ### Final focused presentation recheck

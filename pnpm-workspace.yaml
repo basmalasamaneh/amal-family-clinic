@@ -6,6 +6,16 @@ packages:
 
 autoInstallPeers: false
 
+# These plugins expose Vite types but omit the peer declaration. Bind them to
+# the application's Vite major instead of the copy hoisted by test tooling.
+packageExtensions:
+  '@replit/vite-plugin-runtime-error-modal@0.0.6':
+    peerDependencies:
+      vite: '^7.3.7'
+  '@replit/vite-plugin-cartographer@0.5.21':
+    peerDependencies:
+      vite: '^7.3.7'
+
 catalog:
   '@replit/vite-plugin-cartographer': ^0.5.21
   '@replit/vite-plugin-dev-banner': ^0.1.1
