@@ -23,6 +23,8 @@ export function TourOverlay({ steps, onFinish }: { steps: TourStep[]; onFinish: 
   const [index, setIndex] = useState(0);
   const [box, setBox] = useState<Box | null>(null);
   const [cardSize, setCardSize] = useState({ width: 360, height: 300 });
+  const [viewport, setViewport] = useState({ width: window.innerWidth, height: window.innerHeight });
+  const frameRef = useRef<HTMLDivElement>(null);
   const cardRef = useRef<HTMLDivElement>(null);
   const headRef = useRef<HTMLHeadingElement>(null);
   const restoreRef = useRef<Element | null>(typeof document !== 'undefined' ? document.activeElement : null);
@@ -31,10 +33,14 @@ export function TourOverlay({ steps, onFinish }: { steps: TourStep[]; onFinish: 
   const rtl = i18n.dir() === 'rtl';
 
   const measure = useCallback(() => {
+    const frame = frameRef.current?.getBoundingClientRect();
+    if (!frame) return;
+    setViewport((prev) => prev.width === frame.width && prev.height === frame.height
+      ? prev : { width: frame.width, height: frame.height });
     const el = step ? findTarget(step.targets) : null;
     if (!el) { setBox(null); return; }
     const r = el.getBoundingClientRect();
-    setBox({ top: r.top, start: rtl ? window.innerWidth - r.right : r.left, inline: r.width, block: r.height });
+    setBox({ top: r.top - frame.top, start: rtl ? frame.right - r.right : r.left - frame.left, inline: r.width, block: r.height });
   }, [step, rtl]);
 
   useLayoutEffect(() => {
@@ -54,6 +60,7 @@ export function TourOverlay({ steps, onFinish }: { steps: TourStep[]; onFinish: 
       measure();
     });
     observer.observe(card);
+    if (frameRef.current) observer.observe(frameRef.current);
     const target = step ? findTarget(step.targets) : null;
     if (target) observer.observe(target);
     return () => observer.disconnect();
@@ -90,8 +97,8 @@ export function TourOverlay({ steps, onFinish }: { steps: TourStep[]; onFinish: 
 
   if (!step) return null;
 
-  const vw = typeof window !== 'undefined' ? window.innerWidth : 1024;
-  const vh = typeof window !== 'undefined' ? window.innerHeight : 768;
+  const vw = viewport.width;
+  const vh = viewport.height;
   const cardW = Math.min(cardSize.width, vw - 24);
   const cardH = Math.min(cardSize.height, vh - 24);
   let style: CSSProperties | undefined;
@@ -117,6 +124,7 @@ export function TourOverlay({ steps, onFinish }: { steps: TourStep[]; onFinish: 
 
   return (
     <>
+      <div ref={frameRef} aria-hidden="true" style={{ position: 'fixed', insetBlock: 0, insetInline: 0, visibility: 'hidden', pointerEvents: 'none' }} />
       {box && <div className="tour-ring" aria-hidden="true" style={{ insetBlockStart: box.top - 4, insetInlineStart: box.start - 4, inlineSize: box.inline + 8, blockSize: box.block + 8 }} />}
       <div
         ref={cardRef}
