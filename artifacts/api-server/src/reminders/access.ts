@@ -41,13 +41,14 @@ export async function listReminderLog(auth: Auth, input: unknown) {
     const status = q.status === "scheduled" ? "pending" : q.status === "sent" ? "simulated" : q.status;
     const { rows } = await client.query(
       `SELECT id,status,text_ar,text_en,scheduled_at,sent_at,cancelled_at,cancellation_reason
-       FROM operational.notifications WHERE clinic_id=$1 AND schedule_version IS NOT NULL
+       FROM operational.notifications WHERE clinic_id=$1 AND
+         (schedule_version IS NOT NULL OR ($7::boolean AND waitlist_offer_id IS NOT NULL))
        AND ($2::integer IS NULL OR id<$2)
        AND ($3::text IS NULL OR status::text=$3)
        AND ($4::timestamptz IS NULL OR scheduled_at >= $4)
        AND ($5::timestamptz IS NULL OR scheduled_at < $5)
        ORDER BY id DESC LIMIT $6`,
-      [q.clinicId, q.cursor ?? null, status ?? null, q.from ?? null, q.to ?? null, q.limit + 1]);
+      [q.clinicId, q.cursor ?? null, status ?? null, q.from ?? null, q.to ?? null, q.limit + 1, actor.role === "front-desk"]);
     const items = rows.slice(0, q.limit).map(r => ({
       id: r.id, status: r.status === "pending" ? "scheduled" : r.status === "simulated" ? "sent" : "cancelled",
       textAr: r.text_ar, textEn: r.text_en, scheduledAt: r.scheduled_at.toISOString(),

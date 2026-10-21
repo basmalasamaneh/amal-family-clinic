@@ -1,6 +1,6 @@
 import type { LucideIcon } from 'lucide-react';
 import {
-  Activity, BarChart3, Building2, CalendarDays, CalendarPlus, CalendarRange, Code2, Copy, FileUp, Globe2, Handshake, IdCard, MessageSquareText,
+  Activity, BarChart3, Building2, CalendarDays, CalendarPlus, CalendarRange, Code2, Copy, FileUp, Globe2, ListOrdered, Handshake, IdCard, MessageSquareText,
   Printer, RefreshCcw, ScrollText, Search, ShieldCheck, Stethoscope, Users,
 } from 'lucide-react';
 import type { ShellRole } from './identity';
@@ -22,6 +22,8 @@ export const SHELL_ROUTES: readonly ShellRoute[] = [
   { id: 'patientLookup', path: '/desk/patients', roles: ['front-desk'], icon: Search },
   { id: 'consent', path: '/desk/consent', roles: ['front-desk'], icon: ShieldCheck, navHidden: true },
   { id: 'sync', path: '/desk/sync', roles: ['front-desk'], icon: RefreshCcw },
+  // P2-14 waitlist: reception only; server derives clinic and authorizes.
+  { id: 'waitlist', path: '/desk/waitlist', roles: ['front-desk'], icon: ListOrdered },
   { id: 'daySheet', path: '/desk/day-sheet', roles: ['front-desk'], icon: Printer },
   { id: 'myDay', path: '/doctor/my-day', roles: ['doctor'], icon: Stethoscope },
   { id: 'networkSearch', path: '/doctor/network-search', roles: ['doctor'], icon: Globe2 },

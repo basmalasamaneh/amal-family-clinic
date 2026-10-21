@@ -1,4 +1,5 @@
 import { patientScopeSql } from "../lib/patient-access";
+import { cancelledAppointment } from "../waitlist/lifecycle";
 import { cancelAppointmentReminders, scheduleAppointmentReminders } from "../reminders/lifecycle";
 import { createHash, randomUUID } from "node:crypto";
 import type { PoolClient } from "pg";
@@ -88,6 +89,7 @@ export async function transaction<T>(auth: Auth, work: (client: PoolClient, acto
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
+    await client.query("SELECT pg_advisory_xact_lock_shared(761930)");
     // All previews and appointment/hold mutations share this lock, including cross-clinic patient checks.
     await client.query("SELECT pg_advisory_xact_lock(761910)");
     const actor = await currentAuth(client, auth);
@@ -248,6 +250,9 @@ export async function checkAppointment(auth: Auth, raw: unknown) {
   return transaction(auth, async (client, actor, now) => (await preview(client, actor, now, input)).result);
 }
 export type AppointmentContext = { client: PoolClient; actor: Auth; now: Date };
+export async function checkAppointmentInContext(context: AppointmentContext, raw: unknown) {
+  return (await preview(context.client, context.actor, context.now, checkInput.parse(raw))).result;
+}
 /** Re-evaluate a durable proposal for delivery, never its historical evidence.
  * The caller must hold the scheduling transaction lock and refresh actor authority.
  * Like explicit resolution, this ignores offline holds and evaluates updates
@@ -371,6 +376,9 @@ export async function updateAppointment(auth: Auth, id: number, raw: unknown, co
       await cancelAppointmentReminders(client, id, now, moved ? "appointment_changed" : "appointment_inactive");
     }
     if (moved) await scheduleAppointmentReminders(client, id, now);
+    if (["booked", "double_booked"].includes(row.status) && updated!.status === "cancelled") {
+      await cancelledAppointment(client, row, updated!.version, input.clientOpId, actor.id, now);
+    }
     const response = project(updated!);
     await record(client, actor, input.clientOpId, row.clinic_id, row.doctor_id, hash, response);
     return response;

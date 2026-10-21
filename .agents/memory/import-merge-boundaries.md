@@ -20,3 +20,14 @@ Merge preview must not reveal which hidden clinical evidence caused a safety blo
 **Why:** Authority to view two demographic records is not authority to infer their consent or clinical history. A read-only preview can still leak private information through counts and specific blocker reasons.
 
 **How to apply:** Keep future preview fields within the requesting actor's visibility. Treat preview as advisory and independently revalidate the actual merge transaction.
+
+Waitlist request and offer history is not transferable through demographic merging,
+even after an offer has ended. Preserve the originally selected patient identity.
+
+**Why:** Reception selected an explicit patient for a specific availability request.
+Matching demographics cannot establish that another record inherits that request
+or the patient's reported acceptance/decline.
+
+**How to apply:** Classify new waitlist references in merge safety checks without
+blocking unrelated patients. Keep affected merges restricted until an explicit
+identity-resolution policy is approved; do not silently reassign offers.

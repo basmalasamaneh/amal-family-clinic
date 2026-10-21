@@ -21,6 +21,8 @@ pnpm --filter @workspace/api-server sync:migrate
 pnpm --filter @workspace/api-server kpis:migrate
 pnpm --filter @workspace/api-server admin:migrate
 pnpm --filter @workspace/api-server adoption:migrate
+pnpm --filter @workspace/api-server reminders:migrate
+pnpm --filter @workspace/api-server waitlist:migrate
 # Install only the explicitly enabled development capability; never reset data.
 if [ "${AMAL_DEVELOPER_TOOLS:-}" = "1" ] && [ "${NODE_ENV:-}" != "production" ] && [ "${REPLIT_DEPLOYMENT:-}" != "1" ]; then
   pnpm --filter @workspace/scripts developer:migrate --demo

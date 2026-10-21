@@ -27,6 +27,7 @@
     "test:kpi": "playwright test --config playwright.kpi.config.ts",
     "test:reminders:unit": "tsx --test tests/reminders.unit.test.ts",
     "test:admin:unit": "tsx --test tests/admin.unit.test.ts",
+    "test:waitlist:unit": "tsx --test tests/waitlist.unit.test.ts",
     "test:polish:unit": "tsx --test tests/polish.unit.test.ts",
     "test:admin": "playwright test --config playwright.admin.config.ts"
   },

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
 import { useTranslation } from 'react-i18next';
 import { useQueryClient } from '@tanstack/react-query';
-import { AlertTriangle, ArrowLeft, ArrowRight, Ban, CheckCircle2, DoorOpen, FlaskConical, Info, Loader2, PhoneCall, RotateCcw, TriangleAlert, UserRound, X } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, ListPlus, ArrowRight, Ban, CheckCircle2, DoorOpen, FlaskConical, Info, Loader2, PhoneCall, RotateCcw, TriangleAlert, UserRound, X } from 'lucide-react';
 import type { Appointment, AppointmentInput, ConflictItemSuggestedSlotsItem, ConflictPreview } from '@workspace/api-client-react';
 import { useAmalPreferences } from '@workspace/amal-ui';
 import type { ShellClinic } from '@/shell/identity';
@@ -13,7 +13,7 @@ import { formatExpiry } from './time';
 import { PatientQuickSearch } from './PatientQuickSearch';
 import { ConflictDialog } from './ConflictDialog';
 import { commitAllowed, summarize } from './conflicts';
-import { createAttemptKeeper, createLatest, newOpId, stableKey } from './ops';
+import { createAttemptKeeper, createLatest, newOpId, stableKey, type Attempt } from './ops';
 import { classifyError, isAbort, type Failure, type FailureKind } from './errors';
 import { effectiveInterval, localTimeOf, minutesBetween, nextLocalTime, type ExactSlot } from './time';
 import type { BookingApi } from './api';
@@ -24,6 +24,9 @@ import type { AvailabilityFn, AvailabilitySlot } from '@/reception/api';
 import { cachedPatientSearch, cachedSchedulingAdapter, getBookingSnapshot, localBookingErrorKey, prepareBookingCache, saveLocalBooking, validateLocalBooking } from '@/offline/booking-bridge';
 import { localCache } from '@/offline';
 import type { CachedSnapshot } from '@/offline/types';
+import { AddToWaitlistDialog } from '@/waitlist/AddToWaitlistDialog';
+import type { EntryPayload } from '@/waitlist/model';
+import { useUnconfirmedGuard } from '@/waitlist/use-unconfirmed-guard';
 import './local-messages';
 import './booking.css';
 
@@ -79,6 +82,14 @@ export function BookingDrawer({ clinic, ctx, title, scheduling, patients, api, o
   const [reason, setReason] = useState('');
   const [reasonTouched, setReasonTouched] = useState(false);
   const [conflictOpen, setConflictOpen] = useState(false);
+  /** P2-14: reception can queue the selected patient when no slot fits. Never auto-triggered. */
+  const [waitlistOpen, setWaitlistOpen] = useState(false);
+  const [waitlisted, setWaitlisted] = useState(false);
+  const [waitlistRetained, setWaitlistRetained] = useState<Attempt<EntryPayload> | null>(null);
+  const [closeWarn, setCloseWarn] = useState(false);
+  useUnconfirmedGuard(!!waitlistRetained);
+  useEffect(() => { if (!waitlistRetained) setCloseWarn(false); }, [waitlistRetained]);
+  useEffect(() => { setWaitlisted(false); }, [patient?.id, doctorId]);
   const [hold, setHold] = useState<Hold>({ kind: 'none' });
   const [now, setNow] = useState(() => Date.now());
   const [submitting, setSubmitting] = useState(false);
@@ -271,7 +282,8 @@ export function BookingDrawer({ clinic, ctx, title, scheduling, patients, api, o
       }
     } finally { submittingRef.current = false; setSubmitting(false); }
   };
-  const close = () => { if (submittingRef.current) return; releaseHold(); onClose(null); };
+  // Like an in-flight booking, an unconfirmed waitlist create blocks a silent close: explicit acknowledgement only.
+  const close = (force = false) => { if (submittingRef.current) return; if (waitlistRetained && !force) { setCloseWarn(true); return; } releaseHold(); onClose(null); };
 
   // Quick walk-in tap 3: sets the exact server slot, then the normal check -> hold -> create
   // pipeline runs. Any conflict, warning, failed check or failed hold stops and hands the user
@@ -356,6 +368,10 @@ export function BookingDrawer({ clinic, ctx, title, scheduling, patients, api, o
               })}</p>
               {cache.refreshFailed && <p role="status">{t('localBookingUi.refreshFailed')}</p>}
             </div>}
+            {closeWarn && waitlistRetained && <div className="bk-msg bk-msg--block" role="alert" data-testid="status-waitlist-close-warning">
+              <AlertTriangle size={20} aria-hidden="true" /><div className="bk-msg__body"><p>{t('guard.drawer', { ns: 'wl' })}</p>
+                <button type="button" className="bk-btn bk-btn--sm" onClick={() => { setCloseWarn(false); setWaitlistOpen(true); }} data-testid="button-waitlist-keep-open">{t('guard.keep', { ns: 'wl' })}</button>
+                <button type="button" className="bk-btn bk-btn--sm" onClick={() => close(true)} data-testid="button-waitlist-close-anyway">{t('guard.closeAnyway', { ns: 'wl' })}</button></div></div>}
             <h2 ref={headingRef} tabIndex={-1} className="bk-stage-title" data-testid="text-stage-title">{t(`bk.steps.${steps[stage]}`)}</h2>
 
             <fieldset className="bk-fields" disabled={submitting || (local && cache.kind !== 'ready')}>
@@ -398,6 +414,10 @@ export function BookingDrawer({ clinic, ctx, title, scheduling, patients, api, o
               {!interval.ok && (time || interval.error !== 'invalid') && <p className="bk-err" role="alert" data-testid="text-interval-error">{t(`bk.slot.err.${interval.error}`)}</p>}
               {interval.ok && interval.ambiguous && <Msg tone="warn" icon={TriangleAlert} testId="status-dst-ambiguous">{t('bk.slot.ambiguous')}</Msg>}
               <div aria-live="polite">{checkPanel()}</div>
+              {!walkIn && api.mode === 'real' && patient && <div className="bk-field">
+                {waitlisted ? <Msg tone="ok" icon={CheckCircle2} testId="status-drawer-waitlisted">{t('form.done', { ns: 'wl' })}</Msg>
+                  : <button type="button" className="bk-btn bk-btn--sm" onClick={() => setWaitlistOpen(true)} disabled={submitting} data-testid="button-drawer-add-waitlist"><ListPlus size={16} aria-hidden="true" />{t('addFromBooking', { ns: 'wl' })}</button>}
+              </div>}
             </>}
 
             {stage === 2 && patient && interval.ok && <>
@@ -450,6 +470,8 @@ export function BookingDrawer({ clinic, ctx, title, scheduling, patients, api, o
                {submitting ? <><Loader2 size={18} aria-hidden="true" />{t(local ? 'localBookingUi.saving' : 'bk.confirm.submitting')}</> : <><CheckCircle2 size={18} aria-hidden="true" />{t(local ? 'localBookingUi.save' : 'bk.confirm.submit')}</>}
             </button>}
           </footer>
+          {waitlistOpen && (patient || waitlistRetained) && <AddToWaitlistDialog clinicId={clinic.id} patients={readPatients} initialPatient={patient ?? null} initialDoctorId={doctorId} retained={waitlistRetained} onRetain={setWaitlistRetained}
+            onClose={(c) => { setWaitlistOpen(false); if (c) setWaitlisted(true); }} />}
           {preview && interval.ok && (
             <ConflictDialog open={conflictOpen} onOpenChange={setConflictOpen} preview={preview} clinicId={clinic.id} doctorName={doctorName}
               whenLabel={whenLabel} formatSlot={fmtSlot} ack={ack} onAck={setAck} reason={reason}

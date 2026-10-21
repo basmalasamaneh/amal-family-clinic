@@ -9,6 +9,172 @@ import * as zod from 'zod';
 
 
 /**
+ * Online-only reception view in the refreshed session clinic. No submitted clinic selector, shared cache, or network-wide projection. Offers do not reserve slots; availability is confirmed on acceptance. Declined/expired entries retain their original queue age for later cancellations.
+ */
+export const listWaitlistResponseEntriesItemWeekdaysItemMin = 0;
+export const listWaitlistResponseEntriesItemWeekdaysItemMax = 6;
+
+
+
+export const ListWaitlistResponse = zod.object({
+  "entries": zod.array(zod.object({
+  "id": zod.number().int(),
+  "patientId": zod.number().int(),
+  "patientName": zod.string(),
+  "doctorId": zod.number().int(),
+  "doctorName": zod.string(),
+  "weekdays": zod.array(zod.number().int().min(listWaitlistResponseEntriesItemWeekdaysItemMin).max(listWaitlistResponseEntriesItemWeekdaysItemMax)),
+  "windowStart": zod.string(),
+  "windowEnd": zod.string(),
+  "requestedAt": zod.coerce.date(),
+  "status": zod.enum(['active', 'fulfilled'])
+}).strict()),
+  "offers": zod.array(zod.object({
+  "id": zod.number().int(),
+  "entryId": zod.number().int(),
+  "opportunityId": zod.number().int(),
+  "patientId": zod.number().int(),
+  "patientName": zod.string(),
+  "doctorId": zod.number().int(),
+  "doctorName": zod.string(),
+  "startsAt": zod.coerce.date(),
+  "endsAt": zod.coerce.date(),
+  "createdAt": zod.coerce.date(),
+  "expiresAt": zod.coerce.date(),
+  "status": zod.enum(['active', 'accepted', 'declined', 'expired', 'unavailable']),
+  "notificationStatus": zod.enum(['pending', 'simulated', 'suppressed', 'cancelled']),
+  "notificationReason": zod.string().nullable(),
+  "appointmentId": zod.number().int().nullable()
+}).strict()),
+  "opportunities": zod.array(zod.object({
+  "id": zod.number().int(),
+  "doctorId": zod.number().int(),
+  "startsAt": zod.coerce.date(),
+  "endsAt": zod.coerce.date(),
+  "status": zod.enum(['open', 'fulfilled', 'unavailable', 'exhausted'])
+}).strict()),
+  "serverNow": zod.coerce.date()
+}).strict()
+
+
+/**
+ * Explicit authorized patient/doctor IDs; clinic, request time and FIFO tie-breaker are server-owned. Weekdays use Sunday=0; windows are Asia/Hebron wall-clock preferences and must end after they start.
+ */
+export const createWaitlistEntryBodyPatientIdMax = 2147483647;
+
+export const createWaitlistEntryBodyDoctorIdMax = 2147483647;
+
+export const createWaitlistEntryBodyWeekdaysItemMin = 0;
+export const createWaitlistEntryBodyWeekdaysItemMax = 6;
+
+export const createWaitlistEntryBodyWeekdaysMax = 7;
+
+export const createWaitlistEntryBodyWindowStartRegExp = new RegExp('^(?:[01][0-9]|2[0-3]):[0-5][0-9]$');
+export const createWaitlistEntryBodyWindowEndRegExp = new RegExp('^(?:[01][0-9]|2[0-3]):[0-5][0-9]$');
+
+
+export const CreateWaitlistEntryBody = zod.object({
+  "clientOpId": zod.string().uuid(),
+  "patientId": zod.number().int().min(1).max(createWaitlistEntryBodyPatientIdMax),
+  "doctorId": zod.number().int().min(1).max(createWaitlistEntryBodyDoctorIdMax),
+  "weekdays": zod.array(zod.number().int().min(createWaitlistEntryBodyWeekdaysItemMin).max(createWaitlistEntryBodyWeekdaysItemMax)).min(1).max(createWaitlistEntryBodyWeekdaysMax),
+  "windowStart": zod.string().regex(createWaitlistEntryBodyWindowStartRegExp),
+  "windowEnd": zod.string().regex(createWaitlistEntryBodyWindowEndRegExp)
+}).strict()
+
+export const createWaitlistEntryResponseWeekdaysItemMin = 0;
+export const createWaitlistEntryResponseWeekdaysItemMax = 6;
+
+
+
+export const CreateWaitlistEntryResponse = zod.object({
+  "id": zod.number().int(),
+  "patientId": zod.number().int(),
+  "patientName": zod.string(),
+  "doctorId": zod.number().int(),
+  "doctorName": zod.string(),
+  "weekdays": zod.array(zod.number().int().min(createWaitlistEntryResponseWeekdaysItemMin).max(createWaitlistEntryResponseWeekdaysItemMax)),
+  "windowStart": zod.string(),
+  "windowEnd": zod.string(),
+  "requestedAt": zod.coerce.date(),
+  "status": zod.enum(['active', 'fulfilled'])
+}).strict()
+
+
+export const checkWaitlistOfferPathIdMax = 2147483647;
+
+
+
+export const CheckWaitlistOfferParams = zod.object({
+  "id": zod.coerce.number().int().min(1).max(checkWaitlistOfferPathIdMax)
+}).strict()
+
+export const CheckWaitlistOfferBody = zod.object({
+
+})
+
+
+
+
+
+export const CheckWaitlistOfferResponse = zod.object({
+  "ok": zod.boolean(),
+  "conflicts": zod.array(zod.object({
+  "type": zod.enum(['doctor-overlap', 'patient-overlap', 'same-day-other-clinic', 'outside-hours', 'slot-held']),
+  "with": zod.union([zod.object({
+  "appointmentId": zod.number().int().min(1),
+  "clinicId": zod.number().int().min(1)
+}).strict(),zod.null()]),
+  "severity": zod.enum(['blocking', 'warning', 'info']),
+  "suggestedSlots": zod.array(zod.object({
+  "startsAt": zod.coerce.date(),
+  "endsAt": zod.coerce.date()
+}).strict())
+}).strict())
+}).strict().describe('Exactly {ok, conflicts}. ok means committing is permitted by current rules, not a reservation. Blocking conflicts always prevent writes. Patient warnings require an authorized nonblank overrideReason. Information alone never blocks. Preview has no appointment/audit writes.')
+
+
+/**
+ * Reception confirms a patient's acceptance/decline online. Acceptance uses the normal booking service and requires an explicit audited override reason for patient overlap. Server time, expiry and appointment start are checked under the scheduling lock; a terminal outcome never books again.
+ */
+export const decideWaitlistOfferPathIdMax = 2147483647;
+
+
+
+export const DecideWaitlistOfferParams = zod.object({
+  "id": zod.coerce.number().int().min(1).max(decideWaitlistOfferPathIdMax)
+}).strict()
+
+export const decideWaitlistOfferBodyOverrideReasonMax = 2000;
+
+
+
+export const DecideWaitlistOfferBody = zod.object({
+  "clientOpId": zod.string().uuid(),
+  "decision": zod.enum(['accept', 'decline']),
+  "overrideReason": zod.string().min(1).max(decideWaitlistOfferBodyOverrideReasonMax).optional()
+}).strict()
+
+export const DecideWaitlistOfferResponse = zod.object({
+  "id": zod.number().int(),
+  "entryId": zod.number().int(),
+  "opportunityId": zod.number().int(),
+  "patientId": zod.number().int(),
+  "patientName": zod.string(),
+  "doctorId": zod.number().int(),
+  "doctorName": zod.string(),
+  "startsAt": zod.coerce.date(),
+  "endsAt": zod.coerce.date(),
+  "createdAt": zod.coerce.date(),
+  "expiresAt": zod.coerce.date(),
+  "status": zod.enum(['active', 'accepted', 'declined', 'expired', 'unavailable']),
+  "notificationStatus": zod.enum(['pending', 'simulated', 'suppressed', 'cancelled']),
+  "notificationReason": zod.string().nullable(),
+  "appointmentId": zod.number().int().nullable()
+}).strict()
+
+
+/**
  * Simulation only; own-clinic admin/front-desk metadata, without patient identifiers. Date filters select intended due instants.
  */
 

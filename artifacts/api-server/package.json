@@ -13,6 +13,8 @@
     "auth:migrate": "tsx scripts/auth-migrate.ts",
     "reminders:migrate": "tsx scripts/reminders-migrate.ts",
     "reminders:test": "tsx --test --test-concurrency=1 tests/reminders*.test.ts",
+    "waitlist:migrate": "tsx scripts/waitlist-migrate.ts",
+    "waitlist:test": "tsx --test --test-concurrency=1 tests/waitlist*.test.ts",
     "adoption:migrate": "tsx scripts/adoption-migrate.ts",
     "adoption:test": "tsx --test --test-concurrency=1 tests/adoption*.test.ts",
     "adoption:results:test": "tsx --test --test-concurrency=1 tests/adoption-results-api.test.ts",

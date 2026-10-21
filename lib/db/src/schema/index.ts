@@ -30,3 +30,4 @@ export * from "./operational-sync";
 export * from "./operational-network-health";
 export * from "./operational-adoption";
 export * from "./operational-developer";
+export * from "./operational-waitlist";

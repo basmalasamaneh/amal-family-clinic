@@ -20,6 +20,7 @@ import developerRouter from "./developer";
 import { demoBoundary } from "../developer/boundary";
 import { validateRouteInputs } from "../lib/route-validation";
 import remindersRouter from "./reminders";
+import waitlistRouter from "./waitlist";
 
 const router: IRouter = Router();
 router.use(validateRouteInputs);
@@ -36,6 +37,7 @@ router.use(adminDirectoryRouter);
 router.use(networkHealthRouter);
 router.use(appointmentsRouter);
 router.use(remindersRouter);
+router.use(waitlistRouter);
 router.use(syncRouter);
 router.use(kpisRouter);
 router.use(consentRouter);

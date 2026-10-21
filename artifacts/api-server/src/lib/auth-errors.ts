@@ -6,6 +6,7 @@ export class ApiError extends Error {
 export const fail = (status: number, code: string, key: string, params = {}) => new ApiError(status, code, key, params);
 export const translations = {
   en: {
+    waitlistOfferInactive: "This offer has expired or is no longer available. Refresh the waitlist.",
     developerToolsDisabled: "Developer tools are disabled in this environment.",
     demoResetRequired: "Demo data was reset. Old offline work was intentionally discarded. Sign in again.",
     clinicOutage: "A clinic API outage is being simulated. Prepared offline data remains available.",
@@ -25,6 +26,7 @@ export const translations = {
     pinLocked: "PIN access is temporarily locked.", rateLimited: "Too many attempts. Try again later.", internal: "An unexpected error occurred.",
   },
   ar: {
+    waitlistOfferInactive: "انتهت صلاحية العرض أو لم يعد متاحًا. حدّث قائمة الانتظار.",
     developerToolsDisabled: "أدوات المطوّر معطّلة في هذه البيئة.",
     demoResetRequired: "أُعيد ضبط بيانات العرض. تم تجاهل العمل السابق دون اتصال عمدًا. سجّل الدخول مجددًا.",
     clinicOutage: "تجري محاكاة انقطاع واجهة العيادة. تبقى البيانات المحضّرة دون اتصال متاحة.",

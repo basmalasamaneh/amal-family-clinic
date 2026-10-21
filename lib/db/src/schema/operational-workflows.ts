@@ -7,6 +7,7 @@ import {
   operationalClinics, operationalDoctors, operationalPatients, operationalUsers, operationalDevices,
 } from "./operational-core";
 import { operationalAppointments } from "./operational-clinical";
+import { operationalWaitlistOffers } from "./operational-waitlist";
 
 export const syncStatus = operational.enum("sync_status", ["pending", "applied", "conflict", "rejected"]);
 export const importBatchStatus = operational.enum("import_batch_status", ["review_required", "reviewed", "committed"]);
@@ -91,6 +92,7 @@ export const operationalPatientMergeCandidates = operational.table("patient_merg
 ]);
 
 export const operationalNotifications = operational.table("notifications", {
+  waitlist_offer_id: integer("waitlist_offer_id").references(() => operationalWaitlistOffers.id),
   schedule_version: integer("schedule_version"),
   offset_hours: integer("offset_hours"),
   text_ar: text("text_ar"),
@@ -109,7 +111,10 @@ export const operationalNotifications = operational.table("notifications", {
   scheduled_at: instant("scheduled_at").notNull(),
 }, (t) => [
   foreignKey({ name: "notifications_appointment_patient_clinic_fk", columns: [t.appointment_id, t.patient_id, t.clinic_id], foreignColumns: [operationalAppointments.appointment_id, operationalAppointments.patient_id, operationalAppointments.clinic_id] }),
+  foreignKey({ name: "notifications_waitlist_patient_clinic_fk", columns: [t.waitlist_offer_id, t.patient_id, t.clinic_id], foreignColumns: [operationalWaitlistOffers.id, operationalWaitlistOffers.patient_id, operationalWaitlistOffers.clinic_id] }),
   uniqueIndex("notifications_reminder_identity").on(t.appointment_id, t.schedule_version, t.offset_hours).where(sql`${t.schedule_version} IS NOT NULL`),
+  uniqueIndex("notifications_waitlist_identity").on(t.waitlist_offer_id).where(sql`${t.waitlist_offer_id} IS NOT NULL`),
+  check("notifications_waitlist_shape", sql`${t.waitlist_offer_id} IS NULL OR (${t.schedule_version} IS NULL AND ${t.appointment_id} IS NULL AND ${t.message_key}='waitlist.offer' AND ${t.text_ar} IS NOT NULL AND ${t.text_en} IS NOT NULL)`),
   check("notifications_message_check", sql`${t.message_key} ~ '^[a-z][A-Za-z0-9_.-]*$'`),
 ]);
 

@@ -1,6 +1,7 @@
 import app from "./app";
 import { logger } from "./lib/logger";
 import { startReminderWorker } from "./reminders/dispatcher";
+import { startWaitlistWorker } from "./waitlist/lifecycle";
 
 const rawPort = process.env["PORT"];
 
@@ -31,3 +32,5 @@ server.maxHeadersCount = 64;
 server.keepAliveTimeout = 5_000;
 const stopReminderWorker = startReminderWorker();
 server.on("close", stopReminderWorker);
+const stopWaitlistWorker = startWaitlistWorker();
+server.on("close", stopWaitlistWorker);

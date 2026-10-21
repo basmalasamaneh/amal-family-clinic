@@ -5,6 +5,142 @@
  * Amal Network Section 12. Authentication, appointments and clinic-local patient CRUD/search are implemented; other domain services remain contracts/mocks. UTC ISO instants, required date-only DOB, Asia/Hebron display. Local patient endpoints return demographics only to doctors/front-desk, never clinical history or admin patient access. Separate network services require consent and exclude Lite clinics. Lists use opaque cursor plus limit (1–100, default 25); null nextCursor ends pagination. Administration endpoints are implemented against operational tables, with account deactivation and transactional audit. Network health reports persisted receipt-time telemetry with explicit unknown queue coverage.
  * OpenAPI spec version: 0.2.0
  */
+export type WaitlistEntryStatus = typeof WaitlistEntryStatus[keyof typeof WaitlistEntryStatus];
+
+
+export const WaitlistEntryStatus = {
+  active: 'active',
+  fulfilled: 'fulfilled',
+} as const;
+
+export interface WaitlistEntry {
+  id: number;
+  patientId: number;
+  patientName: string;
+  doctorId: number;
+  doctorName: string;
+  /**
+     * @items.minimum 0
+     * @items.maximum 6
+     */
+  weekdays: number[];
+  windowStart: string;
+  windowEnd: string;
+  requestedAt: string;
+  status: WaitlistEntryStatus;
+}
+
+export type WaitlistOfferStatus = typeof WaitlistOfferStatus[keyof typeof WaitlistOfferStatus];
+
+
+export const WaitlistOfferStatus = {
+  active: 'active',
+  accepted: 'accepted',
+  declined: 'declined',
+  expired: 'expired',
+  unavailable: 'unavailable',
+} as const;
+
+export type WaitlistOfferNotificationStatus = typeof WaitlistOfferNotificationStatus[keyof typeof WaitlistOfferNotificationStatus];
+
+
+export const WaitlistOfferNotificationStatus = {
+  pending: 'pending',
+  simulated: 'simulated',
+  suppressed: 'suppressed',
+  cancelled: 'cancelled',
+} as const;
+
+export interface WaitlistOffer {
+  id: number;
+  entryId: number;
+  opportunityId: number;
+  patientId: number;
+  patientName: string;
+  doctorId: number;
+  doctorName: string;
+  startsAt: string;
+  endsAt: string;
+  createdAt: string;
+  expiresAt: string;
+  status: WaitlistOfferStatus;
+  notificationStatus: WaitlistOfferNotificationStatus;
+  /** @nullable */
+  notificationReason: string | null;
+  /** @nullable */
+  appointmentId: number | null;
+}
+
+export type WaitlistOpportunityStatus = typeof WaitlistOpportunityStatus[keyof typeof WaitlistOpportunityStatus];
+
+
+export const WaitlistOpportunityStatus = {
+  open: 'open',
+  fulfilled: 'fulfilled',
+  unavailable: 'unavailable',
+  exhausted: 'exhausted',
+} as const;
+
+export interface WaitlistOpportunity {
+  id: number;
+  doctorId: number;
+  startsAt: string;
+  endsAt: string;
+  status: WaitlistOpportunityStatus;
+}
+
+export interface WaitlistSnapshot {
+  entries: WaitlistEntry[];
+  offers: WaitlistOffer[];
+  opportunities: WaitlistOpportunity[];
+  serverNow: string;
+}
+
+export interface WaitlistEntryInput {
+  clientOpId: string;
+  /**
+     * @minimum 1
+     * @maximum 2147483647
+     */
+  patientId: number;
+  /**
+     * @minimum 1
+     * @maximum 2147483647
+     */
+  doctorId: number;
+  /**
+     * @minItems 1
+     * @maxItems 7
+     * @items.minimum 0
+     * @items.maximum 6
+     */
+  weekdays: number[];
+  /** @pattern ^(?:[01][0-9]|2[0-3]):[0-5][0-9]$ */
+  windowStart: string;
+  /** @pattern ^(?:[01][0-9]|2[0-3]):[0-5][0-9]$ */
+  windowEnd: string;
+}
+
+export interface WaitlistCheckInput { [key: string]: unknown }
+
+export type WaitlistDecisionInputDecision = typeof WaitlistDecisionInputDecision[keyof typeof WaitlistDecisionInputDecision];
+
+
+export const WaitlistDecisionInputDecision = {
+  accept: 'accept',
+  decline: 'decline',
+} as const;
+
+export interface WaitlistDecisionInput {
+  clientOpId: string;
+  decision: WaitlistDecisionInputDecision;
+  /**
+     * @minLength 1
+     * @maxLength 2000
+     */
+  overrideReason?: string;
+}
+
 export interface ReminderClinicPreference {
   enabled: boolean;
 }

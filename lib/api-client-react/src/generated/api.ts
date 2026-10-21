@@ -143,7 +143,13 @@ import type {
   SyncDeviceState,
   SyncPullResult,
   SyncPushResult,
-  SyncResolutionResult
+  SyncResolutionResult,
+  WaitlistCheckInput,
+  WaitlistDecisionInput,
+  WaitlistEntry,
+  WaitlistEntryInput,
+  WaitlistOffer,
+  WaitlistSnapshot
 } from './api.schemas';
 
 import { customFetch } from '../custom-fetch';
@@ -172,6 +178,334 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
   }
   return result;
 };
+
+export const getListWaitlistUrl = () => {
+
+
+
+
+  return `/api/waitlist`
+}
+
+/**
+ * Online-only reception view in the refreshed session clinic. No submitted clinic selector, shared cache, or network-wide projection. Offers do not reserve slots; availability is confirmed on acceptance. Declined/expired entries retain their original queue age for later cancellations.
+ */
+export const listWaitlist = async ( options?: Parameters<typeof customFetch>[1]): Promise<WaitlistSnapshot> => {
+
+  return customFetch<WaitlistSnapshot>(getListWaitlistUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListWaitlistQueryKey = () => {
+    return [
+    `/api/waitlist`
+    ] as const;
+    }
+
+
+export const getListWaitlistQueryOptions = <TData = Awaited<ReturnType<typeof listWaitlist>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listWaitlist>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListWaitlistQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listWaitlist>>> = ({ signal }) => listWaitlist({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listWaitlist>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListWaitlistQueryResult = NonNullable<Awaited<ReturnType<typeof listWaitlist>>>
+export type ListWaitlistQueryError = ErrorType<unknown>
+
+
+
+export function useListWaitlist<TData = Awaited<ReturnType<typeof listWaitlist>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listWaitlist>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListWaitlistQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateWaitlistEntryUrl = () => {
+
+
+
+
+  return `/api/waitlist/entries`
+}
+
+/**
+ * Explicit authorized patient/doctor IDs; clinic, request time and FIFO tie-breaker are server-owned. Weekdays use Sunday=0; windows are Asia/Hebron wall-clock preferences and must end after they start.
+ */
+export const createWaitlistEntry = async (waitlistEntryInput: WaitlistEntryInput, options?: Parameters<typeof customFetch>[1]): Promise<WaitlistEntry> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<WaitlistEntry>(getCreateWaitlistEntryUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(waitlistEntryInput)
+  }
+);}
+
+
+
+
+
+export const getCreateWaitlistEntryMutationKey = () => ['createWaitlistEntry'] as const;
+
+export const getCreateWaitlistEntryMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createWaitlistEntry>>, TError,CreateWaitlistEntryMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createWaitlistEntry>>, TError,CreateWaitlistEntryMutationVariables, TContext> => {
+
+const mutationKey = getCreateWaitlistEntryMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createWaitlistEntry>>, CreateWaitlistEntryMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  createWaitlistEntry(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateWaitlistEntryMutationResult = NonNullable<Awaited<ReturnType<typeof createWaitlistEntry>>>
+    export type CreateWaitlistEntryMutationBody = BodyType<WaitlistEntryInput>
+    export type CreateWaitlistEntryMutationError = ErrorType<unknown>
+    export type CreateWaitlistEntryMutationVariables = {data: BodyType<WaitlistEntryInput>}
+
+    export const useCreateWaitlistEntry = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createWaitlistEntry>>, TError,CreateWaitlistEntryMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createWaitlistEntry>>,
+        TError,
+        CreateWaitlistEntryMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCreateWaitlistEntryMutationOptions(options));
+    }
+
+export const getCheckWaitlistOfferUrl = (id: number,) => {
+
+
+
+
+  return `/api/waitlist/offers/${id}/check`
+}
+
+export const checkWaitlistOffer = async (id: number,
+    waitlistCheckInput: WaitlistCheckInput, options?: Parameters<typeof customFetch>[1]): Promise<ConflictPreview> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<ConflictPreview>(getCheckWaitlistOfferUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(waitlistCheckInput)
+  }
+);}
+
+
+
+
+
+export const getCheckWaitlistOfferMutationKey = () => ['checkWaitlistOffer'] as const;
+
+export const getCheckWaitlistOfferMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof checkWaitlistOffer>>, TError,CheckWaitlistOfferMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof checkWaitlistOffer>>, TError,CheckWaitlistOfferMutationVariables, TContext> => {
+
+const mutationKey = getCheckWaitlistOfferMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof checkWaitlistOffer>>, CheckWaitlistOfferMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  checkWaitlistOffer(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CheckWaitlistOfferMutationResult = NonNullable<Awaited<ReturnType<typeof checkWaitlistOffer>>>
+    export type CheckWaitlistOfferMutationBody = BodyType<WaitlistCheckInput>
+    export type CheckWaitlistOfferMutationError = ErrorType<unknown>
+    export type CheckWaitlistOfferMutationVariables = {id: number;data: BodyType<WaitlistCheckInput>}
+
+    export const useCheckWaitlistOffer = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof checkWaitlistOffer>>, TError,CheckWaitlistOfferMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof checkWaitlistOffer>>,
+        TError,
+        CheckWaitlistOfferMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCheckWaitlistOfferMutationOptions(options));
+    }
+
+export const getDecideWaitlistOfferUrl = (id: number,) => {
+
+
+
+
+  return `/api/waitlist/offers/${id}/decision`
+}
+
+/**
+ * Reception confirms a patient's acceptance/decline online. Acceptance uses the normal booking service and requires an explicit audited override reason for patient overlap. Server time, expiry and appointment start are checked under the scheduling lock; a terminal outcome never books again.
+ */
+export const decideWaitlistOffer = async (id: number,
+    waitlistDecisionInput: WaitlistDecisionInput, options?: Parameters<typeof customFetch>[1]): Promise<WaitlistOffer> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<WaitlistOffer>(getDecideWaitlistOfferUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(waitlistDecisionInput)
+  }
+);}
+
+
+
+
+
+export const getDecideWaitlistOfferMutationKey = () => ['decideWaitlistOffer'] as const;
+
+export const getDecideWaitlistOfferMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof decideWaitlistOffer>>, TError,DecideWaitlistOfferMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof decideWaitlistOffer>>, TError,DecideWaitlistOfferMutationVariables, TContext> => {
+
+const mutationKey = getDecideWaitlistOfferMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof decideWaitlistOffer>>, DecideWaitlistOfferMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  decideWaitlistOffer(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DecideWaitlistOfferMutationResult = NonNullable<Awaited<ReturnType<typeof decideWaitlistOffer>>>
+    export type DecideWaitlistOfferMutationBody = BodyType<WaitlistDecisionInput>
+    export type DecideWaitlistOfferMutationError = ErrorType<unknown>
+    export type DecideWaitlistOfferMutationVariables = {id: number;data: BodyType<WaitlistDecisionInput>}
+
+    export const useDecideWaitlistOffer = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof decideWaitlistOffer>>, TError,DecideWaitlistOfferMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof decideWaitlistOffer>>,
+        TError,
+        DecideWaitlistOfferMutationVariables,
+        TContext
+      > => {
+      return useMutation(getDecideWaitlistOfferMutationOptions(options));
+    }
 
 export const getListReminderLogUrl = (params: ListReminderLogParams,) => {
   const normalizedParams = new URLSearchParams();

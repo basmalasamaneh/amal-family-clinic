@@ -35,6 +35,15 @@ export async function clearOperational(client: pg.Client) {
     const { rows: [present] } = await client.query("SELECT to_regclass($1) IS NOT NULL AS ready", [`operational.${table}`]);
     if (present.ready) await client.query(`DELETE FROM operational.${table}`);
   }
+  // Waitlist history remains immutable to runtime callers. The existing,
+  // explicitly authorized whole-demo reset clears its operational records only.
+  const { rows: [waitlist] } = await client.query("SELECT to_regclass('operational.waitlist_entries') IS NOT NULL AS ready");
+  if (waitlist.ready) {
+    await client.query("DELETE FROM operational.notifications WHERE waitlist_offer_id IS NOT NULL");
+    for (const table of ["waitlist_transitions", "waitlist_operations", "waitlist_offers", "waitlist_opportunities", "waitlist_entries"]) {
+      await client.query(`DELETE FROM operational.${table}`);
+    }
+  }
   // Adoption's left_by references users and is intentionally not cascading.
   const { rows: [adoption] } = await client.query(`SELECT EXISTS (
     SELECT 1 FROM information_schema.columns WHERE table_schema='operational'

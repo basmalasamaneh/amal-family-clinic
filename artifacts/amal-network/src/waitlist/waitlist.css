@@ -1,0 +1,38 @@
+/* P2-14 waitlist. Logical properties only; amal-ui tokens only (Light/Dark shared). */
+.wl-page { max-inline-size: 1080px; display: flex; flex-direction: column; gap: 20px; }
+.wl-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px; }
+.wl-lede { margin: 0; max-inline-size: 62ch; color: var(--amal-text); }
+.wl-meta { display: flex; flex-wrap: wrap; gap: 8px; font-size: var(--amal-text-sm); color: var(--amal-muted); font-variant-numeric: tabular-nums; }
+.wl-note { display: flex; gap: 10px; align-items: flex-start; padding-block: 12px; padding-inline: 16px; border-radius: var(--amal-radius-card); background: var(--amal-surface-2); border-inline-start: 4px solid var(--amal-primary); }
+.wl-note p { margin: 0; }
+.wl-section { display: flex; flex-direction: column; gap: 12px; }
+.wl-section__h { margin: 0; display: flex; align-items: center; gap: 10px; font-size: var(--amal-text-xl); color: var(--amal-navy); }
+.wl-count { min-inline-size: 28px; padding-inline: 8px; border-radius: 999px; background: var(--amal-primary-soft); color: var(--amal-primary-text); font-size: var(--amal-text-sm); text-align: center; font-variant-numeric: tabular-nums; }
+.wl-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.wl-card { display: flex; flex-direction: column; gap: 10px; padding-block: 16px; padding-inline: 18px; border: 1px solid var(--amal-border); border-radius: var(--amal-radius-card); background: var(--amal-surface); }
+.wl-card--active { border-inline-start: 4px solid var(--amal-primary); }
+.wl-card--closed { background: var(--amal-surface-2); }
+.wl-card__top { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; }
+.wl-card__name { font-weight: 700; font-size: var(--amal-text-md); color: var(--amal-text); }
+.wl-card__when { font-weight: 700; color: var(--amal-navy); font-variant-numeric: tabular-nums; }
+.wl-dl { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 14px; margin: 0; font-size: var(--amal-text-sm); }
+.wl-dl dt { color: var(--amal-muted); }
+.wl-dl dd { margin: 0; font-variant-numeric: tabular-nums; }
+.wl-badge { display: inline-flex; align-items: center; gap: 6px; min-block-size: 28px; padding-inline: 10px; border-radius: 999px; font-size: var(--amal-text-xs); font-weight: 700; border: 1px solid var(--amal-border); background: var(--amal-surface-2); color: var(--amal-text); }
+.wl-badge--active, .wl-badge--open { background: var(--amal-primary-soft); color: var(--amal-primary-text); border-color: transparent; }
+.wl-badge--accepted, .wl-badge--fulfilled { background: var(--amal-status-sync-bg); color: var(--amal-status-sync-fg); border-color: var(--amal-status-sync-border); }
+.wl-badge--expired, .wl-badge--unavailable, .wl-badge--exhausted, .wl-badge--suppressed, .wl-badge--cancelled { border-color: var(--amal-danger-strong); color: var(--amal-danger-strong); background: color-mix(in srgb, var(--amal-danger-strong) 8%, var(--amal-surface)); }
+.wl-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.wl-days { display: flex; flex-wrap: wrap; gap: 6px; }
+.wl-day { position: relative; }
+.wl-day input { position: absolute; opacity: 0; inline-size: 1px; block-size: 1px; }
+.wl-day span { display: inline-flex; align-items: center; justify-content: center; min-block-size: 44px; min-inline-size: 56px; padding-inline: 10px; border: 1px solid var(--amal-border); border-radius: var(--amal-radius-control); background: var(--amal-surface); font-weight: 600; cursor: pointer; }
+.wl-day input:checked + span { background: var(--amal-primary-strong); border-color: var(--amal-primary-strong); color: var(--amal-bg); }
+.wl-day input:focus-visible + span { outline: 3px solid var(--amal-focus-ring); outline-offset: 2px; }
+.wl-day input:disabled + span { opacity: .55; cursor: not-allowed; }
+.wl-skel { block-size: 96px; border-radius: var(--amal-radius-card); background: var(--amal-surface-2); animation: shell-pulse 1.4s ease-in-out infinite; }
+.wl-form { display: flex; flex-direction: column; gap: 16px; }
+.wl-form fieldset { border: 0; margin: 0; padding: 0; min-inline-size: 0; display: flex; flex-direction: column; gap: 16px; }
+.wl-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+@media (prefers-reduced-motion: reduce) { .wl-skel { animation: none; } }
+@media (max-width: 767px) { .wl-row { grid-template-columns: minmax(0, 1fr); } }

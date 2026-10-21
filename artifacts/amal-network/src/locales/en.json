@@ -163,7 +163,8 @@
       "import": "Import wizard",
       "developer": "Developer tools",
       "uiKit": "UI kit",
-      "messages": "Messages log"
+      "messages": "Messages log",
+      "waitlist": "Waitlist"
     },
     "roles": {
       "admin": "Administrator",

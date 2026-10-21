@@ -143,6 +143,8 @@ const knownReferences = new Set([
   "notifications.patient_id", "appointment_holds.patient_id", "patient_clinic_access.patient_id",
   "patient_doctor_access.patient_id", "patient_merge_operations.source_id", "patient_merge_operations.target_id",
   "patient_merge_moves.source_id", "patient_merge_moves.target_id",
+  // Waitlist identity/history must not be transferred to another patient.
+  "waitlist_entries.patient_id", "waitlist_offers.patient_id",
 ]);
 async function referenceBlockers(client: PoolClient, ids: number[]) {
   const blockers: string[] = [];
@@ -173,6 +175,11 @@ async function referenceBlockers(client: PoolClient, ids: number[]) {
     EXISTS(SELECT 1 FROM operational.patients WHERE merged_into_id=ANY($1)) AS alias`, [ids]);
   if (blocked.consent) blockers.push("MERGE_CONSENT");
   if (blocked.imported || blocked.synced || blocked.held || blocked.alias) blockers.push("MERGE_UNSAFE");
+  const { rows: [waitlist] } = await client.query("SELECT to_regclass('operational.waitlist_entries') IS NOT NULL AS ready");
+  if (waitlist.ready) {
+    const { rowCount } = await client.query("SELECT 1 FROM operational.waitlist_entries WHERE patient_id=ANY($1::integer[]) LIMIT 1", [ids]);
+    if (rowCount) blockers.push("MERGE_UNSAFE");
+  }
   return blockers;
 }
 async function mergeBlockers(client: PoolClient, source: Patient, target: Patient) {

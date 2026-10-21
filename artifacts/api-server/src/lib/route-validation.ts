@@ -11,6 +11,10 @@ type RouteContract = { method: string; path: string; query: string[]; body: bool
 const route = (method: string, path: string, query = "", body = false): RouteContract =>
   ({ method, path, query: query ? query.split(" ") : [], body });
 export const routeContracts: RouteContract[] = [
+  route("GET", "/waitlist"),
+  route("POST", "/waitlist/entries", "", true),
+  route("POST", "/waitlist/offers/:id/check", "", true),
+  route("POST", "/waitlist/offers/:id/decision", "", true),
   route("GET", "/reminders/log", "clinicId limit cursor status from to"),
   route("GET", "/reminders/clinics/:clinicId"),
   route("PUT", "/reminders/clinics/:clinicId", "", true),

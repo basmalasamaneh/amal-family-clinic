@@ -32,6 +32,69 @@
       }
     },
     "schemas": {
+      "WaitlistEntry": {
+        "type": "object", "additionalProperties": false,
+        "required": ["id", "patientId", "patientName", "doctorId", "doctorName", "weekdays", "windowStart", "windowEnd", "requestedAt", "status"],
+        "properties": {
+          "id": {"type": "integer"}, "patientId": {"type": "integer"}, "patientName": {"type": "string"},
+          "doctorId": {"type": "integer"}, "doctorName": {"type": "string"},
+          "weekdays": {"type": "array", "items": {"type": "integer", "minimum": 0, "maximum": 6}},
+          "windowStart": {"type": "string"}, "windowEnd": {"type": "string"},
+          "requestedAt": {"type": "string", "format": "date-time"}, "status": {"type": "string", "enum": ["active", "fulfilled"]}
+        }
+      },
+      "WaitlistOffer": {
+        "type": "object", "additionalProperties": false,
+        "required": ["id", "entryId", "opportunityId", "patientId", "patientName", "doctorId", "doctorName", "startsAt", "endsAt", "createdAt", "expiresAt", "status", "notificationStatus", "notificationReason", "appointmentId"],
+        "properties": {
+          "id": {"type": "integer"}, "entryId": {"type": "integer"}, "opportunityId": {"type": "integer"},
+          "patientId": {"type": "integer"}, "patientName": {"type": "string"}, "doctorId": {"type": "integer"}, "doctorName": {"type": "string"},
+          "startsAt": {"type": "string", "format": "date-time"}, "endsAt": {"type": "string", "format": "date-time"},
+          "createdAt": {"type": "string", "format": "date-time"}, "expiresAt": {"type": "string", "format": "date-time"},
+          "status": {"type": "string", "enum": ["active", "accepted", "declined", "expired", "unavailable"]},
+          "notificationStatus": {"type": "string", "enum": ["pending", "simulated", "suppressed", "cancelled"]},
+          "notificationReason": {"type": ["string", "null"]}, "appointmentId": {"type": ["integer", "null"]}
+        }
+      },
+      "WaitlistOpportunity": {
+        "type": "object", "additionalProperties": false,
+        "required": ["id", "doctorId", "startsAt", "endsAt", "status"],
+        "properties": {
+          "id": {"type": "integer"}, "doctorId": {"type": "integer"},
+          "startsAt": {"type": "string", "format": "date-time"}, "endsAt": {"type": "string", "format": "date-time"},
+          "status": {"type": "string", "enum": ["open", "fulfilled", "unavailable", "exhausted"]}
+        }
+      },
+      "WaitlistSnapshot": {
+        "type": "object", "additionalProperties": false, "required": ["entries", "offers", "opportunities", "serverNow"],
+        "properties": {
+          "entries": {"type": "array", "items": {"$ref": "#/components/schemas/WaitlistEntry"}},
+          "offers": {"type": "array", "items": {"$ref": "#/components/schemas/WaitlistOffer"}},
+          "opportunities": {"type": "array", "items": {"$ref": "#/components/schemas/WaitlistOpportunity"}},
+          "serverNow": {"type": "string", "format": "date-time"}
+        }
+      },
+      "WaitlistEntryInput": {
+        "type": "object", "additionalProperties": false,
+        "required": ["clientOpId", "patientId", "doctorId", "weekdays", "windowStart", "windowEnd"],
+        "properties": {
+          "clientOpId": {"type": "string", "format": "uuid"},
+          "patientId": {"type": "integer", "minimum": 1, "maximum": 2147483647},
+          "doctorId": {"type": "integer", "minimum": 1, "maximum": 2147483647},
+          "weekdays": {"type": "array", "minItems": 1, "maxItems": 7, "uniqueItems": true, "items": {"type": "integer", "minimum": 0, "maximum": 6}},
+          "windowStart": {"type": "string", "pattern": "^(?:[01][0-9]|2[0-3]):[0-5][0-9]$"},
+          "windowEnd": {"type": "string", "pattern": "^(?:[01][0-9]|2[0-3]):[0-5][0-9]$"}
+        }
+      },
+      "WaitlistCheckInput": {"type": "object", "additionalProperties": false, "properties": {}},
+      "WaitlistDecisionInput": {
+        "type": "object", "additionalProperties": false, "required": ["clientOpId", "decision"],
+        "properties": {
+          "clientOpId": {"type": "string", "format": "uuid"},
+          "decision": {"type": "string", "enum": ["accept", "decline"]},
+          "overrideReason": {"type": "string", "minLength": 1, "maxLength": 2000}
+        }
+      },
       "ReminderClinicPreference": {
         "type": "object", "additionalProperties": false, "required": ["enabled"],
         "properties": { "enabled": { "type": "boolean" } }
@@ -7904,6 +7967,42 @@
     }
   },
   "paths": {
+    "/waitlist": {
+      "get": {
+        "operationId": "listWaitlist", "tags": ["Waitlist"], "security": [{"sessionCookie": []}],
+        "x-roles": ["front-desk"], "x-implementation": "real",
+        "description": "Online-only reception view in the refreshed session clinic. No submitted clinic selector, shared cache, or network-wide projection. Offers do not reserve slots; availability is confirmed on acceptance. Declined/expired entries retain their original queue age for later cancellations.",
+        "responses": {"200": {"description": "Clinic-private waitlist and authoritative server time", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/WaitlistSnapshot"}, "example": {"entries": [], "offers": [], "opportunities": [], "serverNow": "2026-10-21T10:00:00Z"}}}}}
+      }
+    },
+    "/waitlist/entries": {
+      "post": {
+        "operationId": "createWaitlistEntry", "tags": ["Waitlist"], "security": [{"sessionCookie": [], "csrfToken": []}],
+        "x-roles": ["front-desk"], "x-implementation": "real",
+        "description": "Explicit authorized patient/doctor IDs; clinic, request time and FIFO tie-breaker are server-owned. Weekdays use Sunday=0; windows are Asia/Hebron wall-clock preferences and must end after they start.",
+        "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/WaitlistEntryInput"}, "example": {"clientOpId": "7eda6312-2b87-4f59-8731-55698a71cbda", "patientId": 301, "doctorId": 201, "weekdays": [0, 1, 2], "windowStart": "09:00", "windowEnd": "14:00"}}}},
+        "responses": {"201": {"description": "Created or idempotently replayed entry", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/WaitlistEntry"}, "example": {"id": 1, "patientId": 301, "patientName": "Synthetic patient", "doctorId": 201, "doctorName": "Synthetic doctor", "weekdays": [0, 1, 2], "windowStart": "09:00", "windowEnd": "14:00", "requestedAt": "2026-10-21T10:00:00Z", "status": "active"}}}}}
+      }
+    },
+    "/waitlist/offers/{id}/check": {
+      "post": {
+        "operationId": "checkWaitlistOffer", "tags": ["Waitlist"], "security": [{"sessionCookie": [], "csrfToken": []}],
+        "x-roles": ["front-desk"], "x-implementation": "real",
+        "parameters": [{"name": "id", "in": "path", "required": true, "schema": {"type": "integer", "minimum": 1, "maximum": 2147483647}}],
+        "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/WaitlistCheckInput"}, "example": {}}}},
+        "responses": {"200": {"description": "Normal scheduling conflict preview; does not reserve or accept", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ConflictPreview"}, "example": {"ok": true, "conflicts": []}}}}}
+      }
+    },
+    "/waitlist/offers/{id}/decision": {
+      "post": {
+        "operationId": "decideWaitlistOffer", "tags": ["Waitlist"], "security": [{"sessionCookie": [], "csrfToken": []}],
+        "x-roles": ["front-desk"], "x-implementation": "real",
+        "description": "Reception confirms a patient's acceptance/decline online. Acceptance uses the normal booking service and requires an explicit audited override reason for patient overlap. Server time, expiry and appointment start are checked under the scheduling lock; a terminal outcome never books again.",
+        "parameters": [{"name": "id", "in": "path", "required": true, "schema": {"type": "integer", "minimum": 1, "maximum": 2147483647}}],
+        "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/WaitlistDecisionInput"}, "example": {"clientOpId": "7eda6312-2b87-4f59-8731-55698a71cbda", "decision": "decline"}}}},
+        "responses": {"200": {"description": "Authoritative offer outcome", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/WaitlistOffer"}, "example": {"id": 1, "entryId": 1, "opportunityId": 1, "patientId": 301, "patientName": "Synthetic patient", "doctorId": 201, "doctorName": "Synthetic doctor", "startsAt": "2026-10-26T10:00:00Z", "endsAt": "2026-10-26T10:15:00Z", "createdAt": "2026-10-21T10:00:00Z", "expiresAt": "2026-10-21T10:15:00Z", "status": "declined", "notificationStatus": "suppressed", "notificationReason": "clinic_disabled", "appointmentId": null}}}}}
+      }
+    },
     "/reminders/log": {
       "get": {
         "operationId": "listReminderLog", "tags": ["Reminders"], "security": [{ "sessionCookie": [] }],
