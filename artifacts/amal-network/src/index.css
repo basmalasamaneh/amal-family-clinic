@@ -488,13 +488,13 @@
 .shell-side__top { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-block-end: 8px; }
 .shell-side__brand { color: var(--amal-navy); font-size: var(--amal-text-subheading); font-weight: var(--amal-weight-semibold); min-inline-size: 0; }
 .shell-side__brandname { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.shell-side__collapse, .shell-iconbtn { display: inline-grid; place-items: center; flex: none; inline-size: 40px; block-size: 40px; border: 1px solid transparent; border-radius: var(--amal-radius-control); background: transparent; color: var(--amal-muted); cursor: pointer; transition: background-color var(--amal-duration-fast) ease, color var(--amal-duration-fast) ease; }
+.shell-side__collapse, .shell-iconbtn { display: inline-grid; place-items: center; flex: none; inline-size: var(--amal-space-target); block-size: var(--amal-space-target); border: 1px solid transparent; border-radius: var(--amal-radius-control); background: transparent; color: var(--amal-muted); cursor: pointer; transition: background-color var(--amal-duration-fast) ease, color var(--amal-duration-fast) ease; }
 .shell-side__collapse:hover, .shell-iconbtn:hover { background: var(--amal-surface-2); color: var(--amal-text); }
 .shell-iconbtn { inline-size: 44px; block-size: 44px; border-color: var(--amal-border); background: var(--amal-surface); }
 .shell-iconbtn[aria-disabled='true'] { cursor: default; }
-.shell-side__group { display: flex; flex-direction: column; gap: 2px; margin-block-end: 12px; }
+.shell-side__group { display: flex; flex-direction: column; gap: 4px; margin-block-end: 16px; }
 .shell-side__glabel { margin: 0; padding-block: 6px 4px; padding-inline: 12px; font-size: var(--amal-text-xs); font-weight: var(--amal-weight-medium); color: var(--amal-muted); }
-.shell-side .shell-nav { gap: 10px; min-block-size: 40px; padding-inline: 6px 10px; font-size: var(--amal-text-base); font-weight: var(--amal-weight-medium); color: var(--amal-text); }
+.shell-side .shell-nav { gap: 8px; min-block-size: var(--amal-space-target); padding-inline: 8px; font-size: var(--amal-text-base); font-weight: var(--amal-weight-medium); color: var(--amal-text); }
 .shell-side .shell-nav:hover { background: var(--amal-surface-2); }
 .shell-side .shell-nav.is-active { background: var(--chip-bg, var(--amal-primary-soft)); color: var(--amal-navy); font-weight: var(--amal-weight-semibold); }
 .shell-side .shell-nav.is-active::before { display: none; }

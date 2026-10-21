@@ -6,7 +6,7 @@
   --amal-print-ink: #111111;
   --amal-print-rule: #777777;
   --amal-font-sans: 'IBM Plex Sans Arabic', 'IBM Plex Sans', 'Segoe UI', Tahoma, sans-serif;
-  --amal-font-latin: 'IBM Plex Sans', 'IBM Plex Sans Arabic', 'Segoe UI', Tahoma, sans-serif;
+  --amal-font-latin: 'IBM Plex Sans Arabic', 'IBM Plex Sans', 'Segoe UI', Tahoma, sans-serif;
   --amal-density: 1;
   --amal-text-xs: calc(12.5px * var(--amal-density));
   --amal-text-sm: calc(13.5px * var(--amal-density));
