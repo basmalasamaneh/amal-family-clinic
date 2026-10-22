@@ -57,8 +57,8 @@
 .net-empty { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; padding: 28px; border-radius: var(--amal-radius-card); background: var(--amal-surface); border: 1px solid var(--amal-border); animation: net-in 220ms ease-out; }
 .net-empty__mark { inline-size: 60px; block-size: 60px; display: grid; place-items: center; border-radius: 18px; background: var(--amal-primary-soft); color: var(--amal-primary-text); }
 .net-empty__desc { margin: 0; color: var(--amal-muted); max-inline-size: 60ch; }
-.net-skel { display: flex; flex-direction: column; gap: 8px; padding: 16px; border-radius: var(--amal-radius-card); background: var(--amal-surface); border: 1px solid var(--amal-border); }
-.net-skel span { display: block; block-size: 12px; border-radius: 6px; background: var(--amal-surface-2); animation: net-pulse 1.2s ease-in-out infinite; }
+.net-skel { display: flex; flex-direction: column; gap: 14px; padding-block: 24px; padding-inline: clamp(20px, 3vw, 32px); border-radius: var(--amal-radius-card); background: var(--amal-surface); border: 1px solid var(--amal-border); }
+.net-skel span { display: block; block-size: 12px; border-radius: 6px; background: var(--amal-surface-2); box-shadow: inset 0 0 0 1px var(--amal-border); animation: net-pulse 1.8s ease-in-out infinite; }
 .net-skel span:nth-child(1) { inline-size: 40%; block-size: 16px; }
 .net-skel span:nth-child(2) { inline-size: 70%; }
 .net-skel span:nth-child(3) { inline-size: 55%; }
@@ -144,7 +144,11 @@
 .net-empty { padding-block: 36px; padding-inline: 32px; gap: 14px; }
 .net-empty__mark { margin-block-end: 4px; }
 .net-empty__desc { line-height: 1.85; overflow-wrap: anywhere; }
-.net-empty[role='alert'] .net-empty__mark { color: var(--amal-danger-strong); background: var(--amal-surface-2); }
+.net-empty[role='alert'] { border-inline-start: 4px solid var(--amal-danger-strong); }
+.net-empty[role='alert'] .net-empty__mark { color: var(--amal-danger-strong); background: var(--amal-surface-2); border: 1px solid var(--amal-border); border-radius: var(--amal-radius-control); }
+.net-empty[role='alert'] > .amal-btn { margin-block-start: 8px; }
+.net-empty--gold { background: var(--amal-surface); }
+.net-empty--gold .amal-empty { inline-size: 100%; }
 .net .amal-btn { min-block-size: 44px; }
 .net-dossier { gap: 24px; padding: 28px; }
 .net-id { gap: 18px; align-items: center; }

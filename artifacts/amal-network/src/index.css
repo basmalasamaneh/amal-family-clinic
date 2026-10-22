@@ -618,6 +618,67 @@
 .shell-state__icon { display: grid; place-items: center; inline-size: 72px; block-size: 72px; margin-block-end: 8px; border-radius: 50%; background: var(--amal-surface-2); color: var(--amal-primary-text); border: 1px solid var(--amal-border); }
 .shell-state__icon--forbidden, .shell-state__icon--noRole, .shell-state__icon--warn { color: var(--amal-danger-strong); }
 
+/* State presentation only: keep semantic panels separate from genuine empty art.
+   Shared feature selectors retain each screen's own branching and live regions. */
+.shell-state__icon { flex: none; }
+.shell-state__icon--forbidden, .shell-state__icon--noRole, .shell-state__icon--warn {
+  border-color: var(--amal-danger-strong);
+  border-radius: var(--amal-radius-card);
+}
+.amal-dt .amal-dt__state[role='alert'] {
+  padding-block: 24px;
+  padding-inline: 24px;
+  gap: 12px;
+  border: 1px solid var(--amal-border);
+  border-inline-start: 4px solid var(--amal-danger-strong);
+  border-radius: var(--amal-radius-card);
+  background: var(--amal-surface);
+  color: var(--amal-text);
+  overflow-wrap: anywhere;
+}
+.amal-dt__state[role='alert'] > svg { color: var(--amal-danger-strong); flex: none; }
+.adm-empty-wrap.adm-empty-wrap, .kpi-empty-line.kpi-empty-line,
+.ds-empty.ds-empty, .sync-empty.sync-empty {
+  border-width: 1px;
+  border-style: solid;
+  background: var(--amal-surface);
+  line-height: 1.85;
+  padding-block: 32px;
+  padding-inline: 20px;
+  overflow-wrap: anywhere;
+}
+.adm-empty-wrap.adm-empty-wrap { padding-block: 8px; }
+.auth-error.auth-error, .adm-notice--danger.adm-notice--danger,
+.kpi-notice--error.kpi-notice--error {
+  border-inline-start: 4px solid var(--amal-danger-strong);
+  background: var(--amal-surface);
+  color: var(--amal-text);
+  line-height: 1.75;
+  overflow-wrap: anywhere;
+}
+.sync-phase.sync-phase { gap: 16px; padding-block: 18px; padding-inline: 20px; line-height: 1.75; }
+.sync-phase[data-phase='offline'], .sync-phase[data-phase='locked'] {
+  border-inline-start-width: 4px;
+}
+.sync-phase[data-phase='error'] > svg { color: var(--amal-danger-strong); }
+.sync-phase__text.sync-phase__text { min-inline-size: 0; overflow-wrap: anywhere; }
+.sync-phase__actions.sync-phase__actions { gap: 10px; }
+.sync-skels .sync-skel { border: 1px solid var(--amal-border); }
+.shell-fixture[role='status'] {
+  margin-block: 0;
+  padding-block: 14px;
+  padding-inline: 20px;
+  background: var(--amal-status-sync-bg);
+  color: var(--amal-status-sync-fg);
+  border-block-end: 1px solid var(--amal-status-sync-border);
+  border-inline-start: 4px solid var(--amal-status-sync-border);
+  line-height: 1.75;
+  overflow-wrap: anywhere;
+}
+@media (prefers-reduced-motion: reduce) {
+  .amal-skel, .net-skel span, .sync-skel { animation: none; }
+}
+
 /* =================== Shell v2: calm formal SaaS (tokens only, logical properties) =================== */
 .shell-side { --shell-nav-bg: var(--amal-toast-bg); --shell-nav-fg: var(--amal-toast-fg); --shell-nav-accent: var(--amal-toast-accent); --shell-nav-muted: color-mix(in srgb, var(--shell-nav-fg) 78%, var(--shell-nav-bg)); --shell-nav-active-bg: color-mix(in srgb, var(--shell-nav-fg) 14%, var(--shell-nav-bg));
   background: var(--shell-nav-bg); color: var(--shell-nav-fg); border-inline-end: 1px solid var(--amal-border); gap: 4px; padding-block: 12px; padding-inline: 12px; }

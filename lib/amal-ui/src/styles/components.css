@@ -105,11 +105,11 @@ textarea.amal-input { min-block-size: 104px; resize: vertical; }
 .amal-seg__btn[aria-pressed='true'] { background: var(--amal-primary); color: var(--amal-on-primary); }
 
 /* ---------- Empty state ---------- */
-.amal-empty { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 8px; padding-block: 32px; padding-inline: 24px; }
-.amal-empty__art { inline-size: 128px; block-size: auto; margin-block-end: 8px; }
+.amal-empty { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 12px; padding-block: clamp(32px, 5vw, 56px); padding-inline: clamp(16px, 4vw, 32px); }
+.amal-empty__art { inline-size: 144px; max-inline-size: 100%; block-size: auto; margin-block-end: 12px; }
 .amal-empty__title { margin: 0; font-size: var(--amal-text-lg); font-weight: var(--amal-weight-semibold); color: var(--amal-navy); }
-.amal-empty__desc { margin: 0; color: var(--amal-muted); max-inline-size: 38ch; }
-.amal-empty__actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-block-start: 12px; }
+.amal-empty__desc { margin: 0; color: var(--amal-muted); max-inline-size: 44ch; line-height: 1.85; }
+.amal-empty__actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; margin-block-start: 12px; max-inline-size: 100%; }
 
 /* ---------- Toast ---------- */
 .amal-toasts {
@@ -225,8 +225,8 @@ textarea.amal-input { min-block-size: 104px; resize: vertical; }
 .amal-status { font-size: var(--amal-text-xs); font-weight: var(--amal-weight-medium); }
 
 /* ---------- Skeleton ---------- */
-.amal-skel-group { display: flex; flex-direction: column; gap: 10px; padding-block: 8px; }
-.amal-skel { display: block; block-size: 14px; border-radius: 6px; background: var(--amal-surface-2); animation: amal-pulse 1.4s ease-in-out infinite; }
+.amal-skel-group { display: flex; flex-direction: column; gap: 14px; padding-block: 16px; }
+.amal-skel { display: block; block-size: 14px; border-radius: 6px; background: var(--amal-surface-2); box-shadow: inset 0 0 0 1px var(--amal-border); animation: amal-pulse 1.8s ease-in-out infinite; }
 .amal-skel--block { block-size: 120px; inline-size: 100%; border-radius: var(--amal-radius-card); }
 @keyframes amal-pulse { 50% { opacity: .5; } }
 
