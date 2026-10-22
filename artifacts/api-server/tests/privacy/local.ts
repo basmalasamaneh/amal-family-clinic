@@ -34,7 +34,7 @@ const specializedSuites = {
 type SpecializedSuite = keyof typeof specializedSuites;
 const specializedCommands = Object.keys(specializedSuites).map(key => `audit:${key}`);
 const specializedAudit = command === "audit:specialized" || specializedCommands.includes(command ?? "");
-if (!["test:privacy", "ci", ...browserCommands, ...specializedCommands, "audit:specialized"].includes(command ?? "")) {
+if (!["test:privacy", "test:doctor-calendar", "ci", ...browserCommands, ...specializedCommands, "audit:specialized"].includes(command ?? "")) {
   throw new Error(`Expected an explicitly allowlisted disposable audit command`);
 }
 if (specializedAudit && process.argv.length !== 3) throw new Error("Specialized audits do not accept test/filter overrides");
@@ -251,7 +251,10 @@ try {
   } else {
   const browserConfig = command === "audit:offline" ? "playwright.offline.config.ts"
     : command === "audit:performance" ? "playwright.performance.config.ts" : "playwright.audit-booking.config.ts";
-  const result = spawnSync("pnpm", command === "audit:sync" || command === "audit:appointments"
+  const result = spawnSync("pnpm", command === "test:doctor-calendar"
+    ? ["--filter", "@workspace/api-server", "exec", "tsx", "--test", "--test-concurrency=1",
+      "--test-name-pattern=^doctor calendar:", "tests/privacy-api.test.ts"]
+    : command === "audit:sync" || command === "audit:appointments"
     ? ["--filter", "@workspace/api-server", "run", command === "audit:sync" ? "sync:test" : "appointments:test"]
     : browserAudit
     ? ["--workspace-root", "exec", "playwright", "test", "--config", browserConfig, ...process.argv.slice(3)]

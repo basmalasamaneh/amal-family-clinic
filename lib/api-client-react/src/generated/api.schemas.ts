@@ -4111,6 +4111,15 @@ export const GetKpisRange = {
 
 export type GetDoctorDayParams = {
 /**
+ * Real Gregorian YYYY-MM-DD date, years 0001–9999. Omitted means Asia/Hebron today; impossible dates return 400.
+ * @pattern ^[0-9]{4}-[0-9]{2}-[0-9]{2}$
+ */
+date?: string;
+/**
+ * Day, or Saturday-start week containing date.
+ */
+view?: GetDoctorDayView;
+/**
  * @minLength 1
  * @maxLength 512
  */
@@ -4121,6 +4130,14 @@ cursor?: string;
  */
 limit?: number;
 };
+
+export type GetDoctorDayView = typeof GetDoctorDayView[keyof typeof GetDoctorDayView];
+
+
+export const GetDoctorDayView = {
+  day: 'day',
+  week: 'week',
+} as const;
 
 export type ListDoctorAuditParams = {
 /**

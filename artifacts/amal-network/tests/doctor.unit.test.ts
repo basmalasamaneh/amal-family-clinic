@@ -4,6 +4,19 @@ import { readFileSync } from 'node:fs';
 import { appendPage, createGate, fetchThrough, formatScheduleTime, hebronDayInterval, hebronToday, msUntilHebronMidnight, orderDay, privacyView, statusKey } from '../src/doctor/model';
 import { doctorAr, doctorEn, NO_PERFORMANCE_AR, NO_PERFORMANCE_EN } from '../src/doctor/strings';
 import { clearSelection, getSelection, setSelection } from '../src/network/model';
+import { addLocalDays, formatLocalDate, isLocalDate, localDateOf, weekDates } from '../src/calendar/dates';
+
+test('doctor browsing uses Saturday-first calendar weeks across year and DST boundaries', () => {
+  assert.deepEqual(weekDates('2026-01-01'), ['2025-12-27', '2025-12-28', '2025-12-29', '2025-12-30', '2025-12-31', '2026-01-01', '2026-01-02']);
+  assert.equal(addLocalDays('2025-04-11', 1), '2025-04-12');
+  assert.equal(addLocalDays('2025-10-25', -7), '2025-10-18');
+  assert.equal(addLocalDays('2024-03-01', -1), '2024-02-29');
+  assert.equal(isLocalDate('2025-02-29'), false);
+  assert.equal(localDateOf('2025-06-14T21:00:00Z'), '2025-06-15');
+  assert.equal(localDateOf('2025-01-14T22:00:00Z'), '2025-01-15');
+  assert.match(formatLocalDate('2025-12-31', 'en', 'latn'), /31 December 2025/);
+  assert.match(formatLocalDate('2026-01-02', 'ar', 'arab'), /٢٠٢٦/);
+});
 
 test('exact bilingual no-performance statement', () => {
   assert.equal(NO_PERFORMANCE_EN, 'There are no doctor-performance analytics. Doctors are not ranked or measured.');

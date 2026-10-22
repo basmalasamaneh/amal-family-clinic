@@ -256,6 +256,9 @@ test("doctor reads: exact patient scope, My Day, privacy and source-clinic audit
     assert.equal(page.data.items[0].startsAt, start.toISOString());
     assert.equal(page.data.items[0].patient.id, p.id);
     assert(page.data.nextCursor);
+    const explicitDefault = await request(localDoctor, `/doctor/day?date=${day}&view=day&limit=1&cursor=${page.data.nextCursor}`);
+    assert.equal(explicitDefault.status, 200, "original default-day cursor also works with explicit equivalent parameters");
+    assert.deepEqual(explicitDefault.data.items.map((r: { id: number }) => r.id), [second]);
     const next = await request(localDoctor, `/doctor/day?limit=1&cursor=${page.data.nextCursor}`);
     assert.equal(next.status, 200, JSON.stringify(next.data));
     assert.deepEqual(next.data.items.map((r: { id: number }) => r.id), [second]);
@@ -498,6 +501,80 @@ test("doctor reads: exact patient scope, My Day, privacy and source-clinic audit
       assert.deepEqual((await request(localDoctor, `/audit?patientId=${p.id}`)).data, { items: [], nextCursor: null });
     }
   });
+});
+
+test("doctor calendar: selected day and week preserve scope, boundaries and cursor binding", async () => {
+  const { doctorInterval, dayInterval } = await import("../src/doctor/calendar");
+  const beforeDefault = dayInterval().day;
+  const defaultDay = await request(localDoctor, "/doctor/day");
+  assert.equal(defaultDay.status, 200);
+  assert([beforeDefault, dayInterval().day].includes(defaultDay.data.day));
+  assert.deepEqual(Object.keys(defaultDay.data).sort(), ["day", "items", "nextCursor"]);
+  const selected = "2025-01-01";
+  const week = doctorInterval(selected, "week"), day = doctorInterval(selected);
+  const path = `/doctor/day?date=${selected}&view=week`;
+  assert.equal((await request(null, path)).status, 401);
+  for (const a of [desk, manager]) assert.equal((await request(a, path)).status, 403);
+  for (const query of [
+    "date=2025-02-29", "date=1900-02-29", "date=2024-02-30", "date=2025-04-31",
+    "date=0000-01-01", "date=2025-1-01", "date=", "date=2025-01-01T00:00:00Z",
+    "view=month", "view=", "view=day&view=week", "date=2025-01-01&date=2025-01-02",
+    `date=${selected}&doctorId=${otherDoctor.doctorId}`, `date=${selected}&clinicId=${remoteDoctor.clinic}`,
+  ]) {
+    const invalid = await request(localDoctor, `/doctor/day?${query}`);
+    assert.equal(invalid.status, 400, query);
+    // Global route validation can reject before the doctor router adds
+    // "private"; both rejection paths must retain the app's no-store policy.
+    assert.match(invalid.cacheControl ?? "", /(?:^|,\s*)no-store(?:,|$)/);
+  }
+  for (const date of ["2024-02-29", "2000-02-29"]) {
+    const leap = await request(localDoctor, `/doctor/day?date=${date}`);
+    assert.equal(leap.status, 200);
+    assert.equal(leap.data.day, date);
+  }
+  const p = await patient(), unassigned = await patient();
+  await trustedDoctor(p);
+  const booking = async (patientId: number, at: Date, doctor = localDoctor) =>
+    (await admin.query(`INSERT INTO operational.appointments(clinic_id,doctor_id,patient_id,scheduled_at,booking_method,status)
+      VALUES($1,$2,$3,$4,'phone','booked') RETURNING appointment_id`,
+    [doctor.clinic, doctor.doctorId, patientId, at])).rows[0].appointment_id;
+  const first = await booking(p.id, week.start);
+  const second = await booking(p.id, day.start);
+  const last = await booking(p.id, new Date(week.end.getTime() - 1));
+  await booking(p.id, new Date(week.start.getTime() - 1));
+  await booking(p.id, week.end);
+  await booking(unassigned.id, day.start);
+  await booking(p.id, day.start, otherDoctor);
+  await booking(p.id, day.start, remoteDoctor);
+
+  const page = await request(localDoctor, `${path}&limit=1`);
+  assert.equal(page.status, 200, JSON.stringify(page.data));
+  assert.equal(page.data.day, "2024-12-28");
+  assert.deepEqual(Object.keys(page.data).sort(), ["day", "items", "nextCursor"]);
+  assert.deepEqual(page.data.items.map((r: { id: number }) => r.id), [first]);
+  assert.equal(page.data.items[0].patient.id, p.id);
+  assert.equal(page.data.items[0].patient.effectiveConsentLevel, "none");
+  assert.deepEqual(page.data.items[0].patient.visits, []);
+  assert.equal(page.cacheControl, "private, no-store");
+  assert(page.data.nextCursor);
+  const cursor = encodeURIComponent(page.data.nextCursor);
+  // Different selected days in the SAME returned week are the same interval;
+  // changing page size is permitted, while changing view or interval is not.
+  const next = await request(localDoctor, `/doctor/day?date=2025-01-03&view=week&limit=2&cursor=${cursor}`);
+  assert.equal(next.status, 200, JSON.stringify(next.data));
+  assert.deepEqual(next.data.items.map((r: { id: number }) => r.id), [second, last]);
+  assert.equal(next.data.nextCursor, null);
+  for (const suffix of ["date=2025-01-04&view=week", "date=2024-12-28&view=day", "date=2025-01-01"]) {
+    assert.equal((await request(localDoctor, `/doctor/day?${suffix}&cursor=${cursor}`)).status, 400);
+  }
+  for (const a of [otherDoctor, remoteDoctor]) {
+    assert.equal((await request(a, `${path}&cursor=${cursor}`)).status, 400);
+    assert.deepEqual((await request(a, path)).data.items, [], "appointments alone never grant trusted own-patient access");
+  }
+  const explicitDay = await request(localDoctor, `/doctor/day?date=${selected}`);
+  assert.equal(explicitDay.status, 200);
+  assert.equal(explicitDay.data.day, selected);
+  assert.deepEqual(explicitDay.data.items.map((r: { id: number }) => r.id), [second]);
 });
 
 test("reception-assisted access history: authorization, confirmation, bounded projection and cursors", async t => {

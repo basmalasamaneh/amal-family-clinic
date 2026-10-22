@@ -4517,8 +4517,8 @@ export const getGetDoctorDayUrl = (params?: GetDoctorDayParams,) => {
 }
 
 /**
- * Doctor-only immutable own-patient assignments in the authorized clinic. Server Asia/Hebron today, half-open UTC interval, ordered by time then appointment ID. Shared consent policy, lock and disclosure audits; private no-store. Cursor bound to actor, clinic, doctor and current day. Unknown query keys rejected.
- * @summary Doctor My Day
+ * Doctor-only immutable own-patient assignments in the authorized clinic. Optional date is a real Gregorian YYYY-MM-DD calendar date (years 0001–9999), defaulting to Asia/Hebron today. View defaults to day; week is the Saturday-start week containing date. Each local midnight is converted independently to a half-open UTC interval, including DST changes. Response day is the selected day or the Saturday starting the returned week; the existing response shape is unchanged. Ordered by time then appointment ID. Shared consent policy, lock and disclosure audits; private no-store. Cursor bound to actor, clinic, doctor, view and returned interval, not page size. Existing default-day cursors remain valid for that same day. Unknown query keys rejected.
+ * @summary Doctor selected day or week
  */
 export const getDoctorDay = async (params?: GetDoctorDayParams, options?: Parameters<typeof customFetch>[1]): Promise<DoctorDay> => {
 
@@ -4565,7 +4565,7 @@ export type GetDoctorDayQueryError = ErrorType<void>
 
 
 /**
- * @summary Doctor My Day
+ * @summary Doctor selected day or week
  */
 
 export function useGetDoctorDay<TData = Awaited<ReturnType<typeof getDoctorDay>>, TError = ErrorType<void>>(

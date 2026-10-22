@@ -21,6 +21,8 @@ async function boot(page: Page, role = 'doctor', locale: 'ar' | 'en' = 'ar', the
     localStorage.setItem('amal.display.v1:account%3A42', JSON.stringify({ locale: prefs.locale, theme: prefs.theme, digitPreference: 'latn' }));
   }, { role, locale, theme });
   await page.route('**/api/me', (r) => r.fulfill({ json: user(role) }));
+  // This synthetic online session has no trusted device or offline permit.
+  await page.route('**/api/auth/offline-permit*', (r) => r.fulfill({ status: 403, json: { code: 'FORBIDDEN' } }));
   await page.route('**/api/clinics?*', (r) => r.fulfill({ json: { items: [{ id: 101, name: 'Synthetic Home Clinic', timezone: 'Asia/Hebron', mode: 'network' }], nextCursor: null } }));
 }
 const params = (r: Route) => new URL(r.request().url()).searchParams;
@@ -91,6 +93,52 @@ test('opening a card from My Day uses the stable id in memory, never in the URL'
   expect(await storedBlob(page)).not.toMatch(/Synthetic|61|62/);
   await page.goto('/doctor/patient-card');
   await expect(page.getByTestId('state-card-none')).toBeVisible();
+});
+
+test('date and week browsing retains selection on focus and Today returns to day mode', async ({ page }, info) => {
+  await boot(page, 'doctor', info.project.use.locale, info.project.use.colorScheme);
+  const reads: { date: string | null; view: string | null }[] = [];
+  await page.route('**/api/doctor/day*', (r) => {
+    const date = params(r).get('date');
+    const view = params(r).get('view');
+    reads.push({ date, view });
+    return r.fulfill({ json: { day: view === 'week' ? '2025-12-27' : date, items: [], nextCursor: null } });
+  });
+  await page.goto('/doctor/my-day');
+  await expect(page.getByTestId('state-day-empty')).toBeVisible();
+  await page.getByTestId('input-day-date').fill('2026-01-01');
+  await expect.poll(() => reads.at(-1)).toEqual({ date: '2026-01-01', view: 'day' });
+  await page.evaluate(() => window.dispatchEvent(new Event('focus')));
+  await expect(page.getByTestId('input-day-date')).toHaveValue('2026-01-01');
+  await page.getByTestId('button-day-view-week').click();
+  await expect.poll(() => reads.at(-1)).toEqual({ date: '2026-01-01', view: 'week' });
+  await expect(page.getByTestId('text-day-date')).toContainText('2025');
+  await expect(page.getByTestId('text-day-date')).toContainText('2026');
+  await page.getByTestId('button-day-next').click();
+  await expect.poll(() => reads.at(-1)).toEqual({ date: '2026-01-08', view: 'week' });
+  await page.getByTestId('button-day-previous').click();
+  await expect.poll(() => reads.at(-1)).toEqual({ date: '2026-01-01', view: 'week' });
+  await page.getByTestId('button-day-today').click();
+  await expect(page.getByTestId('button-day-view-day')).toHaveAttribute('aria-pressed', 'true');
+  const today = await page.evaluate(() => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Hebron', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date()));
+  await expect(page.getByTestId('input-day-date')).toHaveValue(today);
+});
+
+test('week rows group by Hebron dates and retain status, alert and patient-card actions', async ({ page }, info) => {
+  await boot(page, 'doctor', info.project.use.locale, info.project.use.colorScheme);
+  await page.route('**/api/doctor/day*', (r) => r.fulfill({ json: {
+    day: params(r).get('view') === 'week' ? '2025-06-14' : '2025-06-15', nextCursor: null,
+    items: [{ id: 1, startsAt: '2025-06-14T21:00:00Z', status: 'completed', patient: patient(51, 'clinical', [clinicalVisit([alert])]) }],
+  } }));
+  await page.goto('/doctor/my-day');
+  await page.getByTestId('input-day-date').fill('2025-06-15');
+  await page.getByTestId('button-day-view-week').click();
+  await expect(page.getByTestId('group-day-2025-06-15').getByTestId('row-day-1')).toBeVisible();
+  await expect(page.getByTestId('group-day-2025-06-14').getByTestId('row-day-1')).toHaveCount(0);
+  await expect(page.getByTestId('list-my-day').locator(':scope > li')).toHaveCount(7);
+  await expect(page.getByTestId('chip-day-alert-1-0')).toBeVisible();
+  await expect(page.getByTestId('status-day-1')).toBeVisible();
+  await expect(page.getByTestId('button-day-open-1')).toBeVisible();
 });
 
 test('consent change revalidates and clears previously shown alerts', async ({ page }, info) => {

@@ -1,6 +1,22 @@
 /* P2-13 doctor My Day + Privacy. Logical properties only; amal-ui tokens only (light and dark via tokens). */
 .doc-date { margin: 4px 0 0; display: inline-flex; align-items: center; gap: 8px; font-weight: 700; color: var(--amal-text); }
 .doc-date svg { color: var(--amal-primary-text); }
+.doc-browse { display: flex; align-items: end; flex-wrap: wrap; gap: 12px; padding-block: 14px; padding-inline: 16px; background: var(--amal-surface); border: 1px solid var(--amal-border); border-radius: var(--amal-radius-card); }
+.doc-browse__views, .doc-browse__steps { display: flex; flex-wrap: wrap; gap: 6px; }
+.doc-browse__views { margin-inline-end: auto; }
+.doc-browse button { min-block-size: 44px; }
+.doc-browse button[aria-pressed='true'] { background: var(--amal-primary-soft); color: var(--amal-primary-text); border-color: var(--amal-primary); }
+.doc-browse__date { display: flex; flex-direction: column; gap: 5px; color: var(--amal-text); font-size: var(--amal-text-sm); font-weight: 600; }
+.doc-browse input { min-block-size: 44px; min-inline-size: 170px; padding-inline: 10px; background: var(--amal-bg); color: var(--amal-text); border: 1px solid var(--amal-border); border-radius: var(--amal-radius-control); font: inherit; }
+.doc-browse :is(button, input):focus-visible { outline: 3px solid var(--amal-focus-ring); outline-offset: 2px; }
+.doc-week-group { list-style: none; }
+.doc-week-group h2 { margin-block: 18px 10px; color: var(--amal-text); font-size: var(--amal-text-md); }
+.doc-week-empty { margin: 0; padding-block: 14px; padding-inline: 16px; color: var(--amal-muted); background: var(--amal-surface); border: 1px dashed var(--amal-border); border-radius: var(--amal-radius-control); }
+@media (max-width: 767px) {
+  .doc-browse { align-items: stretch; flex-direction: column; }
+  .doc-browse__views { margin-inline-end: 0; }
+  .doc-browse__views button, .doc-browse__steps button { flex: 1; }
+}
 .doc-day, .doc-audit { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
 .doc-row { display: grid; grid-template-columns: 72px minmax(0, 1fr) auto; gap: 14px; align-items: start; padding-block: 14px; padding-inline: 16px; background: var(--amal-surface); border: 1px solid var(--amal-border); border-inline-start: 4px solid var(--amal-primary); border-radius: var(--amal-radius-card); }
 .doc-row--cancelled, .doc-row--no_show { border-inline-start-color: var(--amal-border); }

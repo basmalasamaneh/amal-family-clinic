@@ -3147,9 +3147,11 @@ export const GetKpisResponse = zod.object({
 
 
 /**
- * Doctor-only immutable own-patient assignments in the authorized clinic. Server Asia/Hebron today, half-open UTC interval, ordered by time then appointment ID. Shared consent policy, lock and disclosure audits; private no-store. Cursor bound to actor, clinic, doctor and current day. Unknown query keys rejected.
- * @summary Doctor My Day
+ * Doctor-only immutable own-patient assignments in the authorized clinic. Optional date is a real Gregorian YYYY-MM-DD calendar date (years 0001–9999), defaulting to Asia/Hebron today. View defaults to day; week is the Saturday-start week containing date. Each local midnight is converted independently to a half-open UTC interval, including DST changes. Response day is the selected day or the Saturday starting the returned week; the existing response shape is unchanged. Ordered by time then appointment ID. Shared consent policy, lock and disclosure audits; private no-store. Cursor bound to actor, clinic, doctor, view and returned interval, not page size. Existing default-day cursors remain valid for that same day. Unknown query keys rejected.
+ * @summary Doctor selected day or week
  */
+export const getDoctorDayQueryDateRegExp = new RegExp('^[0-9]{4}-[0-9]{2}-[0-9]{2}$');
+export const getDoctorDayQueryViewDefault = `day`;
 export const getDoctorDayQueryCursorMax = 512;
 
 export const getDoctorDayQueryLimitDefault = 25;
@@ -3158,6 +3160,8 @@ export const getDoctorDayQueryLimitMax = 100;
 
 
 export const GetDoctorDayQueryParams = zod.object({
+  "date": zod.coerce.string().regex(getDoctorDayQueryDateRegExp).optional().describe('Real Gregorian YYYY-MM-DD date, years 0001–9999. Omitted means Asia/Hebron today; impossible dates return 400.'),
+  "view": zod.enum(['day', 'week']).default(getDoctorDayQueryViewDefault).describe('Day, or Saturday-start week containing date.'),
   "cursor": zod.coerce.string().min(1).max(getDoctorDayQueryCursorMax).optional(),
   "limit": zod.coerce.number().int().min(1).max(getDoctorDayQueryLimitMax).default(getDoctorDayQueryLimitDefault)
 }).strict()

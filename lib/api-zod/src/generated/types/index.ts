@@ -171,6 +171,7 @@ export * from './duplicateCandidateReasonsItem';
 export * from './duplicatePatient';
 export * from './getAppointmentAvailabilityParams';
 export * from './getDoctorDayParams';
+export * from './getDoctorDayView';
 export * from './getKpisParams';
 export * from './getKpisRange';
 export * from './getOfflinePermitParams';

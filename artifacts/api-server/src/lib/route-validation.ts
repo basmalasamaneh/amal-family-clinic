@@ -78,7 +78,7 @@ export const routeContracts: RouteContract[] = [
   route("POST", "/patients/:id/access-history", "", true),
   route("POST", "/consent/:id/withdraw", "", true),
   route("GET", "/network/lookup", "q limit cursor"),
-  route("GET", "/doctor/day", "limit cursor"),
+  route("GET", "/doctor/day", "limit cursor date view"),
   route("GET", "/doctor/patients/:id"),
   route("GET", "/doctor/privacy"),
   route("GET", "/audit", "limit cursor patientId"),

@@ -1,15 +1,16 @@
 import { createHash, randomUUID } from "node:crypto";
 import { z } from "zod/v4";
-import { fromZonedTime } from "date-fns-tz";
 import type { Auth } from "../lib/auth";
 import { fail } from "../lib/auth-errors";
 import { patientScopeSql } from "../lib/patient-access";
-import { hebronDay } from "../patients/demographics";
 import { idSchema, projectNetworkPatients, requireDoctor, transaction } from "../consent/service";
 import { adoption } from "../adoption/service";
+import { doctorDateSchema, doctorInterval, doctorViewSchema } from "./calendar";
+export { dayInterval } from "./calendar";
 
 const limitSchema = z.string().regex(/^\d+$/).transform(Number).pipe(z.number().int().min(1).max(100));
 const pageSchema = z.object({ limit: limitSchema.optional(), cursor: z.string().min(1).max(512).optional() }).strict();
+const daySchema = pageSchema.extend({ date: doctorDateSchema.optional(), view: doctorViewSchema.optional() }).strict();
 const auditSchema = pageSchema.extend({ patientId: z.string().regex(/^[1-9]\d*$/).transform(Number)
   .pipe(z.number().int().positive().max(2147483647)).optional() }).strict();
 const emptySchema = z.object({}).strict();
@@ -30,23 +31,18 @@ function decode(value: string | undefined, binding: string) {
 function encode(id: number, at: Date, binding: string) {
   return Buffer.from(JSON.stringify({ id, at: at.toISOString(), fingerprint: binding })).toString("base64url");
 }
-/** Convert both calendar midnights independently: adding 24h is wrong on DST days. */
-export function dayInterval(now = new Date()) {
-  const day = hebronDay(now);
-  const next = new Date(`${day}T12:00:00Z`);
-  next.setUTCDate(next.getUTCDate() + 1);
-  return { day, start: fromZonedTime(`${day}T00:00:00`, "Asia/Hebron"),
-    end: fromZonedTime(`${next.toISOString().slice(0, 10)}T00:00:00`, "Asia/Hebron") };
-}
 const ownPatient = `EXISTS(SELECT 1 FROM operational.patient_doctor_access da
   WHERE da.patient_id=p.patient_id AND da.clinic_id=$1 AND da.doctor_id=$2)`;
 
 export async function doctorDay(auth: Auth, query: unknown) {
-  const input = pageSchema.parse(query);
+  const input = daySchema.parse(query);
   return transaction(false, async client => {
     await requireDoctor(client, auth);
-    const interval = dayInterval();
-    const binding = fingerprint(auth, ["day", interval.day]);
+    const view = input.view ?? "day";
+    const interval = doctorInterval(input.date, view);
+    // A view + calendar start uniquely defines its half-open interval. Keep the
+    // original day binding so already-issued default-day cursors remain valid.
+    const binding = fingerprint(auth, [view, interval.day]);
     const cursor = decode(input.cursor, binding);
     const limit = input.limit ?? 25;
     const { rows } = await client.query<{ appointment_id: number; patient_id: number; scheduled_at: Date; status: string }>(`
