@@ -30,10 +30,12 @@ test('phone preview has no transport, cache write, persistence, or delivery rece
   assert.match(code, /Dialog\.Description/);
   assert.match(code, /trigger\.isConnected/);
 });
-test('demo notice distinguishes dispatcher events and unchanged current-page counts in both languages', () => {
-  assert.equal(remEn.phone.result, 'Simulated, not sent to a phone');
-  assert.equal(remAr.phone.result, 'تمت المحاكاة — لم تُرسل للهاتف');
-  assert.match(remEn.phone.notice, /separate from dispatcher/);
+test('demo notice explains local preview and unchanged current-page counts in both languages', () => {
+  assert.equal(remEn.phone.result, 'Preview complete — not sent to a phone');
+  assert.equal(remAr.phone.result, 'اكتملت المعاينة — لم تُرسل للهاتف');
+  const visibleText = JSON.stringify([remEn, remAr]);
+  assert.doesNotMatch(visibleText, /محاك|simulat/i);
+  assert.match(remEn.phone.notice, /No phone or WhatsApp connection/);
   assert.match(remEn.phone.notice, /current-page counts stay unchanged/);
   assert.match(remAr.phone.notice, /لا تتغير حالات السجل/);
   assert.deepEqual(Object.keys(remEn.phone).sort(), Object.keys(remAr.phone).sort());
