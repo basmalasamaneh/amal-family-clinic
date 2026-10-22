@@ -111,8 +111,12 @@ after(async () => {
     await admin.query("DELETE FROM operational.appointment_operations WHERE actor_id=ANY($1::integer[])", [userIds]);
     await admin.query("DELETE FROM operational.appointment_holds WHERE owner_id=ANY($1::integer[])", [userIds]);
     await admin.query("SET LOCAL ROLE amal_demo_reset");
-    await admin.query("DELETE FROM operational.audit_log WHERE patient_id=ANY($1::integer[]) OR user_id=ANY($2::integer[])", [patientIds, userIds]);
+    await admin.query("DELETE FROM operational.audit_log WHERE patient_id=ANY($1::integer[]) OR user_id=ANY($2::integer[]) OR clinic_id=ANY($3::integer[])", [patientIds, userIds, clinicIds]);
+    await admin.query(`DELETE FROM operational.waitlist_transitions WHERE actor_id=ANY($1::integer[])
+      OR opportunity_id IN (SELECT id FROM operational.waitlist_opportunities WHERE source_appointment_id IN
+        (SELECT appointment_id FROM operational.appointments WHERE patient_id=ANY($2::integer[])))`, [userIds, patientIds]);
     await admin.query("RESET ROLE");
+    await admin.query("DELETE FROM operational.waitlist_opportunities WHERE source_appointment_id IN (SELECT appointment_id FROM operational.appointments WHERE patient_id=ANY($1::integer[]))", [patientIds]);
     await admin.query("DELETE FROM operational.appointments WHERE patient_id=ANY($1::integer[])", [patientIds]);
     // Deletes emit tombstones; remove only this fixture's newly emitted changes.
     await admin.query("DELETE FROM operational.sync_changes WHERE clinic_id=ANY($1::integer[])", [clinicIds]);
@@ -273,7 +277,7 @@ test("appointment APIs: authenticated scope, transactions, idempotency, holds an
     assert.equal((await request(doctor, "/appointments", "POST", { ...retryBody, source: "walk-in" })).status, 409);
     assert.equal((await request(desk, "/appointments", "POST", retryBody)).status, 409);
   });
-  await t.test("simultaneous cross-clinic patient commits require explicit override, redact preview and audit every reference", async () => {
+  await t.test("simultaneous cross-clinic patient commits block overrides with redacted evidence", async () => {
     const patientId = patientIds[3]!;
     const a = booking(doctor, patientId, 7), b = booking(remoteDoctor, patientId, 7);
     const results = await Promise.all([request(doctor, "/appointments", "POST", a), request(remoteDoctor, "/appointments", "POST", b)]);
@@ -287,17 +291,13 @@ test("appointment APIs: authenticated scope, transactions, idempotency, holds an
     assert.equal(preview.data.conflicts[0].with, null);
     const accepted = { ...loserBody, clientOpId: randomUUID(), overrideReason: "Patient confirmed both visits" };
     const result = await request(loserActor, "/appointments", "POST", accepted);
-    assert.equal(result.status, 201);
+    assert.equal(result.status, 409);
     assert.deepEqual((await request(loserActor, "/appointments", "POST", accepted)).data, result.data);
     const { rows: audits } = await admin.query("SELECT detail FROM operational.audit_log WHERE patient_id=$1 AND action='appointment.patient_overlap_override'", [patientId]);
-    assert.equal(audits.length, 1);
-    assert.equal(audits[0].detail.reason, accepted.overrideReason);
-    assert.equal(audits[0].detail.operation, "create");
-    assert.equal(audits[0].detail.target.appointmentId, result.data.id);
-    assert(audits[0].detail.affectedAppointments.some((ref: { appointmentId: number }) => ref.appointmentId === winner.data.id));
-    await assert.rejects(admin.query("UPDATE operational.audit_log SET detail='{}' WHERE patient_id=$1", [patientId]), /append-only/);
+    assert.equal(audits.length, 0);
+    assert.equal((await admin.query("SELECT count(*)::int n FROM operational.appointments WHERE patient_id=$1", [patientId])).rows[0].n, 1);
   });
-  await t.test("Trial, Lite and left clinics neither publish nor consume scheduling conflicts; local booking remains", async () => {
+  await t.test("Trial, Lite and left clinics still enforce global patient safety with hidden evidence", async () => {
     const patientId = patientIds[0]!;
     const body = { ...booking(doctor, patientId, 6), startsAt: "2096-06-04T06:00:00.000Z", endsAt: "2096-06-04T06:30:00.000Z" };
     const setState = async (clinicId: number, adoption: string, membership: string) => {
@@ -318,7 +318,9 @@ test("appointment APIs: authenticated scope, transactions, idempotency, holds an
           await setState(restricted, adoption!, membership!);
           const preview = await request(doctor, "/appointments/check", "POST", body);
           assert.equal(preview.status, 200);
-          assert.deepEqual(preview.data, { ok: true, conflicts: [] }, `${restricted}: ${adoption}/${membership}`);
+          assert.equal(preview.data.ok, false, `${restricted}: ${adoption}/${membership}`);
+          assert.equal(preview.data.conflicts[0].with, null);
+          assert.equal(preview.data.conflicts[0].severity, "blocking");
           // Local clinical/scheduling directories must remain local in every state.
           const directory = await request(desk, "/clinics");
           assert.deepEqual(directory.data.items.map((c: { id: number }) => c.id), [desk.clinicId]);
@@ -327,14 +329,14 @@ test("appointment APIs: authenticated scope, transactions, idempotency, holds an
       }
       await setState(doctor.clinicId, "trial", "active");
       const created = await request(doctor, "/appointments", "POST", body);
-      assert.equal(created.status, 201, JSON.stringify(created.data));
+      assert.equal(created.status, 409, JSON.stringify(created.data));
       const localConflict = await request(doctor, "/appointments/check", "POST", { ...body, clientOpId: randomUUID() });
-      assert(localConflict.data.conflicts.some((c: { type: string }) => c.type === "doctor-overlap"));
+      assert(localConflict.data.conflicts.some((c: { type: string }) => c.type === "patient-overlap"));
     } finally {
       for (const clinicId of clinicIds) await setState(clinicId, "full", "active");
     }
   });
-  await t.test("availability suggestions ignore restricted source clinics, not merely their identifiers", async () => {
+  await t.test("availability suggestions respect restricted source clinic patient occupancy", async () => {
     const patientId = patientIds[0]!;
     const path = `/appointments/availability?clinicId=${doctor.clinicId}&patientId=${patientId}`;
     const baseline = await request(doctor, path);
@@ -348,7 +350,8 @@ test("appointment APIs: authenticated scope, transactions, idempotency, holds an
     try {
       await admin.query(`UPDATE operational.clinics SET adoption_state='lite',network_mode='lite' WHERE clinic_id=$1`, [remoteDoctor.clinicId]);
       const hidden = await request(doctor, path);
-      assert.deepEqual(hidden.data.items, baseline.data.items);
+      assert.notDeepEqual(hidden.data.items, baseline.data.items);
+      assert(hidden.data.items.every((item: { startsAt: string }) => item.startsAt !== slot.startsAt));
     } finally {
       await admin.query(`UPDATE operational.clinics SET adoption_state='full',membership_status='active',network_mode='full' WHERE clinic_id=$1`, [remoteDoctor.clinicId]);
     }
@@ -499,7 +502,7 @@ test("appointment APIs: authenticated scope, transactions, idempotency, holds an
       await assert.rejects(createAppointment({ id: desk2.id } as never, body), (error: unknown) => (error as { status: number }).status === 403);
     } finally { await admin.query("UPDATE operational.users SET clinic_id=$2 WHERE id=$1", [desk2.id, desk2.clinicId]); }
   });
-  await t.test("forced audit insert failure rolls booking and operation back together", async () => {
+  await t.test("patient override rejection never reaches override audit insertion or changes the original", async () => {
     const patientId = patientIds[10]!;
     const first = await request(remoteDoctor, "/appointments", "POST", booking(remoteDoctor, patientId, 14));
     assert.equal(first.status, 201);
@@ -509,13 +512,14 @@ test("appointment APIs: authenticated scope, transactions, idempotency, holds an
     await admin.query(`CREATE FUNCTION operational.${trigger}() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'forced appointment audit failure'; END $$`);
     await admin.query(`CREATE TRIGGER ${trigger} BEFORE INSERT ON operational.audit_log FOR EACH ROW WHEN (NEW.patient_id=${patientId}) EXECUTE FUNCTION operational.${trigger}()`);
     try {
-      assert.equal((await request(doctor, "/appointments", "POST", body)).status, 500);
+      assert.equal((await request(doctor, "/appointments", "POST", body)).status, 409);
       assert.equal((await admin.query("SELECT count(*)::integer n FROM operational.appointments WHERE client_op_id=$1", [body.clientOpId])).rows[0].n, 0);
-      assert.equal((await admin.query("SELECT count(*)::integer n FROM operational.appointment_operations WHERE client_op_id=$1", [body.clientOpId])).rows[0].n, 0);
+      assert.equal((await admin.query("SELECT count(*)::integer n FROM operational.appointment_operations WHERE client_op_id=$1 AND status='conflict'", [body.clientOpId])).rows[0].n, 1);
     } finally {
       await admin.query(`DROP TRIGGER ${trigger} ON operational.audit_log`);
       await admin.query(`DROP FUNCTION operational.${trigger}()`);
     }
-    assert.equal((await request(doctor, "/appointments", "POST", body)).status, 201);
+    assert.equal((await request(doctor, "/appointments", "POST", body)).status, 409);
+    assert.equal((await admin.query("SELECT version FROM operational.appointments WHERE appointment_id=$1", [first.data.id])).rows[0].version, 1);
   });
 });

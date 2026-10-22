@@ -66,7 +66,7 @@ clinic inputs and API expectations use Asia/Hebron via date-fns-tz.
 | Book/edit | Keyboard explicit same-name selection, invalid cross-midnight input, duplicate activation, exactly one persisted operation, reload, self-overlapping duration edit, blocked edit leaves original unchanged |
 | Cancel/Undo | Confirmation, focus restore, pending live status, no write at 9999ms, keyboard Undo, one successful write at 10000ms, persisted cancellation, exact slot rebook |
 | Doctor conflict | Blocking text (not color alone), no override, no write, server alternative chosen and rechecked, persisted recovery |
-| Patient conflict | Required acknowledgement and nonblank reason, blocked blank reason, real authorized override and audit reason |
+| Historical patient conflict (superseded policy) | Required acknowledgement and nonblank reason, blocked blank reason, real authorized override and audit reason. Current policy always blocks patient overlaps; updated browser assertions require no acknowledgement/reason controls and no persistence. Historical audit evidence is retained, not reclassified as prevention. |
 | Commit race | Separate session/device cookie jars, dispatch barrier only (no mocked response), one committed booking, losing UI reports conflict and retains input |
 | Mobile/timezone | Drawer/editor bounds, spring DST-gap rejection, summer UTC round trip and reload, Escape restoration |
 

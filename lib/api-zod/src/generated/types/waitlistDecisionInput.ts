@@ -7,6 +7,9 @@
  */
 import type { WaitlistDecisionInputDecision } from './waitlistDecisionInputDecision';
 
+/**
+ * Booking uses the authoritative appointment conflict rules. Legacy overrideReason is accepted for compatibility but ignored for patient overlaps; same-day other-clinic nonoverlap needs no reason.
+ */
 export interface WaitlistDecisionInput {
   clientOpId: string;
   decision: WaitlistDecisionInputDecision;

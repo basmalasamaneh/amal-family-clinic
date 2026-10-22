@@ -90,7 +90,7 @@ async function restartPush(actor: Actor, operations: unknown[]) {
       process.stdout.write(JSON.stringify(await pushSync(req.auth, { operations: input.operations })));
     } finally { await pool.end(); }
   `;
-  const child = spawn(process.execPath, ["--import", "tsx", "--input-type=module", "-e", script], { stdio: ["pipe", "pipe", "pipe"] });
+  const child = spawn(process.execPath, ["--import", "tsx", "-e", script], { stdio: ["pipe", "pipe", "pipe"] });
   let stdout = "", stderr = "";
   child.stdout.setEncoding("utf8").on("data", chunk => { stdout += chunk; });
   child.stderr.setEncoding("utf8").on("data", chunk => { stderr += chunk; });
@@ -163,8 +163,12 @@ after(async () => {
     await admin.query("DELETE FROM operational.appointment_operations WHERE actor_id=ANY($1::integer[])", [userIds]);
     await admin.query("DELETE FROM operational.appointment_holds WHERE owner_id=ANY($1::integer[])", [userIds]);
     await admin.query("SET LOCAL ROLE amal_demo_reset");
-    await admin.query("DELETE FROM operational.audit_log WHERE patient_id=ANY($1::integer[]) OR user_id=ANY($2::integer[])", [patientIds, userIds]);
+    await admin.query("DELETE FROM operational.audit_log WHERE patient_id=ANY($1::integer[]) OR user_id=ANY($2::integer[]) OR clinic_id=ANY($3::integer[])", [patientIds, userIds, clinicIds]);
+    await admin.query(`DELETE FROM operational.waitlist_transitions WHERE actor_id=ANY($1::integer[])
+      OR opportunity_id IN (SELECT id FROM operational.waitlist_opportunities WHERE source_appointment_id IN
+        (SELECT appointment_id FROM operational.appointments WHERE patient_id=ANY($2::integer[])))`, [userIds, patientIds]);
     await admin.query("RESET ROLE");
+    await admin.query("DELETE FROM operational.waitlist_opportunities WHERE source_appointment_id IN (SELECT appointment_id FROM operational.appointments WHERE patient_id=ANY($1::integer[]))", [patientIds]);
     await admin.query("DELETE FROM operational.appointments WHERE patient_id=ANY($1::integer[])", [patientIds]);
     // Appointment deletion itself emits tombstones; remove those only after deleting fixtures.
     await admin.query("DELETE FROM operational.sync_changes WHERE clinic_id=ANY($1::integer[])", [clinicIds]);
@@ -254,19 +258,18 @@ test("sync API: ordered durable operations, explicit resolutions and scoped curs
     assert.equal(owner.result, undefined);
     assert.deepEqual(await evidence(), before);
   });
-  await t.test("authorized patient-overlap override is audited atomically and replay never duplicates that audit", async () => {
+  await t.test("sync patient-overlap override is blocked and replay never creates an override audit", async () => {
     const actor = await makeActor();
     await direct(desk, booking(42, 0));
     const input = { ...booking(42, 0, doctorIds[1]!), overrideReason: "Patient confirmed both appointments" };
     const [outcome] = await push(actor, [createOp(1, input)]);
-    assert.equal(outcome.status, "applied", JSON.stringify(outcome));
+    assert.equal(outcome.status, "conflict", JSON.stringify(outcome));
     const audits = (await admin.query(`SELECT detail FROM operational.audit_log WHERE user_id=$1
       AND action='appointment.patient_overlap_override' AND detail->>'clientOpId'=$2`, [actor.id, input.clientOpId])).rows;
-    assert.equal(audits.length, 1);
-    assert.equal(audits[0].detail.reason, input.overrideReason);
+    assert.equal(audits.length, 0);
     const before = await evidence();
     assert.deepEqual(await push(actor, [createOp(1, input)]), [outcome]);
-    assert.deepEqual((await request(actor, "/appointments", "POST", input)).data, outcome.result);
+    assert.equal((await request(actor, "/appointments", "POST", input)).status, 409);
     assert.deepEqual(await restartPush(actor, [createOp(1, input)]), [outcome]);
     assert.deepEqual(await evidence(), before);
   });
@@ -509,8 +512,8 @@ test("sync API: ordered durable operations, explicit resolutions and scoped curs
     try {
       for (const clinicId of [clinicIds[0]!, clinicIds[1]!]) {
         await admin.query("UPDATE operational.clinics SET adoption_state='lite',network_mode='lite' WHERE clinic_id=$1", [clinicId]);
-        assert((await read()).some((slot: { startsAt: string }) => slot.startsAt === heldSlot.startsAt),
-          "restricted remote occupancy must not suppress a fresh local alternative");
+        assert(!(await read()).some((slot: { startsAt: string }) => slot.startsAt === heldSlot.startsAt),
+          "restricted remote patient occupancy must still suppress unsafe alternatives");
         await admin.query("UPDATE operational.clinics SET adoption_state='full',network_mode='full' WHERE clinic_id=$1", [clinicId]);
       }
     } finally {
@@ -581,7 +584,7 @@ test("sync API: ordered durable operations, explicit resolutions and scoped curs
     assert.equal(remaining.status, 200);
     assert.deepEqual(remaining.data.items.map((r: any) => r.id), [historicalId]);
   });
-  await t.test("cached conflicts and operation replays do not redisclose remote existence after downgrade", async () => {
+  await t.test("cached conflicts and operation replays preserve generic safety blockers after downgrade", async () => {
     const actor = await makeActor();
     await direct(remote, booking(90, 15, doctorIds[2]!, clinicIds[1]!));
     const input = booking(90, 15);
@@ -595,7 +598,8 @@ test("sync API: ordered durable operations, explicit resolutions and scoped curs
       assert.equal(page.status, 200);
       const item = page.data.items.find((row: { id: string }) => row.id === original.conflictId);
       assert(item);
-      assert.deepEqual(item.reasons, []);
+      assert.equal(item.reasons[0].type, "patient-overlap");
+      assert.equal(item.reasons[0].with, null);
       const [replayed] = await push(actor, [createOp(1, input)]);
       assert.equal(replayed.status, "conflict", "keep durable device ordering; do not reapply a rejected proposal");
       assert.equal("conflictCount" in replayed.params, false);
@@ -603,9 +607,10 @@ test("sync API: ordered durable operations, explicit resolutions and scoped curs
       assert.equal(onlineReplay.status, 409);
       assert.equal("conflictCount" in onlineReplay.data.params, false);
       const check = await request(actor, "/appointments/check", "POST", input);
-      assert.deepEqual(check.data, { ok: true, conflicts: [] });
+      assert.equal(check.data.ok, false);
+      assert.equal(check.data.conflicts[0].with, null);
       const localBooking = await request(actor, "/appointments", "POST", { ...input, clientOpId: randomUUID() });
-      assert.equal(localBooking.status, 201);
+      assert.equal(localBooking.status, 409);
       assert.deepEqual((await admin.query("SELECT reasons FROM operational.sync_conflicts WHERE id=$1", [original.conflictId])).rows[0], stored,
         "redaction is a delivery projection, not deletion of durable evidence");
     } finally {

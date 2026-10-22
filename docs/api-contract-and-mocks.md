@@ -148,7 +148,10 @@ Reception has an eight-hour absolute lifetime. Doctor/admin idle expiry is
   the same key returns 409. Mutation responses are not optimistic server writes
   in mock mode. Appointment edits supply `expectedVersion`; stale writes conflict.
 - Conflict preview is exactly `{ok, conflicts:[{type,with,severity,suggestedSlots}]}`.
-  Blocking doctor overlap prevents booking; patient overlap can be a warning.
+  Doctor and patient overlaps always prevent booking. Patient overlap includes
+  the same ID or different IDs with all three exact normalized name, phone and
+  date of birth values matching, in any clinic. Legacy `overrideReason` fields
+  cannot permit an overlap. Same-day other-clinic nonoverlap is informational.
   Responses must not expose unrelated patients' identity or clinical information.
 - Lists use `cursor` and `limit` (1–100, default 25). `nextCursor: null` means done.
   Sync pull requires opaque `since`; apply a page before persisting its cursor.

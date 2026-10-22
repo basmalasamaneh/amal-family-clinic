@@ -61,6 +61,8 @@ export interface EvaluationInput {
   ownerId: number;
   overrideReason?: string;
   canOverride: boolean;
+  /** Internal safety equivalence, not an authorization or consent grant. */
+  equivalentPatientIds?: readonly number[];
   visible: (appointment: Appointment) => boolean;
 }
 
@@ -119,6 +121,8 @@ function addLocalDays(day: string, count: number): string {
 
 type Interval = { start: number; end: number };
 const overlaps = (a: Interval, b: Interval) => a.start < b.end && b.start < a.end;
+const samePatient = (input: EvaluationInput, other: Appointment) =>
+  other.patientId === input.appointment.patientId || Boolean(input.equivalentPatientIds?.includes(other.patientId));
 
 function windowFor(day: string, settings: Settings): Interval | null {
   const weekday = new Date(`${day}T00:00:00Z`).getUTCDay();
@@ -204,7 +208,7 @@ export function nearestAvailability(input: EvaluationInput): SuggestedSlot | nul
   interval(input.appointment);
   const occupied = input.appointments
     .filter(a => ACTIVE_STATUSES.has(a.status) &&
-      (a.doctorId === input.appointment.doctorId || a.patientId === input.appointment.patientId))
+      (a.doctorId === input.appointment.doctorId || samePatient(input, a)))
     .map(interval);
   const holds = input.holds.filter(h => h.doctorId === input.appointment.doctorId &&
     instant(h.expiresAt) > input.now.getTime()).map(interval);
@@ -237,9 +241,13 @@ export function evaluate(input: EvaluationInput): ConflictResult {
     .map(h => interval(h));
   const conflicts: ConflictResult["conflicts"] = [];
   const push = (type: ConflictType, severity: "blocking" | "warning" | "info", other?: Appointment) => {
+    const evidence = other && other.patientId === appointment.patientId && input.visible(other) ||
+      other && !samePatient(input, other) && input.visible(other);
+    // Hidden safety evidence is existence-only, never a count of matched records.
+    if (!evidence && conflicts.some(c => c.type === type && c.with === null)) return;
     conflicts.push({
       type,
-      with: other && input.visible(other) ? { appointmentId: other.id, clinicId: other.clinicId } : null,
+      with: other && evidence ? { appointmentId: other.id, clinicId: other.clinicId } : null,
       severity,
       suggestedSlots: [],
     });
@@ -255,9 +263,9 @@ export function evaluate(input: EvaluationInput): ConflictResult {
   for (const { appointment: other, interval: otherInterval } of active) {
     const overlapping = overlaps(requested, otherInterval);
     if (other.doctorId === appointment.doctorId && overlapping) push("doctor-overlap", "blocking", other);
-    if (other.patientId !== appointment.patientId) continue;
-    if (overlapping) push("patient-overlap", "warning", other);
-    else if (other.clinicId !== appointment.clinicId &&
+    if (!samePatient(input, other)) continue;
+    if (overlapping) push("patient-overlap", "blocking", other);
+    else if (other.patientId === appointment.patientId && input.visible(other) && other.clinicId !== appointment.clinicId &&
       formatInTimeZone(otherInterval.start, "Asia/Hebron", "yyyy-MM-dd") === patientDay) {
       // An overlapping pair already has its more important warning, not a duplicate info notice.
       push("same-day-other-clinic", "info", other);
@@ -270,7 +278,7 @@ export function evaluate(input: EvaluationInput): ConflictResult {
     const centered = addLocalDays(requestedDay, -15);
     const firstDay = centered > today ? centered : today;
     const occupied = active.filter(a => a.appointment.doctorId === appointment.doctorId ||
-      a.appointment.patientId === appointment.patientId).map(a => a.interval);
+      samePatient(input, a.appointment)).map(a => a.interval);
     const candidates = [...eligibleStarts(appointment, settings, now, firstDay, occupied, holds)];
     candidates.sort((a, b) => Math.abs(a - requested.start) - Math.abs(b - requested.start) || a - b);
     const slots = candidates.slice(0, 3).map(start => ({

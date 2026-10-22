@@ -114,18 +114,18 @@ test("only booked and double_booked reserve time; all historical/cancelled statu
   assert.equal(check({ appointments: [other({ status: "double_booked" })] }).ok, false);
 });
 
-test("patient overlaps warn at any clinic and need both authorized and nonblank reason", () => {
+test("patient overlaps block at any clinic regardless of authorized nonblank override reason", () => {
   for (const clinicId of [1, 2]) {
     const row = other({ doctorId: 2, clinicId, patientId: 1 });
     for (const [canOverride, overrideReason, ok] of [
       [false, undefined, false], [true, undefined, false], [true, "   ", false],
-      [false, "urgent", false], [true, " documented reason ", true],
+      [false, "urgent", false], [true, " documented reason ", false],
     ] as const) {
       const result = check({ appointments: [row], canOverride, overrideReason });
       assert.equal(result.ok, ok);
-      assert.deepEqual(result.conflicts, [{
+      assert.deepEqual(result.conflicts.map(c => ({ ...c, suggestedSlots: [] })), [{
         type: "patient-overlap", with: { appointmentId: 2, clinicId },
-        severity: "warning", suggestedSlots: [],
+        severity: "blocking", suggestedSlots: [],
       }]);
     }
   }

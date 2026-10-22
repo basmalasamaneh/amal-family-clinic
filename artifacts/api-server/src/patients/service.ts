@@ -8,6 +8,7 @@ import { enforceScope, forbidden, type Auth } from "../lib/auth";
 import { fail } from "../lib/auth-errors";
 import { patientScopeSql } from "../lib/patient-access";
 import { hebronDay, isMinor, validBirthDate } from "./demographics";
+import { duplicateIdentity, schedulingIdentities, equivalentPatientIds } from "./identity";
 
 const positive = z.coerce.number().int().positive().max(2147483647);
 export const patientId = positive;
@@ -57,6 +58,8 @@ async function transaction<T>(work: (client: PoolClient) => Promise<T>): Promise
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
+    // Demographic group membership must linearize with every scheduling writer.
+    await client.query("SELECT pg_advisory_xact_lock(761910)");
     const result = await work(client);
     await client.query("COMMIT");
     return result;
@@ -157,6 +160,19 @@ export async function updatePatient(auth: Auth, id: number, raw: unknown) {
   return transaction(async client => {
     const old = await local(client, clinicId, id);
     const next = { name: data.name ?? old.patient_name, phone: data.phone ?? old.phone, dateOfBirth: data.dateOfBirth ?? old.dob };
+    const before = await schedulingIdentities(client);
+    const oldGroup = new Set(equivalentPatientIds(before, id));
+    before.set(id, duplicateIdentity({ patient_name: next.name, phone: next.phone, dob: next.dateOfBirth }));
+    const newlyEquivalent = equivalentPatientIds(before, id).filter(other => !oldGroup.has(other));
+    if (newlyEquivalent.length) {
+      const { rowCount } = await client.query(`SELECT 1 FROM operational.appointments a
+        JOIN operational.appointments b ON b.patient_id=ANY($2::integer[])
+        WHERE a.patient_id=$1 AND a.status IN ('booked','double_booked')
+          AND b.status IN ('booked','double_booked')
+          AND a.scheduled_at < b.scheduled_at + b.duration_minutes * interval '1 minute'
+          AND b.scheduled_at < a.scheduled_at + a.duration_minutes * interval '1 minute' LIMIT 1`, [id, newlyEquivalent]);
+      if (rowCount) throw fail(409, "APPOINTMENT_CONFLICT", "conflict");
+    }
     const { rows: [row] } = await client.query<Patient>(`UPDATE operational.patients SET patient_name=$2,phone=$3,dob=$4,name_normalized=$5,
       minor_as_of=(now() AT TIME ZONE 'Asia/Hebron')::date WHERE patient_id=$1 RETURNING patient_id,patient_name,phone,dob::text,name_normalized`,
     [id, next.name, next.phone, next.dateOfBirth, normalizeName(next.name)]);

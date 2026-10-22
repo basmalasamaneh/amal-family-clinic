@@ -6,6 +6,9 @@
  * OpenAPI spec version: 0.2.0
  */
 
+/**
+ * Patient overlaps always block across clinics. Legacy overrideReason is retained for compatibility but cannot permit an overlap.
+ */
 export interface AppointmentHoldInput {
   clientOpId: string;
   /** @minimum 1 */

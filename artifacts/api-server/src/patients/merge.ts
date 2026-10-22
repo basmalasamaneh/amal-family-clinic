@@ -2,12 +2,12 @@ import { createHash } from "node:crypto";
 import type { PoolClient } from "pg";
 import { z } from "zod/v4";
 import { pool } from "@workspace/db";
-import { canonicalPhone, normalizeName } from "@workspace/db/patient-search";
 import { forbidden, type Auth } from "../lib/auth";
 import { fail } from "../lib/auth-errors";
 import { patientScopeSql } from "../lib/patient-access";
-import { validBirthDate } from "./demographics";
 import { setPatientReminderOptOut } from "../reminders/lifecycle";
+import { duplicateIdentity } from "./identity";
+export { duplicateIdentity } from "./identity";
 
 const positive = z.number().int().positive().max(2147483647);
 export const mergeInput = z.object({
@@ -26,11 +26,6 @@ const unsafe = (code = "MERGE_UNSAFE") => fail(409, code, "conflict");
 const fields = "p.patient_id,p.patient_name,p.phone,p.dob::text,p.version,p.merged_into_id,p.created_clinic_id,p.guardian_name,p.guardian_relation";
 
 /** Exact identity key, never fuzzy and never a missing-value equivalence. */
-export function duplicateIdentity(row: Identity): string | null {
-  if (!row.patient_name || !row.phone || !row.dob || !validBirthDate(row.dob)) return null;
-  const name = normalizeName(row.patient_name), phone = canonicalPhone(row.phone);
-  return name && phone ? JSON.stringify([name, row.dob, phone]) : null;
-}
 async function currentActor(client: PoolClient, auth: Auth, readOnly = false) {
   if (!["doctor", "front-desk"].includes(auth.role) || !auth.clinicId) throw forbidden();
   // Reauthorize after waiting for locks, including lost-response replays. Hold

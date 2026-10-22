@@ -48,7 +48,11 @@ Doctor conflicts block, adjacent half-open intervals do not. Cancelled rows
 do not occupy a slot. Existing-appointment overlaps, intra-export pairs and
 source-event replays are separate findings. No override reason permits a
 doctor collision. An explicit existing-appointment association must agree on
-identity and fields. Patient-warning overrides require a recorded reason.
+identity and fields. Patient overlaps also always block, within or across clinics:
+the same patient ID or different IDs with all three exact normalized name, phone
+and date of birth values matching. The legacy `overrideReason` schema field is
+retained but ignored for overlaps; no acknowledgement or reason permits commit.
+Same-day other-clinic nonoverlap remains informational and needs no reason.
 
 ## Duplicate review and merge
 

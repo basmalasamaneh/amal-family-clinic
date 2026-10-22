@@ -8,6 +8,9 @@
 import type { ImportConflictKind } from './importConflictKind';
 import type { ImportConflictSeverity } from './importConflictSeverity';
 
+/**
+ * Patient overlap always blocks, including legacy warning or acknowledged severities. Same-day other-clinic nonoverlap is informational and needs no reason. Do not disclose matched patient identifiers.
+ */
 export interface ImportConflict {
   kind: ImportConflictKind;
   rowIds: number[];

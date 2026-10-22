@@ -39,10 +39,11 @@ Preview returns exactly:
 ```
 
 `ok` means current rules permit a write, not that availability is reserved.
-Blocking conflicts always prevent a write. Patient warnings prevent a write
-unless an authorized staff member supplies a nonblank `overrideReason`.
-Information alone never blocks. A reason never bypasses doctor overlap, holds,
-or working hours. Preview uses the same engine, with optional `appointmentId`
+Blocking conflicts always prevent a write. Patient overlaps are always blocking,
+in any clinic, and no reason or authorization can override them. The legacy
+`overrideReason` field remains accepted for compatibility but is ignored for
+patient overlaps. Information alone never blocks or requires a reason.
+Preview uses the same engine, with optional `appointmentId`
 for self-exclusion, and writes neither appointments nor override audits.
 
 | Type | Severity | Translation key for consumers |
@@ -50,7 +51,7 @@ for self-exclusion, and writes neither appointments nor override audits.
 | `doctor-overlap` | blocking | `conflict.doctorOverlap` |
 | `slot-held` | blocking | `conflict.slotHeld` |
 | `outside-hours` | blocking | `conflict.outsideHours` |
-| `patient-overlap` | warning | `conflict.patientOverlap` |
+| `patient-overlap` | blocking | `conflict.patientOverlap` |
 | `same-day-other-clinic` | info | `conflict.sameDayOtherClinic` |
 
 No literal prose is sent in conflict results. API failures retain
@@ -60,9 +61,11 @@ always-open fallback.
 
 Intervals are half-open `[start,end)`: adjacent appointments are valid.
 Doctor conflicts are detected across all clinics for that doctor. Patient
-overlaps are detected across all clinics, including the same clinic.
+overlaps are detected across all clinics, including the same clinic, for the
+same patient ID or different IDs whose normalized name, phone and date of birth
+all exactly match. Partial or fuzzy identity matches do not trigger this rule.
 Cross-clinic same-local-date notices are emitted only when the pair does not
-already have an overlap warning. Hidden appointments still participate in
+already have an overlap conflict. Hidden appointments still participate in
 conflict detection, but `with` is null. Visible references contain only
 `appointmentId` and `clinicId`; no patient identity, clinical notes or history.
 
@@ -115,10 +118,10 @@ Durable operation records bind `clientOpId` to the actor, target and normalized
 request. Identical authorized retries replay the recorded outcome without
 duplicate appointment or audit writes. Different requests under the same key
 return a typed conflict. Replay still checks authorization. Appointment changes,
-hold consumption, operation outcome and append-only patient override audit
-commit together, or roll back together. Audits identify actor, operation,
-affected appointments, reason and server timestamp. Preview and hold acquisition
-do not record a booking override audit.
+hold consumption and operation outcome commit together, or roll back together.
+Historical append-only patient override audits remain valid audit evidence;
+the current policy permits no new patient-overlap override. Preview and hold
+acquisition do not record a booking override audit.
 
 ## Baseline evidence and verification
 
@@ -182,8 +185,8 @@ doctor contributes at most one nearest **strictly future** interval, ordered by
 doctor ID. The same engine generator used for conflict suggestions enforces grid,
 working days/hours, full interval fit, DST, the 30-local-date horizon, active
 doctor/patient bookings (including cross-clinic patient collisions) and all
-unexpired doctor holds, including the requester's own. No overlap warning is
-automatically overridden. Empty `items` means no eligible interval in the bounded
+unexpired doctor holds, including the requester's own. Patient overlaps cannot
+be overridden. Empty `items` means no eligible interval in the bounded
 horizon, not a fallback schedule. Auth/patient/scope/settings failures remain
 explicit errors. Only candidate local intervals leave the service, never remote
 appointment/clinical details. `checkedAt` is the transactional database clock.

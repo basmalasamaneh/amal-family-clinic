@@ -1,9 +1,9 @@
 import * as Dialog from '@radix-ui/react-dialog';
 import { useTranslation } from 'react-i18next';
-import { Ban, CalendarClock, Info, ShieldAlert, TriangleAlert, X } from 'lucide-react';
+import { Ban, CalendarClock, Info, TriangleAlert, X } from 'lucide-react';
 import type { ConflictItem, ConflictItemSuggestedSlotsItem, ConflictPreview } from '@workspace/api-client-react';
 import { WalkInHandoff } from '@/reception/WalkInHandoff';
-import { summarize } from './conflicts';
+import { classify, summarize } from './conflicts';
 
 export interface ConflictDialogProps {
   open: boolean; onOpenChange: (o: boolean) => void;
@@ -38,7 +38,7 @@ export function ConflictDialog(p: ConflictDialogProps) {
           <p className="bk-hint"><bdi dir="auto">{t('bk.conflict.intro', { doctor: p.doctorName, when: p.whenLabel })}</bdi></p>
           <ul className="bk-list">
             {ordered.map((c, i) => {
-              const sev = (c.severity in ICON ? c.severity : 'blocking') as keyof typeof ICON;
+              const sev = classify(c);
               const Icon = ICON[sev];
               const known = ['doctor-overlap', 'slot-held', 'outside-hours', 'patient-overlap', 'same-day-other-clinic'].includes(c.type);
               return (
@@ -47,7 +47,7 @@ export function ConflictDialog(p: ConflictDialogProps) {
                   <div className="bk-msg__body">
                     <span className="bk-sev">{t(`bk.conflict.sev.${sev}`)}</span>
                     <p><strong>{t(known ? `bk.conflict.types.${c.type}` : 'bk.conflict.types.unknown')}</strong></p>
-                    <p className="bk-hint">{c.with
+                    <p className="bk-hint">{c.with && c.type !== 'patient-overlap'
                       ? t('bk.conflict.with', { id: c.with.appointmentId, clinic: c.with.clinicId === p.clinicId ? t('bk.conflict.thisClinic') : t('bk.conflict.otherClinic') })
                       : t('bk.conflict.redacted')}</p>
                   </div>
@@ -73,18 +73,7 @@ export function ConflictDialog(p: ConflictDialogProps) {
               {s.suggestions.length > 0 && s.suggestions.length < 3 && <p className="bk-hint" data-testid="text-suggestions-fewer">{t('bk.conflict.suggestFewer', { count: s.suggestions.length })}</p>}
             </section>
           )}
-          {s.overrideable ? (
-            <section aria-labelledby="bk-ovr-h" className="bk-field" data-testid="section-override">
-              <h3 id="bk-ovr-h" className="bk-label"><ShieldAlert size={16} aria-hidden="true" /> {t('bk.conflict.overrideTitle')}</h3>
-              <label className="bk-check"><input type="checkbox" checked={p.ack} onChange={(e) => p.onAck(e.target.checked)} data-testid="checkbox-override-ack" />{t('bk.conflict.overrideAck')}</label>
-              {p.ack && <>
-                <label className="bk-label" htmlFor="bk-reason">{t('bk.conflict.reason')}</label>
-                <textarea id="bk-reason" className="bk-input" dir="auto" maxLength={2000} value={p.reason} aria-invalid={p.reasonError}
-                  aria-describedby={p.reasonError ? 'bk-reason-err' : undefined} onChange={(e) => p.onReason(e.target.value)} data-testid="input-override-reason" />
-                {p.reasonError && <p id="bk-reason-err" className="bk-err">{t('bk.conflict.reasonErr')}</p>}
-              </>}
-            </section>
-          ) : s.blocking.length > 0 && <p className="bk-hint" data-testid="text-no-override">{t('bk.conflict.noOverride')}</p>}
+          {s.blocking.length > 0 && <p className="bk-hint" data-testid="text-no-override">{t('bk.conflict.noOverride')}</p>}
           <Dialog.Close className="bk-btn">{t('bk.conflict.close')}</Dialog.Close>
         </Dialog.Content>
       </Dialog.Portal>

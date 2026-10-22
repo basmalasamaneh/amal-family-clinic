@@ -7,6 +7,9 @@
  */
 import type { ImportIdentity } from './importIdentity';
 
+/**
+ * Legacy overrideReason remains accepted for backwards compatibility but is ignored for patient overlaps. Patient overlaps cannot be acknowledged or overridden; reschedule or skip the row. Same-day other-clinic nonoverlap is informational and needs no reason.
+ */
 export type ImportRowReview = {
   /** @minimum 1 */
   rowId: number;

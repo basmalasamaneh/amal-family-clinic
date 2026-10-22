@@ -34,10 +34,12 @@ remounts the drawer and clears its patient, doctor, checks and holds.
 Preview is not a reservation. Conflict codes and server-supplied alternatives are
 displayed without inferring availability; atomic creation remains authoritative.
 Holds are requested at confirmation and use the server's 30-second expiry.
-Warnings require an explicit acknowledgement and trimmed nonblank reason;
-blocking types cannot be overridden. Current service roles allowed to book are
-doctor/front-desk; this reception surface is front-desk-only, and server authorization
-still controls every override.
+Patient overlaps always block, even if a legacy response calls them warnings;
+there is no acknowledgement or reason that permits a commit. This applies across
+clinics to the same patient ID or different IDs with all three exact normalized
+name, phone and date of birth values matching. Same-day other-clinic nonoverlap
+is informational and requires no reason. Current service roles allowed to book
+are doctor/front-desk; this reception surface is front-desk-only.
 
 Inputs and display use Asia/Hebron through date-fns-tz. UTC API timestamps are not
 reconverted as source-local timestamps. DST gaps are rejected, repeated local
@@ -91,8 +93,8 @@ report. The six seed tables and calendar-export identity review remain untouched
 21 booking logic tests and 6 deferred-cancellation tests pass. Workspace
 typechecking passes. Calendar/cancellation browser suite: all 10 cases pass across
 the initial run and targeted rerun after excluding the unrelated first-run tour.
-The acceptance pass verified duplicate identities, keyboard selection, preserved
-inputs, blocking conflicts and three suggestions, reason-required patient warnings,
+The original acceptance pass verified duplicate identities, keyboard selection, preserved
+inputs, blocking conflicts and three suggestions, the historical reason-required patient warnings,
 hold expiry/recheck, simulated commit and honest acknowledgement, cancellation
 failure/retry, Undo across navigation, reload discard, nested focus trapping and
 restoration, and Arabic/English × light/dark at desktop/mobile.

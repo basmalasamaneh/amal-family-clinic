@@ -121,47 +121,31 @@ test('doctor collision blocks without persistence; server alternative is recheck
   });
 });
 
-test('patient overlap requires acknowledgement and a nonblank authorized justification @axe', async ({ page, f }) => {
+test('patient overlap blocks without an acknowledgement or override path @axe', async ({ page, f }) => {
   const before = await f.read(listPath(f));
   const preview = await openSlot(page, f, 0, '11:00');
-  expect(preview.conflicts).toEqual(expect.arrayContaining([expect.objectContaining({ type: 'patient-overlap', severity: 'warning' })]));
+  expect(preview.conflicts).toEqual(expect.arrayContaining([expect.objectContaining({ type: 'patient-overlap', severity: 'blocking' })]));
   expect(preview.ok).toBe(false);
-  await expect(page.getByTestId('status-check-warning')).toBeVisible();
+  await expect(page.getByTestId('status-check-blocked')).toBeVisible();
   await expect(page.getByTestId('button-stage-next')).toBeDisabled();
   await page.getByTestId('button-review-conflicts').click();
   await expect(page.getByTestId('conflict-patient-overlap')).toBeVisible();
-  await expect(page.getByTestId('checkbox-override-ack')).not.toBeChecked();
+  await expect(page.getByTestId('checkbox-override-ack')).toHaveCount(0);
+  await expect(page.getByTestId('input-override-reason')).toHaveCount(0);
+  await expect(page.getByTestId('text-no-override')).toBeVisible();
   await expectAccessible(page);
-  await page.getByTestId('checkbox-override-ack').check();
-  await page.getByTestId('input-override-reason').fill('   ');
-  await expect(page.getByTestId('input-override-reason')).toHaveAttribute('aria-invalid', 'true');
-  await expectAccessible(page);
-  await mobileConflictKeyboard(page, ['checkbox-override-ack', 'input-override-reason']);
+  await mobileConflictKeyboard(page, ['button-close-conflicts']);
   await expect(page.getByTestId('button-stage-next')).toBeDisabled();
   expect(await f.read(listPath(f))).toEqual(before);
   expect(await f.audits()).toEqual([]);
   await page.getByTestId('button-review-conflicts').click();
-  const reason = 'Patient confirmed coordinated assessment with both doctors; receptionist approved.';
-  await page.getByTestId('input-override-reason').fill(reason);
-  await expect(page.getByTestId('input-override-reason')).toHaveAttribute('aria-invalid', 'false');
+  await expect(page.getByTestId('section-override')).toHaveCount(0);
   await expectAccessible(page);
   await page.getByTestId('button-close-conflicts').click();
-  await confirm(page);
-  await expect(page.getByTestId('booking-review')).toContainText(reason);
-  const created = page.waitForResponse(isCreate);
-  await page.getByTestId('button-confirm-booking').click();
-  const response = await created;
-  expect(response.status()).toBe(201);
-  const saved = await response.json();
-  const persisted = await f.read(listPath(f));
-  expect(persisted.items).toHaveLength(before.items.length + 1);
-  expect(persisted.items.find(item => item.id === saved.id)).toMatchObject({
-    doctorId: f.doctor, patientId: f.patients[0], startsAt: utc('2030-01-07', '11:00'), status: 'booked',
-  });
-  expect(await f.audits()).toEqual([expect.objectContaining({
-    action: 'appointment.patient_overlap_override',
-    detail: expect.objectContaining({ reason, appointmentId: saved.id, clientOpId: saved.clientOpId }),
-  })]);
+  await expect(page.getByTestId('button-stage-next')).toBeDisabled();
+  await expect(page.getByTestId('button-confirm-booking')).toHaveCount(0);
+  expect(await f.read(listPath(f))).toEqual(before);
+  expect(await f.audits()).toEqual([]);
 });
 
 test('two isolated real sessions race at commit: one winner, one rejection retaining inputs @axe', async ({ page, context, f }) => {

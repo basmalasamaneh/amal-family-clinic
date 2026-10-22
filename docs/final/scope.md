@@ -44,7 +44,7 @@ complete rehearsal or stakeholder acceptance.
 |---|---|---|
 | Must: three roles, password/PIN | Verified upstream | [Auth security](../auth-security.md); current browser readiness in rehearsal record |
 | Must: day/week, phone/walk-in, edit/cancel/status | Verified upstream | `/desk/today`, `/desk/week`, `/desk/new-booking`; [booking coverage](../testing/booking-coverage.md) |
-| Must: doctor and cross-clinic conflict handling | Verified upstream | [Appointments](../appointments.md); interval blocking versus privacy-safe patient warning/override |
+| Must: doctor and cross-clinic conflict handling | Verified upstream | [Appointments](../appointments.md); doctor/patient interval overlaps block without override; same-day other-clinic nonoverlap is privacy-safe information |
 | Must: network lookup | Partial acceptance | `/doctor/network-search`; implemented and tested, but current Reem Full-scene setup absent |
 | Must: Basic/Clinical/withdrawal/history | Verified upstream | `/desk/consent`; [privacy tests](../privacy-tests.md) |
 | Must: local-first queue and resolution | Verified upstream | `/desk/sync`; [offline live evidence](../testing/offline-live.md); exact current three-booking rehearsal unavailable |

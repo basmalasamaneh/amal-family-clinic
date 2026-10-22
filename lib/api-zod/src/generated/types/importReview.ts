@@ -10,6 +10,7 @@ import type { ImportReviewIdentityAction } from './importReviewIdentityAction';
 import type { ImportReviewVerificationMethod } from './importReviewVerificationMethod';
 
 /**
+ * Legacy overrideReason is preserved for compatibility and historical review evidence, but ignored for patient overlaps. Overlaps always block; same-day other-clinic nonoverlap is informational and needs no reason.
  * @nullable
  */
 export type ImportReview = {

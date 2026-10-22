@@ -8,6 +8,7 @@ import { patientScopeSql } from "../lib/patient-access";
 import { scheduleAppointmentReminders } from "../reminders/lifecycle";
 import { evaluate, type Appointment } from "../appointments/engine";
 import { hebronDay, isMinor } from "../patients/demographics";
+import { duplicateIdentity, schedulingIdentities, equivalentPatientIds } from "../patients/identity";
 import { importMessages } from "./messages";
 import { uploadInput, mapInput, commitInput, newPatientInput, sourceRow, interval, statuses, issue, localTime, wallToUtc, zone,
   type SourceRow, type Mapping, type Issue } from "./validation";
@@ -149,10 +150,16 @@ async function association(c: PoolClient, a: Auth, r: ImportRow, appointmentId: 
 async function conflicts(c: PoolClient, a: Auth, rs: ImportRow[]): Promise<Conflict[]> {
   const candidates = rs.filter(r => r.staging.mapping && r.staging.review?.action !== "skip" && !r.staging.errors.length);
   const results: Conflict[] = [], seen = new Map<string, Conflict>();
+  const identities = await schedulingIdentities(c);
+  for (const r of candidates) {
+    const p = r.staging.review?.newPatient;
+    if (p) identities.set(-r.id, duplicateIdentity({ patient_name: p.name, phone: p.phone, dob: p.dateOfBirth }));
+  }
   for (const r of candidates) {
     const m = r.staging.mapping!, review = r.staging.review;
+    const patientIds = equivalentPatientIds(identities, engineRow(r).patientId);
     const { rows: [clinic] } = await c.query("SELECT * FROM operational.clinics WHERE clinic_id=$1", [m.clinicId]);
-    const { rows: existing } = await c.query("SELECT * FROM operational.appointments WHERE doctor_id=$1 OR patient_id=$2", [m.doctorId, review?.patientId ?? 0]);
+    const { rows: existing } = await c.query("SELECT * FROM operational.appointments WHERE doctor_id=$1 OR patient_id=ANY($2::integer[])", [m.doctorId, patientIds]);
     // Coincident doctor/time is visible evidence, not a booking conflict or identity
     // match. The real export has five such rows, including inactive statuses.
     for (const p of existing) {
@@ -168,6 +175,7 @@ async function conflicts(c: PoolClient, a: Auth, rs: ImportRow[]): Promise<Confl
     const result = evaluate({
       appointment: { ...engineRow(r), id: associated ?? -r.id },
       appointments: [...existing.map(appointmentRow), ...other.map(engineRow)],
+      equivalentPatientIds: patientIds,
       holds: holds.map(h => ({ clinicId: h.clinic_id, doctorId: h.doctor_id, startAt: h.starts_at.toISOString(),
         durationMinutes: h.duration_minutes, ownerId: -1, expiresAt: h.expires_at.toISOString() })),
       settings: { workingDays: clinic.working_days, openTime: clinic.open_time, closeTime: clinic.close_time, slotMinutes: clinic.slot_minutes, timezone: clinic.timezone },

@@ -33,7 +33,8 @@ async function openPatientOverlap(page: import('@playwright/test').Page) {
   await page.getByTestId('input-booking-time').fill('09:00');
   await expect(page.getByTestId('button-review-conflicts')).toBeVisible({ timeout: 5000 });
   await page.getByTestId('button-review-conflicts').click();
-  await expect(page.getByTestId('checkbox-override-ack')).toBeVisible();
+  await expect(page.getByTestId('text-no-override')).toBeVisible();
+  await expect(page.getByTestId('section-override')).toHaveCount(0);
   await page.waitForTimeout(250);
 }
 
@@ -83,13 +84,12 @@ test('drawer and patient-overlap dialog stay within desktop/mobile viewports in 
         expect.soft(geometry.conflict.right, `${viewport.width}px conflict right, ${locale}/${theme}`).toBeLessThanOrEqual(viewport.width);
         expect.soft(geometry.scrollWidth, `${viewport.width}px conflict scrollWidth, ${locale}/${theme}`).toBeLessThanOrEqual(geometry.clientWidth);
 
+        const controls = page.getByTestId('dialog-conflicts').locator('button:not(:disabled),input:not(:disabled),select:not(:disabled),textarea:not(:disabled),a[href],[tabindex="0"]');
+        await controls.last().focus();
         await page.keyboard.press('Tab');
-        await expect(page.getByTestId('checkbox-override-ack')).toBeFocused();
-        await page.keyboard.press('Tab');
-        await page.keyboard.press('Tab');
-        await expect(page.getByTestId('button-close-conflicts')).toBeFocused();
+        await expect(controls.first()).toBeFocused();
         await page.keyboard.press('Shift+Tab');
-        await expect(page.getByRole('dialog').nth(1).getByRole('button', { name: /close|إغلاق/i }).last()).toBeFocused();
+        await expect(controls.last()).toBeFocused();
         await page.keyboard.press('Escape');
         await expect(page.getByTestId('button-review-conflicts')).toBeFocused();
       }
@@ -97,26 +97,31 @@ test('drawer and patient-overlap dialog stay within desktop/mobile viewports in 
   }
 });
 
-test('patient 9003 requires a nonblank reason and expired fixture hold can be rechecked', async ({ page }) => {
+test('patient 9003 cannot proceed or acknowledge an overlap', async ({ page }) => {
+  await openPatientOverlap(page);
+  await expect(page.getByTestId('conflict-patient-overlap')).toBeVisible();
+  await expect(page.getByTestId('checkbox-override-ack')).toHaveCount(0);
+  await expect(page.getByTestId('input-override-reason')).toHaveCount(0);
+  await expect(page.getByTestId('button-stage-next')).toBeDisabled();
+  await page.getByTestId('button-close-conflicts').click();
+  await expect(page.getByTestId('button-stage-next')).toBeDisabled();
+  await expect(page.getByTestId('button-confirm-booking')).toHaveCount(0);
+});
+
+test('nonoverlapping patient fixture hold expires and can be rechecked', async ({ page }) => {
   test.setTimeout(90000);
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto(dayFixture);
   await page.getByTestId('link-new-booking').click();
-  await page.getByTestId('input-patient-search').fill(patientName);
-  await expect(page.getByTestId('option-patient-9003')).toBeVisible();
-  await page.getByTestId('input-patient-search').click();
-  await page.keyboard.press('Enter');
+  await page.getByTestId('input-patient-search').fill('محمد');
+  await expect(page.getByTestId('option-patient-9001')).toBeVisible();
+  await page.getByTestId('option-patient-9001').click();
   await page.getByTestId('select-booking-doctor').selectOption('9100101');
   await page.getByTestId('input-booking-date').fill('2025-03-10');
   await page.getByTestId('input-booking-time').fill('09:00');
   await expect(page.getByTestId('button-review-conflicts')).toBeVisible({ timeout: 5000 });
   await page.getByTestId('button-review-conflicts').click();
-  await page.getByTestId('checkbox-override-ack').click();
-  const reason = page.getByTestId('input-override-reason');
-  await expect(reason).toBeVisible();
-  await expect(reason).toHaveValue('');
-  await expect(page.getByTestId('button-stage-next')).toBeDisabled();
-  await reason.fill('Confirmed intentionally with the patient.');
+  await expect(page.getByTestId('section-override')).toHaveCount(0);
   await page.getByTestId('button-close-conflicts').click();
   await expect(page.getByTestId('button-stage-next')).toBeEnabled();
   await page.getByTestId('button-stage-next').click();

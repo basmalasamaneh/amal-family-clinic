@@ -58,8 +58,10 @@ export function counts(batch: ImportBatch, doctorFor: (email: string) => number 
   return c;
 }
 
-/** Conflicts needing action: blocking or unacknowledged warnings. Info and acknowledged never block. */
-export const openConflicts = (cs: ImportConflict[]) => cs.filter((c) => c.severity === 'blocking' || c.severity === 'warning');
+export const isPatientOverlap = (c: ImportConflict) => c.code.toLowerCase().replaceAll('_', '-') === 'patient-overlap';
+/** Legacy warning/acknowledged overlap responses must not open the commit gate. */
+export const conflictSeverity = (c: ImportConflict) => isPatientOverlap(c) ? 'blocking' as const : c.severity;
+export const openConflicts = (cs: ImportConflict[]) => cs.filter((c) => conflictSeverity(c) === 'blocking' || conflictSeverity(c) === 'warning');
 export function groupConflicts(cs: ImportConflict[]) {
   return {
     intra: cs.filter((c) => c.kind === 'intra-export'),
@@ -163,15 +165,11 @@ export function buildReview(rowId: number, d: Draft, x: Extras, doctorId: number
     rowId, action: 'include', doctorId: doctorId!, identity,
     ...(x.startLocal.trim() && x.endLocal.trim() ? { startLocal: toWall(x.startLocal), endLocal: toWall(x.endLocal) } : {}),
     ...(x.associateAppointmentId && d.kind === 'existing' ? { associateAppointmentId: x.associateAppointmentId } : {}),
-    ...(x.overrideReason.trim() ? { overrideReason: x.overrideReason.trim() } : {}),
   };
 }
 
-/** Override reason is shown only when the server returned an unacknowledged/acknowledged patient warning for the row. */
-export const rowWarnings = (batch: ImportBatch, rowId: number) =>
-  batch.conflicts.filter((c) => c.rowIds.includes(rowId) && (c.severity === 'warning' || c.severity === 'acknowledged'));
 export const rowAssociations = (batch: ImportBatch, rowId: number) =>
-  [...new Set(batch.conflicts.filter((c) => c.rowIds.includes(rowId) && c.kind !== 'intra-export' && c.appointmentId).map((c) => c.appointmentId!))];
+  [...new Set(batch.conflicts.filter((c) => c.rowIds.includes(rowId) && !isPatientOverlap(c) && c.kind !== 'intra-export' && c.appointmentId).map((c) => c.appointmentId!))];
 
 /* ---------- Errors ---------- */
 export type FailKind = 'stale' | 'conflict' | 'validation' | 'denied' | 'notFound' | 'session' | 'network' | 'server' | 'unknown';

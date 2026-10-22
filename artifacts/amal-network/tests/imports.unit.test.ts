@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import type { ImportBatch, ImportRow } from '@workspace/api-client-react';
 import { importAr, importEn } from '../src/imports/strings';
 import {
-  _resetPendingMemory, buildReview, canEnter, commitBody, commitReady, counts, emailGroups, effectiveDoctor, failure, isUncertain, parseExport, readLastBatch, readPending, rowState, stepOpen, toWall, validDateOnly, validate, writeLastBatch, writePending,
+  _resetPendingMemory, buildReview, canEnter, commitBody, commitReady, conflictSeverity, counts, emailGroups, effectiveDoctor, failure, isUncertain, openConflicts, parseExport, readLastBatch, readPending, rowState, stepOpen, toWall, validDateOnly, validate, writeLastBatch, writePending,
   type Draft, type Extras,
 } from '../src/imports/model';
 import { diff, verdict } from '../src/duplicates/model';
@@ -74,6 +74,23 @@ test('identity verification and new-patient rules', () => {
   assert.deepEqual(validate(create, { ...X, startLocal: '2025-03-30T10:00' }, 7).includes('errTimes'), true);
   assert.equal(toWall('2025-03-30T10:00'), '2025-03-30T10:00:00');
   assert.equal(validDateOnly('2024-02-29'), true);
+});
+
+test('legacy overlap acknowledgements cannot clear import conflicts or forward a reason', () => {
+  for (const code of ['patient-overlap', 'PATIENT_OVERLAP']) {
+    for (const severity of ['blocking', 'warning', 'info', 'acknowledged'] as const) {
+      const c = { kind: 'existing-appointment' as const, code, messageKey: 'conflict.patientOverlap', severity, rowIds: [1] };
+      assert.equal(conflictSeverity(c), 'blocking');
+      assert.deepEqual(openConflicts([c]), [c]);
+    }
+  }
+  const info = { kind: 'policy' as const, code: 'same-day-other-clinic', messageKey: 'conflict.sameDayOtherClinic', severity: 'info' as const, rowIds: [1] };
+  assert.equal(conflictSeverity(info), 'info');
+  assert.deepEqual(openConflicts([info]), []);
+  const d: Draft = { kind: 'existing', patientId: 5, method: 'phone', value: '0599000111' };
+  assert.equal('overrideReason' in buildReview(1, d, { ...X, overrideReason: 'legacy approval' }, 7), false);
+  const source = readFileSync(new URL('../src/imports/RowDialog.tsx', import.meta.url), 'utf8');
+  assert.equal(source.includes('input-override-reason'), false);
 });
 
 test('unmapped doctor with no authorized doctors can be individually skipped from mapping and reach commit', () => {
@@ -180,7 +197,8 @@ test('24 rows resolved individually: counts, skips, conflicts and commit readine
   const ob = stepOpen(blocking, emailGroups(blocking), doc);
   assert.equal(ob.conflicts, 1); assert.equal(commitReady(blocking, ob), false); assert.equal(canEnter(5, ob, true), false);
   const acked = mk(b.rows, 'reviewed', [{ kind: 'existing-appointment', code: 'PATIENT_OVERLAP', severity: 'acknowledged', rowIds: [2] }, { kind: 'source-coincidence', code: 'X', severity: 'info', rowIds: [3] }]);
-  assert.equal(commitReady(acked, stepOpen(acked, emailGroups(acked), doc)), true);
+  assert.equal(commitReady(acked, stepOpen(acked, emailGroups(acked), doc)), false);
+  assert.equal(stepOpen(acked, emailGroups(acked), doc).conflicts, 1);
   // Doctor remap invalidates all 18 included rows (skips stay resolved).
   const remap = (e: string) => effectiveDoctor(emailGroups(b).find((x) => x.email === e)!, { 'dr.a@clinic.ps': 8 }, new Set([7, 8]));
   const rc = counts(b, remap);

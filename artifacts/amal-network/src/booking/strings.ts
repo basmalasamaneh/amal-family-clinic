@@ -76,7 +76,7 @@ export const bookingEn = {
    "doctor-overlap": "The doctor already has an appointment at this time.",
    "slot-held": "Another staff member is holding this slot right now.",
    "outside-hours": "This time is outside the clinic working hours.",
-   "patient-overlap": "This patient already has an overlapping appointment.",
+   "patient-overlap": "This time conflicts with another booking. Patient overlaps cannot be overridden.",
    "same-day-other-clinic": "This patient has another appointment the same day at another clinic.",
    "unknown": "The server reported a conflict that this screen cannot describe. Booking is blocked."
   },
@@ -212,7 +212,7 @@ export const bookingAr = {
    "doctor-overlap": "لدى الطبيب موعد آخر في هذا الوقت.",
    "slot-held": "موظف آخر يحجز هذا الوقت مؤقتًا الآن.",
    "outside-hours": "هذا الوقت خارج ساعات عمل العيادة.",
-   "patient-overlap": "لدى هذا المريض موعد متداخل.",
+   "patient-overlap": "يتعارض هذا الوقت مع حجز آخر. لا يمكن تجاوز تداخل مواعيد المريض.",
    "same-day-other-clinic": "لدى هذا المريض موعد آخر في اليوم نفسه في عيادة أخرى.",
    "unknown": "أبلغ الخادم عن تعارض لا تستطيع هذه الشاشة وصفه. الحجز ممنوع."
   },

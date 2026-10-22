@@ -110,8 +110,10 @@ history plus a redacted audit. Exact decision retries return the original
 result. Stale/concurrent decisions cannot overwrite newer decisions.
 Failed fresh scheduling validation rolls both move legs back and records an
 open result/history. New attempts need a new operation ID and returned version.
-Doctor overlaps remain blocking. Patient overrides require explicit authorized
-reasons and existing atomic audit rules. Offline hold tokens are never renewed
+Doctor and patient overlaps remain blocking. No authorization or reason permits
+a patient overlap; legacy overrideReason fields are ignored for overlaps.
+Same-day other-clinic nonoverlap is informational and needs no reason.
+Offline hold tokens are never renewed
 or treated as a guarantee during resolution.
 
 ## Pull bootstrap, continuation and privacy

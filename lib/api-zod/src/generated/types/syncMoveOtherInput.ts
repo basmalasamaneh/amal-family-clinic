@@ -7,6 +7,9 @@
  */
 import type { SyncMoveOtherInputAction } from './syncMoveOtherInputAction';
 
+/**
+ * Resolution rechecks authoritative booking rules. Legacy overrideReason cannot permit a patient overlap.
+ */
 export interface SyncMoveOtherInput {
   clientOpId: string;
   conflictId: string;

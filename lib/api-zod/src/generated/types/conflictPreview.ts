@@ -8,7 +8,7 @@
 import type { ConflictItem } from './conflictItem';
 
 /**
- * Exactly {ok, conflicts}. ok means committing is permitted by current rules, not a reservation. Blocking conflicts always prevent writes. Patient warnings require an authorized nonblank overrideReason. Information alone never blocks. Preview has no appointment/audit writes.
+ * Exactly {ok, conflicts}. ok means committing is permitted by current rules, not a reservation. Patient overlaps always block across all clinics: the same patient ID, or different IDs with all three exact normalized name, phone and date of birth values matching. No override reason or authorization permits an overlap. Legacy patient warning responses must also be treated as blocking. Same-day other-clinic nonoverlap is informational and needs no reason. Conflict details must not disclose matched patient identifiers. Preview has no appointment/audit writes.
  */
 export interface ConflictPreview {
   ok: boolean;

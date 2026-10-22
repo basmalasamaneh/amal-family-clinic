@@ -7,6 +7,9 @@
  */
 import type { AppointmentCheckInputSource } from './appointmentCheckInputSource';
 
+/**
+ * Patient overlaps always block across clinics. Legacy overrideReason is retained for compatibility but cannot permit an overlap.
+ */
 export interface AppointmentCheckInput {
   clientOpId?: string;
   /** @minimum 1 */

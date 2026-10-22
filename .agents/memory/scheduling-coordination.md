@@ -6,6 +6,21 @@ description: Scheduling writes must share database coordination, including futur
 All future scheduling writers, including sync/import, must join the same
 database transaction lock protocol as appointment and hold mutations.
 
+Patient time overlaps must be non-overridable, across clinics regardless of
+network participation. Separate patient records also conflict when all three
+canonical identity fields (name, phone and valid date of birth) match. Missing
+fields or name-only similarity are not sufficient. This is scheduling safety,
+not permission to merge records or share clinical information.
+
+**Why:** On 2026-10-22 the user explicitly replaced the previous patient-warning
+override policy with absolute blocking and requested all-three-field duplicate
+matching. Existing appointments must not be rewritten to apply the new policy.
+
+**How to apply:** Enforce at every authoritative scheduling write, including
+import and offline synchronization; drafts are not confirmed bookings. Keep
+unavailable cross-clinic evidence generic. Coordinate demographic changes with
+scheduling so edits cannot introduce a new overlapping identity group.
+
 **Why:** Existing historical operational collisions must remain intact, so a
 blanket exclusion constraint cannot be used. Locks must cover both doctor
 occupancy and cross-clinic patient checks; separate per-process locks permit

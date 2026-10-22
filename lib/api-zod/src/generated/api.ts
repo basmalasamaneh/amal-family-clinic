@@ -131,7 +131,7 @@ export const CheckWaitlistOfferResponse = zod.object({
   "endsAt": zod.coerce.date()
 }).strict())
 }).strict())
-}).strict().describe('Exactly {ok, conflicts}. ok means committing is permitted by current rules, not a reservation. Blocking conflicts always prevent writes. Patient warnings require an authorized nonblank overrideReason. Information alone never blocks. Preview has no appointment/audit writes.')
+}).strict().describe('Exactly {ok, conflicts}. ok means committing is permitted by current rules, not a reservation. Patient overlaps always block across all clinics: the same patient ID, or different IDs with all three exact normalized name, phone and date of birth values matching. No override reason or authorization permits an overlap. Legacy patient warning responses must also be treated as blocking. Same-day other-clinic nonoverlap is informational and needs no reason. Conflict details must not disclose matched patient identifiers. Preview has no appointment/audit writes.')
 
 
 /**
@@ -153,7 +153,7 @@ export const DecideWaitlistOfferBody = zod.object({
   "clientOpId": zod.string().uuid(),
   "decision": zod.enum(['accept', 'decline']),
   "overrideReason": zod.string().min(1).max(decideWaitlistOfferBodyOverrideReasonMax).optional()
-}).strict()
+}).strict().describe('Booking uses the authoritative appointment conflict rules. Legacy overrideReason is accepted for compatibility but ignored for patient overlaps; same-day other-clinic nonoverlap needs no reason.')
 
 export const DecideWaitlistOfferResponse = zod.object({
   "id": zod.number().int(),
@@ -1142,7 +1142,7 @@ export const CreateAppointmentBody = zod.object({
   "source": zod.enum(['phone', 'walk-in', 'online', 'import']),
   "overrideReason": zod.string().min(1).max(createAppointmentBodyOverrideReasonMax).regex(createAppointmentBodyOverrideReasonRegExp).optional(),
   "holdToken": zod.string().uuid().optional()
-}).strict()
+}).strict().describe('Patient overlaps always block across clinics. Legacy overrideReason is retained for compatibility but cannot permit an overlap.')
 
 
 
@@ -1200,7 +1200,7 @@ export const UpdateAppointmentBody = zod.object({
   "overrideReason": zod.string().min(1).max(updateAppointmentBodyOverrideReasonMax).regex(updateAppointmentBodyOverrideReasonRegExp).optional(),
   "holdToken": zod.string().uuid().optional(),
   "cancelReason": zod.string().min(1).max(updateAppointmentBodyCancelReasonMax).regex(updateAppointmentBodyCancelReasonRegExp).optional()
-}).strict()
+}).strict().describe('Patient overlaps always block across clinics. Legacy overrideReason is retained for compatibility but cannot permit an overlap.')
 
 
 
@@ -1254,7 +1254,7 @@ export const CheckAppointmentsBody = zod.object({
   "holdToken": zod.string().uuid().optional(),
   "appointmentId": zod.number().int().min(1).optional(),
   "expectedVersion": zod.number().int().min(1).optional()
-}).strict()
+}).strict().describe('Patient overlaps always block across clinics. Legacy overrideReason is retained for compatibility but cannot permit an overlap.')
 
 
 
@@ -1274,7 +1274,7 @@ export const CheckAppointmentsResponse = zod.object({
   "endsAt": zod.coerce.date()
 }).strict())
 }).strict())
-}).strict().describe('Exactly {ok, conflicts}. ok means committing is permitted by current rules, not a reservation. Blocking conflicts always prevent writes. Patient warnings require an authorized nonblank overrideReason. Information alone never blocks. Preview has no appointment/audit writes.')
+}).strict().describe('Exactly {ok, conflicts}. ok means committing is permitted by current rules, not a reservation. Patient overlaps always block across all clinics: the same patient ID, or different IDs with all three exact normalized name, phone and date of birth values matching. No override reason or authorization permits an overlap. Legacy patient warning responses must also be treated as blocking. Same-day other-clinic nonoverlap is informational and needs no reason. Conflict details must not disclose matched patient identifiers. Preview has no appointment/audit writes.')
 
 
 /**
@@ -1813,7 +1813,7 @@ export const PushSyncBody = zod.object({
   "source": zod.enum(['phone', 'walk-in', 'online', 'import']),
   "overrideReason": zod.string().min(1).max(pushSyncBodyOperationsItemOneInputOverrideReasonMax).regex(pushSyncBodyOperationsItemOneInputOverrideReasonRegExp).optional(),
   "holdToken": zod.string().uuid().optional()
-}).strict()
+}).strict().describe('Patient overlaps always block across clinics. Legacy overrideReason is retained for compatibility but cannot permit an overlap.')
 }).strict(),zod.object({
   "sequence": zod.number().int().min(1),
   "type": zod.enum(['update']),
@@ -1827,7 +1827,7 @@ export const PushSyncBody = zod.object({
   "overrideReason": zod.string().min(1).max(pushSyncBodyOperationsItemTwoInputOverrideReasonMax).regex(pushSyncBodyOperationsItemTwoInputOverrideReasonRegExp).optional(),
   "holdToken": zod.string().uuid().optional(),
   "cancelReason": zod.string().min(1).max(pushSyncBodyOperationsItemTwoInputCancelReasonMax).regex(pushSyncBodyOperationsItemTwoInputCancelReasonRegExp).optional()
-}).strict()
+}).strict().describe('Patient overlaps always block across clinics. Legacy overrideReason is retained for compatibility but cannot permit an overlap.')
 }).strict()])).min(1).max(pushSyncBodyOperationsMax)
 }).strict().describe('One to fifty operations in consecutive positive device sequence order. The server rejects sequence gaps and blocks all successors after an unresolved or rejected predecessor. Only appointment create and update are supported.')
 
@@ -2028,7 +2028,7 @@ export const ListSyncConflictsResponse = zod.object({
   "source": zod.enum(['phone', 'walk-in', 'online', 'import']),
   "overrideReason": zod.string().min(1).max(listSyncConflictsResponseItemsItemOperationPayloadOneOverrideReasonMax).regex(listSyncConflictsResponseItemsItemOperationPayloadOneOverrideReasonRegExp).optional(),
   "holdToken": zod.string().uuid().optional()
-}).strict(),zod.object({
+}).strict().describe('Patient overlaps always block across clinics. Legacy overrideReason is retained for compatibility but cannot permit an overlap.'),zod.object({
   "clientOpId": zod.string().uuid(),
   "expectedVersion": zod.number().int().min(1),
   "startsAt": zod.coerce.date().optional().describe('UTC ISO 8601 instant ending in Z; enforced by the appointment service before coercion.'),
@@ -2037,7 +2037,7 @@ export const ListSyncConflictsResponse = zod.object({
   "overrideReason": zod.string().min(1).max(listSyncConflictsResponseItemsItemOperationPayloadTwoOverrideReasonMax).regex(listSyncConflictsResponseItemsItemOperationPayloadTwoOverrideReasonRegExp).optional(),
   "holdToken": zod.string().uuid().optional(),
   "cancelReason": zod.string().min(1).max(listSyncConflictsResponseItemsItemOperationPayloadTwoCancelReasonMax).regex(listSyncConflictsResponseItemsItemOperationPayloadTwoCancelReasonRegExp).optional()
-}).strict()])
+}).strict().describe('Patient overlaps always block across clinics. Legacy overrideReason is retained for compatibility but cannot permit an overlap.')])
 }).strict(),
   "targetId": zod.number().int().min(1).nullable(),
   "baseVersion": zod.number().int().min(1).nullable(),
@@ -2156,7 +2156,7 @@ export const ResolveSyncBody = zod.union([zod.object({
   "endsAt": zod.coerce.date().describe('UTC ISO 8601 instant ending in Z; enforced by the service before coercion.'),
   "targetExpectedVersion": zod.number().int().min(1).optional().describe('Required by the service when the original proposal updates an existing appointment.'),
   "overrideReason": zod.string().min(1).max(resolveSyncBodyTwoOverrideReasonMax).regex(resolveSyncBodyTwoOverrideReasonRegExp).optional()
-}).strict(),zod.object({
+}).strict().describe('Resolution rechecks authoritative booking rules. Legacy overrideReason cannot permit a patient overlap.'),zod.object({
   "clientOpId": zod.string().uuid(),
   "conflictId": zod.string().uuid(),
   "expectedVersion": zod.number().int().min(1),
@@ -2167,7 +2167,7 @@ export const ResolveSyncBody = zod.union([zod.object({
   "otherExpectedVersion": zod.number().int().min(1),
   "targetExpectedVersion": zod.number().int().min(1).optional().describe('Required by the service when the original proposal updates an existing appointment.'),
   "overrideReason": zod.string().min(1).max(resolveSyncBodyThreeOverrideReasonMax).regex(resolveSyncBodyThreeOverrideReasonRegExp).optional()
-}).strict()])
+}).strict().describe('Resolution rechecks authoritative booking rules. Legacy overrideReason cannot permit a patient overlap.')])
 
 
 
@@ -2258,7 +2258,7 @@ export const UploadImportResponse = zod.object({
   "reason": zod.string().optional(),
   "overrideReason": zod.string().optional(),
   "associateAppointmentId": zod.number().int().optional()
-}).strict().nullable(),
+}).strict().nullable().describe('Legacy overrideReason is preserved for compatibility and historical review evidence, but ignored for patient overlaps. Overlaps always block; same-day other-clinic nonoverlap is informational and needs no reason.'),
   "reviewHistory": zod.array(zod.object({
   "rowId": zod.number().int(),
   "version": zod.number().int(),
@@ -2288,7 +2288,7 @@ export const UploadImportResponse = zod.object({
   "messageKey": zod.string(),
   "severity": zod.enum(['blocking', 'warning', 'info', 'acknowledged']),
   "appointmentId": zod.number().int().optional()
-}).strict())
+}).strict().describe('Patient overlap always blocks, including legacy warning or acknowledged severities. Same-day other-clinic nonoverlap is informational and needs no reason. Do not disclose matched patient identifiers.'))
 }).strict()).optional(),
   "mapping": zod.object({
   "doctorId": zod.number().int(),
@@ -2324,7 +2324,7 @@ export const UploadImportResponse = zod.object({
   "messageKey": zod.string(),
   "severity": zod.enum(['blocking', 'warning', 'info', 'acknowledged']),
   "appointmentId": zod.number().int().optional()
-}).strict())
+}).strict().describe('Patient overlap always blocks, including legacy warning or acknowledged severities. Same-day other-clinic nonoverlap is informational and needs no reason. Do not disclose matched patient identifiers.'))
 }).strict()
 
 
@@ -2395,7 +2395,7 @@ export const MapImportBody = zod.object({
   "endLocal": zod.string().regex(mapImportBodyRowsItemTwoEndLocalRegExp).optional(),
   "associateAppointmentId": zod.number().int().min(1).optional(),
   "overrideReason": zod.string().min(1).max(mapImportBodyRowsItemTwoOverrideReasonMax).optional()
-}).strict()])).min(1).max(mapImportBodyRowsMax)
+}).strict()]).describe('Legacy overrideReason remains accepted for backwards compatibility but is ignored for patient overlaps. Patient overlaps cannot be acknowledged or overridden; reschedule or skip the row. Same-day other-clinic nonoverlap is informational and needs no reason.')).min(1).max(mapImportBodyRowsMax)
 }).strict()
 
 export const MapImportResponse = zod.object({
@@ -2425,7 +2425,7 @@ export const MapImportResponse = zod.object({
   "reason": zod.string().optional(),
   "overrideReason": zod.string().optional(),
   "associateAppointmentId": zod.number().int().optional()
-}).strict().nullable(),
+}).strict().nullable().describe('Legacy overrideReason is preserved for compatibility and historical review evidence, but ignored for patient overlaps. Overlaps always block; same-day other-clinic nonoverlap is informational and needs no reason.'),
   "reviewHistory": zod.array(zod.object({
   "rowId": zod.number().int(),
   "version": zod.number().int(),
@@ -2455,7 +2455,7 @@ export const MapImportResponse = zod.object({
   "messageKey": zod.string(),
   "severity": zod.enum(['blocking', 'warning', 'info', 'acknowledged']),
   "appointmentId": zod.number().int().optional()
-}).strict())
+}).strict().describe('Patient overlap always blocks, including legacy warning or acknowledged severities. Same-day other-clinic nonoverlap is informational and needs no reason. Do not disclose matched patient identifiers.'))
 }).strict()).optional(),
   "mapping": zod.object({
   "doctorId": zod.number().int(),
@@ -2491,7 +2491,7 @@ export const MapImportResponse = zod.object({
   "messageKey": zod.string(),
   "severity": zod.enum(['blocking', 'warning', 'info', 'acknowledged']),
   "appointmentId": zod.number().int().optional()
-}).strict())
+}).strict().describe('Patient overlap always blocks, including legacy warning or acknowledged severities. Same-day other-clinic nonoverlap is informational and needs no reason. Do not disclose matched patient identifiers.'))
 }).strict()
 
 
@@ -2537,7 +2537,7 @@ export const CommitImportResponse = zod.object({
   "reason": zod.string().optional(),
   "overrideReason": zod.string().optional(),
   "associateAppointmentId": zod.number().int().optional()
-}).strict().nullable(),
+}).strict().nullable().describe('Legacy overrideReason is preserved for compatibility and historical review evidence, but ignored for patient overlaps. Overlaps always block; same-day other-clinic nonoverlap is informational and needs no reason.'),
   "reviewHistory": zod.array(zod.object({
   "rowId": zod.number().int(),
   "version": zod.number().int(),
@@ -2567,7 +2567,7 @@ export const CommitImportResponse = zod.object({
   "messageKey": zod.string(),
   "severity": zod.enum(['blocking', 'warning', 'info', 'acknowledged']),
   "appointmentId": zod.number().int().optional()
-}).strict())
+}).strict().describe('Patient overlap always blocks, including legacy warning or acknowledged severities. Same-day other-clinic nonoverlap is informational and needs no reason. Do not disclose matched patient identifiers.'))
 }).strict()).optional(),
   "mapping": zod.object({
   "doctorId": zod.number().int(),
@@ -2603,7 +2603,7 @@ export const CommitImportResponse = zod.object({
   "messageKey": zod.string(),
   "severity": zod.enum(['blocking', 'warning', 'info', 'acknowledged']),
   "appointmentId": zod.number().int().optional()
-}).strict())
+}).strict().describe('Patient overlap always blocks, including legacy warning or acknowledged severities. Same-day other-clinic nonoverlap is informational and needs no reason. Do not disclose matched patient identifiers.'))
 }).strict()
 
 
@@ -3804,7 +3804,7 @@ export const AcquireAppointmentHoldBody = zod.object({
   "endsAt": zod.coerce.date().describe('UTC ISO 8601 instant ending in Z; enforced by the appointment service before coercion.'),
   "overrideReason": zod.string().min(1).max(acquireAppointmentHoldBodyOverrideReasonMax).regex(acquireAppointmentHoldBodyOverrideReasonRegExp).optional(),
   "appointmentId": zod.number().int().min(1).optional()
-}).strict()
+}).strict().describe('Patient overlaps always block across clinics. Legacy overrideReason is retained for compatibility but cannot permit an overlap.')
 
 export const AcquireAppointmentHoldResponse = zod.object({
   "token": zod.string().uuid(),
@@ -3861,7 +3861,7 @@ export const GetImportBatchResponse = zod.object({
   "reason": zod.string().optional(),
   "overrideReason": zod.string().optional(),
   "associateAppointmentId": zod.number().int().optional()
-}).strict().nullable(),
+}).strict().nullable().describe('Legacy overrideReason is preserved for compatibility and historical review evidence, but ignored for patient overlaps. Overlaps always block; same-day other-clinic nonoverlap is informational and needs no reason.'),
   "reviewHistory": zod.array(zod.object({
   "rowId": zod.number().int(),
   "version": zod.number().int(),
@@ -3891,7 +3891,7 @@ export const GetImportBatchResponse = zod.object({
   "messageKey": zod.string(),
   "severity": zod.enum(['blocking', 'warning', 'info', 'acknowledged']),
   "appointmentId": zod.number().int().optional()
-}).strict())
+}).strict().describe('Patient overlap always blocks, including legacy warning or acknowledged severities. Same-day other-clinic nonoverlap is informational and needs no reason. Do not disclose matched patient identifiers.'))
 }).strict()).optional(),
   "mapping": zod.object({
   "doctorId": zod.number().int(),
@@ -3927,7 +3927,7 @@ export const GetImportBatchResponse = zod.object({
   "messageKey": zod.string(),
   "severity": zod.enum(['blocking', 'warning', 'info', 'acknowledged']),
   "appointmentId": zod.number().int().optional()
-}).strict())
+}).strict().describe('Patient overlap always blocks, including legacy warning or acknowledged severities. Same-day other-clinic nonoverlap is informational and needs no reason. Do not disclose matched patient identifiers.'))
 }).strict()
 
 
@@ -3974,7 +3974,7 @@ export const DownloadImportReportResponse = zod.object({
   "reason": zod.string().optional(),
   "overrideReason": zod.string().optional(),
   "associateAppointmentId": zod.number().int().optional()
-}).strict().nullable(),
+}).strict().nullable().describe('Legacy overrideReason is preserved for compatibility and historical review evidence, but ignored for patient overlaps. Overlaps always block; same-day other-clinic nonoverlap is informational and needs no reason.'),
   "reviewHistory": zod.array(zod.object({
   "rowId": zod.number().int(),
   "version": zod.number().int(),
@@ -4004,7 +4004,7 @@ export const DownloadImportReportResponse = zod.object({
   "messageKey": zod.string(),
   "severity": zod.enum(['blocking', 'warning', 'info', 'acknowledged']),
   "appointmentId": zod.number().int().optional()
-}).strict())
+}).strict().describe('Patient overlap always blocks, including legacy warning or acknowledged severities. Same-day other-clinic nonoverlap is informational and needs no reason. Do not disclose matched patient identifiers.'))
 }).strict()).optional(),
   "mapping": zod.object({
   "doctorId": zod.number().int(),
@@ -4040,7 +4040,7 @@ export const DownloadImportReportResponse = zod.object({
   "messageKey": zod.string(),
   "severity": zod.enum(['blocking', 'warning', 'info', 'acknowledged']),
   "appointmentId": zod.number().int().optional()
-}).strict())
+}).strict().describe('Patient overlap always blocks, including legacy warning or acknowledged severities. Same-day other-clinic nonoverlap is informational and needs no reason. Do not disclose matched patient identifiers.'))
 }).strict()
 }).strict()
 

@@ -131,6 +131,9 @@ export const WaitlistDecisionInputDecision = {
   decline: 'decline',
 } as const;
 
+/**
+ * Booking uses the authoritative appointment conflict rules. Legacy overrideReason is accepted for compatibility but ignored for patient overlaps; same-day other-clinic nonoverlap needs no reason.
+ */
 export interface WaitlistDecisionInput {
   clientOpId: string;
   decision: WaitlistDecisionInputDecision;
@@ -622,6 +625,9 @@ export const AppointmentInputSource = {
   import: 'import',
 } as const;
 
+/**
+ * Patient overlaps always block across clinics. Legacy overrideReason is retained for compatibility but cannot permit an overlap.
+ */
 export interface AppointmentInput {
   clientOpId: string;
   /** @minimum 1 */
@@ -685,6 +691,9 @@ export const AppointmentUpdateStatus = {
   cancelled: 'cancelled',
 } as const;
 
+/**
+ * Patient overlaps always block across clinics. Legacy overrideReason is retained for compatibility but cannot permit an overlap.
+ */
 export interface AppointmentUpdate {
   clientOpId: string;
   /** @minimum 1 */
@@ -749,7 +758,7 @@ export interface ConflictItem {
 }
 
 /**
- * Exactly {ok, conflicts}. ok means committing is permitted by current rules, not a reservation. Blocking conflicts always prevent writes. Patient warnings require an authorized nonblank overrideReason. Information alone never blocks. Preview has no appointment/audit writes.
+ * Exactly {ok, conflicts}. ok means committing is permitted by current rules, not a reservation. Patient overlaps always block across all clinics: the same patient ID, or different IDs with all three exact normalized name, phone and date of birth values matching. No override reason or authorization permits an overlap. Legacy patient warning responses must also be treated as blocking. Same-day other-clinic nonoverlap is informational and needs no reason. Conflict details must not disclose matched patient identifiers. Preview has no appointment/audit writes.
  */
 export interface ConflictPreview {
   ok: boolean;
@@ -1458,6 +1467,9 @@ export const SyncMoveSelfInputAction = {
   'move-self': 'move-self',
 } as const;
 
+/**
+ * Resolution rechecks authoritative booking rules. Legacy overrideReason cannot permit a patient overlap.
+ */
 export interface SyncMoveSelfInput {
   clientOpId: string;
   conflictId: string;
@@ -1488,6 +1500,9 @@ export const SyncMoveOtherInputAction = {
   'move-other': 'move-other',
 } as const;
 
+/**
+ * Resolution rechecks authoritative booking rules. Legacy overrideReason cannot permit a patient overlap.
+ */
 export interface SyncMoveOtherInput {
   clientOpId: string;
   conflictId: string;
@@ -1605,6 +1620,7 @@ export const ImportReviewIdentityAction = {
 } as const;
 
 /**
+ * Legacy overrideReason is preserved for compatibility and historical review evidence, but ignored for patient overlaps. Overlaps always block; same-day other-clinic nonoverlap is informational and needs no reason.
  * @nullable
  */
 export type ImportReview = {
@@ -2378,6 +2394,9 @@ export const AppointmentCheckInputSource = {
   import: 'import',
 } as const;
 
+/**
+ * Patient overlaps always block across clinics. Legacy overrideReason is retained for compatibility but cannot permit an overlap.
+ */
 export interface AppointmentCheckInput {
   clientOpId?: string;
   /** @minimum 1 */
@@ -2404,6 +2423,9 @@ export interface AppointmentCheckInput {
   expectedVersion?: number;
 }
 
+/**
+ * Patient overlaps always block across clinics. Legacy overrideReason is retained for compatibility but cannot permit an overlap.
+ */
 export interface AppointmentHoldInput {
   clientOpId: string;
   /** @minimum 1 */
@@ -2511,6 +2533,9 @@ export type ImportIdentity = {
   patient: ImportNewPatient;
 };
 
+/**
+ * Legacy overrideReason remains accepted for backwards compatibility but is ignored for patient overlaps. Patient overlaps cannot be acknowledged or overridden; reschedule or skip the row. Same-day other-clinic nonoverlap is informational and needs no reason.
+ */
 export type ImportRowReview = {
   /** @minimum 1 */
   rowId: number;
@@ -2620,6 +2645,9 @@ export const ImportConflictSeverity = {
   acknowledged: 'acknowledged',
 } as const;
 
+/**
+ * Patient overlap always blocks, including legacy warning or acknowledged severities. Same-day other-clinic nonoverlap is informational and needs no reason. Do not disclose matched patient identifiers.
+ */
 export interface ImportConflict {
   kind: ImportConflictKind;
   rowIds: number[];

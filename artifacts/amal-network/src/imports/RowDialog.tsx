@@ -6,7 +6,7 @@ import { getGetPatientQueryOptions, getListPatientsQueryKey, useListPatients, us
 import { useAmalPreferences } from '@workspace/amal-ui';
 import { formatInstant } from '@/shell/formatting';
 import {
-  BLOCKING_SOURCE_ISSUES, buildReview, failure, hasIssue, nameConfidence, rowAssociations, rowWarnings, srcEnd, srcName, srcStart, srcStatus, validate,
+  BLOCKING_SOURCE_ISSUES, buildReview, failure, hasIssue, isPatientOverlap, nameConfidence, rowAssociations, srcEnd, srcName, srcStart, srcStatus, validate,
   type Draft, type DraftError, type Extras,
 } from './model';
 import { errorText, issueText } from './i18n';
@@ -50,7 +50,7 @@ export function RowDialog({ batch, row, doctorId, doctorName, memory, focusSched
   const details = useQueries({ queries: ids.map((id) => ({ ...getGetPatientQueryOptions(id), staleTime: 30_000 })) });
   const candidates = ids.map((id, i) => ({ id, data: details[i]?.data, loading: details[i]?.isLoading, error: details[i]?.isError, suggested: row.suggestedPatientIds.includes(id) }));
   const searchHits = (search.data?.items ?? []).filter((p) => !ids.includes(p.id));
-  const warnings = rowWarnings(batch, row.id);
+  const patientOverlap = batch.conflicts.some((c) => c.rowIds.includes(row.id) && isPatientOverlap(c));
   const assoc = rowAssociations(batch, row.id);
   const err = (k: DraftError) => errors.includes(k) ? <p className="im-field-err" id={`err-${k}`} data-testid={`error-${k}`}>{t(`im.review.${k}`)}</p> : null;
   const setKind = (k: Draft['kind']) => setDraft(k === 'skip' ? { kind: 'skip', reason: draft.kind === 'skip' ? draft.reason : '' }
@@ -195,11 +195,7 @@ export function RowDialog({ batch, row, doctorId, doctorName, memory, focusSched
                   {assoc.map((id) => <option key={id} value={id}>{t('im.review.associateOpt', { id })}</option>)}
                 </select><p className="im-hint">{t('im.review.associateHint')}</p></div>
             )}
-            {warnings.some((w) => w.code === 'patient-overlap' || w.code === 'same-day-other-clinic') && (
-              <div><label className="im-label" htmlFor="ov">{t('im.review.override')}</label>
-                <textarea id="ov" className="im-input im-textarea" maxLength={1000} value={extras.overrideReason} onChange={(e) => setExtras({ ...extras, overrideReason: e.target.value })} data-testid="input-override-reason" />
-                <p className="im-hint">{t('im.review.overrideHint')}</p></div>
-            )}
+            {patientOverlap && <Msg tone="block">{t('im.review.overlapBlocked')}</Msg>}
           </details>
         )}
 

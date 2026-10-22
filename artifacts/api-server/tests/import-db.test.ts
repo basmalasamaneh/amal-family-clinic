@@ -247,7 +247,7 @@ test("late database failure rolls back new patients, appointments, provenance, a
     await admin.query("DROP FUNCTION operational.import_test_fail_commit()");
   }
 });
-test("existing association requires exact patient/time/status; warning overrides are explicit and audited", async () => {
+test("existing association requires exact patient/time/status; patient overlap overrides are rejected", async () => {
   const s = source(), booked: any = await createAppointment(actor, {
     clinicId: actor.clinicId, doctorId: doctor.doctor_id, patientId: patient.patient_id, startsAt: wallToUtc(s.start_time),
     endsAt: wallToUtc(s.end_time), source: "phone", clientOpId: randomUUID(),
@@ -262,13 +262,12 @@ test("existing association requires exact patient/time/status; warning overrides
   assert.ok(second);
   const overlap = await upload([{ ...s, event_id: eventId++, doctor_email: second.email }]);
   let mapped = await review(overlap, [include(overlap, 0, { doctorId: second.doctor_id })]);
-  assert.ok(mapped.conflicts.some((c: any) => c.code === "patient-overlap" && c.severity === "warning"));
+  assert.ok(mapped.conflicts.some((c: any) => c.code === "patient-overlap" && c.severity === "blocking"));
   await assert.rejects(commit(mapped), (e: any) => e.code === "IMPORT_CONFLICT");
   mapped = await review(mapped, [include(mapped, 0, { doctorId: second.doctor_id, overrideReason: "Reviewed sequential clinical handoff" })]);
-  const allowed = await commit(mapped);
-  assert.equal(allowed.rows[0].review.overrideReason, "Reviewed sequential clinical handoff");
+  await assert.rejects(commit(mapped), (e: any) => e.code === "IMPORT_CONFLICT");
   const audit = await admin.query("SELECT detail FROM operational.audit_log WHERE user_id=$1 AND action='import.row_committed' AND (detail->>'batchId')::integer=$2", [actor.id, mapped.id]);
-  assert.equal(audit.rows[0].detail.overrideReason, "Reviewed sequential clinical handoff");
+  assert.equal(audit.rows.length, 0);
 });
 test("DOB verification is date-only, missing doctors remain unresolved, outside-hours imports cannot override blockers", async () => {
   const invalidDoctor = await upload([{ ...source(), doctor_email: "missing@imports.invalid" }]);
@@ -312,7 +311,7 @@ test("corrected malformed source dates and invalid source intervals commit and r
     assert.equal(await count("appointments"), before + 1);
   }
 });
-test("both staged patient-overlap participants require their own warning acknowledgement", async () => {
+test("both staged patient-overlap participants remain blocked even with override reasons", async () => {
   const second = (await admin.query("SELECT * FROM operational.doctors WHERE clinic_id=$1 AND doctor_id<>$2 LIMIT 1",
     [actor.clinicId, doctor.doctor_id])).rows[0];
   assert.ok(second);
@@ -324,7 +323,7 @@ test("both staged patient-overlap participants require their own warning acknowl
   const warnings = mapped.conflicts.filter((c: any) => c.kind === "intra-export" && c.code === "patient-overlap");
   assert.equal(warnings.length, 1);
   assert.deepEqual(warnings[0].rowIds, b.rows.map((r: any) => r.id));
-  assert.equal(warnings[0].severity, "warning");
+  assert.equal(warnings[0].severity, "blocking");
   const counts = async () => ({ appointments: await count("appointments"), patients: await count("patients"),
     sourceLinks: await count("import_source_links"), audit: await count("audit_log"), receipts: await count("import_operations") });
   const before = await counts();
@@ -336,19 +335,18 @@ test("both staged patient-overlap participants require their own warning acknowl
     include(mapped, 0),
     include(mapped, 1, { doctorId: second.doctor_id, overrideReason: "Second row reviewed handoff" }),
   ]);
-  assert.equal(mapped.conflicts.find((c: any) => c.code === "patient-overlap").severity, "warning");
+  assert.equal(mapped.conflicts.find((c: any) => c.code === "patient-overlap").severity, "blocking");
   await assert.rejects(commit(mapped), (e: any) => e.code === "IMPORT_CONFLICT");
   mapped = await review(mapped, [
     include(mapped, 0, { overrideReason: "First row reviewed handoff" }),
     include(mapped, 1, { doctorId: second.doctor_id, overrideReason: "Second row reviewed handoff" }),
   ]);
   assert.equal(mapped.conflicts.filter((c: any) => c.code === "patient-overlap").length, 1);
-  assert.equal(mapped.conflicts.find((c: any) => c.code === "patient-overlap").severity, "acknowledged");
-  const committed = await commit(mapped);
-  assert.equal(committed.totals.created, 2);
-  assert.equal(await count("appointments"), before.appointments + 2);
+  assert.equal(mapped.conflicts.find((c: any) => c.code === "patient-overlap").severity, "blocking");
+  await assert.rejects(commit(mapped), (e: any) => e.code === "IMPORT_CONFLICT");
+  assert.equal(await count("appointments"), before.appointments);
   const evidence = (await admin.query(`SELECT detail->>'overrideReason' reason FROM operational.audit_log
     WHERE user_id=$1 AND action='import.row_committed' AND (detail->>'batchId')::integer=$2 ORDER BY (detail->>'rowId')::integer`,
   [actor.id, b.id])).rows.map(r => r.reason);
-  assert.deepEqual(evidence, ["First row reviewed handoff", "Second row reviewed handoff"]);
+  assert.deepEqual(evidence, []);
 });

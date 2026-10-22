@@ -24,7 +24,7 @@ export const realBookingApi: BookingApi = {
 /**
  * DEV FIXTURE ONLY: deterministic simulated engine for fixture sessions. Nothing is persisted
  * and no request reaches the server. Rules: local 10:00–10:59 doctor overlap (with server-like
- * suggestions), outside 08:00–16:00 blocked, patient 9003 has a patient-overlap warning,
+ * suggestions), outside 08:00–16:00 blocked, patient 9003 has a blocking patient overlap,
  * patient 9004 gets a same-day other-clinic notice.
  */
 export function createFixtureBookingApi(): BookingApi {
@@ -43,9 +43,9 @@ export function createFixtureBookingApi(): BookingApi {
       const offs = [11 * 60 - sm, 11 * 60 + 30 - sm, 9 * 60 + 30 - sm].filter((d) => sm + d >= 8 * 60);
       conflicts.push({ type: 'doctor-overlap', with: { appointmentId: 4812, clinicId: i.clinicId }, severity: 'blocking', suggestedSlots: offs.map(at) });
     }
-    if (i.patientId === 9003) conflicts.push({ type: 'patient-overlap', with: null, severity: 'warning', suggestedSlots: [] });
+    if (i.patientId === 9003) conflicts.push({ type: 'patient-overlap', with: null, severity: 'blocking', suggestedSlots: [] });
     if (i.patientId === 9004) conflicts.push({ type: 'same-day-other-clinic', with: null, severity: 'info', suggestedSlots: [] });
-    const ok = !conflicts.some((c) => c.severity === 'blocking') && (!conflicts.some((c) => c.severity === 'warning') || !!i.overrideReason?.trim());
+    const ok = !conflicts.some((c) => c.severity !== 'info');
     return { ok, conflicts };
   };
   return {

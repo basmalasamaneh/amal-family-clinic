@@ -52,7 +52,7 @@ const en = {
   reasons: 'Why it conflicts',
   reason: {
     'doctor-overlap': 'The doctor already has an appointment at this time.',
-    'patient-overlap': 'The patient already has an appointment at this time.',
+    'patient-overlap': 'This time conflicts with another booking. Patient overlaps cannot be overridden.',
     'same-day-other-clinic': 'The patient has an appointment at another clinic that day.',
     'outside-hours': 'This time is outside working hours.',
     'slot-held': 'This slot was being held by another booking.',
@@ -161,7 +161,7 @@ const ar: typeof en = {
   reasons: 'سبب التعارض',
   reason: {
     'doctor-overlap': 'لدى الطبيب موعد آخر في هذا الوقت.',
-    'patient-overlap': 'لدى المريض موعد آخر في هذا الوقت.',
+    'patient-overlap': 'يتعارض هذا الوقت مع حجز آخر. لا يمكن تجاوز تداخل مواعيد المريض.',
     'same-day-other-clinic': 'لدى المريض موعد في عيادة أخرى في اليوم نفسه.',
     'outside-hours': 'هذا الوقت خارج ساعات العمل.',
     'slot-held': 'كان هذا الموعد محجوزاً مؤقتاً لحجز آخر.',

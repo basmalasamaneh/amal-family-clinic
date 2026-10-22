@@ -76,15 +76,17 @@ test('walk-in default rounds up to 5 local minutes', () => {
 const pv = (c: ConflictPreview['conflicts'], ok = false): ConflictPreview => ({ ok, conflicts: c });
 const slot = (h: number) => ({ startsAt: `2025-01-15T${String(h).padStart(2, '0')}:00:00.000Z`, endsAt: `2025-01-15T${String(h).padStart(2, '0')}:30:00.000Z` });
 test('blocking conflicts never commit, even with a reason', () => {
-  for (const type of ['doctor-overlap', 'outside-hours', 'slot-held'] as const)
+  for (const type of ['doctor-overlap', 'patient-overlap', 'outside-hours', 'slot-held'] as const)
     assert.equal(commitAllowed(pv([{ type, with: null, severity: 'blocking', suggestedSlots: [] }]), 'please'), false);
 });
-test('patient warning requires trimmed nonblank reason', () => {
-  const p = pv([{ type: 'patient-overlap', with: null, severity: 'warning', suggestedSlots: [] }]);
-  assert.equal(commitAllowed(p, ''), false);
-  assert.equal(commitAllowed(p, '   '), false);
-  assert.equal(commitAllowed(p, ' family request '), true);
-  assert.equal(summarize(p).overrideable, true);
+test('patient overlap blocks even legacy warnings/info, ok:true and nonblank reasons', () => {
+  for (const severity of ['warning', 'info', 'blocking'] as const) {
+    const p = pv([{ type: 'patient-overlap', with: null, severity, suggestedSlots: [] }], true);
+    for (const reason of ['', '   ', ' family request ']) assert.equal(commitAllowed(p, reason), false);
+    assert.equal(summarize(p).overrideable, false);
+    assert.equal(summarize(p).blocking.length, 1);
+    assert.equal(summarize(p).warnings.length, 0);
+  }
 });
 test('info alone does not block; no preview never allows; unknown severity blocks', () => {
   assert.equal(commitAllowed(pv([{ type: 'same-day-other-clinic', with: null, severity: 'info', suggestedSlots: [] }], true), ''), true);
@@ -130,6 +132,22 @@ test('fixture booking api: idempotent create, commit-time conflict, overlap sugg
   await assert.rejects(api.create({ ...base, startsAt: busy.startsAt, endsAt: busy.endsAt, clientOpId: 'op-2' }), (e: { status: number }) => e.status === 409);
 });
 
+test('fixture patient overlap rejects even a reason, while nonoverlap notice permits booking', async () => {
+  const api = createFixtureBookingApi();
+  const interval = resolveLocalInterval('2025-01-15', '09:00', 30);
+  assert.ok(interval.ok);
+  if (!interval.ok) return;
+  const input = { clinicId: 1, doctorId: 2, patientId: 9003, source: 'phone' as const, startsAt: interval.startsAt, endsAt: interval.endsAt, overrideReason: 'legacy approval', clientOpId: 'overlap-op' };
+  const p = await api.check(input);
+  assert.equal(p.ok, false);
+  assert.equal(p.conflicts[0]!.severity, 'blocking');
+  await assert.rejects(api.create(input), (e: { status: number }) => e.status === 409);
+  const infoInput = { ...input, patientId: 9004, overrideReason: undefined, clientOpId: 'info-op' };
+  const info = await api.check(infoInput);
+  assert.equal(commitAllowed(info, ''), true);
+  assert.equal((await api.create(infoInput)).patientId, 9004);
+});
+
 test('commitAllowed fails closed on ok:false with no conflicts and on misclassified severities', () => {
   assert.equal(commitAllowed(pv([], false), ''), false);
   assert.equal(commitAllowed(pv([{ type: 'same-day-other-clinic', with: null, severity: 'info', suggestedSlots: [] }], false), ''), false);
@@ -139,7 +157,7 @@ test('commitAllowed fails closed on ok:false with no conflicts and on misclassif
   assert.equal(commitAllowed(pv([{ type: 'same-day-other-clinic', with: null, severity: 'warning', suggestedSlots: [] }]), 'reason'), false);
   assert.equal(commitAllowed(pv([{ type: 'patient-overlap', with: null, severity: 'blocking', suggestedSlots: [] }]), 'reason'), false);
   assert.equal(commitAllowed(pv([{ type: 'patient-overlap', with: null, severity: 'info', suggestedSlots: [] }]), ''), false);
-  assert.equal(commitAllowed(pv([{ type: 'patient-overlap', with: null, severity: 'warning', suggestedSlots: [] }, { type: 'same-day-other-clinic', with: null, severity: 'info', suggestedSlots: [] }]), 'ok'), true);
+  assert.equal(commitAllowed(pv([{ type: 'patient-overlap', with: null, severity: 'warning', suggestedSlots: [] }, { type: 'same-day-other-clinic', with: null, severity: 'info', suggestedSlots: [] }]), 'ok'), false);
 });
 
 test('attempt keeper replays exact payload and id (incl. original holdToken) for same context', () => {

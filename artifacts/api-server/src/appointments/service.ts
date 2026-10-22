@@ -1,4 +1,5 @@
 import { patientScopeSql } from "../lib/patient-access";
+import { schedulingIdentities, equivalentPatientIds } from "../patients/identity";
 import { cancelledAppointment } from "../waitlist/lifecycle";
 import { cancelAppointmentReminders, scheduleAppointmentReminders } from "../reminders/lifecycle";
 import { createHash, randomUUID } from "node:crypto";
@@ -163,13 +164,12 @@ export async function getAppointmentAvailability(auth: Auth, raw: unknown) {
       "SELECT doctor_id FROM operational.doctors WHERE clinic_id=$1 AND ($2::integer IS NULL OR doctor_id=$2) ORDER BY doctor_id",
       [input.clinicId, actor.role === "doctor" ? actor.doctorId : null]);
     // Patient collisions may be cross-clinic; only proposed local slots leave the service.
+    const patientIds = equivalentPatientIds(await schedulingIdentities(client), input.patientId);
     const { rows: appointments } = await client.query<Row>(
       `SELECT a.* FROM operational.appointments a
-        JOIN operational.clinics source ON source.clinic_id=a.clinic_id
-        JOIN operational.clinics requester ON requester.clinic_id=$1
-        WHERE (a.clinic_id=$1 OR (a.patient_id=$2 AND source.network_mode='full' AND requester.network_mode='full'))
+        WHERE (a.clinic_id=$1 OR a.patient_id=ANY($2::integer[]))
           AND a.status IN ('booked','double_booked')`,
-      [input.clinicId, input.patientId]);
+      [input.clinicId, patientIds]);
     const { rows: holds } = await client.query<HoldRow>(
       "SELECT * FROM operational.appointment_holds WHERE clinic_id=$1 AND expires_at>$2", [input.clinicId, now]);
     const items = doctors.flatMap(doctor => {
@@ -178,6 +178,7 @@ export async function getAppointmentAvailability(auth: Auth, raw: unknown) {
         appointment: { id: 0, clinicId: input.clinicId, doctorId: doctor.doctor_id, patientId: input.patientId,
           startAt: now.toISOString(), durationMinutes: clinic.slot_minutes, status: "booked" },
         appointments: appointments.map(engineRow),
+        equivalentPatientIds: patientIds,
         holds: holds.map(h => ({ clinicId: h.clinic_id, doctorId: h.doctor_id, startAt: h.starts_at.toISOString(),
           durationMinutes: h.duration_minutes, ownerId: h.owner_id, expiresAt: h.expires_at.toISOString() })),
         settings: { workingDays: clinic.working_days, openTime: clinic.open_time, closeTime: clinic.close_time,
@@ -205,19 +206,17 @@ async function preview(client: PoolClient, actor: Auth, now: Date, input: z.infe
   }
   const { rows: [clinic] } = await client.query("SELECT * FROM operational.clinics WHERE clinic_id=$1", [input.clinicId]);
   if (!clinic) throw fail(422, "INVALID_BOOKING_REFERENCE", "validation");
-  // The scheduling lock orders this authoritative mode read against lifecycle
-  // transitions. Filtering before evaluation also protects counts, suggestions,
-  // overrides and eligibility (redacting only `with` would still leak existence).
+  // Safety occupancy is global; projection authority is deliberately separate.
+  const patientIds = equivalentPatientIds(await schedulingIdentities(client), input.patientId);
   const { rows: appointments } = await client.query<Row>(`SELECT a.* FROM operational.appointments a
-    JOIN operational.clinics source ON source.clinic_id=a.clinic_id
-    WHERE (a.doctor_id=$1 OR a.patient_id=$2) AND a.status IN ('booked','double_booked')
-      AND (a.clinic_id=$3 OR (source.network_mode='full' AND $4='full'))`,
-  [input.doctorId, input.patientId, input.clinicId, clinic.network_mode]);
+    WHERE (a.doctor_id=$1 OR a.patient_id=ANY($2::integer[])) AND a.status IN ('booked','double_booked')`,
+  [input.doctorId, patientIds]);
   const { rows: holds } = await client.query<HoldRow>("SELECT * FROM operational.appointment_holds WHERE doctor_id=$1 AND expires_at>$2", [input.doctorId, now]);
   if (input.holdToken && !holds.some(h => h.token === input.holdToken && exactHold(h, actor, input, minutes, input.appointmentId))) throw conflict("HOLD_EXPIRED");
   const result = evaluate({
     appointment: { id: input.appointmentId ?? 0, clinicId: input.clinicId, doctorId: input.doctorId, patientId: input.patientId, startAt: input.startsAt, durationMinutes: minutes, status },
     appointments: appointments.map(engineRow),
+    equivalentPatientIds: patientIds,
     holds: holds.filter(h => !exactHold(h, actor, input, minutes, input.appointmentId)).map(h => ({
       clinicId: h.clinic_id, doctorId: h.doctor_id, startAt: h.starts_at.toISOString(), durationMinutes: h.duration_minutes,
       // Only an exact owner+interval+patient+target hold is exempt; other own holds still block.

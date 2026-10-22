@@ -12,7 +12,7 @@ import type { ShellClinic } from '@/shell/identity';
 import { formatInstant, formatNumber } from '@/shell/formatting';
 import { newOpId } from '@/booking/ops';
 import {
-  STEPS, canEnter, commitBody, commitReady, counts, effectiveDoctor, emailGroups, failure, groupConflicts, isUncertain, openConflicts, parseExport,
+  STEPS, canEnter, commitBody, commitReady, conflictSeverity, counts, effectiveDoctor, emailGroups, failure, groupConflicts, isPatientOverlap, isUncertain, openConflicts, parseExport,
   readLastBatch, readPending, rowState, srcEmail, srcName, srcStart, statusSummary, stepOpen, writeLastBatch, writePending, type DoctorChoices, type StepId,
 } from './model';
 import { errorText, issueText } from './i18n';
@@ -421,18 +421,18 @@ function ConflictsStep({ batch, onEdit, onRefresh, refreshing }: { batch: Import
           {g[k].length === 0 ? <p className="im-muted">{t('im.conflicts.none')}</p> : (
             <ul className="im-conflicts">
               {g[k].map((c, i) => (
-                <li key={`${c.code}-${c.rowIds.join('-')}-${i}`} className={`im-conflict im-conflict--${c.severity}`} data-testid={`conflict-${k}-${i}`}>
+                <li key={`${c.code}-${c.rowIds.join('-')}-${i}`} className={`im-conflict im-conflict--${conflictSeverity(c)}`} data-testid={`conflict-${k}-${i}`}>
                   <div className="im-conflict__head">
-                    <span className={`im-sev im-sev--${c.severity}`}>{c.severity === 'blocking' || c.severity === 'warning' ? <AlertTriangle size={14} aria-hidden="true" /> : <CheckCircle2 size={14} aria-hidden="true" />}{t(`im.conflicts.sev.${c.severity}`)}</span>
+                    <span className={`im-sev im-sev--${conflictSeverity(c)}`}>{conflictSeverity(c) === 'blocking' || conflictSeverity(c) === 'warning' ? <AlertTriangle size={14} aria-hidden="true" /> : <CheckCircle2 size={14} aria-hidden="true" />}{t(`im.conflicts.sev.${conflictSeverity(c)}`)}</span>
                     <strong>{issueText(t, c.code)}</strong>
                   </div>
                   <ul className="im-conflict__rows">
                     {c.rowIds.map((rid) => { const r = row(rid); return r ? (
                       <li key={rid}>
                         <span className="im-mono">#{rid}</span> <Iso>{srcName(r)}</Iso> · {r.mapping ? <TimeCell iso={r.mapping.startsAt} /> : <Iso ltr>{srcStart(r)}</Iso>}
-                        {!committed && (c.severity === 'blocking' || c.severity === 'warning') && <button type="button" className="bk-btn bk-btn--sm" onClick={() => onEdit(r)} data-testid={`button-resolve-${rid}`}>{t('im.conflicts.resolve', { id: rid })}</button>}
+                        {!committed && (conflictSeverity(c) === 'blocking' || conflictSeverity(c) === 'warning') && <button type="button" className="bk-btn bk-btn--sm" onClick={() => onEdit(r)} data-testid={`button-resolve-${rid}`}>{t('im.conflicts.resolve', { id: rid })}</button>}
                       </li>) : null; })}
-                    {c.appointmentId && <li className="im-muted">{t('im.conflicts.appt', { id: c.appointmentId })}</li>}
+                    {c.appointmentId && !isPatientOverlap(c) && <li className="im-muted">{t('im.conflicts.appt', { id: c.appointmentId })}</li>}
                   </ul>
                 </li>
               ))}
