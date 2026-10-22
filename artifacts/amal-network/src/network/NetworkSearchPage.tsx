@@ -7,6 +7,7 @@ import { lookupNetwork, recordLookupDuration, type NetworkPatient } from '@works
 import { LookupTiming, observePaintedCard } from './lookup-timing';
 import type { ShellClinic } from '@/shell/identity';
 import { demoPath } from '@/shell/identity';
+import { usePatientSearchRequest } from '@/shell/PatientSearchProvider';
 import { ConsentBadge, KeyAlertChip } from './indicators';
 import {
   classifyFailure, clearSelection, clinicTone, CONSENT_CHANGED_EVENT, formatVisitDay, REVALIDATE_MS, effectiveConsent, getSelection, isAbortError, latestVisit, normalizeQuery,
@@ -32,8 +33,9 @@ type State =
 export function NetworkSearchPage({ clinic, title, scope }: { clinic: ShellClinic | null; title: string; scope: string }) {
   const { t } = useTranslation();
   const [, navigate] = useLocation();
+  const request = usePatientSearchRequest();
   const prior = useRef(getSelection(scope)).current;
-  const [text, setText] = useState(prior?.q ?? '');
+  const [text, setText] = useState(request?.query ?? prior?.q ?? '');
   const [state, setState] = useState<State>({ kind: 'idle' });
   const seq = useRef(0);
   const ctl = useRef<AbortController | null>(null);
@@ -69,7 +71,13 @@ export function NetworkSearchPage({ clinic, title, scope }: { clinic: ShellClini
   }, []);
 
   // Restore after returning from the card: revalidate, never redisplay old data.
-  useEffect(() => { if (prior?.q) run(prior.q); return () => { timing.current.cancel(); ctl.current?.abort(); seq.current++; }; }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (!request && prior?.q) run(prior.q); return () => { timing.current.cancel(); ctl.current?.abort(); seq.current++; }; }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (!request) return;
+    setText(request.query);
+    run(request.query, undefined, true);
+  }, [request, run]);
 
   useEffect(() => {
     if (state.kind !== 'ok' || state.timingToken === null || !state.items.length || !listRef.current) return;

@@ -10,6 +10,7 @@ import { resolveSchedulingAdapter } from '@/calendar/adapter';
 import { bookingQuery } from '@/calendar/booking';
 import { formatLocalDate, formatNum, formatTime, isLocalDate, localDateOf } from '@/calendar/dates';
 import { PatientQuickSearch } from '@/booking/PatientQuickSearch';
+import { usePatientSearchRequest } from '@/shell/PatientSearchProvider';
 import { localCache } from '@/offline';
 import { cachedPatientSearch, prepareBookingCache } from '@/offline/booking-bridge';
 import { APPOINTMENTS_CHANGED } from '@/booking/BookingDrawer';
@@ -33,6 +34,7 @@ import './reception.css';
  */
 export function PatientsPage({ clinic, fixture, title }: { clinic: ShellClinic | null; fixture: boolean; title: string }) {
   const { t } = useTranslation();
+  const request = usePatientSearchRequest();
   const search = useSearch();
   const useFixture = import.meta.env.DEV && fixture;
   const scheduling = useMemo(() => resolveSchedulingAdapter(search, fixture), [fixture]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -118,7 +120,7 @@ export function PatientsPage({ clinic, fixture, title }: { clinic: ShellClinic |
       <div className="rx-grid">
         <section className="rx-panel" aria-labelledby="rx-search-h">
           <h2 id="rx-search-h" className="rx-h2">{t('rx.searchTitle')}</h2>
-          <PatientQuickSearch adapter={patients} clinicId={clinic.id} onSelect={select} paginate refreshKey={refresh} selectedId={selected?.id ?? null} />
+          <PatientQuickSearch key={request?.id ?? 'native'} initialQuery={request?.query} adapter={patients} clinicId={clinic.id} onSelect={select} paginate refreshKey={refresh} selectedId={selected?.id ?? null} />
         </section>
         <section className="rx-panel rx-dossier" aria-labelledby="rx-detail-h" data-testid="panel-patient-detail">
           {selected ? (

@@ -17,15 +17,17 @@ type State =
   | { kind: 'error'; failure: FailureKind };
 export const SEARCH_DEBOUNCE_MS = 300;
 
-export function PatientQuickSearch({ adapter, clinicId, onSelect, autoFocus, paginate, refreshKey = 0, selectedId, onCreate, createDisabledReason }: {
+export function PatientQuickSearch({ adapter, clinicId, onSelect, autoFocus, paginate, refreshKey = 0, selectedId, onCreate, createDisabledReason, initialQuery = '' }: {
   adapter: PatientSearchAdapter; clinicId: number; onSelect: (p: PatientHit) => void; autoFocus?: boolean;
   /** Show "load more" using the server's opaque cursor instead of only asking to refine. */
   paginate?: boolean; /** Bump to re-run the current query (e.g. after registration). */ refreshKey?: number; selectedId?: number | null;
   onCreate?: (query: string) => void; createDisabledReason?: string;
+  /** Memory-only prefill; callers key by submission id to support repeated identical queries. */
+  initialQuery?: string;
 }) {
   const { t } = useTranslation();
   const { locale, digitPreference } = useAmalPreferences();
-  const [q, setQ] = useState('');
+  const [q, setQ] = useState(() => initialQuery.slice(0, 120));
   const [nonce, setNonce] = useState(0);
   const [state, setState] = useState<State>({ kind: 'idle' });
   const [active, setActive] = useState(0);

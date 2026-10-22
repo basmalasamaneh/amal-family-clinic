@@ -8,6 +8,9 @@ import { ConnectionStatus } from './ConnectionStatus';
 import { DaySheet } from '@/day-sheet/DaySheet';
 import './offline-messages';
 import { usePrivateCacheContext } from './private-cache-lifecycle';
+import { PatientSearchProvider, usePatientSearchHandoff } from './PatientSearchProvider';
+import { patientSearchDestination } from './patient-search-handoff';
+import './patient-search-messages';
 import { localCache } from '@/offline';
 import { AmalLogo, Avatar, Breadcrumbs, Button, DensitySwitch, EmptyState, Icon, IconChip, PageHeader, LanguageSwitch, Segmented, ThemeSwitch, useAmalPreferences } from '@workspace/amal-ui';
 import { groupOf, groupRoutes, sectionOf } from './nav-groups';
@@ -123,6 +126,7 @@ function AppShellContent({ identity, fixture, onRefresh, onLogout }: Props) {
   if (res.kind === 'landing') return <Redirect to={demoPath(res.to)} replace />;
 
   return (
+    <PatientSearchProvider key={`${identity.id}:${role}:${clinic?.id ?? 'none'}:${identity.clinicsState}:${!!identity.offlineRestored}:${fixture}`} role={role} fixture={fixture}>
     <WalkInProvider key={clinic?.id ?? 'none'} clinic={clinic} fixture={fixture} enabled={role === 'front-desk'}>
     <div className="shell" data-testid="app-shell" data-role={identity.role ?? 'none'} data-collapsed={collapsed || undefined}>
       <a href="#main" className="shell-skip" data-testid="link-skip">{t('shell.skip')}</a>
@@ -162,7 +166,7 @@ function AppShellContent({ identity, fixture, onRefresh, onLogout }: Props) {
           <div className="shell-top__main">
           <div className="shell-top__brand"><AmalLogo /></div>
           <ClinicSwitcher clinics={clinics} state={identity.clinicsState} value={clinicId} onChange={(id) => { void localCache.setContext(null); clearNetworkSelection(); clearConsentSelection(); setClinicId(id); }} onRetry={onRefresh} />
-          {!(res.kind === 'page' && (res.route.id === 'networkSearch' || res.route.id === 'patientCard')) && <GlobalSearch key={clinicId ?? 'none'} />}
+          {patientSearchDestination(role) && clinic && identity.clinicsState !== 'error' && !(res.kind === 'page' && (res.route.id === 'networkSearch' || res.route.id === 'patientCard')) && <GlobalSearch />}
           <div className="shell-top__walkin"><WalkInButton /></div>
           <div className="shell-top__end">
             <button type="button" className="shell-iconbtn" aria-disabled="true" aria-label={t('shell.bell.label')} title={t('shell.bell.soon')} data-testid="button-notifications">
@@ -188,6 +192,7 @@ function AppShellContent({ identity, fixture, onRefresh, onLogout }: Props) {
       {tour.open && <TourOverlay key={tour.run} steps={tour.steps} onFinish={tour.finish} />}
     </div>
     </WalkInProvider>
+    </PatientSearchProvider>
   );
 }
 
@@ -310,16 +315,23 @@ function ClinicSwitcher({ clinics, state, value, onChange, onRetry }: {
 
 function GlobalSearch() {
   const { t } = useTranslation();
+  const [, navigate] = useLocation();
+  const { store } = usePatientSearchHandoff();
   const [q, setQ] = useState('');
   const [msg, setMsg] = useState<string | null>(null);
-  const submit = (e: FormEvent) => { e.preventDefault(); setMsg(q.trim() ? t('shell.search.result') : t('shell.search.empty')); };
+  const submit = (e: FormEvent) => {
+    e.preventDefault();
+    if (q.trim().length < 2) { setMsg(t('shell.search.short')); return; }
+    const destination = store?.submit(q);
+    if (destination) { setMsg(null); navigate(demoPath(destination)); }
+  };
   return (
     <form role="search" className="shell-search" onSubmit={submit} aria-label={t('shell.search.label')}>
       <label className="shell-search__field">
         <span className="shell-sr">{t('shell.search.label')}</span>
         <Search size={18} aria-hidden="true" />
         <input
-          type="search" value={q} onChange={(e) => { setQ(e.target.value); setMsg(null); }}
+          type="search" value={q} autoComplete="off" spellCheck={false} maxLength={120} onChange={(e) => { setQ(e.target.value); setMsg(null); }}
           placeholder={t('shell.search.placeholder')} dir="auto" data-testid="input-global-search"
         />
       </label>
