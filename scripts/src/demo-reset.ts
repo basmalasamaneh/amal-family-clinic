@@ -24,7 +24,7 @@ export async function clearOperational(client: pg.Client) {
   // Keep the explicit reset compatible before or after the additive service
   // migrations; operational:test exercises this only in a rollback transaction.
   for (const table of [
-    "developer_outages", "clinic_managers", "device_network_health",
+    "network_coordinator_scope", "developer_outages", "clinic_managers", "device_network_health",
     "auth_sessions", "auth_devices", "auth_pin_state", "auth_throttles",
     "import_reviews", "import_operations", "import_source_links",
     "patient_merge_moves", "patient_merge_operations", "consent_operations",

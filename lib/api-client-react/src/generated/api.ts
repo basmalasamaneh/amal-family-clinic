@@ -110,6 +110,8 @@ import type {
   ListSyncConflictsParams,
   LookupDurationInput,
   LookupNetworkParams,
+  NetworkCoordination,
+  NetworkCoordinationAccess,
   NetworkHealth,
   NetworkHeartbeat,
   NetworkHeartbeatInput,
@@ -178,6 +180,154 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
   }
   return result;
 };
+
+export const getGetNetworkCoordinationAccessUrl = () => {
+
+
+
+
+  return `/api/network/coordination/access`
+}
+
+/**
+ * Doctor-only fresh explicit operational scope capability. No query parameters. Does not grant clinical access.
+ */
+export const getNetworkCoordinationAccess = async ( options?: Parameters<typeof customFetch>[1]): Promise<NetworkCoordinationAccess> => {
+
+  return customFetch<NetworkCoordinationAccess>(getGetNetworkCoordinationAccessUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetNetworkCoordinationAccessQueryKey = () => {
+    return [
+    `/api/network/coordination/access`
+    ] as const;
+    }
+
+
+export const getGetNetworkCoordinationAccessQueryOptions = <TData = Awaited<ReturnType<typeof getNetworkCoordinationAccess>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getNetworkCoordinationAccess>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetNetworkCoordinationAccessQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getNetworkCoordinationAccess>>> = ({ signal }) => getNetworkCoordinationAccess({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getNetworkCoordinationAccess>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetNetworkCoordinationAccessQueryResult = NonNullable<Awaited<ReturnType<typeof getNetworkCoordinationAccess>>>
+export type GetNetworkCoordinationAccessQueryError = ErrorType<void>
+
+
+
+export function useGetNetworkCoordinationAccess<TData = Awaited<ReturnType<typeof getNetworkCoordinationAccess>>, TError = ErrorType<void>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getNetworkCoordinationAccess>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetNetworkCoordinationAccessQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetNetworkCoordinationUrl = () => {
+
+
+
+
+  return `/api/network/coordination`
+}
+
+/**
+ * Read-only allowlisted aggregate summary of explicit operator-granted clinics for seven complete Asia/Hebron days. No filters, exports, raw identities or clinical permissions. Observed telemetry is partial coverage; absence is null.
+ */
+export const getNetworkCoordination = async ( options?: Parameters<typeof customFetch>[1]): Promise<NetworkCoordination> => {
+
+  return customFetch<NetworkCoordination>(getGetNetworkCoordinationUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetNetworkCoordinationQueryKey = () => {
+    return [
+    `/api/network/coordination`
+    ] as const;
+    }
+
+
+export const getGetNetworkCoordinationQueryOptions = <TData = Awaited<ReturnType<typeof getNetworkCoordination>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getNetworkCoordination>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetNetworkCoordinationQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getNetworkCoordination>>> = ({ signal }) => getNetworkCoordination({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getNetworkCoordination>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetNetworkCoordinationQueryResult = NonNullable<Awaited<ReturnType<typeof getNetworkCoordination>>>
+export type GetNetworkCoordinationQueryError = ErrorType<void>
+
+
+
+export function useGetNetworkCoordination<TData = Awaited<ReturnType<typeof getNetworkCoordination>>, TError = ErrorType<void>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getNetworkCoordination>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetNetworkCoordinationQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export const getListWaitlistUrl = () => {
 

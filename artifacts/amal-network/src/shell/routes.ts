@@ -26,6 +26,7 @@ export const SHELL_ROUTES: readonly ShellRoute[] = [
   { id: 'networkSearch', path: '/doctor/network-search', roles: ['doctor'], icon: I.networkSearch },
   { id: 'patientCard', path: '/doctor/patient-card', roles: ['doctor'], icon: I.patientCard },
   { id: 'privacy', path: '/doctor/privacy', roles: ['doctor'], icon: I.privacy },
+  { id: 'coordination', path: '/doctor/coordination', roles: ['doctor'], icon: I.networkHealth },
   // P1-13 simulated reminders: own-clinic log; server enforces scope.
   { id: 'messages', path: '/messages', roles: ['front-desk', 'admin'], icon: I.messages },
   { id: 'kpi', path: '/admin/kpi', roles: ['admin'], icon: I.kpi },
@@ -46,9 +47,9 @@ export function isKnownRole(role: unknown): role is ShellRole {
   return typeof role === 'string' && (KNOWN_ROLES as readonly string[]).includes(role);
 }
 
-export function routesFor(role: ShellRole | null): ShellRoute[] {
+export function routesFor(role: ShellRole | null, canCoordinate = false): ShellRoute[] {
   if (!isKnownRole(role)) return [];
-  return SHELL_ROUTES.filter((r) => r.roles.includes(role));
+  return SHELL_ROUTES.filter((r) => r.roles.includes(role) && (r.id !== 'coordination' || canCoordinate));
 }
 
 export function landingFor(role: ShellRole | null): string | null {
@@ -63,7 +64,7 @@ export type Resolution =
   | { kind: 'notFound' };
 
 /** Guards direct URLs as well as links. Presentation only; the server must still authorize. */
-export function resolve(location: string, role: ShellRole | null): Resolution {
+export function resolve(location: string, role: ShellRole | null, canCoordinate = false): Resolution {
   const path = location.replace(/\/+$/, '') || '/';
   const known = isKnownRole(role);
   if (path === '/') return known ? { kind: 'landing', to: landingFor(role)! } : { kind: 'noRole' };
@@ -71,5 +72,6 @@ export function resolve(location: string, role: ShellRole | null): Resolution {
   if (!route) return { kind: 'notFound' };
   if (!known) return { kind: 'noRole' };
   if (!route.roles.includes(role)) return { kind: 'forbidden' };
+  if (route.id === 'coordination' && !canCoordinate) return { kind: 'forbidden' };
   return { kind: 'page', route, isLanding: landingFor(role) === route.path };
 }

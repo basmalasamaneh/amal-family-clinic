@@ -116,6 +116,7 @@ after(async () => {
       await admin.query("DELETE FROM operational.appointment_operations WHERE clinic_id=ANY($1::int[])", [clinics]);
       await admin.query("RESET ROLE");
       await admin.query("DELETE FROM operational.kpi_snapshots WHERE clinic_id=ANY($1::int[])", [clinics]);
+      await admin.query("DELETE FROM operational.network_coordinator_scope WHERE user_id=ANY($1::int[])", [users]);
       await admin.query("DELETE FROM operational.auth_sessions WHERE user_id=ANY($1::int[])", [users]);
       if (deviceId) {
         await admin.query("DELETE FROM operational.auth_devices WHERE device_id=$1", [deviceId]);
@@ -140,6 +141,64 @@ test("configuration is strict, explicit, distinct and cannot infer identities", 
     assert.equal(parseScenario(raw), null, JSON.stringify(raw));
   }
   assert.deepEqual(parseScenario(validConfig()), validConfig());
+});
+
+test("explicit coordinator scope: fresh doctor-only authorization, strict scalar privacy and no clinical escalation", async () => {
+  const marker = (await admin.query(`SELECT shobj_description(oid,'pg_database') AS marker
+    FROM pg_database WHERE datname=current_database()`)).rows[0].marker;
+  assert.equal(marker, "amal:disposable:privacy-tests:v1", "Coordinator grant tests require owned disposable DB");
+  const path = "/network/coordination";
+  assert.equal((await request(path, null)).status, 401);
+  assert.equal((await request(`${path}/access`, adminToken)).status, 403);
+  assert.equal((await request(path, receptionToken, deviceToken)).status, 403);
+  assert.deepEqual((await request(`${path}/access`)).body, { canCoordinate: false });
+  assert.equal((await request(path)).status, 403);
+  const identityBefore = (await admin.query("SELECT role,clinic_id,doctor_id,password_hash FROM operational.users WHERE id=$1", [users[0]])).rows;
+  for (const clinic of clinics.slice(0, 3)) {
+    await admin.query("INSERT INTO operational.network_coordinator_scope(user_id,clinic_id) VALUES($1,$2)", [users[0], clinic]);
+  }
+  assert.deepEqual((await request(`${path}/access`)).body, { canCoordinate: true });
+  for (const suffix of ["?clinicId=1", "?export=true", "?from=2020-01-01", "?patientId=1"]) {
+    assert.equal((await request(path + suffix)).status, 400);
+    assert.equal((await request(`${path}/access${suffix}`)).status, 400);
+  }
+  const response = await request(path);
+  assert.equal(response.status, 200);
+  assert.match(response.headers.get("cache-control")!, /no-store/);
+  assert.deepEqual(Object.keys(response.body).sort(), ["asOf", "clinics", "period"]);
+  assert.deepEqual(response.body.clinics.map((c: { id: number }) => c.id), clinics.slice(0,3));
+  assert.equal(response.body.period.timeZone, "Asia/Hebron");
+  for (const clinic of response.body.clinics) {
+    assert.deepEqual(Object.keys(clinic).sort(), ["id", "membershipStatus", "metrics", "mode", "name"]);
+    assert.deepEqual(Object.keys(clinic.metrics).sort(), ["medianLookupSeconds", "preventedConflicts"]);
+    for (const metric of Object.values(clinic.metrics) as {value: number|null; sampleCount: number; coverage: string}[]) {
+      assert.deepEqual(Object.keys(metric).sort(), ["coverage", "sampleCount", "value"]);
+      if (metric.sampleCount === 0) { assert.equal(metric.value, null); assert.equal(metric.coverage, "unavailable"); }
+    }
+  }
+  assert.equal((await request("/admin/users")).status, 403);
+  assert.equal((await request(`/clinics/${clinics[1]}/adoption`)).status, 403);
+  assert.deepEqual((await admin.query("SELECT role,clinic_id,doctor_id,password_hash FROM operational.users WHERE id=$1", [users[0]])).rows, identityBefore);
+  // The capability is read again; no cached scope survives explicit revocation.
+  await admin.query("BEGIN");
+  await admin.query("SELECT pg_advisory_xact_lock(160005)");
+  let completed = false;
+  const queuedRead = request(path).then(result => { completed = true; return result; });
+  await new Promise(resolve => setTimeout(resolve, 50));
+  assert.equal(completed, false, "Coordinator reads must wait behind scope/lifecycle revocation");
+  await admin.query("DELETE FROM operational.network_coordinator_scope WHERE user_id=$1", [users[0]]);
+  await admin.query("COMMIT");
+  assert.equal((await queuedRead).status, 403, "Post-lock authorization must observe committed revocation");
+  assert.deepEqual((await request(`${path}/access`)).body, { canCoordinate: false });
+  assert.equal((await request(path)).status, 403);
+  await admin.query("UPDATE operational.users SET disabled_at=clock_timestamp() WHERE id=$1", [users[0]]);
+  assert.equal((await request(path)).status, 401);
+  await admin.query("UPDATE operational.users SET disabled_at=NULL WHERE id=$1", [users[0]]);
+  await admin.query("UPDATE operational.auth_sessions SET revoked_at=clock_timestamp() WHERE token_digest=$1", [digest(doctorToken)]);
+  assert.equal((await request(`${path}/access`)).status, 401);
+  await admin.query("UPDATE operational.auth_sessions SET revoked_at=NULL WHERE token_digest=$1", [digest(doctorToken)]);
+  await assert.rejects(pool.query("INSERT INTO operational.network_coordinator_scope(user_id,clinic_id) VALUES($1,$2)", [users[0], clinics[0]]), /permission denied/);
+  assert.deepEqual(await seedState(), seedBefore);
 });
 
 test("fixed rolling complete-week window uses exclusive Asia/Hebron midnights across DST", () => {
@@ -261,4 +320,31 @@ test("actual blocks, warnings excluded, observed zero vs missing, exact whole-wi
   }
   const noEvidence = await adoptionResults(new Date("2090-01-10T12:00:00Z"), validConfig());
   assert(noEvidence.clinics.every(clinic => clinic.preventedBlocks.value === null && clinic.medianLookupSeconds.value === null));
+});
+
+test("coordinator metrics match existing adoption definitions across exactly three granted clinics", async () => {
+  for (const clinic of clinics.slice(0,3)) {
+    await admin.query("INSERT INTO operational.network_coordinator_scope(user_id,clinic_id) VALUES($1,$2)", [users[0],clinic]);
+  }
+  try {
+    const before = (await admin.query("SELECT last_seen_at FROM operational.auth_sessions WHERE token_digest=$1", [digest(doctorToken)])).rows;
+    const summary = await request("/network/coordination");
+    const existing = await request();
+    assert.equal(summary.status, 200);
+    assert.equal(summary.body.clinics.length, 3);
+    assert(!summary.body.clinics.some((c: {id: number})=>c.id === clinics[3]));
+    for (const expected of existing.body.clinics) {
+      const actual = summary.body.clinics.find((c: {id: number})=>c.id === expected.clinicId);
+      assert.deepEqual(actual.metrics.preventedConflicts, {
+        value: expected.preventedBlocks.value, sampleCount: expected.preventedBlocks.sampleCount, coverage: "partial",
+      });
+      assert.deepEqual(actual.metrics.medianLookupSeconds, {
+        value: expected.medianLookupSeconds.value, sampleCount: expected.medianLookupSeconds.sampleCount, coverage: "partial",
+      });
+    }
+    assert.deepEqual((await admin.query("SELECT last_seen_at FROM operational.auth_sessions WHERE token_digest=$1", [digest(doctorToken)])).rows, before);
+    assert.deepEqual(await seedState(), seedBefore);
+  } finally {
+    await admin.query("DELETE FROM operational.network_coordinator_scope WHERE user_id=$1", [users[0]]);
+  }
 });

@@ -5,7 +5,7 @@
  * The whole local cluster is temporary and is stopped/removed by this owner.
  */
 import { execFileSync, spawnSync } from "node:child_process";
-import { appendFileSync, existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { appendFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -113,6 +113,10 @@ try {
     stage = "restore schema";
     execFileSync("psql", ["-X", "-v", "ON_ERROR_STOP=1", "-h", directory, "-p", String(port), "-U", "privacy_owner", "-d", name],
       { input: schema, stdio: ["pipe", "pipe", "pipe"] });
+    // Pending additive migration is installed ONLY in this newly owned database.
+    await setup.query("BEGIN");
+    await setup.query(readFileSync(join(root, "lib/db/migrations/0018_network_coordination.sql"), "utf8"));
+    await setup.query("COMMIT");
     if (specializedAudit) {
       stage = "initialize approved isolated workbook baseline";
       await initializeWorkbookBaseline(setup, name, baselineSnapshot!);

@@ -21,6 +21,7 @@ import { demoBoundary } from "../developer/boundary";
 import { validateRouteInputs } from "../lib/route-validation";
 import remindersRouter from "./reminders";
 import waitlistRouter from "./waitlist";
+import networkCoordinationRouter from "./network-coordination";
 
 const router: IRouter = Router();
 router.use(validateRouteInputs);
@@ -31,6 +32,7 @@ router.use(healthRouter);
 router.use(authRouter);
 router.use(adoptionRouter);
 router.use(adoptionResultsRouter);
+router.use(networkCoordinationRouter);
 router.use(adminUsersRouter);
 router.use(adminAuditRouter);
 router.use(adminDirectoryRouter);

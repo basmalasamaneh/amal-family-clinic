@@ -5,6 +5,71 @@
  * Amal Network Section 12. Authentication, appointments and clinic-local patient CRUD/search are implemented; other domain services remain contracts/mocks. UTC ISO instants, required date-only DOB, Asia/Hebron display. Local patient endpoints return demographics only to doctors/front-desk, never clinical history or admin patient access. Separate network services require consent and exclude Lite clinics. Lists use opaque cursor plus limit (1–100, default 25); null nextCursor ends pagination. Administration endpoints are implemented against operational tables, with account deactivation and transactional audit. Network health reports persisted receipt-time telemetry with explicit unknown queue coverage.
  * OpenAPI spec version: 0.2.0
  */
+export type CoordinationMetricCoverage = typeof CoordinationMetricCoverage[keyof typeof CoordinationMetricCoverage];
+
+
+export const CoordinationMetricCoverage = {
+  available: 'available',
+  unavailable: 'unavailable',
+  partial: 'partial',
+} as const;
+
+export interface CoordinationMetric {
+  /**
+     * @minimum 0
+     * @nullable
+     */
+  value: number | null;
+  /** @minimum 0 */
+  sampleCount: number;
+  coverage: CoordinationMetricCoverage;
+}
+
+export interface NetworkCoordinationAccess {
+  canCoordinate: boolean;
+}
+
+export type NetworkCoordinationClinicMode = typeof NetworkCoordinationClinicMode[keyof typeof NetworkCoordinationClinicMode];
+
+
+export const NetworkCoordinationClinicMode = {
+  full: 'full',
+  lite: 'lite',
+} as const;
+
+export type NetworkCoordinationClinicMetrics = {
+  preventedConflicts: CoordinationMetric;
+  medianLookupSeconds: CoordinationMetric;
+};
+
+export interface NetworkCoordinationClinic {
+  /** @minimum 1 */
+  id: number;
+  name: string;
+  mode: NetworkCoordinationClinicMode;
+  membershipStatus: string;
+  metrics: NetworkCoordinationClinicMetrics;
+}
+
+export type NetworkCoordinationPeriodTimeZone = typeof NetworkCoordinationPeriodTimeZone[keyof typeof NetworkCoordinationPeriodTimeZone];
+
+
+export const NetworkCoordinationPeriodTimeZone = {
+  'Asia/Hebron': 'Asia/Hebron',
+} as const;
+
+export type NetworkCoordinationPeriod = {
+  from: string;
+  to: string;
+  timeZone: NetworkCoordinationPeriodTimeZone;
+};
+
+export interface NetworkCoordination {
+  asOf: string;
+  period: NetworkCoordinationPeriod;
+  clinics: NetworkCoordinationClinic[];
+}
+
 export type WaitlistEntryStatus = typeof WaitlistEntryStatus[keyof typeof WaitlistEntryStatus];
 
 

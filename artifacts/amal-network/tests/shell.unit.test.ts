@@ -9,8 +9,9 @@ test('every direct route is allowed only for its listed role', () => {
     assert.equal(resolve('/', role).kind, 'landing');
     assert.equal(landingFor(role), routesFor(role)[0].path);
     for (const route of SHELL_ROUTES) {
-      assert.equal(resolve(route.path, role).kind, route.roles.includes(role) ? 'page' : 'forbidden');
-      assert.equal(resolve(`${route.path}/`, role).kind, route.roles.includes(role) ? 'page' : 'forbidden');
+      const expected = route.roles.includes(role) && route.id !== 'coordination' ? 'page' : 'forbidden';
+      assert.equal(resolve(route.path, role).kind, expected);
+      assert.equal(resolve(`${route.path}/`, role).kind, expected);
     }
   }
   for (const role of [null, 'administrator', 'reception', ''] as const) {
@@ -18,7 +19,7 @@ test('every direct route is allowed only for its listed role', () => {
     for (const route of SHELL_ROUTES) assert.equal(resolve(route.path, role as null).kind, 'noRole');
   }
   assert.equal(resolve('/missing', 'admin').kind, 'notFound');
-  assert.equal(new Set(SHELL_ROUTES.map(r => r.path)).size, 22);
+  assert.equal(new Set(SHELL_ROUTES.map(r => r.path)).size, 23);
 });
 
 test('display preferences isolate stable identities, invalid fields and storage failures', () => {

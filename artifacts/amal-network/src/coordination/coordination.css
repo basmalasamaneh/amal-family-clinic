@@ -1,0 +1,13 @@
+.coordination { display: grid; gap: 24px; color: var(--amal-text); }
+.coordination__note { padding: 18px 22px; border-inline-start: 3px solid var(--amal-primary); background: var(--amal-primary-soft); border-radius: var(--amal-radius-control); }
+.coordination__note p { margin: 6px 0; }
+.coordination__period { display: flex; flex-wrap: wrap; gap: 12px 28px; color: var(--amal-muted); }
+.coordination__clinics { display: grid; gap: 16px; }
+.coordination__clinic { padding: 24px; background: var(--amal-surface); border: 1px solid var(--amal-border); border-radius: var(--amal-radius-card); }
+.coordination__clinic h2 { margin: 0 0 8px; font-size: var(--amal-text-lg); }
+.coordination__meta { color: var(--amal-muted); margin: 0 0 24px; }
+.coordination__metrics { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin: 0; }
+.coordination__metrics dd { margin: 8px 0 0; font-size: 1.7rem; font-weight: 600; }
+.coordination__metrics small { display: block; margin-top: 8px; color: var(--amal-muted); font-size: var(--amal-text-sm); font-weight: 400; }
+.coordination__skeleton { min-height: 180px; background: var(--amal-surface); border-radius: var(--amal-radius-card); border: 1px solid var(--amal-border); }
+@media (max-width: 767px) { .coordination__metrics { grid-template-columns: 1fr; } .coordination__clinic { padding: 18px; } }

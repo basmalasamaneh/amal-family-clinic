@@ -9,6 +9,56 @@ import * as zod from 'zod';
 
 
 /**
+ * Doctor-only fresh explicit operational scope capability. No query parameters. Does not grant clinical access.
+ */
+export const GetNetworkCoordinationAccessResponse = zod.object({
+  "canCoordinate": zod.boolean()
+}).strict()
+
+
+/**
+ * Read-only allowlisted aggregate summary of explicit operator-granted clinics for seven complete Asia/Hebron days. No filters, exports, raw identities or clinical permissions. Observed telemetry is partial coverage; absence is null.
+ */
+
+export const getNetworkCoordinationResponseClinicsItemMetricsPreventedConflictsValueMin = 0;
+
+export const getNetworkCoordinationResponseClinicsItemMetricsPreventedConflictsSampleCountMin = 0;
+
+export const getNetworkCoordinationResponseClinicsItemMetricsMedianLookupSecondsValueMin = 0;
+
+export const getNetworkCoordinationResponseClinicsItemMetricsMedianLookupSecondsSampleCountMin = 0;
+
+
+
+export const GetNetworkCoordinationResponse = zod.object({
+  "asOf": zod.coerce.date(),
+  "period": zod.object({
+  "from": zod.coerce.date(),
+  "to": zod.coerce.date(),
+  "timeZone": zod.enum(['Asia/Hebron'])
+}).strict(),
+  "clinics": zod.array(zod.object({
+  "id": zod.number().int().min(1),
+  "name": zod.string(),
+  "mode": zod.enum(['full', 'lite']),
+  "membershipStatus": zod.string(),
+  "metrics": zod.object({
+  "preventedConflicts": zod.object({
+  "value": zod.number().min(getNetworkCoordinationResponseClinicsItemMetricsPreventedConflictsValueMin).nullable(),
+  "sampleCount": zod.number().int().min(getNetworkCoordinationResponseClinicsItemMetricsPreventedConflictsSampleCountMin),
+  "coverage": zod.enum(['available', 'unavailable', 'partial'])
+}).strict(),
+  "medianLookupSeconds": zod.object({
+  "value": zod.number().min(getNetworkCoordinationResponseClinicsItemMetricsMedianLookupSecondsValueMin).nullable(),
+  "sampleCount": zod.number().int().min(getNetworkCoordinationResponseClinicsItemMetricsMedianLookupSecondsSampleCountMin),
+  "coverage": zod.enum(['available', 'unavailable', 'partial'])
+}).strict()
+}).strict()
+}).strict())
+}).strict()
+
+
+/**
  * Online-only reception view in the refreshed session clinic. No submitted clinic selector, shared cache, or network-wide projection. Offers do not reserve slots; availability is confirmed on acceptance. Declined/expired entries retain their original queue age for later cancellations.
  */
 export const listWaitlistResponseEntriesItemWeekdaysItemMin = 0;

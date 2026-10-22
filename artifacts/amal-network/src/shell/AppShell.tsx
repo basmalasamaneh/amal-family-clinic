@@ -41,6 +41,8 @@ import { ConsentPage } from '@/consent/ConsentPage';
 import { ImportPage } from '@/imports/ImportPage';
 import { DuplicatesPage } from '@/duplicates/DuplicatesPage';
 import { AdoptionPage } from '@/adoption/AdoptionPage';
+import { CoordinationPage } from '@/coordination/CoordinationPage';
+import { useCoordination } from '@/coordination/use-coordination';
 import '@/adoption/i18n';
 import { SyncQueuePanel } from '@/sync/SyncQueuePanel';
 import { isKnownRole, landingFor, resolve, routesFor, type Resolution, type ShellRoute } from './routes';
@@ -50,7 +52,7 @@ type NavigationItem = ShellRoute & { schedule?: boolean; labelKey?: string; pati
 const DOCTOR_NAV_GROUPS = [
   { group: 'doctorClinical', ids: ['myDay', 'networkSearch'] },
   { group: 'doctorRecords', ids: ['import', 'duplicates'] },
-  { group: 'doctorPrivacy', ids: ['adoption', 'privacy'] },
+  { group: 'doctorPrivacy', ids: ['adoption', 'coordination', 'privacy'] },
 ];
 const DOCTOR_NAV_LABELS: Record<string, string> = {
   networkSearch: 'findPatient', duplicates: 'reviewDuplicates', adoption: 'networkParticipation',
@@ -73,18 +75,20 @@ function AppShellContent({ identity, fixture, onRefresh, onLogout }: Props) {
   const { t } = useTranslation();
   const [location] = useLocation();
   const role = isKnownRole(identity.role) ? identity.role : null;
+  const coordinationActive = location.replace(/\/+$/, '') === '/doctor/coordination';
+  const coordination = useCoordination(identity, fixture, coordinationActive);
   // Expiry/unmount must also clear transient selections, not just explicit logout.
   useEffect(() => () => { clearNetworkSelection(); clearConsentSelection(); }, [identity.id, role]);
-  const items = useMemo<NavigationItem[]>(() => routesFor(role)
+  const items = useMemo<NavigationItem[]>(() => routesFor(role, coordination.allowed)
     .filter((r) => !r.navHidden && !(role === 'front-desk' && ['week', 'newBooking', 'daySheet'].includes(r.id))
       && !(role === 'doctor' && r.id === 'patientCard'))
     .map((r) => role === 'doctor' ? { ...r, labelKey: DOCTOR_NAV_LABELS[r.id], patientSearch: r.id === 'networkSearch' }
-      : role === 'front-desk' && r.id === 'today' ? { ...r, schedule: true } : r), [role]);
+      : role === 'front-desk' && r.id === 'today' ? { ...r, schedule: true } : r), [role, coordination.allowed]);
   const navGroups = role === 'doctor'
     ? DOCTOR_NAV_GROUPS.map((g) => ({ group: g.group, items: g.ids.flatMap((id) => items.filter((r) => r.id === id)) }))
     : groupRoutes(items);
   const orderedItems = role === 'doctor' ? navGroups.flatMap((g) => g.items) : items;
-  const res = resolve(location, role);
+  const res = resolve(location, role, coordination.allowed);
 
   const clinics = identity.clinics;
   const [clinicId, setClinicId] = useState<number | null>(clinics[0]?.id ?? null);
@@ -97,7 +101,7 @@ function AppShellContent({ identity, fixture, onRefresh, onLogout }: Props) {
   const tour = useTour(identity.id, role);
   const [collapsed, setCollapsed] = useState(() => { try { return window.localStorage.getItem('amal.nav.collapsed') === '1'; } catch { return false; } });
   const toggleCollapsed = () => setCollapsed((c) => { try { window.localStorage.setItem('amal.nav.collapsed', c ? '0' : '1'); } catch { /* storage unavailable */ } return !c; });
-  const title = role === 'doctor' && res.kind === 'page' && DOCTOR_NAV_LABELS[res.route.id]
+  const title = role === 'doctor' && coordinationActive ? t('shell.nav.coordination') : role === 'doctor' && res.kind === 'page' && DOCTOR_NAV_LABELS[res.route.id]
     ? t(`shell.nav.${DOCTOR_NAV_LABELS[res.route.id]}`) : titleFor(res, t);
   const [announce, setAnnounce] = useState('');
   const first = useRef(true);
@@ -174,7 +178,7 @@ function AppShellContent({ identity, fixture, onRefresh, onLogout }: Props) {
 
         <div className="shell-crumbs"><Breadcrumbs label={t('shell.crumbs')} items={[{ label: t('shell.crumbsHome'), render: (c: ReactNode, cls: string) => <Link href={demoPath('/')} className={cls} data-testid="link-crumb-home">{c}</Link> }, ...crumbs]} /></div>
         <main id="main" tabIndex={-1} className="shell-main" key={role === 'admin' ? 'admin' : clinicId ?? 'none'}>
-          <PageContent identity={identity} res={res} title={title} clinic={clinic} clinics={clinics} fixture={fixture} landing={landingFor(role)} scope={`${identity.id}:${role ?? 'none'}:${role === 'admin' ? 'all' : clinic?.id ?? 'none'}`} onRefresh={onRefresh} />
+          {coordinationActive && role === 'doctor' ? <CoordinationPage view={coordination} /> : <PageContent identity={identity} res={res} title={title} clinic={clinic} clinics={clinics} fixture={fixture} landing={landingFor(role)} scope={`${identity.id}:${role ?? 'none'}:${role === 'admin' ? 'all' : clinic?.id ?? 'none'}`} onRefresh={onRefresh} />}
         </main>
       </div>
 

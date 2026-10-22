@@ -5,6 +5,7 @@ import scenario from "./scenario.json";
 import { aggregateTelemetry, type TelemetryAggregate } from "../kpis/aggregates";
 import { KPI_VERSION, period, shiftDay, ZONE } from "../kpis/period";
 import { LOOKUP_VERSION } from "../kpis/lookup";
+import type { PoolClient } from "pg";
 
 const id = z.number().int().positive().max(2147483647);
 const configuration = z.object({
@@ -49,6 +50,30 @@ export function projectResults(telemetry: TelemetryAggregate, attemptCount: numb
   };
 }
 
+/** Shared evidence definition; caller supplies only server-authorized scope. */
+export async function resultMetrics(client: PoolClient, window: ReturnType<typeof resultsWindow>, clinicId: number) {
+  const telemetry = await aggregateTelemetry(client, window.start, window.end, clinicId);
+  const { rows: [evidence] } = await client.query<{ count: number }>(`
+    WITH decisions AS (
+      SELECT client_op_id::text AS logical_id,created_at AS at
+      FROM operational.appointment_operations
+      WHERE clinic_id=$3 AND (status='applied' OR
+        (status='conflict' AND result->>'code'='APPOINTMENT_CONFLICT'))
+      UNION ALL
+      SELECT h.client_op_id::text,h.created_at
+      FROM operational.sync_resolution_history h
+      JOIN operational.sync_conflicts c ON c.id=h.conflict_id
+      WHERE c.clinic_id=$3 AND h.result->>'status'='open'
+        AND h.result->'error'->>'code'='APPOINTMENT_CONFLICT'
+    ), logical_decisions AS (
+      SELECT logical_id,min(at) AS at FROM decisions GROUP BY logical_id
+    )
+    SELECT count(*)::integer AS count FROM logical_decisions
+    WHERE at >= $1::timestamptz AND at < $2::timestamptz`,
+  [window.start, window.end, clinicId]);
+  return projectResults(telemetry, evidence!.count);
+}
+
 export async function adoptionResults(now = new Date(), rawConfiguration: unknown = scenario) {
   const window = resultsWindow(now);
   const config = parseScenario(rawConfiguration);
@@ -69,31 +94,9 @@ export async function adoptionResults(now = new Date(), rawConfiguration: unknow
     }
     const clinics = [];
     for (const clinicId of config.resultClinicIds) {
-      const telemetry = await aggregateTelemetry(client, window.start, window.end, clinicId);
-      // Coverage evidence only: the metric calculation remains aggregateTelemetry.
-      // Include applied decisions to distinguish a genuine observed zero from no
-      // instrumentation, and mirror upstream logical-ID/earliest-at attribution.
-      const { rows: [evidence] } = await client.query<{ count: number }>(`
-        WITH decisions AS (
-          SELECT client_op_id::text AS logical_id,created_at AS at
-          FROM operational.appointment_operations
-          WHERE clinic_id=$3 AND (status='applied' OR
-            (status='conflict' AND result->>'code'='APPOINTMENT_CONFLICT'))
-          UNION ALL
-          SELECT h.client_op_id::text,h.created_at
-          FROM operational.sync_resolution_history h
-          JOIN operational.sync_conflicts c ON c.id=h.conflict_id
-          WHERE c.clinic_id=$3 AND h.result->>'status'='open'
-            AND h.result->'error'->>'code'='APPOINTMENT_CONFLICT'
-        ), logical_decisions AS (
-          SELECT logical_id,min(at) AS at FROM decisions GROUP BY logical_id
-        )
-        SELECT count(*)::integer AS count FROM logical_decisions
-        WHERE at >= $1::timestamptz AND at < $2::timestamptz`,
-      [window.start, window.end, clinicId]);
       clinics.push({
         clinicId, clinicName: rows.find(row => row.clinic_id === clinicId)!.clinic_name,
-        ...projectResults(telemetry, evidence!.count),
+        ...await resultMetrics(client, window, clinicId),
       });
     }
     await client.query("COMMIT");

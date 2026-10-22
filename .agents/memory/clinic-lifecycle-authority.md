@@ -4,6 +4,17 @@ description: Permission and ordering decisions for adoption and departure
 ---
 Clinic management is an explicit clinic-scoped delegation to a doctor, never inferred from a doctor/admin role.
 
+The managing partner remains a doctor and may additionally coordinate the
+network through read-only, explicitly scoped aggregate results and participation
+status. This does not imply administrator authority across the clinics.
+
+**Why:** The user approved this interpretation of Dr. Amal's role: a unified view
+to demonstrate value while each clinic retains its own adoption decision.
+
+**How to apply:** Keep her existing local management separate from coordination.
+Never let coordination authorize another clinic's lifecycle changes, staff/device
+management, exports, or clinical records outside the existing sharing rules.
+
 **Why:** Voluntary opt-in/export/leave must not grant network administrators clinical access or let them opt in on a clinic's behalf.
 
 **How to apply:** Preserve explicit delegated authority and local scope for lifecycle/export operations. New remote-data consumers must enforce both source and requester eligibility using current database state, including cached evidence. Departure retains local Lite operation and is not erasure or permission to rejoin.
