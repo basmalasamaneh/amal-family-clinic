@@ -93,9 +93,9 @@
   white-space: normal; overflow-wrap: anywhere; line-height: 1.75;
 }
 .cr__cap { font-size: var(--amal-text-sm); }
-.cr__history time { display: block; margin-inline-start: 0; unicode-bidi: plaintext; }
+.cr__history time { display: block; margin-inline-start: 0; unicode-bidi: isolate; text-align: start; }
 .cr__dl dd, .cr__slot time, .sync-row__when {
-  white-space: normal; unicode-bidi: plaintext; line-height: 1.75;
+  white-space: normal; unicode-bidi: isolate; text-align: start; line-height: 1.75;
 }
 .cr__slot time { min-inline-size: 0; overflow-wrap: anywhere; }
 .cr__slot input { flex-shrink: 0; }
