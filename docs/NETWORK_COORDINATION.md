@@ -33,8 +33,11 @@ another clinic's adoption settings. Clinical access keeps the existing
 doctor/patient/consent rules. Local adoption decisions remain with the explicitly
 delegated manager of that clinic.
 
-The existing additional practice administrator accounts were not deleted or
-changed. They are separate from this coordination delegation.
+The three additional practice administrator accounts (manager.1, manager.2 and
+manager.3) were subsequently retired with the owner's approval: sign-in is
+disabled and sessions revoked, while their audit history is retained. They are
+separate from this coordination delegation. The main administrator and doctors
+remain active with their existing authority.
 
 ## Trusted operator maintenance
 

@@ -29,9 +29,9 @@ The manifest was prepared for **21 October 2026, Asia/Hebron**, with **12 practi
 | Account email | Role / person | Assigned clinic and initial network mode |
 |---|---|---|
 | `admin@amal.example` | Administrator | Network-wide; no assigned home clinic |
-| `manager.1@amal.example` | Clinic administrator | 1 — Amal Family Clinic - Downtown — Full |
-| `manager.2@amal.example` | Clinic administrator | 2 — Amal Family Clinic - Al-Bireh — Lite |
-| `manager.3@amal.example` | Clinic administrator | 3 — Amal Family Clinic - Nablus Road — Full |
+| `manager.1@amal.example` | Retired — sign-in disabled; audit history retained | 1 — Amal Family Clinic - Downtown — Full |
+| `manager.2@amal.example` | Retired — sign-in disabled; audit history retained | 2 — Amal Family Clinic - Al-Bireh — Lite |
+| `manager.3@amal.example` | Retired — sign-in disabled; audit history retained | 3 — Amal Family Clinic - Nablus Road — Full |
 | `doctor.1@amal.example` | Dr. Amal Khoury | 1 — Amal Family Clinic - Downtown — Full |
 | `doctor.2@amal.example` | Dr. Nabil Sabbah | 2 — Amal Family Clinic - Al-Bireh — Lite |
 | `doctor.3@amal.example` | Dr. Yasmin Odeh | 3 — Amal Family Clinic - Nablus Road — Full |
