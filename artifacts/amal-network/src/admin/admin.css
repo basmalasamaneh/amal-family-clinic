@@ -192,6 +192,15 @@
 .adm-filters .amal-field { min-inline-size: min(160px, 100%); }
 .adm-table td { overflow-wrap: anywhere; }
 .adm-table .adm-rowact { overflow-wrap: normal; }
+.adm-table .adm-role,
+.adm-table .adm-state-chip {
+  flex-shrink: 0;
+  min-inline-size: max-content;
+  white-space: nowrap;
+  overflow-wrap: normal;
+  word-break: normal;
+}
+.adm-table .adm-role > svg { flex-shrink: 0; }
 @media (max-width: 767px) {
   .adm-health-grid, .adm-clinic__facts, .adm-hcard__dl { grid-template-columns: minmax(0, 1fr); }
   .adm-hcard { padding-block: 18px; padding-inline: 20px; }
