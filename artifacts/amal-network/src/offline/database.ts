@@ -12,6 +12,7 @@ export const SCHEMA_V1 = {
 
 /** Append-only schema history. v2 only adds indexes/a lifecycle table: never clears records. */
 export class LocalCacheDatabase extends Dexie {
+  registrations!: Table<import('./types').PatientRegistration, [string, number, string]>;
   appointments!: Table<CachedAppointment, [string, number, number]>;
   doctors!: Table<CachedDoctor, [string, number, number]>;
   patients!: Table<CachedPatient, [string, number, number]>;
@@ -46,6 +47,9 @@ export class LocalCacheDatabase extends Dexie {
     });
     this.version(5).stores({
       syncTombstones: '[userId+clinicId+id], userId, [userId+clinicId]',
+    });
+    this.version(6).stores({
+      registrations: '[userId+clinicId+clientOpId], userId, [userId+clinicId], [userId+clinicId+localId]',
     });
   }
 }

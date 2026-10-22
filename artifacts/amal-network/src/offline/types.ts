@@ -52,6 +52,18 @@ export interface AppointmentProjection {
 }
 export type CachedDoctor = DoctorProjection & Scope;
 export type CachedPatient = PatientProjection & Scope;
+/** Only a durable, owned registration may project a temporary negative identity. */
+export interface RegistrationPatientProjection extends PatientProjection { registrationOpId: string }
+export interface PatientRegistration extends Scope {
+  clientOpId: string;
+  localId: number;
+  input: import('@workspace/api-client-react').PatientInput;
+  patient: RegistrationPatientProjection;
+  canonical: PatientProjection | null;
+  status: 'pending' | 'processing' | 'failed' | 'rejected' | 'applied';
+  attempts: number;
+  errorCode: 'network' | 'rejected' | null;
+}
 export type CachedAppointment = AppointmentProjection & Scope;
 
 export interface CalendarWindow {
@@ -77,7 +89,7 @@ export interface AuthorizedSnapshot extends Scope {
 }
 export interface CachedSnapshot {
   doctors: CachedDoctor[];
-  patients: CachedPatient[];
+  patients: (CachedPatient | (RegistrationPatientProjection & Scope))[];
   appointments: CachedAppointment[];
   metadata: CacheMetadata | null;
   window: CalendarWindow;
@@ -118,7 +130,9 @@ export interface BookingProposal extends Scope {
   deviceId: number;
   sequence: number;
   input: import('@workspace/api-client-react').AppointmentInput;
-  patient: PatientProjection;
+  /** Frozen before the first wire attempt; original local intent is never rewritten. */
+  deliveryInput?: import('@workspace/api-client-react').AppointmentInput;
+  patient: PatientProjection | RegistrationPatientProjection;
   doctor: DoctorProjection;
   canonical: import('@workspace/api-client-react').Appointment | null;
   outcome: 'pending' | 'applied' | 'conflict' | 'rejected' | 'blocked';

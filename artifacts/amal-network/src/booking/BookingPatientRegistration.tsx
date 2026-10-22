@@ -1,11 +1,10 @@
-import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useOnlineStatus } from '@/hooks/use-online-status';
-import { isDemoReachable, subscribeDemoReachability } from '@/auth/demo-context';
 import { localCache } from '@/offline';
 import { getBookingSnapshot, prepareBookingCache } from '@/offline/booking-bridge';
 import { createFixtureReceptionApi, realReceptionApi } from '@/reception/api';
-import { NewPatientDialog, startSave, IDLE_STATUS, type RegStatus } from '@/reception/NewPatientDialog';
+import { NewPatientDialog, startSave, IDLE_STATUS, canRegisterLocally, localRegistrationApi, type RegStatus } from '@/reception/NewPatientDialog';
 import { createRegSession, EMPTY_DRAFT, serverFieldErrors, type NewPatientPayload } from '@/reception/registration';
 import type { SchedulingReadAdapter } from '@/calendar/adapter';
 import type { PatientHit, PatientSearchAdapter } from './patients';
@@ -19,9 +18,8 @@ export function BookingPatientRegistration({ clinicId, fixture, scheduling, pati
 }) {
   const { t } = useTranslation();
   const online = useOnlineStatus();
-  const reachable = useSyncExternalStore(subscribeDemoReachability, isDemoReachable, isDemoReachable);
-  const allowed = online && (fixture || reachable);
-  const api = useMemo(() => fixture ? createFixtureReceptionApi((id, signal) => scheduling.listDoctors(id, signal)) : realReceptionApi, [fixture, scheduling]);
+  const allowed = fixture ? online : canRegisterLocally(clinicId);
+  const api = useMemo(() => fixture ? createFixtureReceptionApi((id, signal) => scheduling.listDoctors(id, signal)) : localRegistrationApi(realReceptionApi, clinicId), [fixture, scheduling, clinicId]);
   const session = useRef(createRegSession()).current;
   const [draft, setDraft] = useState(EMPTY_DRAFT);
   const [status, setStatus] = useState<RegStatus>(IDLE_STATUS);
@@ -43,7 +41,7 @@ export function BookingPatientRegistration({ clinicId, fixture, scheduling, pati
     if (busy.current || !alive.current || !allowed) return;
     busy.current = true; setRefreshState('loading');
     try {
-      const p = fixture ? { ...result.patient, clinicId } : await refreshRegisteredPatient(result, clinicId, prepareBookingCache, getBookingSnapshot, () => alive.current);
+      const p = fixture || result.patient.id < 0 ? { ...result.patient, clinicId } : await refreshRegisteredPatient(result, clinicId, prepareBookingCache, getBookingSnapshot, () => alive.current);
       if (!alive.current) return;
       callbacks.current.onOpenChange(false);
       callbacks.current.onSelect(p);
@@ -51,7 +49,7 @@ export function BookingPatientRegistration({ clinicId, fixture, scheduling, pati
     finally { busy.current = false; }
   };
   const submit = (key: string, payload: NewPatientPayload) => {
-    if (!allowed || !alive.current || created) return;
+    if (!allowed || !alive.current || created || (!fixture && !canRegisterLocally(clinicId))) return;
     let operationId = '';
     const started = startSave(api, session, key, payload, res => {
       if (!alive.current) return;
@@ -73,7 +71,7 @@ export function BookingPatientRegistration({ clinicId, fixture, scheduling, pati
   };
   return <>
     {created ? <div className="bk-msg bk-msg--info" role="status" data-testid="status-registration-refresh">
-      <div className="bk-msg__body"><p>{t(refreshState === 'loading' ? 'rx.bookingRefreshing' : 'rx.bookingRefreshFailed')}</p>
+      <div className="bk-msg__body"><p>{t(created.patient.id < 0 ? 'rx.reg.localPending' : refreshState === 'loading' ? 'rx.bookingRefreshing' : 'rx.bookingRefreshFailed')}</p>
         {refreshState !== 'loading' && <button className="bk-btn bk-btn--sm" type="button" disabled={!allowed} onClick={() => void complete(created)} data-testid="button-registration-refresh">{t('bk.search.retry')}</button>}
         {!allowed && <p className="bk-hint">{t('rx.bookingOffline')}</p>}
       </div>
@@ -81,6 +79,6 @@ export function BookingPatientRegistration({ clinicId, fixture, scheduling, pati
       <PatientQuickSearch adapter={patients} clinicId={clinicId} autoFocus paginate onSelect={onSelect} onCreate={show} createDisabledReason={!allowed ? t('rx.bookingOffline') : undefined} />
       {(draft !== EMPTY_DRAFT || session.pending || status.saving) && !open && <button className="bk-btn bk-btn--sm" type="button" disabled={!allowed} onClick={() => show()} data-testid="button-booking-registration-resume">{t('rx.reg.resume')}</button>}
     </>}
-    {open && !created && <NewPatientDialog api={api} clinicId={clinicId} draft={draft} onDraft={setDraft} onClose={close} onWalkIn={null} session={session} status={status} onSubmit={submit} saveDisabled={!allowed} />}
+    {open && !created && <NewPatientDialog api={api} clinicId={clinicId} draft={draft} onDraft={setDraft} onClose={close} onWalkIn={null} session={session} status={status} onSubmit={submit} saveDisabled={!allowed} allowOffline={!fixture} />}
   </>;
 }

@@ -1,10 +1,11 @@
-import { getSyncState, pushSync, pullSync, listSyncConflicts, resolveSync } from '@workspace/api-client-react';
+import { createPatient, getSyncState, pushSync, pullSync, listSyncConflicts, resolveSync } from '@workspace/api-client-react';
 import { localCache } from '../offline';
 import { reportUnauthorized } from '../auth/session-events';
 import { SyncRunner, browserQueueLock } from './runner';
 import { isDemoReachable, subscribeDemoReachability } from '../auth/demo-context';
 
 export const syncClient = new SyncRunner(localCache, {
+  registerPatient: (input, signal) => createPatient(input, { signal }),
   state: signal => getSyncState({ signal }),
   push: (operations, signal) => pushSync({ operations }, { signal }),
   pull: (since, signal) => pullSync(since ? { since } : {}, { signal }),

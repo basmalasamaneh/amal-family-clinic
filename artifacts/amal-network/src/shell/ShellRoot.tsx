@@ -1,5 +1,5 @@
 import { AlertTriangle, LockKeyhole, WifiOff } from 'lucide-react';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Redirect, useLocation, useSearch } from 'wouter';
 import { useQueryClient } from '@tanstack/react-query';
@@ -10,7 +10,7 @@ import { LoginPage } from '@/pages/login/LoginPage';
 import { DataPage } from '@/pages/data/DataPage';
 import { loginHref, safeReturnTo } from '@/auth/return-to';
 import { onUnauthorized, reportUnauthorized } from '@/auth/session-events';
-import { ensureDemoContext, startDemoContextPolling } from '@/auth/demo-context';
+import { ensureDemoContext, isDemoReachable, startDemoContextPolling, subscribeDemoReachability } from '@/auth/demo-context';
 import { demoPath, identityAdapter, type ShellIdentity } from './identity';
 import { landingFor } from './routes';
 import { AppShell } from './AppShell';
@@ -18,7 +18,8 @@ import { useOnlineStatus } from '@/hooks/use-online-status';
 import './offline-messages';
 import { localCache } from '@/offline';
 import { readCleanupTarget, rememberCleanupTarget, UNKNOWN_CLEANUP } from './cleanup-warning';
-import { allowSessionAfterLogin, markExplicitSignout, onPeerRevocation, revokeOfflineAuthorization } from '@/auth/offline-permit';
+import { allowSessionAfterLogin, authorizationEpoch, isExplicitlySignedOut, markExplicitSignout, onPeerRevocation, revokeOfflineAuthorization } from '@/auth/offline-permit';
+import { ONLINE_REVERIFY_INTERVAL, startOfflineReverification, type ReverificationThrottle } from './offline-reverification';
 
 type LoadState = { status: 'loading' } | { status: 'error' } | { status: 'ready'; identity: ShellIdentity | null; expired?: boolean };
 const MAX_TIMER = 2_147_000_000;
@@ -33,6 +34,10 @@ export function ShellRoot() {
   const [cleanupTarget, setCleanupTarget] = useState<string | null>(readCleanupTarget);
   const [cleaning, setCleaning] = useState(false);
   const [demoReset, setDemoReset] = useState(false);
+  const online = useOnlineStatus();
+  const reachable = useSyncExternalStore(subscribeDemoReachability, isDemoReachable, isDemoReachable);
+  // Kept outside loading/ready state so failed /me restoration cannot reset the backoff.
+  const reverifyThrottle = useRef<ReverificationThrottle>({ nextAttemptAt: 0, inFlight: false });
   const [location, navigate] = useLocation();
   const search = useSearch();
   const qc = useQueryClient();
@@ -57,6 +62,7 @@ export function ShellRoot() {
   const load = useCallback(() => {
     void localCache.setContext(null);
     const g = ++gen.current;
+    reverifyThrottle.current.nextAttemptAt = Date.now() + ONLINE_REVERIFY_INTERVAL;
     setState({ status: 'loading' });
     (identityAdapter.mode === 'fixture' ? identityAdapter.load() : ensureDemoContext().then(() => identityAdapter.load())).then(
       (identity) => { if (mounted.current && g === gen.current) apply(identity); },
@@ -120,6 +126,33 @@ export function ShellRoot() {
   const identity = state.status === 'ready' ? state.identity : null;
   const expiresAt = identity?.offlineAuthorizedUntil ?? identity?.expiresAt ?? null;
   useEffect(() => {
+    if (identityAdapter.mode === 'fixture' || !identity?.offlineRestored || !online || !reachable) return;
+    const generation = gen.current;
+    const epoch = authorizationEpoch();
+    return startOfflineReverification({
+      expiresAt: Date.parse(identity.offlineAuthorizedUntil ?? ''),
+      throttle: reverifyThrottle.current,
+      canVerify: () => mounted.current && gen.current === generation &&
+        epoch !== null && epoch === authorizationEpoch() && !isExplicitlySignedOut() &&
+        navigator.onLine && isDemoReachable(),
+      isCurrent: () => mounted.current && gen.current === generation,
+      verify: () => identityAdapter.load(),
+      onVerified: (next) => {
+        // /me 401 revokes the permit inside the adapter before returning null.
+        // That changed epoch is a denial, not a stale success to silently ignore.
+        if (!next || epoch !== authorizationEpoch() || isExplicitlySignedOut()) expire();
+        // A transport failure can restore the same permit. Keep the original identity
+        // and deadline, without loading-state churn or enabling sync delivery.
+        else if (!next.offlineRestored && navigator.onLine && isDemoReachable()) apply(next);
+      },
+      onError: (error) => {
+        if (epoch !== authorizationEpoch() || isExplicitlySignedOut() ||
+          (error && typeof error === 'object' && 'status' in error && error.status === 401)) expire();
+        // Other failures retain only the already bounded continuation; retry later.
+      },
+    });
+  }, [identity, online, reachable, apply, expire]);
+  useEffect(() => {
     if (!expiresAt) return;
     const at = Date.parse(expiresAt);
     if (!Number.isFinite(at)) return;
@@ -135,7 +168,9 @@ export function ShellRoot() {
   }, [expiresAt, expire, apply]);
   useEffect(() => {
     const offline = () => { if (identity && !identity.offlineAuthorizedUntil) expire(); };
-    const online = () => { if (identity) load(); };
+    // Bounded background verification owns offline continuations, including missed
+    // online events and the HTTP reachability guard settling after that event.
+    const online = () => { if (identity && !identity.offlineRestored) load(); };
     window.addEventListener('offline', offline);
     window.addEventListener('online', online);
     return () => { window.removeEventListener('offline', offline); window.removeEventListener('online', online); };

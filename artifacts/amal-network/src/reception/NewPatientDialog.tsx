@@ -3,6 +3,8 @@ import * as Dialog from '@radix-ui/react-dialog';
 import { useTranslation } from 'react-i18next';
 import { AlertTriangle, DoorOpen, Loader2, RotateCcw, ShieldAlert, UserPlus, X } from 'lucide-react';
 import { useOnlineStatus } from '@/hooks/use-online-status';
+import { localCache } from '@/offline';
+import { saveLocalPatientRegistration } from '@/offline/booking-bridge';
 import { classifyError, type Failure } from '@/booking/errors';
 import { newOpId } from '@/booking/ops';
 import type { PatientHit } from '@/booking/patients';
@@ -16,6 +18,26 @@ import type { ReceptionApi } from './api';
  */
 export interface RegStatus { saving: boolean; failure: Failure | null; serverErrors: RegErrors }
 export const IDLE_STATUS: RegStatus = { saving: false, failure: null, serverErrors: {} };
+
+/** Connectivity is never an authorization grant. Rechecked at the actual save boundary. */
+export function canRegisterLocally(clinicId: number): boolean {
+  const scope = localCache.captureScope();
+  return scope.ok && scope.value.clinicId === clinicId;
+}
+
+export function localRegistrationApi(api: ReceptionApi, clinicId: number): ReceptionApi {
+  if (api.mode === 'fixture') return api;
+  return { ...api, async createPatient(input) {
+    const scope = localCache.captureScope();
+    if (!scope.ok || scope.value.clinicId !== clinicId) throw Object.assign(new Error('Unauthorized registration'), { status: 403 });
+    const patient = await saveLocalPatientRegistration(input);
+    const current = localCache.captureScope();
+    if (!current.ok || current.value.clinicId !== clinicId || current.value.userId !== scope.value.userId || current.value.generation !== scope.value.generation) {
+      throw Object.assign(new Error('Registration scope changed'), { status: 403 });
+    }
+    return patient;
+  } };
+}
 
 /**
  * Starts a save bound to the page-owned session. Results go to `report`, which belongs to the
@@ -34,14 +56,17 @@ export function startSave(api: ReceptionApi, session: RegSession, key: string, p
   return 'started';
 }
 
-export function NewPatientDialog({ api, clinicId, draft, onDraft, onClose, onWalkIn, session, status, onSubmit, saveDisabled = false }: {
+export function NewPatientDialog({ api, clinicId, draft, onDraft, onClose, onWalkIn, session, status, onSubmit, saveDisabled = false, allowOffline = false }: {
   api: ReceptionApi; clinicId: number; draft: RegDraft; onDraft: (d: RegDraft) => void;
   onClose: () => void; onWalkIn: (() => void) | null;
   session: RegSession; status: RegStatus; onSubmit: (key: string, payload: NewPatientPayload) => void;
   saveDisabled?: boolean;
+  allowOffline?: boolean;
 }) {
   const { t } = useTranslation();
   const online = useOnlineStatus();
+  const offlineAllowed = allowOffline && api.mode === 'real' && canRegisterLocally(clinicId);
+  const connectionBlocked = !online && !offlineAllowed;
   const [today] = useState(() => hebronToday());
   const [errors, setErrors] = useState<RegErrors>({});
   const [showErrors, setShowErrors] = useState(false);
@@ -69,7 +94,8 @@ export function NewPatientDialog({ api, clinicId, draft, onDraft, onClose, onWal
     if (session.inFlight) return;
     setShowErrors(true);
     if (!result.ok) { setErrors(result.errors); setTimeout(() => summaryRef.current?.focus(), 0); return; }
-    if (!online || saveDisabled || !payloadKey || changedAfterUncertain) return;
+    if (connectionBlocked || saveDisabled || !payloadKey || changedAfterUncertain) return;
+    if (allowOffline && api.mode === 'real' && !canRegisterLocally(clinicId)) return;
     onSubmit(payloadKey, result.payload);
   };
   const err = (k: RegField) => (errors[k] ? t(`rx.reg.err.${errors[k]}`) : null);
@@ -94,7 +120,7 @@ export function NewPatientDialog({ api, clinicId, draft, onDraft, onClose, onWal
           <form className="bk-body" onSubmit={submit} noValidate id="rx-reg-form">
             <p id="rx-reg-desc" className="bk-hint">{t('rx.reg.desc')}</p>
             {api.mode === 'fixture' && <p className="bk-fixture" data-testid="status-fixture-reception">{t('rx.fixture')}</p>}
-            {(!online || saveDisabled) && <div className="bk-msg bk-msg--warn" role="status" data-testid="status-reg-offline"><AlertTriangle size={20} aria-hidden="true" /><div className="bk-msg__body"><p>{t('rx.reg.offline')}</p></div></div>}
+            {(connectionBlocked || saveDisabled || offlineAllowed) && <div className="bk-msg bk-msg--warn" role="status" data-testid="status-reg-offline"><AlertTriangle size={20} aria-hidden="true" /><div className="bk-msg__body"><p>{t(offlineAllowed && !saveDisabled ? 'rx.reg.localNotice' : 'rx.reg.offline')}</p></div></div>}
             <p ref={summaryRef} tabIndex={-1} className="bk-err" role="alert" hidden={!showErrors || result.ok} data-testid="text-reg-summary">{t('rx.reg.summary')}</p>
 
             <div className="bk-field">
@@ -142,14 +168,14 @@ export function NewPatientDialog({ api, clinicId, draft, onDraft, onClose, onWal
                 <div className="bk-msg__body"><p>{failMsg}</p>
                   {changedAfterUncertain && <p className="bk-hint" data-testid="text-reg-changed">{t('rx.reg.changedAfterUncertain')}</p>}
                   {changedAfterUncertain && session.pending && <button type="button" className="bk-btn bk-btn--sm" onClick={onRevert} data-testid="button-reg-revert">{t('rx.reg.revert')}</button>}
-                  {failure && isUncertain(failure) && !changedAfterUncertain && <button type="button" className="bk-btn bk-btn--sm" onClick={() => void submit()} disabled={saving || !online || saveDisabled} data-testid="button-reg-retry"><RotateCcw size={16} aria-hidden="true" />{t('rx.reg.retrySame')}</button>}
+                  {failure && isUncertain(failure) && !changedAfterUncertain && <button type="button" className="bk-btn bk-btn--sm" onClick={() => void submit()} disabled={saving || connectionBlocked || saveDisabled} data-testid="button-reg-retry"><RotateCcw size={16} aria-hidden="true" />{t('rx.reg.retrySame')}</button>}
                 </div></div>
             )}
           </form>
           <footer className="bk-foot">
             <button type="button" className="bk-btn" onClick={onClose} data-testid="button-reg-cancel">{t('rx.reg.cancel')}</button>
             <span className="bk-foot__spacer" />
-            <button type="submit" form="rx-reg-form" className="bk-btn bk-btn--primary" disabled={saving || !online || saveDisabled || changedAfterUncertain} aria-busy={saving} data-testid="button-reg-save">
+            <button type="submit" form="rx-reg-form" className="bk-btn bk-btn--primary" disabled={saving || connectionBlocked || saveDisabled || changedAfterUncertain} aria-busy={saving} data-testid="button-reg-save">
               {saving ? <><Loader2 size={18} aria-hidden="true" className="rx-spin" />{t('rx.reg.saving')}</> : <><UserPlus size={18} aria-hidden="true" />{t('rx.reg.save')}</>}
             </button>
           </footer>

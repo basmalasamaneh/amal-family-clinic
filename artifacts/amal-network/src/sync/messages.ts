@@ -1,6 +1,12 @@
 import { i18n } from '../i18n';
 
 const en = {
+  registration: {
+    title: 'Patient registrations', empty: 'No local patient registrations.',
+    hint: 'Saved on this device. Awaiting server confirmation.',
+    pending: 'Pending sync', processing: 'Sending', failed: 'Waiting to retry', rejected: 'Not accepted', applied: 'Confirmed by server',
+    retrySame: 'Retry unchanged registration', retryFailed: 'Could not retry registration. Nothing was changed.',
+  },
   eyebrow: 'Offline bookings',
   lede: 'Every booking made during an outage stays here until the server confirms it. Nothing is removed from this list without an acknowledgement.',
   counts: { waiting: 'Waiting', syncing: 'Syncing', acknowledged: 'Acknowledged', conflict: 'Conflicts', retry: 'Retrying', dependent: 'Held behind another' },
@@ -110,6 +116,12 @@ const en = {
 };
 
 const ar: typeof en = {
+  registration: {
+    title: 'تسجيلات المرضى', empty: 'لا توجد تسجيلات مرضى محلية.',
+    hint: 'محفوظ على هذا الجهاز. بانتظار تأكيد الخادم.',
+    pending: 'بانتظار المزامنة', processing: 'جارٍ الإرسال', failed: 'بانتظار إعادة المحاولة', rejected: 'لم يُقبل', applied: 'أكده الخادم',
+    retrySame: 'إعادة إرسال التسجيل دون تغيير', retryFailed: 'تعذرت إعادة إرسال التسجيل. لم يتغير شيء.',
+  },
   eyebrow: 'حجوزات دون اتصال',
   lede: 'كل حجز أُنشئ أثناء انقطاع الاتصال يبقى هنا حتى يؤكده الخادم. لا يُزال شيء من هذه القائمة دون تأكيد.',
   counts: { waiting: 'بانتظار الإرسال', syncing: 'قيد الإرسال', acknowledged: 'مؤكدة', conflict: 'تعارضات', retry: 'إعادة محاولة', dependent: 'بانتظار حجز سابق' },

@@ -40,14 +40,21 @@ export function ConnectionStatus({ userId, clinicId, queueAvailable }: { userId:
       const refresh = async () => {
         const request = ++readId;
         try {
-        const [result, sync, bookings] = await Promise.all([
-          localCache.listOutbox(ticket.value), localCache.readSyncState(ticket.value), localCache.listBookings(ticket.value),
+        const [result, sync, bookings, registrations] = await Promise.all([
+          localCache.listOutbox(ticket.value), localCache.readSyncState(ticket.value), localCache.listBookings(ticket.value), localCache.listPatientRegistrations(ticket.value),
         ]);
         if (!result.ok) throw new Error(result.error);
         if (!sync.ok) throw new Error(sync.error);
         if (!bookings.ok) throw new Error(bookings.error);
+        if (!registrations.ok) throw new Error(registrations.error);
         const counts = summarizeQueue(result.value, bookings.value);
         counts.attention = Math.max(counts.attention, sync.value.conflicts.filter(c => c.status === 'open').length);
+        for (const registration of registrations.value) {
+          if (registration.status === 'applied') continue;
+          counts.waiting++;
+          if (registration.status === 'rejected') counts.attention++;
+          else counts.pending++;
+        }
         if (!disposed && run === generation && request === readId) setLoad({ scope, state: 'ready', counts });
         } catch {
           if (!disposed && run === generation && request === readId) setLoad({ scope, state: 'error', counts: null });

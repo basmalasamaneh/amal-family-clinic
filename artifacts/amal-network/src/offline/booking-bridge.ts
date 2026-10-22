@@ -1,13 +1,13 @@
 import {
   getSyncState, listAppointments, listDoctors, listPatients,
-  type Appointment, type AppointmentInput, type SyncOutcome,
+  type Appointment, type AppointmentInput, type SyncOutcome, type PatientInput,
 } from '@workspace/api-client-react';
 import { localCache } from './index';
 import { appointmentWindow } from './calendar';
 import type { BookingProposal, CachedSnapshot, Result, ScopeTicket } from './types';
 import type { CalendarAppointment, SchedulingReadAdapter } from '../calendar/adapter';
 import { showCalendarProposal } from '../calendar/local-schedule';
-import type { PatientSearchAdapter } from '../booking/patients';
+import type { PatientSearchAdapter, PatientHit } from '../booking/patients';
 import { matchesPatient } from '../booking/normalize';
 import { reportUnauthorized } from '../auth/session-events';
 import './booking-messages';
@@ -106,6 +106,21 @@ export async function saveLocalBooking(input: AppointmentInput): Promise<Appoint
   wakeSync();
   return provisional(proposal);
 }
+export async function saveLocalPatientRegistration(input: PatientInput): Promise<PatientHit> {
+  const registration = value(await localCache.savePatientRegistration(scope(), input));
+  changed();
+  wakeSync();
+  return registration.canonical ?? registration.patient;
+}
+/** Scoped durable receipts, including rejection and exact-payload retry state. */
+export async function getLocalPatientRegistrations() {
+  return value(await localCache.listPatientRegistrations(await readyScope()));
+}
+export async function retryLocalPatientRegistration(clientOpId: string): Promise<void> {
+  value(await localCache.retryPatientRegistration(scope(), clientOpId));
+  changed();
+  wakeSync();
+}
 /** One coordinated owner handles initial delivery and exact replay alike. */
 export async function deliverLocalBooking(_operationId: string): Promise<void> {
   syncClient.retry();
@@ -124,6 +139,10 @@ export async function getLocalCalendar(q: { clinicId: number; from: string; to: 
   const ids = new Set(proposals.map(p => p.canonical?.id).filter(Boolean));
   const operationIds = new Set(proposals.filter(p => !p.canonical).map(p => p.operationId));
   const patientNames = new Map(snapshot.patients.map(p => [p.id, p.name]));
+  for (const registration of value(await localCache.listPatientRegistrations(ticket))) {
+    if (registration.canonical) patientNames.set(registration.localId,
+      patientNames.get(registration.canonical.id) ?? registration.canonical.name);
+  }
   const result: CalendarAppointment[] = snapshot.appointments
     .filter(a => !ids.has(a.id) && !(a.clientOpId && operationIds.has(a.clientOpId)))
     .map(a => ({ id: a.id, clinicId: a.clinicId, doctorId: a.doctorId, patientName: patientNames.get(a.patientId) ?? null,
@@ -132,7 +151,8 @@ export async function getLocalCalendar(q: { clinicId: number; from: string; to: 
   for (const proposal of proposals) {
     if (proposal.canonical && tombstones.has(proposal.canonical.id)) continue;
     const a = proposal.canonical ? snapshot.appointments.find(a => a.id === proposal.canonical!.id) ?? proposal.canonical : provisional(proposal);
-    result.push({ id: a.id, clinicId: a.clinicId, doctorId: a.doctorId, patientName: proposal.patient.name, clientOpId: proposal.operationId,
+    result.push({ id: a.id, clinicId: a.clinicId, doctorId: a.doctorId,
+      patientName: patientNames.get(proposal.deliveryInput?.patientId ?? a.patientId) ?? proposal.patient.name, clientOpId: proposal.operationId,
       startsAt: a.startsAt, endsAt: a.endsAt, lifecycle: a.status === 'arrived' ? 'booked' : a.status,
       syncPending: !proposal.canonical, conflict: proposal.outcome === 'conflict' || proposal.outcome === 'rejected',
       ...(proposal.canonical ? { version: a.version } : {}) });

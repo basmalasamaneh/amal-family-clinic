@@ -131,7 +131,8 @@ async function applyResolved(db: LocalCacheDatabase, scope: Scope, c: SyncConfli
   else requireValid(a.id === c.targetId);
   const p = await db.proposals.get(key(scope, c.operation.payload.clientOpId));
   if (p) {
-    requireValid(a.doctorId === p.input.doctorId && a.patientId === p.input.patientId);
+    const delivered = p.deliveryInput ?? p.input;
+    requireValid(a.doctorId === delivered.doctorId && a.patientId === delivered.patientId);
     const prior = p.canonicalHistory ?? (p.canonical ? [p.canonical] : []);
     if (!prior.some(v => JSON.stringify(v) === JSON.stringify(a))) prior.push(a);
     await db.proposals.put({ ...p, canonical: a, canonicalHistory: prior, outcome: 'applied', outcomeCode: null });

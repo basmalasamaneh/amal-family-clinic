@@ -4,6 +4,7 @@ import { LocalCacheDatabase } from './database';
 import { acknowledgeBooking, bookingInput, BookingFailure, persistBooking, validateBooking } from './booking-command';
 import type { AppointmentInput, SyncOutcome, SyncConflict, SyncResolutionResult } from '@workspace/api-client-react';
 import { applyPage, reconcile, saveIntent, finishIntent, readState } from './sync-store';
+import { persistRegistration, registrationFor } from './registration';
 import { InvalidProjection, projectOperation, projectSnapshot, requireValid, utcInstant, validId, validText } from './projections';
 import type {
   AuthorizedContext, AuthorizedSnapshot, CacheErrorCode, CacheMetadata, CachedSnapshot,
@@ -343,6 +344,11 @@ export class LocalCacheController {
           windowStartUtc: window.startUtc, windowEndUtc: window.endUtc,
         };
       }
+      const registrations = await this.scopeRows(this.db.registrations, scope).toArray();
+      for (const r of registrations) {
+        if (r.canonical && !patients.some(p => p.id === r.canonical!.id))
+          patients.push({ ...scope, ...r.canonical });
+      }
       // Re-project reads as well, so old records never leak unexpected fields after migration.
       const safe = projectSnapshot({
         ...scope, doctors, patients, appointments: appointments.filter(a =>
@@ -350,7 +356,8 @@ export class LocalCacheController {
         coverage: { startUtc: metadata?.coverageStartUtc ?? window.startUtc, endUtc: metadata?.coverageEndUtc ?? window.endUtc },
       }, scope);
       return {
-        doctors: safe.doctors, patients: safe.patients, appointments: safe.appointments, metadata, window,
+        doctors: safe.doctors, patients: [...safe.patients, ...registrations.filter(r => !r.canonical).map(r => ({ ...scope, ...r.patient }))],
+        appointments: safe.appointments, metadata, window,
         fullyCovered: safe.appointments.length === appointments.length && metadata !== null &&
           metadata.coverageStartUtc <= window.startUtc && metadata.coverageEndUtc >= window.endUtc,
       };
@@ -379,15 +386,27 @@ export class LocalCacheController {
     requireValid(statuses.includes(row.status) && Number.isSafeInteger(row.attempts) && row.attempts >= 0);
     requireValid(row.errorCode === null || ['network', 'rate-limited', 'conflict', 'rejected', 'blocked', 'unknown'].includes(row.errorCode));
     return {
-      ...projectOperation(row), ...scope, enqueuedAt: utcInstant(row.enqueuedAt), updatedAt: utcInstant(row.updatedAt),
+      ...this.projectBookingOutbox(row), ...scope, enqueuedAt: utcInstant(row.enqueuedAt), updatedAt: utcInstant(row.updatedAt),
       ...(row.booking ? { booking: { ...row.booking } } : {}),
       status: row.status, attempts: row.attempts, retryAt: row.retryAt === null ? null : utcInstant(row.retryAt), errorCode: row.errorCode,
     };
+  }
+  private projectBookingOutbox(row: OutboxRecord): LocalOperation {
+    if (row.booking && row.type === 'appointment.create' && row.payload.patientId < 0) {
+      const projected = projectOperation({ ...row, payload: { ...row.payload, patientId: 1 } });
+      requireValid(projected.type === 'appointment.create' && Number.isSafeInteger(row.payload.patientId));
+      return { ...projected, payload: { ...projected.payload, patientId: row.payload.patientId } };
+    }
+    return projectOperation(row);
   }
   listOutbox(ticket: ScopeTicket, status?: OutboxStatus): Promise<Result<OutboxRecord[]>> {
     return this.scoped(ticket, async (scope) => {
       requireValid(status === undefined || statuses.includes(status));
       const rows = await this.scopeRows(this.db.outbox, scope).toArray();
+      for (const row of rows) {
+        if (row.type === 'appointment.create' && row.payload.patientId < 0)
+          requireValid(row.booking && await registrationFor(this.db, scope, row.payload.patientId));
+      }
       return rows.filter((row) => status === undefined || row.status === status)
         .map((row) => this.safeOutbox(row, scope))
         .sort((a, b) => a.enqueuedAt.localeCompare(b.enqueuedAt) || a.operationId.localeCompare(b.operationId));
@@ -413,7 +432,8 @@ export class LocalCacheController {
     return this.scoped(ticket, async (scope) => {
       const bookings = await this.db.outbox.where('userId').equals(scope.userId).filter((row) => row.status !== 'succeeded').count();
       const decisions = await this.db.resolutionIntents.where('userId').equals(scope.userId).filter(row => row.status === 'pending').count();
-      return bookings + decisions;
+      const registrations = await this.db.registrations.where('userId').equals(scope.userId).filter(r => r.status !== 'applied').count();
+      return bookings + decisions + registrations;
     });
   }
   prepareBookingStream(ticket: ScopeTicket, state: { deviceId: number; nextSequence: number }): Promise<Result<void>> {
@@ -432,6 +452,42 @@ export class LocalCacheController {
   }
   listBookings(ticket: ScopeTicket) {
     return this.scoped(ticket, scope => this.scopeRows(this.db.proposals, scope).toArray());
+  }
+  savePatientRegistration(ticket: ScopeTicket, input: import('@workspace/api-client-react').PatientInput) {
+    return this.scoped(ticket, scope => persistRegistration(this.db, scope, input, this.now()));
+  }
+  listPatientRegistrations(ticket: ScopeTicket) {
+    return this.scoped(ticket, scope => this.scopeRows(this.db.registrations, scope).toArray());
+  }
+  retryPatientRegistration(ticket: ScopeTicket, clientOpId: string) {
+    return this.scoped(ticket, async scope => {
+      const key: [string, number, string] = [scope.userId, scope.clinicId, clientOpId];
+      const row = await this.db.registrations.get(key);
+      requireValid(row);
+      if (row.status !== 'applied') await this.db.registrations.update(key, { status: 'pending', errorCode: null });
+    });
+  }
+  markPatientRegistration(ticket: ScopeTicket, clientOpId: string, status: 'processing' | 'failed' | 'rejected') {
+    return this.scoped(ticket, async scope => {
+      const key: [string, number, string] = [scope.userId, scope.clinicId, clientOpId];
+      const row = await this.db.registrations.get(key);
+      requireValid(row);
+      if (row.status === 'applied') return;
+      await this.db.registrations.update(key, { status, attempts: row.attempts + (status === 'processing' ? 1 : 0),
+        errorCode: status === 'processing' ? null : status === 'rejected' ? 'rejected' : 'network' });
+    });
+  }
+  acknowledgePatientRegistration(ticket: ScopeTicket, clientOpId: string, patient: import('./types').PatientProjection) {
+    return this.scoped(ticket, async scope => {
+      const key: [string, number, string] = [scope.userId, scope.clinicId, clientOpId];
+      const row = await this.db.registrations.get(key);
+      requireValid(row);
+      const canonical = projectSnapshot({ ...scope, doctors: [], appointments: [], patients: [patient],
+        coverage: { startUtc: '2000-01-01T00:00:00Z', endUtc: '2000-01-02T00:00:00Z' } }, scope).patients[0]!;
+      if (row.canonical) { requireValid(row.canonical.id === canonical.id); return; }
+      await this.db.registrations.update(key, { canonical, status: 'applied', errorCode: null });
+      await this.db.patients.put(canonical);
+    });
   }
   acknowledgeBooking(ticket: ScopeTicket, operationId: string, outcome: SyncOutcome): Promise<Result<void>> {
     return this.scoped(ticket, scope => acknowledgeBooking(this.db, scope, operationId, outcome, this.now()));
@@ -495,8 +551,21 @@ export class LocalCacheController {
       if (earlier) return null;
       const currentDevice = await this.db.bookingScopes.get([scope.userId, scope.clinicId]);
       requireValid(currentDevice?.deviceId === proposal.deviceId);
+      if (proposal.outcome === 'conflict' || proposal.outcome === 'rejected') return null;
+      if (!proposal.deliveryInput) {
+        let patientId = proposal.input.patientId;
+        if (patientId < 0) {
+          const registration = await registrationFor(this.db, scope, patientId);
+          if (!registration?.canonical || registration.status !== 'applied') return null;
+          patientId = registration.canonical.id;
+        }
+        requireValid(validId(patientId));
+        proposal.deliveryInput = bookingInput({ ...proposal.input, patientId }, scope);
+        await this.db.proposals.put(proposal);
+      }
+      requireValid(validId(proposal.deliveryInput.patientId));
       await this.db.outbox.update(key, { attempts: outbox.attempts + 1, updatedAt: this.now().toISOString() });
-      return { sequence: proposal.sequence, type: 'create' as const, input: proposal.input };
+      return { sequence: proposal.sequence, type: 'create' as const, input: proposal.deliveryInput };
     });
   }
   /**
@@ -521,7 +590,8 @@ export class LocalCacheController {
         if (!userId) fail('unauthorized');
         const pending = await this.db.outbox.where('userId').equals(userId).filter((row) => row.status !== 'succeeded').count();
         const decisions = await this.db.resolutionIntents.where('userId').equals(userId).filter(row => row.status === 'pending').count();
-        if (pending || decisions) fail('pending-outbox');
+        const registrations = await this.db.registrations.where('userId').equals(userId).filter(r => r.status !== 'applied').count();
+        if (pending || decisions || registrations) fail('pending-outbox');
         // Acknowledged booking receipts and device ordering are retained too.
         for (const table of [this.db.appointments, this.db.doctors, this.db.patients, this.db.metadata, this.db.bookingScopes, this.db.syncCursors, this.db.syncConflicts]) {
           await table.where('userId').equals(userId).delete();

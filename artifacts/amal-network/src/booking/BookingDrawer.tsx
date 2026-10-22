@@ -376,6 +376,7 @@ export function BookingDrawer({ clinic, ctx, title, scheduling, patients, api, o
             <h2 ref={headingRef} tabIndex={-1} className="bk-stage-title" data-testid="text-stage-title">{t(`bk.steps.${steps[stage]}`)}</h2>
 
             <fieldset className="bk-fields" disabled={submitting || (local && cache.kind !== 'ready')}>
+            {patient && patient.id < 0 && <p className="bk-msg bk-msg--info" role="status" data-testid="status-booking-patient-pending">{t('rx.localPending')}</p>}
             {stage === 0 && (!local || cache.kind === 'ready') && (patient ? (
               <div className="bk-field">
                 <div className="bk-chosen" data-testid="card-selected-patient">

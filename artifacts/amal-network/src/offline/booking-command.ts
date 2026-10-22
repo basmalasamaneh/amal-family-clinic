@@ -4,6 +4,7 @@ import type { BookingProposal, Scope, OutboxRecord, CacheErrorCode } from './typ
 import { appointmentWindow } from './calendar';
 import { projectOperation, requireValid, validId } from './projections';
 import { parseBookingOutcome } from './sync-store';
+import { registrationFor } from './registration';
 
 export class BookingFailure extends Error {
   constructor(readonly code: CacheErrorCode) { super(code); }
@@ -15,17 +16,21 @@ const rows = <T extends Scope>(table: import('dexie').Table<T, any>, scope: Scop
 /** No hold capabilities or arbitrary fields may enter durable proposals. */
 export function bookingInput(raw: AppointmentInput, scope: Scope): AppointmentInput {
   requireValid(raw.clinicId === scope.clinicId && !raw.holdToken);
-  const op = projectOperation({ operationId: raw.clientOpId, type: 'appointment.create', entityId: null, payload: raw });
+  const temporary = Number.isSafeInteger(raw.patientId) && raw.patientId < 0;
+  const op = projectOperation({ operationId: raw.clientOpId, type: 'appointment.create', entityId: null,
+    payload: { ...raw, patientId: temporary ? 1 : raw.patientId } });
   requireValid(op.type === 'appointment.create');
   requireValid(raw.overrideReason === undefined || (typeof raw.overrideReason === 'string' && raw.overrideReason.trim().length > 0 && raw.overrideReason.length <= 2000));
-  return { clinicId: scope.clinicId, clientOpId: op.operationId, ...op.payload,
+  return { clinicId: scope.clinicId, clientOpId: op.operationId, ...op.payload, patientId: raw.patientId,
     ...(raw.overrideReason === undefined ? {} : { overrideReason: raw.overrideReason.trim() }) };
 }
 
 export async function validateBooking(db: LocalCacheDatabase, scope: Scope, input: AppointmentInput, now: Date) {
   const [doctor, patient, metadata] = await Promise.all([
     db.doctors.get([scope.userId, scope.clinicId, input.doctorId]),
-    db.patients.get([scope.userId, scope.clinicId, input.patientId]),
+    input.patientId < 0 ? registrationFor(db, scope, input.patientId).then(r => r?.patient) :
+      db.patients.get([scope.userId, scope.clinicId, input.patientId]).then(async patient => patient ??
+        (await rows(db.registrations, scope).filter(r => r.canonical?.id === input.patientId).first())?.canonical),
     db.metadata.get([scope.userId, scope.clinicId]),
   ]);
   if (!doctor || !patient) fail('identity-not-cached');
@@ -75,7 +80,11 @@ export async function persistBooking(db: LocalCacheDatabase, scope: Scope, raw: 
     patient: { id: patient.id, clinicId: patient.clinicId, name: patient.name, phone: patient.phone, dateOfBirth: patient.dateOfBirth },
     doctor: { id: doctor.id, clinicId: doctor.clinicId, name: doctor.name },
     canonical: null, outcome: 'pending', outcomeCode: null };
-  const operation = projectOperation({ operationId: input.clientOpId, type: 'appointment.create', entityId: null, payload: input });
+  if ('registrationOpId' in patient) proposal.patient = { ...proposal.patient, registrationOpId: patient.registrationOpId };
+  const operation = { operationId: input.clientOpId, type: 'appointment.create' as const, entityId: null, payload: {
+    doctorId: input.doctorId, patientId: input.patientId, startsAt: input.startsAt, endsAt: input.endsAt, source: input.source,
+    ...(input.overrideReason ? { overrideReason: input.overrideReason } : {}),
+  } };
   const outbox: OutboxRecord = { ...scope, ...operation,
     booking: { localId, deviceId: proposal.deviceId, sequence },
     enqueuedAt: now.toISOString(), updatedAt: now.toISOString(), status: 'pending', attempts: 0, retryAt: null, errorCode: null };
@@ -95,7 +104,7 @@ export async function acknowledgeBooking(db: LocalCacheDatabase, scope: Scope, o
   requireValid(proposal && outbox && outcome.clientOpId === operationId && outcome.sequence === proposal.sequence);
   if (proposal.outcome === 'applied') return;
   if (outcome.status === 'applied') {
-    const a = outcome.result, input = proposal.input;
+    const a = outcome.result, input = proposal.deliveryInput ?? proposal.input;
     requireValid(a && validId(a.id) && validId(a.version) && a.clientOpId === operationId &&
       a.clinicId === scope.clinicId && a.doctorId === input.doctorId && a.patientId === input.patientId &&
       new Date(a.startsAt).toISOString() === input.startsAt && new Date(a.endsAt).toISOString() === input.endsAt &&

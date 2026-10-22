@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { AlertCircle, CheckCircle2, Lock, RefreshCcw, RotateCw, WifiOff } from 'lucide-react';
 import { Button, EmptyState } from '@workspace/amal-ui';
 import type { BookingProposal, OutboxRecord } from '@/offline/types';
+import { retryLocalPatientRegistration } from '@/offline/booking-bridge';
 import type { ShellClinic } from '@/shell/identity';
 import { syncClient } from './client';
 import { ConflictResolution, useFormatWhen } from './ConflictResolution';
@@ -26,6 +27,15 @@ export function SyncQueuePanel({ clinic, title, scope }: { clinic: ShellClinic |
   const { t } = useTranslation('sync');
   const fmt = useFormatWhen();
   const snap = useSyncExternalStore(syncClient.subscribe, syncClient.getSnapshot);
+  const registrations = snap.registrations;
+  const [retryingRegistration, setRetryingRegistration] = useState<string | null>(null);
+  const retryRegistration = async (clientOpId: string) => {
+    if (snap.phase === 'locked' || retryingRegistration) return;
+    setRetryingRegistration(clientOpId);
+    try { await retryLocalPatientRegistration(clientOpId); syncClient.refresh(); }
+    catch { announce(t('registration.retryFailed')); }
+    finally { setRetryingRegistration(null); }
+  };
   const [live, setLive] = useState('');
   const announce = useCallback((text: string) => { setLive(''); requestAnimationFrame(() => setLive(text)); }, []);
 
@@ -111,7 +121,7 @@ export function SyncQueuePanel({ clinic, title, scope }: { clinic: ShellClinic |
 
       <section aria-labelledby="sync-queue-h">
         <h2 className="sync-h" id="sync-queue-h">{t('queueTitle')}<span className="sync-h__badge">{rows.length}</span></h2>
-        {loading ? (
+        {snap.phase === 'locked' ? <div className="sync-empty">{t('lockedConflicts')}</div> : loading ? (
           <div className="sync-skels" role="status" aria-busy="true" aria-label={t('phase.loading')}>{[0, 1, 2].map((i) => <div key={i} className="sync-skel" />)}</div>
         ) : rows.length === 0 ? (
           <div data-testid="empty-queue"><EmptyState className="amal-empty--compact" title={t('queueEmpty')} description={t('queueEmptyHint')} /></div>
@@ -129,6 +139,26 @@ export function SyncQueuePanel({ clinic, title, scope }: { clinic: ShellClinic |
             ))}
           </ol>
         )}
+      </section>
+
+      <section aria-labelledby="sync-registrations-h" data-testid="section-registration-queue">
+        <h2 className="sync-h" id="sync-registrations-h">{t('registration.title')}<span className="sync-h__badge">{snap.phase === 'locked' ? '–' : registrations.length}</span></h2>
+        {snap.phase === 'locked' ? <div className="sync-empty">{t('lockedConflicts')}</div>
+          : loading ? <div className="sync-skels" aria-busy="true"><div className="sync-skel" /></div>
+          : registrations.length === 0 ? <EmptyState className="amal-empty--compact" title={t('registration.empty')} description={t('registration.hint')} />
+          : <ol className="sync-list">{registrations.map((registration) => (
+            <li key={registration.clientOpId} className="sync-row" data-testid={`row-registration-${registration.clientOpId}`}>
+              <span className="sync-row__main">
+                <span className="sync-row__who"><bdi>{registration.patient.name}</bdi></span>
+                <span className="sync-row__when">{t(registration.status === 'applied' ? 'status.acknowledged' : 'registration.hint')}</span>
+              </span>
+              <span className="sync-chip" data-s={registration.status === 'rejected' ? 'rejected' : registration.status === 'applied' ? 'acknowledged' : 'waiting'}>{t(`registration.${registration.status}`)}</span>
+              {(registration.status === 'failed' || registration.status === 'rejected') && <Button variant="secondary" size="sm"
+                disabled={retryingRegistration !== null || snap.phase === 'syncing'}
+                onClick={() => void retryRegistration(registration.clientOpId)}
+                data-testid={`retry-registration-${registration.clientOpId}`}>{t('registration.retrySame')}</Button>}
+            </li>
+          ))}</ol>}
       </section>
     </section>
   );

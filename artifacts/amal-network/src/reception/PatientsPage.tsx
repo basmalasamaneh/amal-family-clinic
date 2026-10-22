@@ -10,6 +10,8 @@ import { resolveSchedulingAdapter } from '@/calendar/adapter';
 import { bookingQuery } from '@/calendar/booking';
 import { formatLocalDate, formatNum, formatTime, isLocalDate, localDateOf } from '@/calendar/dates';
 import { PatientQuickSearch } from '@/booking/PatientQuickSearch';
+import { localCache } from '@/offline';
+import { cachedPatientSearch, prepareBookingCache } from '@/offline/booking-bridge';
 import { APPOINTMENTS_CHANGED } from '@/booking/BookingDrawer';
 import { resolvePatientSearch, type PatientHit } from '@/booking/patients';
 import { classifyError, isAbort, type FailureKind } from '@/booking/errors';
@@ -17,7 +19,7 @@ import { createLatest } from '@/booking/ops';
 import { hebronToday, completedYears, isMinor } from './age';
 import { createRegSession, EMPTY_DRAFT, serverFieldErrors, type NewPatientPayload, type RegDraft } from './registration';
 import { createFixtureReceptionApi, realReceptionApi, type ReceptionApi, type UpcomingItem } from './api';
-import { IDLE_STATUS, NewPatientDialog, startSave, type RegStatus } from './NewPatientDialog';
+import { IDLE_STATUS, NewPatientDialog, startSave, canRegisterLocally, localRegistrationApi, type RegStatus } from './NewPatientDialog';
 import { useWalkIn } from './WalkIn';
 import { selectConsentPatient } from '@/consent/model';
 import '@/booking/i18n';
@@ -34,9 +36,10 @@ export function PatientsPage({ clinic, fixture, title }: { clinic: ShellClinic |
   const search = useSearch();
   const useFixture = import.meta.env.DEV && fixture;
   const scheduling = useMemo(() => resolveSchedulingAdapter(search, fixture), [fixture]); // eslint-disable-line react-hooks/exhaustive-deps
-  const patients = useMemo(() => resolvePatientSearch(useFixture), [useFixture]);
+  const patients = useMemo(() => useFixture ? resolvePatientSearch(true) : cachedPatientSearch, [useFixture]);
   const walkIn = useWalkIn();
   const api = useMemo<ReceptionApi>(() => walkIn.reception ?? (useFixture ? createFixtureReceptionApi((id, s) => scheduling.listDoctors(id, s)) : realReceptionApi), [walkIn.reception, useFixture, scheduling]);
+  const registrationApi = useMemo(() => localRegistrationApi(api, clinic?.id ?? 0), [api, clinic?.id]);
   const [selected, setSelected] = useState<PatientHit | null>(null);
   const [regOpen, setRegOpen] = useState(false);
   const [draft, setDraft] = useState<RegDraft>(EMPTY_DRAFT);
@@ -45,7 +48,13 @@ export function PatientsPage({ clinic, fixture, title }: { clinic: ShellClinic |
   const session = useRef(createRegSession()).current;
   const [regStatus, setRegStatus] = useState<RegStatus>(IDLE_STATUS);
   const alive = useRef(true);
-  useEffect(() => { alive.current = true; return () => { alive.current = false; }; }, []);
+  useEffect(() => {
+    alive.current = true;
+    const unsubscribe = useFixture ? () => {} : localCache.subscribeContext(() => {
+      alive.current = false; setRegOpen(false); setSelected(null); setDraft(EMPTY_DRAFT); setSaved(null);
+    });
+    return () => { alive.current = false; unsubscribe(); };
+  }, [useFixture]);
   const [saved, setSaved] = useState<string | null>(null);
   const [doctorNames, setDoctorNames] = useState<Map<number, string>>(new Map());
   const newBtn = useRef<HTMLButtonElement>(null);
@@ -59,16 +68,25 @@ export function PatientsPage({ clinic, fixture, title }: { clinic: ShellClinic |
     return () => ctl.abort();
   }, [scheduling, clinic]);
 
+  useEffect(() => {
+    if (useFixture || !clinic) return;
+    let active = true;
+    // Refresh only at page entry; selecting a durable negative identity never requests it.
+    void prepareBookingCache().then(() => { if (active) setRefresh(n => n + 1); }, () => undefined);
+    return () => { active = false; };
+  }, [useFixture, clinic?.id]);
+
   if (!clinic) return <section className="rx" data-testid="page-patientLookup"><h1 id="page-title" tabIndex={-1} className="cal-h1">{title}</h1><p>{t('shell.page.noClinic')}</p></section>;
 
   const select = (p: PatientHit) => { setSelected(p); setSaved(null); setTimeout(() => detailRef.current?.focus(), 0); };
   const submitReg = (key: string, payload: NewPatientPayload) => {
-    const r = startSave(api, session, key, payload, (res) => {
+    if (!alive.current || (api.mode !== 'fixture' && !canRegisterLocally(clinic.id))) return;
+    const r = startSave(registrationApi, session, key, payload, (res) => {
       if (!alive.current) return; // page gone (clinic/account switch): drop, never show in another scope
       if (res.ok) {
         const p = { ...res.patient, clinicId: res.patient.clinicId || clinic.id };
         setRegStatus(IDLE_STATUS); setRegOpen(false); setDraft(EMPTY_DRAFT); setRefresh((n) => n + 1); select(p);
-        setSaved(t('rx.reg.saved', { name: '\u2068' + p.name + '\u2069' }));
+        setSaved(t(p.id < 0 ? 'rx.reg.localPending' : 'rx.reg.saved', { name: '\u2068' + p.name + '\u2069' }));
       } else setRegStatus({ saving: false, failure: res.failure, serverErrors: serverFieldErrors(res.failure, res.data) });
     });
     if (r === 'started') { session.snapshot = draft; setRegStatus({ saving: true, failure: null, serverErrors: {} }); }
@@ -117,7 +135,8 @@ export function PatientsPage({ clinic, fixture, title }: { clinic: ShellClinic |
       </div>
 
       {regOpen && (
-        <NewPatientDialog api={api} clinicId={clinic.id} draft={draft} onDraft={setDraft} onWalkIn={handoff}
+        <NewPatientDialog api={registrationApi} clinicId={clinic.id} draft={draft} onDraft={setDraft} onWalkIn={handoff}
+          allowOffline={api.mode === 'real'} saveDisabled={api.mode === 'real' && !canRegisterLocally(clinic.id)}
           session={session} status={regStatus} onSubmit={submitReg}
           onClose={() => { setRegOpen(false); setTimeout(() => newBtn.current?.focus(), 0); }} />
       )}
@@ -125,7 +144,7 @@ export function PatientsPage({ clinic, fixture, title }: { clinic: ShellClinic |
   );
 }
 
-type Up = { kind: 'loading' } | { kind: 'ok'; items: UpcomingItem[]; cursor: string | null; more: 'idle' | 'loading' | 'error' } | { kind: 'error'; failure: FailureKind };
+type Up = { kind: 'pending' } | { kind: 'loading' } | { kind: 'ok'; items: UpcomingItem[]; cursor: string | null; more: 'idle' | 'loading' | 'error' } | { kind: 'error'; failure: FailureKind };
 
 function PatientDetail({ patient, clinic, api, doctorNames, headingRef, onClear, onWalkIn }: {
   patient: PatientHit; clinic: ShellClinic; api: ReceptionApi; doctorNames: Map<number, string>;
@@ -134,11 +153,12 @@ function PatientDetail({ patient, clinic, api, doctorNames, headingRef, onClear,
   const { t } = useTranslation();
   const { locale, digitPreference: dp } = useAmalPreferences();
   const today = hebronToday();
-  const [up, setUp] = useState<Up>({ kind: 'loading' });
+  const [up, setUp] = useState<Up>({ kind: patient.id < 0 ? 'pending' : 'loading' });
   const [nonce, setNonce] = useState(0);
   const latest = useRef(createLatest()).current;
 
   useEffect(() => {
+    if (patient.id < 0) { setUp({ kind: 'pending' }); return; }
     const token = latest.next(); const ctl = new AbortController();
     setUp({ kind: 'loading' });
     api.upcoming(clinic.id, patient.id, null, ctl.signal).then(
@@ -172,7 +192,7 @@ function PatientDetail({ patient, clinic, api, doctorNames, headingRef, onClear,
         <div className="rx-id__txt">
           <p className="bk-hint">{t('rx.detail.title')}</p>
           <h2 id="rx-detail-h" ref={headingRef} tabIndex={-1} className="rx-id__name" data-testid="text-patient-name"><bdi dir="auto">{patient.name}</bdi></h2>
-          <p className="rx-id__rec">{t('rx.detail.record', { id: patient.id })}{minor && <span className="rx-tag" data-testid="badge-minor">{t('rx.detail.minor')}</span>}</p>
+          <p className="rx-id__rec">{t(patient.id < 0 ? 'rx.reg.localPending' : 'rx.detail.record', { id: patient.id })}{minor && <span className="rx-tag" data-testid="badge-minor">{t('rx.detail.minor')}</span>}</p>
         </div>
         <button type="button" className="bk-x" onClick={onClear} aria-label={t('rx.detail.clear')} data-testid="button-clear-patient"><X size={20} aria-hidden="true" /></button>
       </div>
@@ -182,15 +202,16 @@ function PatientDetail({ patient, clinic, api, doctorNames, headingRef, onClear,
         <div><dt>{t('rx.detail.age')}</dt><dd data-testid="text-patient-age">{age !== null ? t('rx.detail.ageYears', { count: age }).replace(String(age), formatNum(age, dp)) : '—'}</dd></div>
       </dl>
       <div className="rx-actions">
-        {onWalkIn && <button type="button" className="bk-btn bk-btn--primary" onClick={onWalkIn} data-testid="button-patient-walkin"><DoorOpen size={20} aria-hidden="true" />{t('rx.detail.walkIn')}</button>}
-        <Link href={demoPath(`/desk/consent?patientId=${patient.id}`)} onClick={() => selectConsentPatient(clinic.id, patient.id)} className="bk-btn" data-testid="link-patient-consent"><ShieldCheck size={18} aria-hidden="true" />{t('rx.detail.consent')}</Link>
+        {onWalkIn && patient.id > 0 && <button type="button" className="bk-btn bk-btn--primary" onClick={onWalkIn} data-testid="button-patient-walkin"><DoorOpen size={20} aria-hidden="true" />{t('rx.detail.walkIn')}</button>}
+        {patient.id > 0 && <Link href={demoPath(`/desk/consent?patientId=${patient.id}`)} onClick={() => selectConsentPatient(clinic.id, patient.id)} className="bk-btn" data-testid="link-patient-consent"><ShieldCheck size={18} aria-hidden="true" />{t('rx.detail.consent')}</Link>}
         <Link href={demoPath(bookingQuery({ clinicId: clinic.id, source: 'phone' }))} className="bk-btn" data-testid="link-patient-phone-booking"><PhoneCall size={18} aria-hidden="true" />{t('rx.detail.phoneBooking')}</Link>
       </div>
 
-      <ReminderOptOut key={`${clinic.id}:${patient.id}`} patientId={patient.id} />
+      {patient.id > 0 && <ReminderOptOut key={`${clinic.id}:${patient.id}`} patientId={patient.id} />}
 
       <section className="rx-up" aria-labelledby="rx-up-h" data-testid="section-upcoming">
         <h3 id="rx-up-h" className="rx-h3"><CalendarClock size={20} aria-hidden="true" />{t('rx.up.title')}</h3>
+        {patient.id < 0 && <p className="bk-msg bk-msg--info" role="status" data-testid="status-local-registration">{t('rx.reg.localDetails')}</p>}
         <p className="rx-sr" role="status" aria-live="polite">{up.kind === 'loading' ? t('rx.up.loading') : errText}</p>
         {up.kind === 'loading' && <div className="bk-list" aria-hidden="true" data-testid="status-upcoming-loading"><div className="bk-skel" /><div className="bk-skel" /></div>}
         {up.kind === 'error' && <div className="bk-msg bk-msg--block" data-testid="status-upcoming-error"><AlertTriangle size={20} aria-hidden="true" /><div className="bk-msg__body"><p>{errText}</p>

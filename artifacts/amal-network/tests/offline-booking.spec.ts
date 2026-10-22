@@ -40,6 +40,11 @@ interface OutboxEvidence {
 interface DeviceEvidence {
   proposals: ProposalEvidence[];
   outbox: OutboxEvidence[];
+  registrations: Array<{
+    clientOpId: string; localId: number; input: Record<string, unknown>;
+    patient: { id: number; name: string; phone: string; dateOfBirth: string };
+    canonical: { id: number } | null; status: string; attempts: number;
+  }>;
   metadata: Array<{ userId: string; clinicId: number; refreshedAt: string }>;
   patients: Array<{ id: number; userId: string; clinicId: number }>;
   streams: Array<{ deviceId: number; nextSequence: number }>;
@@ -53,11 +58,19 @@ function tomorrowHebron() {
   return next.toISOString().slice(0, 10);
 }
 
-async function mockAuthorizedApi(context: BrowserContext, day: string, locale: Locale, theme: Theme) {
+async function mockAuthorizedApi(context: BrowserContext, day: string, locale: Locale, theme: Theme,
+  options: { offlineNewPatient?: boolean } = {}) {
   let offline = false;
   const requests: RequestEvidence[] = [];
   const unhandled: string[] = [];
   const fulfilledOffline: string[] = [];
+  const registrationPosts: Array<Record<string, unknown>> = [];
+  const pushPosts: Array<Record<string, unknown>> = [];
+  const syncOrder: string[] = [];
+  let lostRegistrationResponse = false;
+  let lostPushResponse = false;
+  const registeredPatientId = 581030;
+  const syncedAppointmentId = 581031;
   const loginPages = new WeakMap<Page, boolean>();
   const loginBodies: Array<{ email: string; password: string }> = [];
   const canonical = {
@@ -90,6 +103,9 @@ async function mockAuthorizedApi(context: BrowserContext, day: string, locale: L
     };
     const requestPage = request.frame().page();
     if (request.method() === 'GET') {
+      // Isolated real-session tests run with demo authority explicitly disabled;
+      // this prevents demo bootstrap from blocking the HTTP-auth mock.
+      if (path === '/api/demo/context') return json({ enabled: false, generation: null, clinicId: null, outage: false });
       if (path === '/api/me') {
         if (loginPages.get(requestPage) === false) {
           return json({ code: 'UNAUTHORIZED', messageKey: 'unauthorized', params: {} }, 401);
@@ -126,6 +142,42 @@ async function mockAuthorizedApi(context: BrowserContext, day: string, locale: L
       if (path === '/api/sync/conflicts') return json({ items: [], nextCursor: null });
       if (path === '/api/sync/pull') return json({ changes: [], nextCursor: null, since: 'mock-offline-booking-cursor' });
     }
+    if (options.offlineNewPatient && request.method() === 'POST' && path === '/api/patients') {
+      const body = request.postDataJSON() as Record<string, unknown>;
+      registrationPosts.push(body);
+      syncOrder.push('registration');
+      if (!lostRegistrationResponse) {
+        lostRegistrationResponse = true;
+        await route.abort('connectionreset');
+        return;
+      }
+      return json({
+        id: registeredPatientId, clinicId: clinic.id, name: body.name,
+        phone: body.phone, dateOfBirth: body.dateOfBirth, visibility: 'basic',
+      }, 201);
+    }
+    if (options.offlineNewPatient && request.method() === 'POST' && path === '/api/sync/push') {
+      const body = request.postDataJSON() as { operations?: Array<{ sequence: number; input: Record<string, unknown> }> };
+      pushPosts.push(body as unknown as Record<string, unknown>);
+      syncOrder.push('push');
+      if (!lostPushResponse) {
+        lostPushResponse = true;
+        await route.abort('connectionreset');
+        return;
+      }
+      const operation = body.operations?.[0];
+      if (!operation) return json({ code: 'INVALID_MOCK_OPERATION', messageKey: 'test.invalid', params: {} }, 400);
+      const appointment = {
+        id: syncedAppointmentId, clinicId: clinic.id, doctorId: doctors[0].id,
+        patientId: registeredPatientId, startsAt: operation.input.startsAt,
+        endsAt: operation.input.endsAt, status: 'booked', version: 1,
+        source: operation.input.source, clientOpId: operation.input.clientOpId,
+      };
+      return json({ outcomes: [{
+        sequence: operation.sequence, clientOpId: operation.input.clientOpId,
+        status: 'applied', result: appointment,
+      }] });
+    }
     if (request.method() === 'POST' && path === '/api/auth/login' && loginPages.has(requestPage)) {
       const body = request.postDataJSON() as { email?: string; password?: string };
       loginBodies.push({ email: body.email ?? '', password: body.password ?? '' });
@@ -146,11 +198,15 @@ async function mockAuthorizedApi(context: BrowserContext, day: string, locale: L
     return json({ code: 'UNEXPECTED_MOCK_API_REQUEST', messageKey: 'test.unexpectedApi', params: {} }, 501);
   });
   return {
-    requests, unhandled, fulfilledOffline, loginBodies,
+    requests, unhandled, fulfilledOffline, loginBodies, registrationPosts, pushPosts, syncOrder,
     beginLogin(page: Page) { loginPages.set(page, false); },
     async goOffline() {
       offline = true; // Set the route guard BEFORE Chromium changes network state.
       await context.setOffline(true);
+    },
+    async goOnline() {
+      offline = false;
+      await context.setOffline(false);
     },
   };
 }
@@ -168,7 +224,7 @@ async function deviceEvidence(page: Page): Promise<DeviceEvidence> {
       open.onerror = () => reject(open.error);
     });
     try {
-      const names = ['proposals', 'outbox', 'metadata', 'patients', 'streams', 'bookingScopes'];
+      const names = ['proposals', 'outbox', 'registrations', 'metadata', 'patients', 'streams', 'bookingScopes'];
       const transaction = db.transaction(names, 'readonly');
       const complete = new Promise<void>((resolve, reject) => {
         transaction.oncomplete = () => resolve();
@@ -180,13 +236,14 @@ async function deviceEvidence(page: Page): Promise<DeviceEvidence> {
         request.onsuccess = () => resolve(request.result);
         request.onerror = () => reject(request.error);
       });
-      const [proposals, outbox, metadata, patients, streams, bookingScopes] = await Promise.all([
+      const [proposals, outbox, registrations, metadata, patients, streams, bookingScopes] = await Promise.all([
         all<ProposalEvidence>('proposals'), all<OutboxEvidence>('outbox'),
+        all<DeviceEvidence['registrations'][number]>('registrations'),
         all<DeviceEvidence['metadata'][number]>('metadata'), all<DeviceEvidence['patients'][number]>('patients'),
         all<DeviceEvidence['streams'][number]>('streams'), all<DeviceEvidence['bookingScopes'][number]>('bookingScopes'),
       ]);
       await complete;
-      return { proposals: proposals.sort((a, b) => a.sequence - b.sequence), outbox: outbox.sort((a, b) => a.booking.sequence - b.booking.sequence), metadata, patients, streams, bookingScopes };
+      return { proposals: proposals.sort((a, b) => a.sequence - b.sequence), outbox: outbox.sort((a, b) => a.booking.sequence - b.booking.sequence), registrations, metadata, patients, streams, bookingScopes };
     } finally { db.close(); }
   });
 }
@@ -223,6 +280,145 @@ async function expectPendingCards(page: Page, proposals: ProposalEvidence[], loc
     await expect(card).toContainText(patients.find(patient => patient.id === proposal.input.patientId)!.name);
   }
 }
+
+test('MOCKED API · offline-new-patient registration and dependent booking survive reload and exact retry', async ({ page, context }, testInfo) => {
+  testInfo.annotations.push({
+    type: 'evidence-scope',
+    description: 'Mocked HTTP and signed permit only; real production PWA, browser offline networking, IndexedDB and retry flow. No live account, DB or server evidence.',
+  });
+  const day = tomorrowHebron();
+  const api = await mockAuthorizedApi(context, day, 'en', 'light', { offlineNewPatient: true });
+  await page.addInitScript(({ id }) => {
+    localStorage.setItem(`amal.tour.v1:${encodeURIComponent(`account:${id}`)}:front-desk`, 'dismissed');
+  }, { id: userId });
+  await page.goto(`desk/today?date=${day}`);
+  await expect(page.getByTestId('app-shell')).toBeVisible();
+  await calendarDay(page, day);
+  await page.evaluate(async () => { await navigator.serviceWorker.ready; });
+  await page.reload();
+  await expect.poll(() => page.evaluate(() => !!navigator.serviceWorker.controller)).toBe(true);
+  await calendarDay(page, day);
+  await display(page, 'ar', 'light');
+  await display(page, 'en', 'light');
+  await api.goOffline();
+  expect(await page.evaluate(() => navigator.onLine)).toBe(false);
+
+  await page.getByTestId('link-new-booking').click();
+  await expect(page.getByTestId('drawer-booking')).toBeVisible();
+  await page.getByTestId('input-patient-search').fill('Offline New Patient');
+  await expect(page.getByTestId('status-patient-empty')).toBeVisible();
+  await page.getByTestId('button-register-booking-patient').click();
+  await expect(page.getByTestId('dialog-new-patient')).toBeVisible();
+  await page.getByTestId('input-reg-name').fill('Offline New Patient');
+  await page.getByTestId('input-reg-phone').fill('05995550001');
+  await page.getByTestId('input-reg-dob').fill('1990-01-02');
+  await page.getByTestId('button-reg-save').click();
+  await expect(page.getByTestId('dialog-new-patient')).toHaveCount(0);
+  await expect(page.getByTestId('status-booking-patient-pending')).toBeVisible();
+  await expect(page.getByTestId('card-booking-slot-patient')).toContainText('Offline New Patient');
+  await testInfo.attach('offline-new-patient-selected.png', {
+    contentType: 'image/png', body: await page.screenshot(),
+  });
+  await page.getByTestId('select-booking-doctor').selectOption(String(doctors[0].id));
+  await page.getByTestId('input-booking-date').fill(day);
+  await page.getByTestId('input-booking-time').fill('10:00');
+  await page.getByTestId('select-booking-duration').selectOption('30');
+  await expect(page.getByTestId('status-check-ok')).toBeVisible();
+  await page.getByTestId('button-stage-next').click();
+  await expect(page.getByTestId('status-local-no-hold')).toBeVisible();
+  await page.getByTestId('button-confirm-booking').click();
+  await expect(page.getByTestId('drawer-booking')).toHaveCount(0);
+  let saved = await deviceEvidence(page);
+  expect(saved.registrations).toHaveLength(1);
+  expect(saved.registrations[0].status).toBe('pending');
+  expect(saved.registrations[0].localId).toBeLessThan(0);
+  expect(saved.proposals).toHaveLength(1);
+  expect(saved.proposals[0].input.patientId).toBe(saved.registrations[0].localId);
+  expect(saved.proposals[0].input.clientOpId).toBe(saved.proposals[0].operationId);
+  expect(saved.outbox[0].booking.localId).toBe(saved.proposals[0].localId);
+
+  await context.setOffline(true);
+  const cdp = await context.newCDPSession(page);
+  await cdp.send('Network.enable');
+  const failedRequests: Array<{ url: string; errorText: string }> = [];
+  page.on('requestfailed', request => failedRequests.push({
+    url: request.url(), errorText: request.failure()?.errorText ?? '',
+  }));
+  const offlineReload = await page.reload();
+  expect(offlineReload?.fromServiceWorker()).toBe(true);
+  await expect(page.getByTestId('app-shell')).toBeVisible();
+  // Chromium may report online after a service-worker navigation while CDP is
+  // still disconnected. Restore and prove the real browser offline signal before
+  // detaching this extra session and letting the context own reconnect.
+  await cdp.send('Network.emulateNetworkConditions', {
+    offline: true, latency: 0, downloadThroughput: 0, uploadThroughput: 0, connectionType: 'none',
+  });
+  expect(await page.evaluate(() => navigator.onLine)).toBe(false);
+  const probeUrl = `/__offline-new-patient-probe-${Date.now()}`;
+  const probeError = await page.evaluate(async path => {
+    try { await fetch(path, { cache: 'no-store' }); return 'unexpected success'; }
+    catch (error) { return String(error); }
+  }, probeUrl);
+  expect(probeError).not.toBe('unexpected success');
+  await expect.poll(() => failedRequests.some(failure =>
+    failure.url.includes(probeUrl) && failure.errorText === 'net::ERR_INTERNET_DISCONNECTED')).toBe(true);
+  await cdp.detach();
+  saved = await deviceEvidence(page);
+  expect(saved.registrations).toHaveLength(1);
+  expect(saved.proposals).toHaveLength(1);
+  // Use the application's SPA navigation: another worker-served document load
+  // would reset Chromium's offline signal after the CDP correction above.
+  await page.locator('a[href$="/desk/sync"]').first().click();
+  await expect(page.getByTestId('page-sync')).toBeVisible();
+  const registrationOp = saved.registrations[0].clientOpId;
+  const bookingOp = saved.proposals[0].operationId;
+  await expect(page.getByTestId(`row-registration-${registrationOp}`)).toBeVisible();
+  await expect(page.getByTestId(`status-booking-${bookingOp}`)).toBeVisible();
+  expect(api.registrationPosts).toEqual([]);
+  expect(api.pushPosts).toEqual([]);
+  await testInfo.attach('offline-new-patient-queued.png', {
+    contentType: 'image/png', body: await page.screenshot(),
+  });
+
+  await api.goOnline();
+  await expect.poll(() => api.syncOrder, { timeout: 65_000 }).toEqual(['registration', 'registration', 'push', 'push']);
+  // Requests being observed is not proof that their acknowledgements committed.
+  await expect(page.getByTestId(`status-booking-${bookingOp}`)).toHaveAttribute('data-s', 'acknowledged');
+  const retryEvidence = await deviceEvidence(page);
+  expect(api.registrationPosts).toHaveLength(2);
+  expect(api.registrationPosts[1]).toEqual(api.registrationPosts[0]);
+  expect(api.pushPosts).toHaveLength(2);
+  expect(api.pushPosts[1]).toEqual(api.pushPosts[0]);
+  const pushBody = api.pushPosts[0] as { operations: Array<{ sequence: number; input: { patientId: number; clientOpId: string } }> };
+  expect(pushBody.operations).toHaveLength(1);
+  expect(pushBody.operations[0].sequence).toBe(saved.proposals[0].sequence);
+  expect(pushBody.operations[0].input.clientOpId).toBe(bookingOp);
+  expect(pushBody.operations[0].input.patientId).toBe(581030);
+  expect(retryEvidence.registrations).toHaveLength(1);
+  expect(retryEvidence.registrations[0].status).toBe('applied');
+  expect(retryEvidence.registrations[0].canonical?.id).toBe(581030);
+  expect(retryEvidence.proposals).toHaveLength(1);
+  // Original local intent is immutable. Only the delivered payload is mapped,
+  // as asserted above, so uncertain retries preserve the exact wire identity.
+  expect(retryEvidence.proposals[0].input.patientId).toBe(saved.registrations[0].localId);
+  expect(retryEvidence.proposals[0].canonical).not.toBeNull();
+  expect(retryEvidence.outbox).toHaveLength(1);
+  expect(retryEvidence.outbox[0].attempts).toBe(2);
+  await expect(page.getByTestId(`row-registration-${registrationOp}`)).toBeVisible();
+  await expect(page.getByTestId(`status-booking-${bookingOp}`)).toHaveAttribute('data-s', 'acknowledged');
+  expect(api.unhandled).toEqual([]);
+  await testInfo.attach('offline-new-patient-retry-evidence.json', {
+    contentType: 'application/json',
+    body: Buffer.from(JSON.stringify({
+      evidenceScope: 'MOCKED API only; real application IndexedDB/offline/reload/retry behavior. Not live server evidence.',
+      registrationPosts: api.registrationPosts, syncOrder: api.syncOrder, pushPosts: api.pushPosts,
+      persistedRegistrationCount: retryEvidence.registrations.length,
+      persistedBookingCount: retryEvidence.proposals.length,
+      canonicalPatientId: retryEvidence.registrations[0].canonical?.id,
+      canonicalBookingPatientId: retryEvidence.proposals[0].input.patientId,
+    }, null, 2)),
+  });
+});
 
 test('MOCKED API · login sender keeps its permit while peer revocation locks the other tab', async ({ page, context }, testInfo) => {
   testInfo.annotations.push({

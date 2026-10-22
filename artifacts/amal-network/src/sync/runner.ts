@@ -1,6 +1,6 @@
 import type { ResolutionInput, SyncResolutionResult, SyncPushResult, SyncPullResult, SyncConflictPage } from '@workspace/api-client-react';
 import type { LocalCacheController } from '../offline/controller';
-import type { BookingProposal, OutboxRecord, ResolutionIntent, Result, ScopeTicket } from '../offline/types';
+import type { BookingProposal, OutboxRecord, PatientRegistration, ResolutionIntent, Result, ScopeTicket } from '../offline/types';
 import type { SyncConflict } from '@workspace/api-client-react';
 
 export class SyncFailure extends Error {
@@ -14,8 +14,11 @@ export type SyncSnapshot = {
   phase: 'idle' | 'loading' | 'syncing' | 'offline' | 'error' | 'locked';
   error: null | 'network' | 'invalid-data' | 'storage' | 'authorization' | 'unavailable';
   bookings: BookingProposal[]; outbox: OutboxRecord[]; conflicts: SyncConflict[]; intents: ResolutionIntent[];
+  registrations: PatientRegistration[];
 };
 export interface SyncTransport {
+  /** Existing idempotent patient endpoint, not a device-sequenced sync operation. */
+  registerPatient?(input: import('@workspace/api-client-react').PatientInput, signal: AbortSignal): Promise<import('../offline/types').PatientProjection>;
   state(signal: AbortSignal): Promise<{ deviceId: number; nextSequence: number }>;
   push(operations: import('@workspace/api-client-react').SyncOperation[], signal: AbortSignal): Promise<SyncPushResult>;
   pull(since: string | null, signal: AbortSignal): Promise<SyncPullResult>;
@@ -29,7 +32,7 @@ export const browserQueueLock: QueueLock = async (deviceId, signal, work) => {
   // overlap a new owner; exact operation IDs recover a crash after server commit.
   return navigator.locks.request(`amal-sync-device:${deviceId}`, { signal }, work);
 };
-const empty = (): SyncSnapshot => ({ phase: 'locked', error: null, bookings: [], outbox: [], conflicts: [], intents: [] });
+const empty = (): SyncSnapshot => ({ phase: 'locked', error: null, bookings: [], outbox: [], conflicts: [], intents: [], registrations: [] });
 const authCodes = new Set(['FORBIDDEN', 'UNAUTHORIZED', 'DEVICE_UNTRUSTED', 'SESSION_EXPIRED']);
 function status(e: unknown): number | undefined {
   return e && typeof e === 'object' && 'status' in e && typeof e.status === 'number' ? e.status : undefined;
@@ -81,11 +84,11 @@ export class SyncRunner {
       throw new SyncFailure('stale-context');
   }
   private async local(s: NonNullable<SyncRunner['session']>) {
-    const [bookings, outbox, state] = await Promise.all([
-      this.cache.listBookings(s.ticket), this.cache.listOutbox(s.ticket), this.cache.readSyncState(s.ticket),
+    const [bookings, outbox, state, registrations] = await Promise.all([
+      this.cache.listBookings(s.ticket), this.cache.listOutbox(s.ticket), this.cache.readSyncState(s.ticket), this.cache.listPatientRegistrations(s.ticket),
     ]);
     this.current(s);
-    this.publish({ bookings: unwrap(bookings), outbox: unwrap(outbox), ...unwrap(state) });
+    this.publish({ bookings: unwrap(bookings), outbox: unwrap(outbox), ...unwrap(state), registrations: unwrap(registrations) });
   }
   refresh = () => {
     const s = this.session;
@@ -125,6 +128,26 @@ export class SyncRunner {
         // Recover uncertain decisions before attempting dependent bookings.
         const pending = unwrap(await this.cache.readSyncState(s.ticket)).intents.filter(i => i.status === 'pending');
         for (const intent of pending) await this.sendIntent(s, intent.input);
+        const registrations = unwrap(await this.cache.listPatientRegistrations(s.ticket));
+        for (const registration of registrations) {
+          if (registration.status === 'applied' || registration.status === 'rejected') continue;
+          this.current(s);
+          if (!this.online()) throw new SyncFailure('network');
+          if (!this.api.registerPatient) throw new SyncFailure('unavailable');
+          unwrap(await this.cache.markPatientRegistration(s.ticket, registration.clientOpId, 'processing'));
+          try {
+            const patient = await this.api.registerPatient(registration.input, s.controller.signal);
+            this.current(s);
+            unwrap(await this.cache.acknowledgePatientRegistration(s.ticket, registration.clientOpId, patient));
+            this.changed();
+          } catch (e) {
+            this.current(s);
+            unwrap(await this.cache.markPatientRegistration(s.ticket, registration.clientOpId,
+              [400, 409, 422].includes(status(e) ?? 0) ? 'rejected' : 'failed'));
+            this.changed();
+            throw e;
+          }
+        }
         const proposals = unwrap(await this.cache.listBookings(s.ticket)).sort((a, b) => a.sequence - b.sequence);
         for (const p of proposals) {
           this.current(s);
