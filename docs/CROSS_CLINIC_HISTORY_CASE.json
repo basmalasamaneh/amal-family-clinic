@@ -1,0 +1,28 @@
+{
+  "synthetic": true,
+  "patientId": 158,
+  "name": "ميس حمدان",
+  "phone": "0598800881",
+  "dob": "1992-04-18",
+  "consent": "clinical",
+  "visits": [
+    {
+      "clinic_id": 1,
+      "clinic_name": "Amal Family Clinic - Downtown",
+      "doctor_id": 1,
+      "doctor_name": "Dr. Amal Khoury",
+      "email": "doctor.1@amal.example",
+      "date": "2026-10-14",
+      "visitId": 51
+    },
+    {
+      "clinic_id": 3,
+      "clinic_name": "Amal Family Clinic - Nablus Road",
+      "doctor_id": 3,
+      "doctor_name": "Dr. Yasmin Odeh",
+      "email": "doctor.3@amal.example",
+      "date": "2026-10-20",
+      "visitId": 52
+    }
+  ]
+}
