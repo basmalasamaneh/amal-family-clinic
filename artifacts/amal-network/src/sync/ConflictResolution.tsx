@@ -3,8 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import * as Dialog from '@radix-ui/react-dialog';
 import { AlertTriangle, ArrowLeftRight, CalendarClock, Phone, RotateCw, X } from 'lucide-react';
-import { formatInTimeZone } from 'date-fns-tz';
-import { arSA, enUS } from 'date-fns/locale';
+import { formatSyncWhen } from './format-when';
 import { Button, useAmalPreferences } from '@workspace/amal-ui';
 import { getListAppointmentsQueryKey, listAppointments } from '@workspace/api-client-react';
 import type {
@@ -18,19 +17,11 @@ import {
   type GateInput, type GateReason, type OtherRef,
 } from './resolution-model';
 
-const TZ = 'Asia/Hebron';
 const MAX_PAGES = 20;
 
 export function useFormatWhen() {
   const { locale, digitPreference } = useAmalPreferences();
-  return (iso: string | null | undefined) => {
-    if (!iso) return '';
-    const d = new Date(iso);
-    if (Number.isNaN(d.getTime())) return '';
-    let s = formatInTimeZone(d, TZ, 'EEE d MMM, HH:mm', { locale: locale === 'ar' ? arSA : enUS });
-    if (digitPreference === 'latn' || locale === 'en') s = s.replace(/[\u0660-\u0669]/g, (c) => String(c.charCodeAt(0) - 0x0660));
-    return s;
-  };
+  return (iso: string | null | undefined) => formatSyncWhen(iso, locale, digitPreference);
 }
 
 function slotKey(s: ConflictItemSuggestedSlotsItem) { return `${s.startsAt}|${s.endsAt}`; }
@@ -174,8 +165,8 @@ export function ConflictResolution({ conflict, proposal, intent, clinicId, locke
         <section className="cr__col cr__col--local" aria-label={t('local')}>
           <p className="cr__cap">{t('local')}</p>
           <dl className="cr__dl">
-            {proposal && <><dt>{t('patient')}</dt><dd>{proposal.patient.name}</dd><dt>{t('doctor')}</dt><dd>{proposal.doctor.name}</dd></>}
-            <dt>{t('when')}</dt><dd>{fmt(local?.startsAt)}</dd>
+            {proposal && <><dt>{t('patient')}</dt><dd><bdi>{proposal.patient.name}</bdi></dd><dt>{t('doctor')}</dt><dd><bdi>{proposal.doctor.name}</bdi></dd></>}
+            <dt>{t('when')}</dt><dd><bdi>{fmt(local?.startsAt)}</bdi></dd>
           </dl>
           <p className="cr__note">{t('localNote')}</p>
         </section>
