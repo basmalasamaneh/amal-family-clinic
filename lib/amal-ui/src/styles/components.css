@@ -305,5 +305,18 @@ textarea.amal-input { min-block-size: 104px; resize: vertical; }
 .amal-pagehead__text > * + p { margin-block-start: 8px; }
 /* Language toggle reads "AR | EN"; full names stay in aria-label. */
 .amal-seg__btn[lang] { font-variant-numeric: normal; letter-spacing: 0; min-inline-size: 44px; justify-content: center; }
+
+/* Shared responsive primitives, including body-level dialog/toast portals. */
+.amal-btn { box-sizing: border-box; max-inline-size: 100%; overflow-wrap: anywhere; }
+.amal-btn > svg { flex-shrink: 0; }
+.amal-seg { box-sizing: border-box; max-inline-size: 100%; flex-wrap: wrap; }
+.amal-seg__btn, .amal-toast__close { min-block-size: 44px; min-inline-size: 44px; }
+.amal-seg__btn { white-space: normal; overflow-wrap: anywhere; }
+.amal-stat { min-inline-size: 0; grid-template-columns: auto minmax(0, 1fr); overflow-wrap: anywhere; }
+.amal-dt__scroll { box-sizing: border-box; min-inline-size: 0; max-inline-size: 100%; overscroll-behavior-inline: contain; }
+.amal-dt__cards { grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr)); }
+.amal-dialog { box-sizing: border-box; max-inline-size: calc(100% - 32px); max-block-size: calc(100dvh - 32px); overflow-y: auto; overscroll-behavior: contain; overflow-wrap: anywhere; }
+.amal-toast { box-sizing: border-box; min-inline-size: 0; max-inline-size: 100%; grid-template-columns: auto minmax(0, 1fr) auto; overflow-wrap: anywhere; }
+.amal-filterbar > * { min-inline-size: 0; max-inline-size: 100%; }
 .amal-dt__table tbody th[scope='row'] { position: static; background: transparent; color: var(--amal-text); font-size: var(--amal-text-table); text-align: start; padding-block: 10px; padding-inline: 14px; border-block-end: 1px solid var(--amal-border); white-space: normal; }
 .amal-dt__table tbody tr:nth-child(even) th[scope='row'] { background: color-mix(in srgb, var(--amal-surface-2) 45%, var(--amal-surface)); }

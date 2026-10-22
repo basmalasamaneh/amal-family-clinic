@@ -238,7 +238,7 @@ function WeekGrid({ date, today, search, doctorId, doctors, appointments }: {
   const { locale, digitPreference } = useAmalPreferences();
   const byId = new Map(doctors.map((d) => [d.id, d]));
   return (
-    <ol className="cal-week" data-testid="calendar-week">
+    <ol className="cal-week" tabIndex={0} data-testid="calendar-week">
       {weekDates(date).map((d) => {
         const items = appointments.filter((a) => localDateOf(a.startsAt) === d).sort((a, b) => a.startsAt.localeCompare(b.startsAt) || a.id - b.id);
         const p = new URLSearchParams(); if (d !== today) p.set('date', d); if (doctorId) p.set('doctor', String(doctorId));

@@ -14,6 +14,16 @@ therefore not evidence of a layout regression.
 assertions. Supply an explicit disabled demo context for isolated visual checks,
 without changing real demo state or production transport behavior.
 
+Public-page checks must distinguish a signed-out identity (401) from an
+unavailable identity service (503).
+
+**Why:** Returning 503 for every API rendered a workspace-load error instead of
+the login page. Its lack of overflow and language controls said nothing about
+the actual login layout.
+
+**How to apply:** Model signed-out identity explicitly and assert the intended
+page/controls and HTML locale before accepting public-page geometry results.
+
 Native browser zoom screenshots need a virtual display large enough to contain
 the whole browser window. DevTools full-page captures may omit composited text;
 use actual foreground-window captures before diagnosing apparent clipping.

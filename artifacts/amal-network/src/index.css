@@ -870,3 +870,109 @@ input.cr__slot {
 .adm-form__row.adm-form__row { gap: 16px; align-items: start; }
 .rem-field.rem-field, .ds-field.ds-field { gap: 8px; }
 .net-search__field input { min-block-size: 44px; }
+
+/* Responsive workspace contract. Keep the existing bilingual token system and
+   icon rail; constrain content, never conceal document overflow. Calendar row
+   tracks/subgrids are deliberately excluded from these layout adjustments. */
+.shell-main, .shell-crumbs {
+  box-sizing: border-box;
+  inline-size: 100%;
+  max-inline-size: 1440px;
+  min-inline-size: 0;
+  margin-inline: auto;
+}
+.shell-main > :is(.adm, .im, .net, .doc, .kpi, .sync, .book, .rx, .rem, .wl) {
+  box-sizing: border-box;
+  inline-size: 100%;
+  min-inline-size: 0;
+  margin-inline: auto;
+}
+.shell-main :is(.cal, .cal-head, .cal-tools, .cal-tools__end, .cal-workspace, .cal-day-wrap,
+  .rx-grid, .rx-panel, .cs-grid, .cs-card, .im-panel, .im-sources, .im-grid2,
+  .adm-card, .adm-section, .adm-wizard, .doc-panel, .net-panel, .kpi-card, .kpi-grid,
+  .rem-item, .wl-card, .adopt-results, .adopt-status, .adopt-actions) {
+  min-inline-size: 0;
+}
+.shell-main :is(.rx-grid, .cs-grid, .im-sources, .im-grid2, .kpi-grid,
+  .adopt-results, .adopt-actions, .adm-form__row) > * { min-inline-size: 0; }
+.shell-main :is(.cal-head, .rx-panel, .cs-card, .im-panel, .adm-card,
+  .doc-panel, .net-panel, .kpi-card, .rem-item, .wl-card, .adopt-meta) {
+  overflow-wrap: anywhere;
+}
+.shell-main :is(.cal-date, .cal-filter, .kpi-date, .adm-filters, .rem-field) {
+  min-inline-size: 0;
+  max-inline-size: 100%;
+}
+.shell-main :is(.cal-date input, .cal-filter select, .adm-filters select) {
+  box-sizing: border-box;
+  min-inline-size: 0;
+  max-inline-size: 100%;
+}
+.shell-main :is(.cal-filter, .rx-up, .rx-quick__book) { flex-wrap: wrap; }
+.shell-main .rx-up__main { min-inline-size: 0; }
+.shell-main .net-id__txt { min-inline-size: 0; flex-basis: 180px; }
+.shell-main .net-id__consent { max-inline-size: 100%; }
+.shell-main :is(.net-consent, .adm-pill, .sync-chip) { white-space: normal; overflow-wrap: anywhere; }
+:is(.bk-btn, .cal-btn) { box-sizing: border-box; max-inline-size: 100%; white-space: normal; overflow-wrap: anywhere; }
+:is(.bk-btn, .cal-btn) > svg { flex-shrink: 0; }
+.shell-main :is(.cal-docs, .adopt-status, .adopt-modes, .adopt-meta--top) {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
+}
+/* Wide content owns its scrollbar; no changes to appointment/time geometry. */
+:is(.cal-day, .cal-week, .im-steps-nav, .im-table-wrap, .adm-table-wrap,
+  .kpi-table-wrap, .data-table-wrap) {
+  box-sizing: border-box;
+  min-inline-size: 0;
+  max-inline-size: 100%;
+  overscroll-behavior-inline: contain;
+}
+.shell-main :is(.im-table-wrap, .kpi-table-wrap) { overflow-x: auto; }
+:is(.cal-week, .im-steps-nav, .im-table-wrap):focus-visible {
+  outline: 3px solid var(--amal-focus-ring);
+  outline-offset: 2px;
+}
+/* Portal surfaces are outside .shell: size their border boxes explicitly.
+   Percent maximums also respect the fixed containing block's scrollbar gutter. */
+:is(.shell-dialog, .bk-dialog, .bk-drawer, .cs-dialog, .im-dialog, .tour-card, .rx-toast) {
+  box-sizing: border-box;
+  min-inline-size: 0;
+  max-inline-size: calc(100% - 24px);
+  overflow-wrap: anywhere;
+}
+.bk-drawer { max-inline-size: 100%; max-block-size: 100dvh; }
+:is(.shell-dialog, .bk-dialog, .cs-dialog, .im-dialog) {
+  max-block-size: calc(100dvh - 24px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+:is(.shell-dialog, .bk-dialog, .cs-dialog, .im-dialog, .bk-drawer) :is(input, select, textarea) {
+  box-sizing: border-box;
+  min-inline-size: 0;
+  max-inline-size: 100%;
+}
+:is(.shell-dialog__head, .bk-dialog__head) > :last-child { flex-shrink: 0; }
+.shell-menu { box-sizing: border-box; min-inline-size: min(220px, calc(100vw - 24px)); max-inline-size: calc(100vw - 24px); }
+.shell-menu__item { white-space: normal; overflow-wrap: anywhere; }
+/* Standalone pages share the same shrink contract, without global font resets. */
+:is(.auth, .auth-main, .data-main, .data-layout, .kit-layout, .kit-header__inner,
+  .kit-combo, .kit-g, .kit-g-grid2) { box-sizing: border-box; min-inline-size: 0; }
+:is(.data-layout, .kit-g-grid, .kit-g-grid2, .kit-combos) > * { min-inline-size: 0; }
+:is(.data-main, .kit-main, .auth-main) { overflow-wrap: anywhere; }
+.data-grid, .kit-g-grid2 { grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); }
+.kit-g-stats { grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr)); }
+.kit-g-select { min-block-size: 44px; max-inline-size: 100%; }
+@media (max-width: 1023px) {
+  /* Available workspace is narrower than viewport because the icon rail stays. */
+  .shell-main :is(.rx-grid, .cs-grid, .im-dup-layout) { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 767px) {
+  .shell-main :is(.adopt-meta, .adopt-status, .adopt-modes, .adopt-actions,
+    .adopt-results, .adm-modes, .im-sources, .im-grid2, .doc-mode,
+    .rem-bodies, .rem-filters__set, .wl-row, .book-ctx) { grid-template-columns: minmax(0, 1fr); }
+  .shell-main :is(.cal-head, .cal-actions, .cal-nav, .cal-tools__end) { max-inline-size: 100%; }
+  .shell-main :is(.rx-panel, .im-panel, .adm-wizard) { padding-inline: 16px; }
+  .kit-g-stats, .kit-g-grid2 { grid-template-columns: minmax(0, 1fr); }
+  .kit-header__brand { flex-wrap: wrap; }
+  .kit-combo { padding: 16px; }
+  .auth-top__prefs { max-inline-size: 100%; }
+}

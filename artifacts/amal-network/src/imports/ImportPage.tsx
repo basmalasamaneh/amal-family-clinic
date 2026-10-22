@@ -113,7 +113,7 @@ function ImportWorkspace({ clinic, title, scope }: { clinic: ShellClinic; title:
         )}
       </header>
 
-      <nav aria-label={t('im.wizard.stepsLabel')} className="im-steps-nav">
+      <nav aria-label={t('im.wizard.stepsLabel')} className="im-steps-nav" tabIndex={0}>
         <ol className="im-steps">
           {STEPS.map((s, i) => {
             const enter = canEnter(i, open, !!batch);
@@ -274,7 +274,7 @@ function DoctorsStep({ batch, groups, doctors, doctorsQ, doctorFor, onChoose, on
           </button>
         </div>
       ))}
-      <div className="im-table-wrap">
+      <div className="im-table-wrap" tabIndex={0}>
         <table className="im-table">
           <thead><tr><th scope="col">{t('im.doctors.email')}</th><th scope="col">{t('im.doctors.rows')}</th><th scope="col">{t('im.doctors.serverMatch')}</th><th scope="col">{t('im.doctors.choose')}</th></tr></thead>
           <tbody>
@@ -331,7 +331,7 @@ function PatientsStep({ batch, doctorFor, doctorName, onEdit }: { batch: ImportB
         </select>
       </div>
       {batch.rows.length === 0 ? <div data-testid="state-batch-empty"><EmptyState className="amal-empty--compact" title={t('im.patients.empty')} description={t('im.patients.emptyDesc')} /></div> : (
-        <div className="im-table-wrap">
+        <div className="im-table-wrap" tabIndex={0}>
           <table className="im-table">
             <thead><tr>
               <th scope="col">{t('im.patients.row')}</th><th scope="col">{t('im.patients.source')}</th><th scope="col">{t('im.patients.when')}</th>
@@ -375,7 +375,7 @@ function StatusStep({ batch, onEdit }: { batch: ImportBatch; onEdit: (r: ImportR
   return (
     <div className="im-stack">
       <p className="im-lede">{t('im.status.lede')}</p>
-      <div className="im-table-wrap">
+      <div className="im-table-wrap" tabIndex={0}>
         <table className="im-table">
           <thead><tr><th scope="col">{t('im.status.source')}</th><th scope="col" aria-hidden="true" /><th scope="col">{t('im.status.target')}</th><th scope="col">{t('im.status.rows')}</th></tr></thead>
           <tbody>
