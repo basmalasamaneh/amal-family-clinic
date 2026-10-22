@@ -30,10 +30,6 @@ export function MessagesPage({ identity, clinic, title, canManageReminders = fal
   return (
     <div className="rem-page" data-testid="page-messages">
       <PageHeader icon={MessageSquareText} section="reception" eyebrow={t('eyebrow')} title={title} description={t('lede')} />
-      <div className="rem-sim" role="note" data-testid="notice-simulation">
-        <FlaskConical size={22} aria-hidden="true" />
-        <div><p className="rem-sim__title">{t('sim.title')}</p><p>{t('sim.body')}</p><p className="rem-provider">{t('sim.provider')}</p></div>
-      </div>
       {!online || (identity.role === 'doctor' && !canManageReminders) ? (
         <EmptyState headingLevel={2} title={t('error.title')} description={t(online ? 'error.forbidden' : 'error.generic')} />
       ) : !own ? (
