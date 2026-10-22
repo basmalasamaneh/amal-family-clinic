@@ -69,6 +69,7 @@
     "@tailwindcss/vite": "catalog:",
     "@tanstack/react-query": "catalog:",
     "@types/node": "catalog:",
+    "@types/papaparse": "^5.5.2",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
     "@vitejs/plugin-react": "catalog:",
@@ -109,6 +110,10 @@
   },
   "dependencies": {
     "date-fns-tz": "^3.2.0",
-    "dexie": "^4.4.6"
+    "dexie": "^4.4.6",
+    "fflate": "^0.8.3",
+    "ical.js": "^2.2.1",
+    "papaparse": "^5.7.0",
+    "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"
   }
 }

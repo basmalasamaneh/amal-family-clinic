@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLocation, useSearch } from 'wouter';
 import { useQueryClient } from '@tanstack/react-query';
-import { AlertTriangle, CheckCircle2, ChevronLeft, ChevronRight, Database, Download, FileJson, FileUp, FolderOpen, Loader2, Lock, RefreshCw } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, ChevronLeft, ChevronRight, Download, FileSpreadsheet, FileUp, FolderOpen, Loader2, Lock, RefreshCw } from 'lucide-react';
 import {
   commitImport, downloadImportReport, getGetImportBatchQueryKey, getImportBatch, getListDoctorsQueryKey, useGetImportBatch, useListDoctors, useUploadImport,
   type ImportBatch, type ImportRow,
@@ -12,12 +12,13 @@ import type { ShellClinic } from '@/shell/identity';
 import { formatInstant, formatNumber } from '@/shell/formatting';
 import { newOpId } from '@/booking/ops';
 import {
-  STEPS, canEnter, commitBody, commitReady, conflictSeverity, counts, effectiveDoctor, emailGroups, failure, groupConflicts, isPatientOverlap, isUncertain, openConflicts, parseExport,
-  readLastBatch, readPending, rowState, srcEmail, srcName, srcStart, statusSummary, stepOpen, writeLastBatch, writePending, type DoctorChoices, type StepId,
+  STEPS, canEnter, commitBody, commitReady, conflictSeverity, counts, effectiveDoctor, emailGroups, failure, groupConflicts, isPatientOverlap, isUncertain, openConflicts,
+  readLastBatch, readPending, rowState, srcEmail, srcName, srcStart, statusSummary, stepOpen, writeLastBatch, writePending, uploadError, uploadErrorContext, type DoctorChoices, type StepId,
 } from './model';
 import { errorText, issueText } from './i18n';
 import { RowDialog, type Memory } from './RowDialog';
 import { Iso, Modal, Msg, Skeleton } from './ui';
+import { ACCEPTED_IMPORT_FILES, MAX_UPLOAD_BYTES, parseAppointmentFile } from './file-parsers';
 import '@/booking/i18n';
 import '@/booking/booking.css';
 import './imports.css';
@@ -192,20 +193,61 @@ function UploadStep({ scope, batch, onBatch, onOpen, onReset }: { scope: string;
   const { t } = useTranslation();
   const upload = useUploadImport();
   const [fileErr, setFileErr] = useState<string | null>(null);
+  const [fileContext, setFileContext] = useState<{ row?: number; column?: string }>({});
   const [rows, setRows] = useState<{ name: string; rows: Record<string, unknown>[] } | null>(null);
+  const [parsing, setParsing] = useState(false);
+  const [sheetNames, setSheetNames] = useState<string[]>([]);
+  const [selectedSheet, setSelectedSheet] = useState('');
+  const fileRef = useRef<File | null>(null);
+  const sequence = useRef(0);
+  const mounted = useRef(true);
+  useEffect(() => {
+    mounted.current = true;
+    return () => { mounted.current = false; sequence.current++; };
+  }, [scope]);
   const [reopen, setReopen] = useState('');
   const [reopenErr, setReopenErr] = useState(false);
   const last = readLastBatch(scope);
   const opRef = useRef<{ sig: string; id: string } | null>(null);
   const opFor = (sig: string) => { if (!opRef.current || opRef.current.sig !== sig) opRef.current = { sig, id: newOpId() }; return opRef.current.id; };
-  const onFile = async (e: ChangeEvent<HTMLInputElement>) => {
-    const f = e.target.files?.[0]; setRows(null); setFileErr(null);
-    if (!f) return;
-    const r = parseExport(f.name, f.size > 131072 ? '' : await f.text(), f.size);
-    if (!r.ok) setFileErr(t(`im.upload.${r.error}`)); else setRows({ name: f.name.slice(0, 100), rows: r.rows });
+  const parseFile = async (f: File, sheetName?: string) => {
+    const seq = ++sequence.current;
+    setRows(null); setFileErr(null); setParsing(true); opRef.current = null;
+    setFileContext({});
+    upload.reset();
+    const current = () => mounted.current && sequence.current === seq;
+    try {
+      const r: Awaited<ReturnType<typeof parseAppointmentFile>> = f.size > MAX_UPLOAD_BYTES ? { ok: false, error: 'errFileSize' } : await parseAppointmentFile(f, sheetName);
+      if (!current()) return;
+      setSheetNames(r.sheetNames ?? []);
+      if (!r.ok) {
+        setFileErr(uploadError(r.error));
+        setFileContext(uploadErrorContext(r.row, r.column));
+      } else {
+        setSelectedSheet(r.selectedSheet ?? sheetName ?? '');
+        setRows({ name: f.name.slice(0, 100), rows: r.rows });
+      }
+    } catch {
+      if (current()) setFileErr('errParse');
+    } finally {
+      if (current()) setParsing(false);
+    }
+  };
+  const onFile = (e: ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0] ?? null;
+    sequence.current++; fileRef.current = f; opRef.current = null;
+    setRows(null); setFileErr(null); setSheetNames([]); setSelectedSheet(''); setParsing(false); upload.reset();
+    setFileContext({});
+    if (f) void parseFile(f);
   };
   const errorCount = batch ? batch.rows.filter((r) => r.errors.length).length : 0;
-  const stage = (body: Parameters<typeof upload.mutate>[0]['data']) => upload.mutate({ data: body }, { onSuccess: (b) => { opRef.current = null; onBatch(b); } });
+  const stage = (body: Parameters<typeof upload.mutate>[0]['data']) => {
+    const seq = sequence.current;
+    upload.mutate({ data: body }, { onSuccess: (b) => {
+      if (!mounted.current || seq !== sequence.current) return;
+      opRef.current = null; onBatch(b);
+    } });
+  };
 
   if (batch) return (
     <div className="im-stack">
@@ -216,25 +258,42 @@ function UploadStep({ scope, batch, onBatch, onOpen, onReset }: { scope: string;
   );
   return (
     <div className="im-sources">
-      <article className="im-card im-card--hero">
-        <Database size={24} aria-hidden="true" />
-        <h3 className="im-h3">{t('im.upload.seedTitle')}</h3>
-        <p className="im-hint">{t('im.upload.seedBody')}</p>
-        <button type="button" className="bk-btn bk-btn--primary" disabled={upload.isPending} aria-busy={upload.isPending}
-          onClick={() => stage({ source: 'seed', clientOpId: opFor('seed') })} data-testid="button-stage-seed">
-          {upload.isPending && <Loader2 size={18} className="im-spin" aria-hidden="true" />}{t('im.upload.seedBtn')}
-        </button>
-      </article>
-      <article className="im-card">
-        <FileJson size={24} aria-hidden="true" />
+      <article className="im-card im-card--hero im-upload">
+        <FileSpreadsheet size={28} aria-hidden="true" />
         <h3 className="im-h3">{t('im.upload.fileTitle')}</h3>
         <p className="im-hint">{t('im.upload.fileBody')}</p>
-        <label className="im-label" htmlFor="imp-file">{t('im.upload.fileLabel')}</label>
-        <input id="imp-file" type="file" accept=".json,application/json" className="im-input" onChange={(e) => void onFile(e)} aria-invalid={!!fileErr} data-testid="input-import-file" />
-        {fileErr && <p className="im-field-err" role="alert" data-testid="error-file">{fileErr}</p>}
-        <button type="button" className="bk-btn" disabled={!rows || upload.isPending}
+        <div className="im-upload__formats" aria-label={t('im.upload.formats')}>{['JSON', 'CSV', 'XLSX', 'XLS', 'ICS'].map((format) => <span key={format}>{format}</span>)}</div>
+        <div className="im-upload__picker">
+          <label className="im-label" htmlFor="imp-file">{t('im.upload.fileLabel')}</label>
+          <p id="imp-file-help" className="im-hint">{t('im.upload.limits')}</p>
+          <input id="imp-file" type="file" accept={ACCEPTED_IMPORT_FILES} className="im-input" disabled={upload.isPending} onChange={onFile} aria-describedby="imp-file-help" aria-invalid={!!fileErr} data-testid="input-import-file" />
+        </div>
+        {sheetNames.length > 0 && <div className="im-upload__preview">
+          <label className="im-label" htmlFor="imp-sheet">{t('im.upload.sheetLabel')}</label>
+          <select id="imp-sheet" className="im-input" value={selectedSheet} disabled={parsing || upload.isPending} onChange={(e) => { setSelectedSheet(e.target.value); if (fileRef.current) void parseFile(fileRef.current, e.target.value); }} data-testid="select-import-sheet">
+            <option value="" disabled>{t('im.upload.sheetPlaceholder')}</option>
+            {sheetNames.map((name) => <option key={name} value={name}>{name}</option>)}
+          </select>
+        </div>}
+        {parsing && <div className="im-upload__preview" role="status" data-testid="status-file-parsing"><p>{t('im.upload.parsing')}</p><Skeleton lines={2} label={t('im.upload.parsing')} /></div>}
+        {fileErr && <p className="im-field-err" role="alert" data-testid="error-file">
+          {t(`im.upload.${fileErr}`)}
+          {fileContext.row !== undefined && <> · {t('im.upload.errorRow', { row: fileContext.row })}</>}
+          {fileContext.column && <> · {t('im.upload.errorColumn', { column: fileContext.column })}</>}
+        </p>}
+        {fileErr === 'errParse' && fileRef.current && <button type="button" className="bk-btn bk-btn--sm" disabled={parsing || upload.isPending} onClick={() => fileRef.current && void parseFile(fileRef.current, selectedSheet || undefined)}>{t('im.upload.retry')}</button>}
+        {rows && !parsing && <div className="im-upload__preview" role="status" data-testid="preview-import-file">
+          <strong>{t('im.upload.detected', { count: rows.rows.length })}</strong>
+          <p className="im-hint"><Iso>{rows.name}</Iso></p>
+          {selectedSheet && <p className="im-hint">{t('im.upload.sheetLabel')}: <Iso>{selectedSheet}</Iso></p>}
+          <p className="im-hint">{t('im.upload.previewNote')}</p>
+        </div>}
+        <details className="im-details"><summary>{t('im.upload.columnsTitle')}</summary><p className="im-hint">{t('im.upload.columnsBody')}</p><p className="im-hint">{t('im.upload.uidHint')}</p></details>
+        <details className="im-details"><summary>{t('im.upload.icsTitle')}</summary><p className="im-hint">{t('im.upload.icsBody')}</p></details>
+        <p className="im-hint">{t('im.upload.privacy')}</p>
+        <button type="button" className="bk-btn bk-btn--primary" disabled={!rows || parsing || upload.isPending} aria-busy={upload.isPending}
           onClick={() => rows && stage({ source: 'json', sourceName: rows.name, rows: rows.rows, clientOpId: opFor(`json:${rows.name}:${JSON.stringify(rows.rows).length}`) })} data-testid="button-stage-file">
-          {t('im.upload.fileBtn')}
+          <FileUp size={18} aria-hidden="true" />{t(upload.isPending ? 'im.upload.staging' : 'im.upload.fileBtn')}
         </button>
       </article>
       <article className="im-card">

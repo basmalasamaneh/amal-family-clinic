@@ -242,6 +242,29 @@ export function writeLastBatch(scope: string, id: number | null, s: Store | null
 
 /* ---------- Upload file parsing ---------- */
 export const MAX_BYTES = 131072;
+/** Stable parser codes map only to known localized copy, never to source contents. */
+export const uploadErrorAliases = {
+  errFileSize: 'errSize', errFileType: 'errType', errEmpty: 'errEmpty',
+  errEncoding: 'errEncoding', errFormat: 'errFormat', errMalformed: 'errParse',
+  errJsonShape: 'errShape', errMissingHeader: 'errHeaders', errDuplicateHeader: 'errDuplicateHeader',
+  errColumns: 'errColumns', errField: 'errField', errId: 'errId', errDate: 'errDate',
+  errCsv: 'errCsv', errDelimiter: 'errDelimiter', errSheetChoice: 'errSheetChoice',
+  errFormula: 'errFormula', errZip: 'errArchive', errZipLimit: 'errZipLimit',
+  errRowLimit: 'errRows', errPayloadLimit: 'errNormalizedSize', errCalendar: 'errCalendar',
+  errCalendarTime: 'errCalendarTime', errAllDay: 'errAllDay', errDuration: 'errDuration',
+  errRecurrence: 'errRecurrence', errStatus: 'errStatus', errTimezone: 'errTimezone',
+} as const;
+export function uploadError(code: string) {
+  return Object.prototype.hasOwnProperty.call(uploadErrorAliases, code)
+    ? uploadErrorAliases[code as keyof typeof uploadErrorAliases] : 'errParse';
+}
+export function uploadErrorContext(row?: number, column?: string): { row?: number; column?: string } {
+  const columns = ['event_id', 'event_uid', 'doctor_email', 'patient_name_typed', 'start_time', 'end_time', 'event_status'];
+  return {
+    ...(Number.isSafeInteger(row) && row! > 0 ? { row } : {}),
+    ...(column && columns.includes(column) ? { column } : {}),
+  };
+}
 export type ParseResult = { ok: true; rows: Record<string, unknown>[] } | { ok: false; error: 'errType' | 'errSize' | 'errParse' | 'errShape' };
 export function parseExport(name: string, text: string, bytes: number): ParseResult {
   if (!/\.json$/i.test(name)) return { ok: false, error: 'errType' };

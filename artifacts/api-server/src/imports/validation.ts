@@ -7,8 +7,9 @@ const positive = z.number().int().positive().max(2147483647);
 const reason = z.string().trim().min(1).max(1000);
 export const sourceRow = z.object({
   event_id: positive, doctor_email: z.string().max(254), patient_name_typed: z.string().max(200),
+  event_uid: z.string().trim().min(1).max(1024).optional(),
   start_time: z.string().max(40), end_time: z.string().max(40), event_status: z.string().max(40),
-}).strict();
+}).strict().refine(v => v.event_uid === undefined || v.event_id === 1, { path: ["event_id"], message: "UID rows must use event_id 1" });
 export type SourceRow = z.infer<typeof sourceRow>;
 export const uploadInput = z.object({
   source: z.enum(["seed", "json"]), clientOpId: z.uuid(), sourceName: z.string().trim().min(1).max(100).optional(),

@@ -44,6 +44,45 @@ Asia/Hebron wall time; operational appointment values are UTC instants. Repeated
 or nonexistent DST wall times require correction. Display the returned local
 values using the IANA zone, never a fixed offset.
 
+### Browser-normalized CSV/XLSX/XLS/ICS rows
+
+The server still accepts JSON only; binary upload and file parsing are not API
+features. Browser adapters send the same six required fields (`event_id`,
+`doctor_email`, `patient_name_typed`, `start_time`, `end_time`, `event_status`).
+Legacy numeric IDs remain positive 32-bit integers and omit `event_uid`.
+For external string IDs/ICS UIDs, send `event_id: 1` and `event_uid` containing
+the full stable external ID. The UID is trimmed, case-sensitive, nonempty and
+at most 1024 characters. Numeric strings, negative IDs, UID aliases and UID rows
+with an event ID other than 1 are invalid. Malformed bounded rows remain visible
+with `INVALID_COLUMNS` and must be explicitly skipped or corrected upstream.
+
+Numeric provenance remains `(calendar_app_export, event_id)`. UID provenance is
+`(calendar_app_export:uid:FULL_SHA256(trimmed_UID), 1)`, using the full 64-digit
+SHA256 over UTF-8, with the full prior UID independently checked on every replay.
+This bounds the PostgreSQL primary-key index even for long Unicode UIDs.
+Filenames, file formats, row ordering and parser flags never enter identity.
+UID and malformed staging rows use negative batch-local locators only; those
+locators never enter the source payload, external provenance or source hash.
+Duplicate canonical identities reject the entire batch, including whitespace
+variants of the same UID. Different UIDs may all have `event_id: 1`.
+
+All adapters must normalize times to the same Hebron wall-time contract before
+submission; do not send parser timezone flags or extra format-specific fields.
+Seed instants retain their existing UTC interpretation and equivalent numeric
+JSON rows retain replay compatibility. Source hashes use normalized timestamps
+and trimmed UIDs, never display names or internal locators. Every replay still
+requires manual identity review and exact association checks. A changed payload
+for an existing UID returns `IMPORT_SOURCE_CHANGED`; it never silently replaces
+a booking. Scope, verification and scheduling conflicts remain unchanged.
+
+Run the owned suite through the existing disposable snapshot wrapper (source
+database is read-only; all test writes occur in its private local clone):
+
+```sh
+pnpm --filter @workspace/api-server exec tsx --test tests/import-isolated.test.ts
+pnpm --filter @workspace/api-server typecheck
+```
+
 Doctor conflicts block, adjacent half-open intervals do not. Cancelled rows
 do not occupy a slot. Existing-appointment overlaps, intra-export pairs and
 source-event replays are separate findings. No override reason permits a
@@ -83,7 +122,7 @@ pnpm --filter @workspace/api-server merge:migrate
 pnpm --filter @workspace/api-spec compose:imports
 pnpm --filter @workspace/api-spec codegen
 pnpm --filter @workspace/api-spec validate
-pnpm --filter @workspace/api-server imports:test
+pnpm --filter @workspace/api-server exec tsx --test tests/import-isolated.test.ts
 pnpm --filter @workspace/api-server merge:test
 pnpm --filter @workspace/api-server test:contract
 pnpm --filter @workspace/scripts seed:verify

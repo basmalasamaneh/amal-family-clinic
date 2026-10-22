@@ -15,7 +15,10 @@ This does not authorize publishing the application.
 - Create separate operational tables with all Section 7 additions. Fill them from the seed tables using one idempotent script that preserves original IDs.
 - Admin > Developer tools > Reset demo data wipes operational tables and re-copies from seed tables; it never changes seed tables.
 - KPI “before” numbers are always computed from untouched seed tables; “after” numbers come from operational tables.
-- The import wizard reads calendar_app_export directly from the seed table.
+- The import wizard now uses uploaded files rather than exposing the built-in
+  calendar-export shortcut. On 2026-10-22 the user explicitly requested removing
+  that card. This does not authorize deleting or changing the underlying seed
+  table or removing compatibility for existing batches.
 
 An audit may initialize a new, isolated disposable database from a read-only
 copy of the six workbook tables, then enforce their immutable protections

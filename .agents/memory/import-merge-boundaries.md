@@ -9,6 +9,16 @@ Treat uploaded export names as display provenance, never as independent event na
 
 **How to apply:** Keep source-event deduplication independent from filenames, demographic matching and appointment-time overlaps when extending import consumers.
 
+Preserve opaque external event identifiers as stable identities across file
+formats; never replace them with row positions, random IDs, or truncated hashes.
+
+**Why:** Supporting calendar files alongside spreadsheet exports introduces
+non-numeric event IDs. Converting those to small integers can collide or create
+duplicates when the same appointment is uploaded in another format.
+
+**How to apply:** Numeric legacy IDs retain their existing identity; opaque IDs
+must remain distinguishable and repeatable regardless of filename or row order.
+
 Exact duplicate demographics do not establish consent equivalence. Block merges involving consent evidence or differing visibility grants until there is an explicitly approved resolution policy.
 
 **Why:** Reassigning a visit to an otherwise identical patient can expose it under the survivor's existing consent or doctor rights; preserving evidence alone does not prevent that disclosure.

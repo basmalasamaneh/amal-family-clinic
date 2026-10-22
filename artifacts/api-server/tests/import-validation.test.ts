@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { wallToUtc, localTime, interval, newPatientInput, mapInput } from "../src/imports/validation";
+import { wallToUtc, localTime, interval, newPatientInput, mapInput, sourceRow } from "../src/imports/validation";
 test("Hebron wall-clock summer/winter conversion, immutable UTC, gaps, repeats and dates", () => {
   assert.equal(wallToUtc("2026-09-13T09:00:00"), "2026-09-13T06:00:00.000Z");
   assert.equal(wallToUtc("2026-01-13T09:00:00"), "2026-01-13T07:00:00.000Z");
@@ -18,4 +18,22 @@ test("new patients and replacements cannot omit confirmation or required demogra
   assert.equal(newPatientInput.safeParse({ name: "Name", phone: "0599000000", dateOfBirth: "2020-01-01" }).success, false);
   assert.equal(newPatientInput.safeParse({ name: "Name", phone: "0599000000", dateOfBirth: "2020-01-01", guardianName: "Parent", guardianRelation: "Mother" }).success, true);
   assert.equal(mapInput.safeParse({ expectedVersion: 1, rows: [{ rowId: 1, action: "include", doctorId: 1, patientId: 1 }] }).success, false);
+});
+test("UID validation is explicit, bounded and does not coerce or alias numeric IDs", () => {
+  const row = { event_id: 1, doctor_email: "doctor@example.test", patient_name_typed: "Patient",
+    start_time: "2026-09-13T09:00:00", end_time: "2026-09-13T09:30:00", event_status: "confirmed" };
+  assert.deepEqual(sourceRow.parse(row), row);
+  assert.equal(sourceRow.parse({ ...row, event_uid: "  stable-UID  " }).event_uid, "stable-UID");
+  assert.equal(sourceRow.parse({ ...row, event_uid: "界".repeat(1024) }).event_uid?.length, 1024);
+  for (const event_uid of ["", " \t ", "x".repeat(1025), null, 7]) {
+    assert.equal(sourceRow.safeParse({ ...row, event_uid }).success, false);
+  }
+  for (const event_id of [-1, 0, 1.5, "1", 2147483648]) {
+    assert.equal(sourceRow.safeParse({ ...row, event_id }).success, false);
+    assert.equal(sourceRow.safeParse({ ...row, event_id, event_uid: "uid" }).success, false);
+  }
+  assert.equal(sourceRow.safeParse({ ...row, event_id: 2, event_uid: "uid" }).success, false);
+  for (const alias of ["uid", "eventUID", "source_event_id"]) {
+    assert.equal(sourceRow.safeParse({ ...row, [alias]: "uid" }).success, false);
+  }
 });

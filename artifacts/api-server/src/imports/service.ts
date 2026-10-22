@@ -55,6 +55,16 @@ const hash = (v: unknown) => createHash("sha256").update(canonical(v)).digest("h
 // Fingerprint is internal only and is never exposed in projections or audit detail.
 const identityHash = (p: Patient, batch: Batch) => hash([batch.id, batch.created_at.toISOString(), p]);
 const sourceNamespace = "calendar_app_export";
+// A batch-local locator is never external identity. UID namespaces use the FULL
+// SHA256 of the trimmed UID to keep the text primary-key index bounded even for
+// long Unicode UIDs; source_payload retains the full UID for collision checks.
+function sourceIdentity(source: SourceRow) {
+  return {
+    namespace: source.event_uid === undefined ? sourceNamespace :
+      `${sourceNamespace}:uid:${createHash("sha256").update(source.event_uid).digest("hex")}`,
+    eventId: source.event_uid === undefined ? source.event_id : 1,
+  };
+}
 function sourceHash(r: ImportRow, b: Batch) {
   const source = sourceRow.parse(r.source_payload);
   // Provenance fingerprints the immutable input, not the corrected booking.
@@ -259,14 +269,17 @@ export async function uploadImport(auth: Auth, raw: unknown) {
     const { rows: [b] } = await c.query<Batch>(`INSERT INTO operational.import_batches(clinic_id,source_name,source_checksum,owner_id,owner_doctor_id)
       VALUES($1,$2,$3,$4,$5) RETURNING *`, [a.clinicId, input.source === "seed" ? "calendar_app_export" : input.sourceName, hash(source), a.id, a.role === "doctor" ? a.doctorId : null]);
     const { rows: roster } = await c.query<{ patient_id: number; patient_name: string }>(`SELECT p.patient_id,p.patient_name FROM operational.patients p WHERE ${patientScopeSql("$1")}`, [a.clinicId]);
-    const eventIds = new Set<number>();
+    const eventIds = new Set<string>();
     for (let i = 0; i < source.length; i++) {
       const rawRow = source[i]!, parsed = sourceRow.safeParse(rawRow);
       const errors: Issue[] = [], s: Stage = { errors, suggestedPatientIds: [], mapping: null, review: null };
       if (!parsed.success) errors.push(issue("INVALID_COLUMNS", { row: i + 1 }));
-      const eventId = parsed.success ? parsed.data.event_id : -(i + 1);
-      if (eventIds.has(eventId)) throw fail(400, "IMPORT_DUPLICATE_EVENT_ID", "validation", { row: i + 1 });
-      eventIds.add(eventId);
+      const eventId = parsed.success && parsed.data.event_uid === undefined ? parsed.data.event_id : -(i + 1);
+      if (parsed.success) {
+        const identity = sourceIdentity(parsed.data), key = JSON.stringify([identity.namespace, identity.eventId]);
+        if (eventIds.has(key)) throw fail(400, "IMPORT_DUPLICATE_EVENT_ID", "validation", { row: i + 1 });
+        eventIds.add(key);
+      }
       if (parsed.success) {
         const r = parsed.data;
         s.suggestedPatientIds = roster.filter(p => normalizeName(p.patient_name) === normalizeName(r.patient_name_typed)).map(p => p.patient_id);
@@ -359,9 +372,15 @@ export async function commitImport(auth: Auth, id: number, raw: unknown) {
         if (identityHash(await patient(c, a, review.patientId), b) !== review.identityHash) throw conflict("IMPORT_STALE_IDENTITY");
       } else if (review.newPatient) newPatientInput.parse(review.newPatient);
       else throw conflict("IMPORT_REVIEW_REQUIRED");
-      const { rows: [link] } = await c.query("SELECT * FROM operational.import_source_links WHERE source_name=$1 AND source_event_id=$2",
-        [sourceNamespace, r.source_event_id]);
+      const source = sourceRow.parse(r.source_payload), identity = sourceIdentity(source);
+      const { rows: [link] } = await c.query(`SELECT l.*,r.source_payload AS linked_source_payload
+        FROM operational.import_source_links l JOIN operational.import_rows r ON r.id=l.row_id
+        WHERE l.source_name=$1 AND l.source_event_id=$2`, [identity.namespace, identity.eventId]);
       if (link) {
+        // Fail closed even on a theoretical full SHA256 collision. The immutable
+        // prior source, not an ordinal or filename, is the collision witness.
+        if (source.event_uid !== undefined &&
+          sourceRow.parse(link.linked_source_payload).event_uid !== source.event_uid) throw conflict("IMPORT_SOURCE_CHANGED");
         if (link.source_hash !== sourceHash(r, b)) throw conflict("IMPORT_SOURCE_CHANGED");
         // Provenance replay is not clinical verification: manual review still precedes
         // this exact-field check, and cannot create a second patient or appointment.
@@ -400,8 +419,11 @@ export async function commitImport(auth: Auth, id: number, raw: unknown) {
         const { rows: [clock] } = await c.query("SELECT clock_timestamp() AS now");
         await scheduleAppointmentReminders(c, created.appointment_id, clock.now);
       }
-      if (r.staging.outcome !== "source-replay") await c.query(`INSERT INTO operational.import_source_links(source_name,source_event_id,source_hash,appointment_id,batch_id,row_id)
-        VALUES($1,$2,$3,$4,$5,$6)`, [sourceNamespace, r.source_event_id, sourceHash(r, b), r.appointment_id, id, r.id]);
+      if (r.staging.outcome !== "source-replay") {
+        const identity = sourceIdentity(sourceRow.parse(r.source_payload));
+        await c.query(`INSERT INTO operational.import_source_links(source_name,source_event_id,source_hash,appointment_id,batch_id,row_id)
+          VALUES($1,$2,$3,$4,$5,$6)`, [identity.namespace, identity.eventId, sourceHash(r, b), r.appointment_id, id, r.id]);
+      }
       // Retain only review evidence, not staged demographics or verification digests.
       delete review.newPatient; delete review.identityHash;
       await c.query("UPDATE operational.import_rows SET staging=$2,confirmed_patient_id=$3,appointment_id=$4 WHERE id=$1",

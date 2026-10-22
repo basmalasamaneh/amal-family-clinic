@@ -1,6 +1,6 @@
 import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
-import { randomUUID, randomInt } from "node:crypto";
+import { randomUUID, randomInt, createHash } from "node:crypto";
 import pg from "pg";
 import { pool } from "@workspace/db";
 import type { Auth } from "../src/lib/auth";
@@ -84,10 +84,14 @@ after(async () => {
   await admin.query("DELETE FROM operational.import_operations WHERE user_id=ANY($1::integer[])", [users]);
   await admin.query("DELETE FROM operational.import_rows WHERE batch_id=ANY($1::integer[])", [owned]);
   await admin.query("DELETE FROM operational.import_batches WHERE id=ANY($1::integer[])", [owned]);
+  await admin.query("DELETE FROM operational.sync_resolution_history WHERE actor_id=ANY($1::integer[])", [users]);
+  await admin.query("DELETE FROM operational.sync_conflicts WHERE actor_id=ANY($1::integer[])", [users]);
+  await admin.query("DELETE FROM operational.sync_device_operations WHERE device_id=ANY($1::integer[])", [devices]);
   await admin.query("DELETE FROM operational.appointment_operations WHERE actor_id=ANY($1::integer[])", [users]);
   await admin.query("SET ROLE amal_demo_reset");
   await admin.query("DELETE FROM operational.audit_log WHERE user_id=ANY($1::integer[])", [users]);
   await admin.query("RESET ROLE");
+  await admin.query("DELETE FROM operational.notifications WHERE appointment_id IN (SELECT appointment_id FROM operational.appointments WHERE created_by=ANY($1::integer[]))", [users]);
   await admin.query("DELETE FROM operational.appointments WHERE created_by=ANY($1::integer[])", [users]);
   if (createdPatients.length) await admin.query("DELETE FROM operational.patients WHERE patient_id=ANY($1::integer[])", [createdPatients]);
   await admin.query("DELETE FROM operational.auth_sessions WHERE user_id=ANY($1::integer[])", [users]);
@@ -177,6 +181,87 @@ test("concurrent identical commit and repeated renamed source produce exactly on
   assert.equal(await count("appointments"), n + 1);
   const changed = await review(await upload([{ ...s, patient_name_typed: "changed" }], `${namespace}-changed`));
   await assert.rejects(commit(changed), (e: any) => e.code === "IMPORT_SOURCE_CHANGED");
+});
+test("full UID identities replay across filenames, formats and row order without numeric collisions", async () => {
+  const longPrefix = "界".repeat(1000);
+  const a = { ...source(), event_id: 1, event_uid: `${longPrefix}a` };
+  const b = { ...source(), event_id: 1, event_uid: `${longPrefix}b` };
+  const numeric = { ...source(), event_id: 1 };
+  const malformed = { ...source(), event_id: -1, event_uid: "bad" };
+  const n = await count("appointments"), p = await count("patients");
+  const batch = await upload([a, malformed, numeric, b], "calendar.csv");
+  GetImportBatchResponse.parse(batch);
+  assert.equal(batch.rows[1].errors[0].code, "INVALID_COLUMNS");
+  assert.deepEqual(batch.rows.map((r: any) => r.source.event_id), [1, -1, 1, 1]);
+  const locators = (await admin.query("SELECT source_event_id FROM operational.import_rows WHERE batch_id=$1 ORDER BY id", [batch.id])).rows;
+  assert.deepEqual(locators.map(r => r.source_event_id), [-1, -2, 1, -4]);
+  await assert.rejects(commit(batch), (e: any) => e.code === "IMPORT_REVIEW_REQUIRED");
+  await assert.rejects(review(batch, [include(batch, 1)]), (e: any) => e.code === "IMPORT_INVALID_SOURCE_ROW");
+  await assert.rejects(getImport(other, batch.id), (e: any) => e.status === 403);
+  await assert.rejects(review(batch, [{ ...include(batch), identity: { kind: "existing", patientId: patient.patient_id,
+    verification: { method: "phone", value: "wrong" } } }]), (e: any) => e.code === "IMPORT_IDENTITY_VERIFICATION_FAILED");
+  const first = await commit(await review(batch, [include(batch), { rowId: batch.rows[1].id, action: "skip", reason: "Malformed source" },
+    { rowId: batch.rows[2].id, action: "skip", reason: "Reserve seed numeric provenance for seed replay test" }, include(batch, 3)]));
+  assert.equal(first.totals.created, 2);
+  const links = (await admin.query("SELECT source_name,source_event_id FROM operational.import_source_links WHERE batch_id=$1", [batch.id])).rows;
+  assert.equal(links.length, 2);
+  for (const s of [a, b]) assert.ok(links.some(r => r.source_name ===
+    `calendar_app_export:uid:${createHash("sha256").update(s.event_uid).digest("hex")}` && r.source_event_id === 1));
+  for (const name of ["renamed.xlsx", "roundtrip.xls", "calendar.ics", "renamed.csv"]) {
+    // Reverse order and change insignificant UID edge whitespace. Format and
+    // parser timezone flags are not provenance fields; timestamps are normalized
+    // to the same Hebron wall-time JSON contract before reaching this API.
+    const next = await upload([{ ...b, event_uid: ` ${b.event_uid} ` }, a], name);
+    const replay = await commit(await review(next, next.rows.map((_: any, i: number) => include(next, i))));
+    assert.deepEqual(replay.rows.map((r: any) => r.outcome), ["source-replay", "source-replay"]);
+    assert.deepEqual(replay.rows.map((r: any) => r.appointmentId),
+      [first.rows[3].appointmentId, first.rows[0].appointmentId]);
+  }
+  assert.equal(await count("appointments"), n + 2);
+  assert.equal(await count("patients"), p);
+  const changed = await review(await upload([{ ...a, patient_name_typed: "Changed original" }], "changed.ics"));
+  await assert.rejects(commit(changed), (e: any) => e.code === "IMPORT_SOURCE_CHANGED");
+  assert.equal(await count("appointments"), n + 2);
+});
+test("duplicate trimmed UIDs reject atomically while invalid rows keep actionable errors", async () => {
+  const s = { ...source(), event_id: 1, event_uid: randomUUID() };
+  const n = await count("import_batches");
+  await assert.rejects(upload([s, { ...source(), event_id: 1, event_uid: ` ${s.event_uid} ` }]),
+    (e: any) => e.code === "IMPORT_DUPLICATE_EVENT_ID" && e.params.row === 2);
+  assert.equal(await count("import_batches"), n);
+  const rows = ["", " ".repeat(2), "x".repeat(1025), null, 9].map(event_uid => ({ ...s, event_uid }));
+  const batch = await upload([...rows, { ...s, event_id: -1 }, { ...s, event_id: 2 }, { ...s, uid: "alias" }]);
+  assert.equal(batch.rows.length, 8);
+  assert.ok(batch.rows.every((r: any) => r.errors.some((e: any) => e.code === "INVALID_COLUMNS")));
+  await assert.rejects(review(batch), (e: any) => e.code === "IMPORT_INVALID_SOURCE_ROW");
+});
+test("UID replay fails closed when the prior linked full UID differs despite a matching hash namespace", async () => {
+  const s = { ...source(), event_id: 1, event_uid: randomUUID() };
+  const original = await commit(await review(await upload([s])));
+  const namespace = `calendar_app_export:uid:${createHash("sha256").update(s.event_uid).digest("hex")}`;
+  const otherUid = `${s.event_uid}-collision-witness`;
+  // Simulate the otherwise theoretical SHA256 collision without replacing the
+  // hash implementation: the immutable prior row is the independent witness.
+  await admin.query("UPDATE operational.import_rows SET source_payload=jsonb_set(source_payload,'{event_uid}',to_jsonb($2::text)) WHERE id=$1",
+    [original.rows[0].id, otherUid]);
+  try {
+    const next = await review(await upload([s]));
+    await assert.rejects(commit(next), (e: any) => e.code === "IMPORT_SOURCE_CHANGED");
+    assert.equal((await admin.query("SELECT source_name FROM operational.import_source_links WHERE row_id=$1", [original.rows[0].id])).rows[0].source_name, namespace);
+  } finally {
+    await admin.query("UPDATE operational.import_rows SET source_payload=$2 WHERE id=$1", [original.rows[0].id, JSON.stringify(s)]);
+  }
+});
+test("UIDs do not relax scheduling conflicts or doctor scope", async () => {
+  const s = source(), batch = await upload([{ ...s, event_id: 1, event_uid: randomUUID() },
+    { ...s, event_id: 1, event_uid: randomUUID() }]);
+  const remote = (await admin.query("SELECT doctor_id FROM operational.doctors WHERE clinic_id<>$1 LIMIT 1", [actor.clinicId])).rows[0];
+  await assert.rejects(review(batch, [include(batch, 0, { doctorId: remote.doctor_id })]), (e: any) => e.status === 403);
+  const mapped = await review(batch, [include(batch), include(batch, 1)]);
+  assert.ok(mapped.conflicts.some((c: any) => c.code === "doctor-overlap" && c.severity === "blocking"));
+  const n = await count("appointments");
+  await assert.rejects(commit(mapped), (e: any) => e.code === "IMPORT_CONFLICT");
+  assert.equal(await count("appointments"), n);
 });
 test("seed instant and equivalent JSON wall-time source share event provenance", async () => {
   const b: any = await uploadImport(actor, { source: "seed", clientOpId: randomUUID() }); batches.push(b.id);
