@@ -1,12 +1,31 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { coversCalendarRange, mergeLocalCalendar } from '../src/calendar/local-schedule';
+import { coversCalendarRange, mergeLocalCalendar, showCalendarProposal } from '../src/calendar/local-schedule';
 import { createAttemptKeeper } from '../src/booking/ops';
 import type { CalendarAppointment } from '../src/calendar/adapter';
 
 const appointment = (id: number, extras: Partial<CalendarAppointment> = {}): CalendarAppointment => ({
   id, clinicId: 1, doctorId: 2, patientName: 'Patient', startsAt: '2026-05-01T08:00:00.000Z',
   endsAt: '2026-05-01T08:30:00.000Z', lifecycle: 'booked', conflict: false, syncPending: false, ...extras,
+});
+
+test('rejected, conflicting and blocked local requests never become calendar appointments', () => {
+  for (const outcome of ['conflict', 'rejected', 'blocked', 'applied'] as const) {
+    const proposal = Object.freeze({ outcome, canonical: null });
+    assert.equal(showCalendarProposal(proposal), false);
+    assert.equal(proposal.outcome, outcome); // Projection must not clear the durable queue.
+  }
+  assert.equal(showCalendarProposal({ outcome: 'pending', canonical: null }), true);
+});
+
+test('a failed request cannot hide or overwrite the original server booking', () => {
+  const original = appointment(15, { version: 4 });
+  const rejected = { canonical: null, outcome: 'conflict' as const };
+  const local = showCalendarProposal(rejected) ? [appointment(-1)] : [];
+  assert.deepEqual(mergeLocalCalendar([original], local), [original]);
+  // A previously committed canonical result is not a new rejected booking.
+  const canonical = { id: 15 } as NonNullable<Parameters<typeof showCalendarProposal>[0]['canonical']>;
+  assert.equal(showCalendarProposal({ outcome: 'conflict', canonical }), true);
 });
 
 test('calendar merge preserves local proposals, canonical identities and their independent sync state', () => {

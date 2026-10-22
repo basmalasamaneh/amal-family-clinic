@@ -21,6 +21,16 @@ import and offline synchronization; drafts are not confirmed bookings. Keep
 unavailable cross-clinic evidence generic. Coordinate demographic changes with
 scheduling so edits cannot introduce a new overlapping identity group.
 
+Rejected/conflicting local proposals must not appear as appointment cards in
+Today, Week or the day sheet. Keep them in the sync/conflict queue; preserve
+confirmed appointments and unresolved offline work.
+
+**Why:** The user explicitly rejected showing a refused booking on the schedule,
+even when it carries a conflict badge.
+
+**How to apply:** Separate durable queue retention from calendar projection;
+never delete the proposal or a canonical appointment merely to hide a failed request.
+
 **Why:** Existing historical operational collisions must remain intact, so a
 blanket exclusion constraint cannot be used. Locks must cover both doctor
 occupancy and cross-clinic patient checks; separate per-process locks permit

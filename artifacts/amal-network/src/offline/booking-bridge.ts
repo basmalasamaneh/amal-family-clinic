@@ -6,6 +6,7 @@ import { localCache } from './index';
 import { appointmentWindow } from './calendar';
 import type { BookingProposal, CachedSnapshot, Result, ScopeTicket } from './types';
 import type { CalendarAppointment, SchedulingReadAdapter } from '../calendar/adapter';
+import { showCalendarProposal } from '../calendar/local-schedule';
 import type { PatientSearchAdapter } from '../booking/patients';
 import { matchesPatient } from '../booking/normalize';
 import { reportUnauthorized } from '../auth/session-events';
@@ -118,7 +119,7 @@ export async function getLocalCalendar(q: { clinicId: number; from: string; to: 
   const ticket = await readyScope();
   if (q.clinicId !== ticket.clinicId) throw new LocalBookingError('unauthorized');
   const snapshot = value(await localCache.readSnapshot(ticket));
-  const proposals = value(await localCache.listBookings(ticket));
+  const proposals = value(await localCache.listBookings(ticket)).filter(showCalendarProposal);
   const tombstones = new Set(value(await localCache.readSyncState(ticket)).tombstoneIds);
   const ids = new Set(proposals.map(p => p.canonical?.id).filter(Boolean));
   const operationIds = new Set(proposals.filter(p => !p.canonical).map(p => p.operationId));

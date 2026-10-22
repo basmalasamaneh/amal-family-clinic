@@ -1,4 +1,10 @@
 import type { CalendarAppointment } from './adapter';
+import type { BookingProposal } from '../offline/types';
+
+/** Failed proposals remain in the durable sync queue, not on appointment calendars. */
+export function showCalendarProposal(proposal: Pick<BookingProposal, 'canonical' | 'outcome'>): boolean {
+  return proposal.canonical !== null || proposal.outcome === 'pending';
+}
 
 /** Local canonical records and proposals win by identity; never replace proposals with server rows. */
 export function mergeLocalCalendar(server: CalendarAppointment[], local: CalendarAppointment[]): CalendarAppointment[] {
