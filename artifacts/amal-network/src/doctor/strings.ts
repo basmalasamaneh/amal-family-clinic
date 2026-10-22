@@ -48,7 +48,7 @@ export const doctorEn = {
     moreAlerts_one: '{{count}} more flag on the card',
     moreAlerts_other: '{{count}} more flags on the card',
     capped: 'Showing the first part of this period. Open the calendar for the full schedule.',
-    backToDay: 'Back to My Day',
+    backToDay: 'Back to My appointments',
     status: { booked: 'Booked', double_booked: 'Double-booked', completed: 'Completed', no_show: 'No-show', cancelled: 'Cancelled', unknown: 'Status not recorded' },
   },
   privacy: {
@@ -139,7 +139,7 @@ export const doctorAr: Shape<typeof doctorEn> = {
     moreAlerts_one: 'إشارة إضافية واحدة في البطاقة',
     moreAlerts_other: '{{count}} إشارات إضافية في البطاقة',
     capped: 'يُعرض الجزء الأول من هذه الفترة. افتح التقويم لرؤية الجدول كاملًا.',
-    backToDay: 'العودة إلى يومي',
+    backToDay: 'العودة إلى مواعيدي',
     status: { booked: 'محجوز', double_booked: 'حجز مزدوج', completed: 'مكتمل', no_show: 'لم يحضر', cancelled: 'ملغى', unknown: 'الحالة غير مسجّلة' },
   },
   privacy: {

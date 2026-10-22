@@ -227,7 +227,7 @@
       "patientLookup": "Patient lookup",
       "sync": "Sync & conflicts",
       "daySheet": "Print day sheet",
-      "myDay": "My day",
+      "myDay": "My appointments",
       "networkSearch": "Network search",
       "patientCard": "Patient card",
       "privacy": "Privacy & access log",
@@ -437,7 +437,7 @@
     "nav": {
       "title": "Your destinations",
       "front-desk": "Today, the week, bookings, patient lookup, sync and the day sheet live here.",
-      "doctor": "My day, network search, the patient card and privacy settings live here.",
+      "doctor": "My appointments, network search, the patient card and privacy settings live here.",
       "admin": "Clinic operations, users and devices, duplicates, audit and import live here."
     },
     "account": {
