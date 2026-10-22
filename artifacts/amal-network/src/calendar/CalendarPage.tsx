@@ -12,6 +12,7 @@ import { AppointmentCard, CalSkeleton, DateNavigator, LocalCalendarNotice } from
 import { setWalkInPageContext } from '@/reception/walkin-bus';
 import { useSchedule } from './use-schedule';
 import { WalkInHandoff } from '@/reception/WalkInHandoff';
+import { visibleOnSchedule } from './visibility';
 
 /** Keeps explicit dev demo params (calendarDemo) on calendar links; shellDemo is added by demoPath. */
 export function calHref(path: string, search: string): string {
@@ -126,10 +127,10 @@ export function CalendarPage({ view, clinic, fixture, title }: { view: 'day' | '
       ) : view === 'day' ? (
         <DayGrid clinicId={clinic.id} date={date} search={search} hours={load.data.hours}
           doctors={doctorId ? load.data.doctors.filter((d) => d.id === doctorId) : load.data.doctors}
-          appointments={load.data.appointments.filter((a) => !doctorId || a.doctorId === doctorId)} />
+          appointments={load.data.appointments.filter((a) => visibleOnSchedule(a.lifecycle) && (!doctorId || a.doctorId === doctorId))} />
       ) : (
         <WeekGrid date={date} today={today} search={search} doctorId={doctorId} doctors={load.data.doctors}
-          appointments={load.data.appointments.filter((a) => !doctorId || a.doctorId === doctorId)} />
+          appointments={load.data.appointments.filter((a) => visibleOnSchedule(a.lifecycle) && (!doctorId || a.doctorId === doctorId))} />
       )}
       </div>
       <aside className="cal-workspace__rail">

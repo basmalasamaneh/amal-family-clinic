@@ -12,6 +12,7 @@ import { Empty, Skeleton } from '@/network/NetworkSearchPage';
 import { clearSelection, effectiveConsent, patientAlerts, setSelection } from '@/network/model';
 import { addLocalDays, formatLocalDate, isLocalDate, localDateOf, weekDates } from '@/calendar/dates';
 import { DAY_PAGE_LIMIT, MAX_DAY_PAGES, formatScheduleTime, hebronToday, msUntilHebronMidnight, orderDay, statusKey } from './model';
+import { visibleOnSchedule } from '@/calendar/visibility';
 import { useProtectedPages } from './use-protected';
 import { FailState } from './FailState';
 import '@/network/network.css';
@@ -70,7 +71,7 @@ function DaySchedule({ clinic, title, scope, day, view, selectDay, selectView, t
   const start = dateLabel(dates[0]);
   const end = dateLabel(dates[dates.length - 1]);
   const isToday = day === hebronToday(new Date());
-  const items = state.kind === 'ok' ? orderDay(state.items as DayItem[]) : [];
+  const items = state.kind === 'ok' ? orderDay((state.items as DayItem[]).filter(it => visibleOnSchedule(it.status))) : [];
 
   return (
     <section className="net doc" data-testid="page-myDay" aria-busy={state.kind === 'loading'}>
