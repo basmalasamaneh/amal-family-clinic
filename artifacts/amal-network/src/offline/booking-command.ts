@@ -109,7 +109,7 @@ export async function acknowledgeBooking(db: LocalCacheDatabase, scope: Scope, o
   } else {
     requireValid(['conflict', 'rejected', 'blocked'].includes(outcome.status));
     outbox.status = outcome.status === 'conflict' ? 'conflict' : 'failed';
-    outbox.errorCode = outcome.status === 'conflict' ? 'conflict' : 'rejected';
+    outbox.errorCode = outcome.status;
   }
   proposal.outcome = outcome.status;
   // Do not cache raw errors, patient warnings, or other clinics' appointments.

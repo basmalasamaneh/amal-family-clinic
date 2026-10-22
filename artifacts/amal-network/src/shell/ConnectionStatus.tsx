@@ -40,10 +40,13 @@ export function ConnectionStatus({ userId, clinicId, queueAvailable }: { userId:
       const refresh = async () => {
         const request = ++readId;
         try {
-        const [result, sync] = await Promise.all([localCache.listOutbox(ticket.value), localCache.readSyncState(ticket.value)]);
+        const [result, sync, bookings] = await Promise.all([
+          localCache.listOutbox(ticket.value), localCache.readSyncState(ticket.value), localCache.listBookings(ticket.value),
+        ]);
         if (!result.ok) throw new Error(result.error);
         if (!sync.ok) throw new Error(sync.error);
-        const counts = summarizeQueue(result.value);
+        if (!bookings.ok) throw new Error(bookings.error);
+        const counts = summarizeQueue(result.value, bookings.value);
         counts.attention = Math.max(counts.attention, sync.value.conflicts.filter(c => c.status === 'open').length);
         if (!disposed && run === generation && request === readId) setLoad({ scope, state: 'ready', counts });
         } catch {
@@ -69,10 +72,14 @@ export function ConnectionStatus({ userId, clinicId, queueAvailable }: { userId:
   const current = load.scope === scope ? load : { state: 'loading' as const, counts: null };
   const state = connectionState(online && reachable, current.state, current.counts);
   const Icon = state === 'attention' || state === 'error' ? AlertTriangle : state === 'loading' ? LoaderCircle : state === 'locked' ? LockKeyhole : online ? Wifi : WifiOff;
-  const waiting = current.counts ? t('waiting', { count: current.counts.waiting, n: formatNumber(current.counts.waiting, locale, digitPreference) }) : null;
+  const queueCounts = current.counts ? [
+    t('pending', { n: formatNumber(current.counts.pending, locale, digitPreference) }),
+    ...(current.counts.attention ? [t('attentionCount', { n: formatNumber(current.counts.attention, locale, digitPreference) })] : []),
+    ...(current.counts.held ? [t('held', { n: formatNumber(current.counts.held, locale, digitPreference) })] : []),
+  ].join(' · ') : null;
   return <div className="connection-status">
     <div className="shell-pill" role="status" aria-live="polite" data-testid="status-connection">
-      <Icon size={16} aria-hidden="true" /><span>{t(state)}{state !== 'online' && state !== 'offline' && ` · ${t(online ? 'online' : 'offline')}`}{waiting && ` · ${waiting}`}</span>
+      <Icon size={16} aria-hidden="true" /><span>{t(state)}{state !== 'online' && state !== 'offline' && ` · ${t(online ? 'online' : 'offline')}`}{queueCounts && ` · ${queueCounts}`}</span>
     </div>
     <small>{t('caveat')}</small>
     {online && !reachable && <p role="status">{t('offline:demoUnavailable')}</p>}

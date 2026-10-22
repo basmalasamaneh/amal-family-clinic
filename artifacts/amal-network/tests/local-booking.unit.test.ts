@@ -8,6 +8,7 @@ import type { Result, AuthorizedSnapshot, BookingProposal } from '../src/offline
 import type { AppointmentInput, SyncOutcome } from '@workspace/api-client-react';
 import { appointmentWindow } from '../src/offline/calendar';
 import { effectiveInterval } from '../src/booking/time';
+import { summarizeQueue } from '../src/shell/connection-model';
 
 const now = new Date('2026-10-20T08:00:00Z');
 const auth = { userId: 'synthetic-local-booker', clinicId: 701, authorizedUntil: '2026-10-20T16:00:00Z' };
@@ -158,6 +159,34 @@ test('outbox primitives cannot forge acknowledgement of a booking', async t => {
   const { cache, ticket } = await setup(t);
   const p = value(await cache.saveBooking(ticket, input()));
   assert.deepEqual(await cache.updateOutbox(ticket, p.operationId, { status: 'succeeded', attempts: 1 }), { ok: false, error: 'invalid-data' });
+});
+test('blocked acknowledgements retain distinct evidence and do not release successors', async t => {
+  const { db, cache, ticket } = await setup(t);
+  const first = value(await cache.saveBooking(ticket, input()));
+  const second = value(await cache.saveBooking(ticket, input(11)));
+  const before = value(await cache.listOutbox(ticket));
+  value(await cache.acknowledgeBooking(ticket, first.operationId, {
+    sequence: first.sequence, clientOpId: first.operationId, status: 'blocked',
+    code: 'PREDECESSOR_UNRESOLVED', messageKey: 'error.blocked', params: {},
+  }));
+  const outbox = value(await cache.listOutbox(ticket));
+  const row = outbox.find(o => o.operationId === first.operationId)!;
+  assert.equal(row.status, 'failed');
+  assert.equal(row.errorCode, 'blocked');
+  assert.deepEqual(row.payload, before.find(o => o.operationId === first.operationId)!.payload);
+  assert.deepEqual(row.booking, before.find(o => o.operationId === first.operationId)!.booking);
+  assert.equal(value(await cache.beginBookingDelivery(ticket, second.operationId)), null);
+  assert.deepEqual(summarizeQueue(outbox, value(await cache.listBookings(ticket))),
+    { waiting: 2, pending: 0, attention: 0, held: 2 });
+  assert.equal(value(await cache.pendingCount(ticket)), 2, 'cleanup guard retains all unresolved work');
+  // Simulate durable evidence written by an older client; reads never migrate it.
+  await db.outbox.update([auth.userId, auth.clinicId, first.operationId], { errorCode: 'rejected' });
+  const legacy = value(await cache.listOutbox(ticket));
+  assert.deepEqual(summarizeQueue(legacy, value(await cache.listBookings(ticket))),
+    { waiting: 2, pending: 0, attention: 0, held: 2 });
+  assert.equal(legacy.find(o => o.operationId === first.operationId)!.errorCode, 'rejected');
+  assert.equal(value(await cache.beginBookingDelivery(ticket, second.operationId)), null);
+  assert.equal(await db.outbox.count(), 2);
 });
 test('existing timezone validator rejects DST gap and preserves exact UTC slots', () => {
   const gap = effectiveInterval(null, '2026-03-28', '02:15', 30);

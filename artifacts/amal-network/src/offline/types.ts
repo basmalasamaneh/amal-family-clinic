@@ -101,7 +101,7 @@ export type LocalOperation =
     payload: { startsAt: string; endsAt: string; expectedVersion: number };
   };
 export type OutboxStatus = 'pending' | 'processing' | 'failed' | 'conflict' | 'succeeded';
-export type RetryCode = 'network' | 'rate-limited' | 'conflict' | 'rejected' | 'unknown';
+export type RetryCode = 'network' | 'rate-limited' | 'conflict' | 'rejected' | 'blocked' | 'unknown';
 export type OutboxRecord = LocalOperation & Scope & {
   /** Present only for atomic local-first booking commands; never changed on retry. */
   booking?: { localId: number; deviceId: number; sequence: number };

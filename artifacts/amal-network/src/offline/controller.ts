@@ -377,7 +377,7 @@ export class LocalCacheController {
   }
   private safeOutbox(row: OutboxRecord, scope: Scope): OutboxRecord {
     requireValid(statuses.includes(row.status) && Number.isSafeInteger(row.attempts) && row.attempts >= 0);
-    requireValid(row.errorCode === null || ['network', 'rate-limited', 'conflict', 'rejected', 'unknown'].includes(row.errorCode));
+    requireValid(row.errorCode === null || ['network', 'rate-limited', 'conflict', 'rejected', 'blocked', 'unknown'].includes(row.errorCode));
     return {
       ...projectOperation(row), ...scope, enqueuedAt: utcInstant(row.enqueuedAt), updatedAt: utcInstant(row.updatedAt),
       ...(row.booking ? { booking: { ...row.booking } } : {}),
@@ -474,7 +474,7 @@ export class LocalCacheController {
       const key: [string, number, string] = [scope.userId, scope.clinicId, operationId];
       const row = await this.db.outbox.get(key);
       requireValid(row?.booking && ['processing', 'failed'].includes(status));
-      requireValid(errorCode === null || ['network', 'rate-limited', 'conflict', 'rejected', 'unknown'].includes(errorCode));
+      requireValid(errorCode === null || ['network', 'rate-limited', 'conflict', 'rejected', 'blocked', 'unknown'].includes(errorCode));
       if (retryAt !== null) utcInstant(retryAt);
       if (row.status === 'succeeded' || row.status === 'conflict') return;
       await this.db.outbox.put(this.safeOutbox({ ...row, status, retryAt, errorCode,
