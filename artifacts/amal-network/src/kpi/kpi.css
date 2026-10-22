@@ -41,7 +41,7 @@
 .kpi-notes { display: flex; flex-direction: column; gap: 6px; font-size: var(--amal-text-sm); color: var(--amal-muted); }
 .kpi-notes p { margin: 0; }
 .kpi-toggle { align-self: flex-start; display: inline-flex; align-items: center; gap: 6px; min-block-size: 44px; padding-inline: 12px; background: transparent; border: 1px solid var(--amal-border); border-radius: var(--amal-radius-control); color: var(--amal-primary-text); font: inherit; font-weight: 600; font-size: var(--amal-text-sm); cursor: pointer; }
-.kpi-toggle:hover { background: var(--amal-primary-soft); }
+.kpi-toggle:hover:not(:disabled, [aria-disabled='true'], [aria-busy='true']) { background: var(--amal-primary-soft); }
 .kpi-table-wrap { min-inline-size: 0; max-inline-size: 100%; max-block-size: min(60dvh, 30rem); overflow: auto; isolation: isolate; scroll-padding-block: 4rem 1rem; border-radius: var(--amal-radius-control); background: var(--amal-surface); }
 .kpi-table { inline-size: 100%; border-collapse: separate; border-spacing: 0; font-size: var(--amal-text-sm); font-variant-numeric: tabular-nums; line-height: 1.65; }
 .kpi-table caption { text-align: start; font-weight: 700; padding-block-end: 8px; }

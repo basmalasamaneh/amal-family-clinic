@@ -43,7 +43,7 @@ button.shell-walkin { border: 0; font: inherit; font-size: var(--amal-text-recep
 .rx-quick__h { margin: 0; display: flex; align-items: center; gap: 8px; font-size: var(--amal-text-lg); color: var(--amal-navy); }
 .rx-quick__list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
 .rx-quick__book { inline-size: 100%; display: flex; align-items: center; gap: 14px; min-block-size: 64px; padding-block: 10px; padding-inline: 14px; text-align: start; font: inherit; color: var(--amal-text); background: var(--amal-surface); border: 1px solid var(--amal-border); border-inline-start: 4px solid var(--amal-primary); border-radius: var(--amal-radius-card); cursor: pointer; transition: transform 120ms ease; }
-.rx-quick__book:hover:not(:disabled) { background: var(--amal-primary-soft); }
+.rx-quick__book:hover:not(:disabled, [aria-disabled='true'], [aria-busy='true']) { background: var(--amal-primary-soft); }
 .rx-quick__book:active:not(:disabled) { transform: scale(.99); }
 .rx-quick__book:disabled { opacity: .6; cursor: progress; }
 .rx-quick__book:focus-visible { outline: 3px solid var(--amal-focus-ring, var(--amal-primary)); outline-offset: 2px; }

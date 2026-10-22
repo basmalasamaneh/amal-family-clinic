@@ -24,10 +24,10 @@
 .bk-foot { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding-block: 14px calc(14px + env(safe-area-inset-bottom)); padding-inline: 24px; border-block-start: 1px solid var(--amal-border); background: var(--amal-surface); }
 .bk-foot__spacer { flex: 1; }
 .bk-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-block-size: 48px; min-inline-size: 48px; padding-inline: 18px; border-radius: var(--amal-radius-control); border: 1px solid var(--amal-border); background: var(--amal-surface); color: var(--amal-text); font: inherit; font-weight: 600; cursor: pointer; text-decoration: none; }
-.bk-btn:hover:not(:disabled) { border-color: var(--amal-primary); }
+.bk-btn:hover:not(:disabled, [aria-disabled='true'], [aria-busy='true']) { border-color: var(--amal-primary); }
 .bk-btn:disabled { opacity: .55; cursor: not-allowed; }
 .bk-btn--primary { background: var(--amal-primary-strong); border-color: var(--amal-primary-strong); color: var(--amal-bg); }
-.bk-btn--primary:hover:not(:disabled) { background: var(--amal-primary-pressed); }
+.bk-btn--primary:hover:not(:disabled, [aria-disabled='true'], [aria-busy='true']) { background: var(--amal-primary-pressed); }
 .bk-btn--sm { min-block-size: 44px; padding-inline: 12px; font-size: var(--amal-text-sm); }
 [dir='rtl'] .bk-flip { transform: scaleX(-1); }
 .bk-fixture { margin: 0; display: flex; gap: 8px; align-items: flex-start; padding-block: 8px; padding-inline: 12px; border-radius: var(--amal-radius-control); background: var(--amal-status-sync-bg); color: var(--amal-status-sync-fg); border: 1px dashed var(--amal-status-sync-border); font-size: var(--amal-text-sm); font-weight: 600; }
@@ -88,7 +88,7 @@ textarea.bk-input { padding-block: 10px; min-block-size: 88px; resize: vertical;
 .bk-field { min-inline-size: 0; gap: 8px; }
 .bk-row { align-items: start; gap: 16px; }
 .bk-input { min-inline-size: 0; max-inline-size: 100%; padding-block: 8px; line-height: 1.5; border-color: var(--amal-muted); }
-.bk-input:hover:not(:disabled) { border-color: var(--amal-primary-text); }
+.bk-input:hover:not(:disabled, [aria-disabled='true'], [aria-busy='true'], [readonly], [aria-invalid='true']) { border-color: var(--amal-primary-text); }
 .bk-input:focus-visible { outline: 3px solid var(--amal-focus-ring); outline-offset: 2px; }
 .bk-input[aria-invalid='true'] { border-color: var(--amal-danger-strong); box-shadow: inset 0 0 0 1px var(--amal-danger-strong); }
 .bk-input:disabled { background: var(--amal-disabled-bg); color: var(--amal-disabled-fg); cursor: not-allowed; }
@@ -105,10 +105,10 @@ textarea.bk-input { padding-block: 10px; min-block-size: 88px; resize: vertical;
 .bk-btn { padding-block: 8px; line-height: 1.5; text-align: center; white-space: normal; transition: transform 140ms ease; }
 .bk-btn > svg { flex-shrink: 0; }
 .bk-btn:focus-visible, .bk-x:focus-visible { outline: 3px solid var(--amal-focus-ring); outline-offset: 2px; }
-.bk-btn:active:not(:disabled) { transform: translateY(1px); }
+.bk-btn:active:not(:disabled, [aria-disabled='true'], [aria-busy='true']) { transform: translateY(1px); }
 .bk-btn--primary { background: var(--amal-primary); border-color: var(--amal-primary); color: var(--amal-on-primary); }
-.bk-btn--primary:hover:not(:disabled) { background: var(--amal-primary-strong); }
-.bk-x:hover:not(:disabled) { background: var(--amal-primary-soft); border-color: var(--amal-primary-text); }
+.bk-btn--primary:hover:not(:disabled, [aria-disabled='true'], [aria-busy='true']) { background: var(--amal-primary-strong); }
+.bk-x:hover:not(:disabled, [aria-disabled='true'], [aria-busy='true']) { background: var(--amal-primary-soft); border-color: var(--amal-primary-text); }
 .bk-dialog { padding: 24px; gap: 16px; box-shadow: var(--amal-shadow-pop); overscroll-behavior: contain; }
 .bk-dialog__head { align-items: flex-start; }
 .bk-dialog .bk-field { gap: 8px; }
@@ -131,7 +131,7 @@ textarea.bk-input { padding-block: 10px; min-block-size: 88px; resize: vertical;
 @media (prefers-reduced-motion: reduce) {
   .bk-dialog[data-state], .bk-overlay[data-state] { animation: none; }
   .bk-btn { transition: none; }
-  .bk-btn:active:not(:disabled) { transform: none; }
+  .bk-btn:active:not(:disabled, [aria-disabled='true'], [aria-busy='true']) { transform: none; }
 }
 @keyframes bk-slide { from { transform: translateX(32px); opacity: 0; } }
 @keyframes bk-slide-rtl { from { transform: translateX(-32px); opacity: 0; } }

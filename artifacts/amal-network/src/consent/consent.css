@@ -1,6 +1,7 @@
 /* Consent ledger. Logical properties only; tokens from amal-ui so light/dark follow automatically. */
 .cs-back { align-self: flex-start; display: inline-flex; align-items: center; gap: 6px; min-block-size: 44px; color: var(--amal-primary-text); font-weight: 600; text-decoration: none; }
-.cs-back:hover { text-decoration: underline; }
+.cs-back { min-block-size: var(--amal-space-target); box-sizing: border-box; }
+.cs-back:hover:not([aria-disabled='true'], [aria-busy='true']) { text-decoration: underline; }
 [dir='rtl'] .cs-flip { transform: scaleX(-1); }
 .cs-guard { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; padding: 28px; border-radius: var(--amal-radius-card); background: var(--amal-surface); border: 1px dashed var(--amal-border); max-inline-size: 560px; }
 .cs-msgslot { outline: none; display: contents; }
@@ -32,7 +33,7 @@
 
 .cs-withdraw { border-inline-start: 4px solid var(--amal-danger-strong); }
 .cs-btn-danger { align-self: flex-start; color: var(--amal-danger-strong); border-color: var(--amal-danger-strong); }
-.cs-btn-danger:hover:not(:disabled) { background: color-mix(in srgb, var(--amal-danger-strong) 8%, var(--amal-surface)); }
+.cs-btn-danger:hover:not(:disabled, [aria-disabled='true'], [aria-busy='true']) { background: color-mix(in srgb, var(--amal-danger-strong) 8%, var(--amal-surface)); border-color: var(--amal-danger-strong); }
 .cs-dialog .cs-btn-danger { background: var(--amal-danger-strong); color: var(--amal-bg); }
 
 /* Ledger: past grants are stamped, never styled as active */
@@ -117,7 +118,7 @@
 .cs-dialog { max-block-size: calc(100dvh - 32px); overflow-y: auto; overscroll-behavior: contain; gap: 16px; box-shadow: var(--amal-shadow-pop); }
 .cs-dialog :focus-visible, .cs-check input:focus-visible { outline: 3px solid var(--amal-focus-ring); outline-offset: 2px; }
 .cs-dialog .cs-btn-danger { background: var(--amal-danger); color: var(--amal-on-danger); border-color: var(--amal-danger); }
-.cs-dialog .cs-btn-danger:hover:not(:disabled) { background: var(--amal-danger-strong); }
+.cs-dialog .cs-btn-danger:hover:not(:disabled, [aria-disabled='true'], [aria-busy='true']) { background: var(--amal-danger-strong); border-color: var(--amal-danger-strong); }
 [data-theme='dark'] .cs-overlay { background: color-mix(in srgb, var(--amal-bg) 72%, transparent); }
 .cs-dialog[data-state='open'], .cs-overlay[data-state='open'] { animation: cs-fade-in 180ms ease-out; }
 .cs-dialog[data-state='closed'], .cs-overlay[data-state='closed'] { animation: cs-fade-out 120ms ease-in both; }
