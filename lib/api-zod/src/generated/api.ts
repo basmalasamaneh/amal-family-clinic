@@ -225,6 +225,32 @@ export const DecideWaitlistOfferResponse = zod.object({
 
 
 /**
+ * Read-only, private all-history aggregate of actual appointment reminder notifications (schedule_version IS NOT NULL), excluding waitlist and legacy notifications. pending maps to scheduledCount, simulated to sentCount and cancelled to cancelledCount. Empty clinics have zero counts. Uses freshly checked session, role and home clinic inside the existing locked appointments transaction. Doctors, including clinic managers and network coordinators, and front-desk are forbidden. No query parameters are accepted: scope overrides and unknown query keys are rejected. This grants no access to /reminders/log or preference toggles and never sends, seeds or mutates notifications.
+ */
+
+export const getAdminReminderOverviewResponseClinicsItemScheduledCountMin = 0;
+
+export const getAdminReminderOverviewResponseClinicsItemSentCountMin = 0;
+
+export const getAdminReminderOverviewResponseClinicsItemCancelledCountMin = 0;
+
+
+
+export const GetAdminReminderOverviewResponse = zod.object({
+  "asOf": zod.coerce.date().describe('Database clock captured in the authenticated transaction; also the lower bound for nextScheduledAt.'),
+  "clinics": zod.array(zod.object({
+  "clinicId": zod.number().int().min(1),
+  "clinicName": zod.string(),
+  "enabled": zod.boolean(),
+  "scheduledCount": zod.number().int().min(getAdminReminderOverviewResponseClinicsItemScheduledCountMin).describe('All-history count of actual appointment-reminder notifications with pending status, including overdue rows.'),
+  "sentCount": zod.number().int().min(getAdminReminderOverviewResponseClinicsItemSentCountMin).describe('All-history count of actual appointment-reminder notifications with simulated status; not external delivery.'),
+  "cancelledCount": zod.number().int().min(getAdminReminderOverviewResponseClinicsItemCancelledCountMin).describe('All-history count of actual appointment-reminder notifications with cancelled status.'),
+  "nextScheduledAt": zod.coerce.date().nullable().describe('Earliest actual pending appointment-reminder scheduled_at at or after asOf, or null. Never a predicted or invented future time.')
+}).strict())
+}).strict().describe('Read-only appointment-reminder aggregates across all history, not a time-window report. No patient, appointment, recipient, actor, message text or raw notification detail is disclosed.')
+
+
+/**
  * Simulation only; own-clinic administrator, front-desk or currently delegated home-clinic doctor metadata, without patient identifiers. Doctor role alone and network-coordinator scope grant no access. Cross-clinic access is forbidden. Date filters select intended due instants. Waitlist notification visibility remains front-desk only.
  */
 

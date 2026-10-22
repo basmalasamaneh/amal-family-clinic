@@ -24,6 +24,8 @@ export * from './adminDoctorInput';
 export * from './adminDoctorPage';
 export * from './adminDoctorUpdate';
 export * from './adminPinInput';
+export * from './adminReminderOverview';
+export * from './adminReminderOverviewClinicsItem';
 export * from './adminUser';
 export * from './adminUserInput';
 export * from './adminUserInputLocale';

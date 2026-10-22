@@ -13,6 +13,8 @@ import { EMPTY_FILTERS, STATUSES, errorStatus, messagesClinicFor, reasonKey, toP
 import { REMINDER_REVOKED } from './use-reminder-access';
 import { PhonePreview } from './PhonePreview';
 import { previewText } from './phone-preview-model';
+import { AdminReminderOverview } from './AdminReminderOverview';
+import { isGlobalReminderAdmin, overviewCopy } from './admin-overview-model';
 import './strings';
 import './reminders.css';
 
@@ -21,6 +23,9 @@ export { messagesClinicFor } from './model';
 export function MessagesPage({ identity, clinic, title, canManageReminders = false }: { identity: ShellIdentity; clinic: ShellClinic | null; title: string; canManageReminders?: boolean }) {
   const { t } = useTranslation('rem');
   const own = messagesClinicFor(identity, clinic);
+  const { locale } = useAmalPreferences();
+  const globalOverview = isGlobalReminderAdmin(identity);
+  const copy = overviewCopy[locale];
   const [online, setOnline] = useState(() => navigator.onLine);
   useEffect(() => {
     const update = () => setOnline(navigator.onLine);
@@ -29,8 +34,11 @@ export function MessagesPage({ identity, clinic, title, canManageReminders = fal
   }, []);
   return (
     <div className="rem-page" data-testid="page-messages">
-      <PageHeader icon={MessageSquareText} section="reception" eyebrow={t('eyebrow')} title={title} description={t('lede')} />
-      {!online || (identity.role === 'doctor' && !canManageReminders) ? (
+      <PageHeader icon={MessageSquareText} section="reception" eyebrow={t('eyebrow')} title={globalOverview ? copy.title : title} description={globalOverview ? copy.scope : t('lede')} />
+      {globalOverview ? (
+        !online || identity.offlineRestored ? <div data-testid="status-overview-offline"><EmptyState headingLevel={2} title={copy.error} description={copy.offline} /></div>
+          : <AdminReminderOverview key={identity.id} accountId={identity.id} />
+      ) : !online || (identity.role === 'doctor' && !canManageReminders) ? (
         <EmptyState headingLevel={2} title={t('error.title')} description={t(online ? 'error.forbidden' : 'error.generic')} />
       ) : !own ? (
         <div data-testid="status-messages-no-clinic"><EmptyState headingLevel={2} title={t('noClinic.title')} description={t('noClinic.body')} /></div>

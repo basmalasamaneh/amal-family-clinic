@@ -127,6 +127,118 @@ test("reminders API: own-clinic access, independent preferences and private simu
         VALUES($1,$2,$3,'2025-01-12',$4)`, [own, local, doctorId, sentinel]);
       const logPath = `/reminders/log?clinicId=${local}`;
       const clinicPath = `/reminders/clinics/${local}`, patientPath = `/reminders/patients/${own}`;
+      await t.test("admin overview is an all-history, zero-safe, private aggregate with no notification mutations", async () => {
+        const empty = await clinic();
+        await admin.query("UPDATE operational.clinics SET reminders_enabled=false WHERE clinic_id=$1", [empty]);
+        const a = await appointment(local, doctorId, own), b = await appointment(local, doctorId, own);
+        await notification(local, own, a, "pending", "2001-01-01T00:00:00Z", 24);
+        await notification(local, own, a, "pending", "2090-01-02T00:00:00Z", 2);
+        const sent = await notification(local, own, b, "simulated", "2001-01-02T00:00:00Z", 24);
+        await notification(local, own, b, "cancelled", "2001-01-03T00:00:00Z", 2);
+        const ra = await appointment(remote, remoteDoctorId, foreign);
+        await notification(remote, foreign, ra, "pending", "2001-01-01T00:00:00Z");
+        await admin.query(`UPDATE operational.notifications SET text_ar=$2,text_en=$2,
+          receipt=jsonb_build_object('secret',$2::text) WHERE id=$1`, [sent, sentinel]);
+        await admin.query(`INSERT INTO operational.notifications(clinic_id,patient_id,message_key,status,scheduled_at,text_en)
+          VALUES($1,$2,'legacy.notice','pending','2089-01-01T00:00:00Z',$3)`, [local, own, sentinel]);
+        // An actual waitlist-offer notification must not affect reminder totals or next due time.
+        await admin.query(`WITH entry AS (
+          INSERT INTO operational.waitlist_entries
+            (clinic_id,patient_id,doctor_id,weekdays,window_start,window_end,created_by)
+          VALUES($1,$2,$3,ARRAY[1],'08:00','17:00',$4) RETURNING id
+        ), opportunity AS (
+          INSERT INTO operational.waitlist_opportunities
+            (clinic_id,doctor_id,source_appointment_id,cancellation_version,cancellation_op_id,starts_at,ends_at)
+          VALUES($1,$3,$5,2,$6,'2089-01-01T09:00:00Z','2089-01-01T09:30:00Z') RETURNING id
+        ), offer AS (
+          INSERT INTO operational.waitlist_offers
+            (clinic_id,doctor_id,patient_id,entry_id,opportunity_id,created_at,expires_at)
+          SELECT $1,$3,$2,entry.id,opportunity.id,'2089-01-01T08:00:00Z','2089-01-01T08:15:00Z'
+          FROM entry,opportunity RETURNING id
+        )
+        INSERT INTO operational.notifications
+          (clinic_id,patient_id,message_key,status,scheduled_at,text_ar,text_en,waitlist_offer_id)
+        SELECT $1,$2,'waitlist.offer','pending','2089-01-01T08:00:00Z',$7,$7,offer.id FROM offer`,
+        [local, own, doctorId, manager.id, a, randomUUID(), sentinel]);
+        const state = async () => (await admin.query(
+          "SELECT row_to_json(n) AS row FROM operational.notifications n ORDER BY id")).rows;
+        const beforeGet = await state();
+        const global = await request(globalManager, "/reminders/overview");
+        assert.equal(global.status, 200, global.text);
+        assert.equal(global.cacheControl, "private, no-store");
+        assert.deepEqual(Object.keys(global.data).sort(), ["asOf", "clinics"]);
+        assert(Number.isFinite(Date.parse(global.data.asOf)));
+        const allClinicIds = (await admin.query("SELECT clinic_id FROM operational.clinics ORDER BY clinic_id")).rows.map(r => r.clinic_id);
+        assert.deepEqual(global.data.clinics.map((r: { clinicId: number }) => r.clinicId), allClinicIds);
+        const byId = (id: number) => global.data.clinics.find((r: { clinicId: number }) => r.clinicId === id);
+        const names = (await admin.query("SELECT clinic_id,clinic_name FROM operational.clinics WHERE clinic_id=ANY($1::int[])", [[local, remote, empty]])).rows;
+        const name = (id: number) => names.find(r => r.clinic_id === id)!.clinic_name;
+        assert.deepEqual(byId(local), { clinicId: local, clinicName: name(local), enabled: true,
+          scheduledCount: 2, sentCount: 1, cancelledCount: 1, nextScheduledAt: "2090-01-02T00:00:00.000Z" });
+        assert.deepEqual(byId(remote), { clinicId: remote, clinicName: name(remote), enabled: true,
+          scheduledCount: 1, sentCount: 0, cancelledCount: 0, nextScheduledAt: null });
+        assert.deepEqual(byId(empty), { clinicId: empty, clinicName: name(empty), enabled: false,
+          scheduledCount: 0, sentCount: 0, cancelledCount: 0, nextScheduledAt: null });
+        const ownOverview = await request(manager, "/reminders/overview");
+        assert.equal(ownOverview.status, 200);
+        assert.deepEqual(ownOverview.data.clinics, [byId(local)]);
+        const zeroManager = await actor("administrator", empty);
+        assert.deepEqual((await request(zeroManager, "/reminders/overview")).data.clinics, [byId(empty)]);
+        for (const row of global.data.clinics) {
+          assert.deepEqual(Object.keys(row).sort(),
+            ["clinicId", "clinicName", "enabled", "scheduledCount", "sentCount", "cancelledCount", "nextScheduledAt"].sort());
+          if (row.nextScheduledAt !== null) assert(Date.parse(row.nextScheduledAt) >= Date.parse(global.data.asOf));
+        }
+        for (const secret of [sentinel, `PATIENT-SECRET-${marker}`, `PHONE-SECRET-${marker}`, "Reminder: your clinic appointment"]) {
+          assert(!global.text.includes(secret));
+        }
+        for (const key of ["id", "patientId", "patient_id", "appointmentId", "doctorId", "actorId", "userId",
+          "recipient", "phone", "textAr", "textEn", "receipt", "detail"]) assert(!global.text.includes(`"${key}"`));
+        const { GetAdminReminderOverviewResponse } = await import("@workspace/api-zod");
+        assert(GetAdminReminderOverviewResponse.safeParse(global.data).success);
+        for (const extra of [{ patientId: own }, { appointmentId: a }, { textEn: sentinel }, { actorId: manager.id }]) {
+          assert.equal(GetAdminReminderOverviewResponse.safeParse({ ...global.data, clinics: [{ ...byId(local), ...extra }] }).success, false);
+        }
+        for (const invalid of [{ scheduledCount: -1 }, { sentCount: 1.5 }, { clinicId: 0 }, { nextScheduledAt: "tomorrow" }]) {
+          assert.equal(GetAdminReminderOverviewResponse.safeParse({ ...global.data, clinics: [{ ...byId(local), ...invalid }] }).success, false);
+        }
+        for (const a of [manager, globalManager]) {
+          for (const suffix of [`?clinicId=${remote}`, "?scope=all", "?patientId=1", "?doctorId=1", "?unknown=x", "?clinicId=1&clinicId=2"]) {
+            assert.equal((await request(a, "/reminders/overview" + suffix)).status, 400, suffix);
+          }
+        }
+        assert.equal((await request(null, "/reminders/overview")).status, 401);
+        for (const a of [doctor, desk, remoteDesk]) assert.equal((await request(a, "/reminders/overview")).status, 403);
+        assert.equal((await request(globalManager, logPath)).status, 403, "aggregate does not grant global log access");
+        assert.deepEqual(await state(), beforeGet, "GET overview leaves every persisted notification column unchanged");
+      });
+      await t.test("overview checks fresh locked admin role, home clinic and session, not cached authority", async () => {
+        const { getAdminReminderOverview } = await import("../src/reminders/access");
+        const moved = await actor("administrator", null);
+        const stale: Auth = { id: moved.id, email: "unused@reminders.test", role: "admin", clinicId: null, doctorId: null,
+          locale: "en", theme: "light", sessionDigest: digest(moved.session), csrfToken: moved.csrf,
+          device: null, expiresAt: new Date(Date.now() + 3600000), absoluteExpiresAt: null, pinVerifiedAt: null };
+        await admin.query("UPDATE operational.users SET clinic_id=$2 WHERE id=$1", [moved.id, remote]);
+        await assert.rejects(() => getAdminReminderOverview(stale, {}), (error: { status?: number }) => error.status === 403,
+          "home-clinic changes revoke the old session");
+        // Restore only this disposable fixture session to exercise current scope independently of revocation.
+        await admin.query("UPDATE operational.auth_sessions SET revoked_at=NULL,last_seen_at=now() WHERE token_digest=$1", [stale.sessionDigest]);
+        assert.deepEqual((await getAdminReminderOverview(stale, {})).clinics.map(r => r.clinicId), [remote]);
+        await admin.query("UPDATE operational.users SET disabled_at=now() WHERE id=$1", [moved.id]);
+        await assert.rejects(() => getAdminReminderOverview(stale, {}), (error: { status?: number }) => error.status === 403);
+        await admin.query("UPDATE operational.users SET disabled_at=NULL WHERE id=$1", [moved.id]);
+        await admin.query("UPDATE operational.auth_sessions SET revoked_at=now() WHERE token_digest=$1", [stale.sessionDigest]);
+        await assert.rejects(() => getAdminReminderOverview(stale, {}), (error: { status?: number }) => error.status === 403);
+        assert.equal((await request(moved, "/reminders/overview")).status, 401);
+        await admin.query("UPDATE operational.auth_sessions SET revoked_at=NULL,last_seen_at=now()-interval '31 minutes' WHERE token_digest=$1", [stale.sessionDigest]);
+        await assert.rejects(() => getAdminReminderOverview(stale, {}), (error: { status?: number }) => error.status === 403);
+        await admin.query("UPDATE operational.auth_sessions SET last_seen_at=now() WHERE token_digest=$1", [stale.sessionDigest]);
+        await admin.query("UPDATE operational.users SET role='receptionist' WHERE id=$1", [moved.id]);
+        await assert.rejects(() => getAdminReminderOverview(stale, {}), (error: { status?: number }) => error.status === 403);
+        await admin.query("UPDATE operational.users SET role='administrator' WHERE id=$1", [moved.id]);
+        await admin.query("UPDATE operational.auth_sessions SET revoked_at=NULL,last_seen_at=now() WHERE token_digest=$1", [stale.sessionDigest]);
+        assert.deepEqual((await getAdminReminderOverview(stale, {})).clinics.map(r => r.clinicId), [remote]);
+      });
       await t.test("authentication, doctor denial and strict own-clinic roles including null-clinic admin", async () => {
         for (const [path, method, body] of [
           [logPath, "GET", undefined], [clinicPath, "GET", undefined],
@@ -155,9 +267,11 @@ test("reminders API: own-clinic access, independent preferences and private simu
       await t.test("delegated home-clinic doctor manages reminders, never patients or other clinics", async () => {
         // A network coordinator without a manager grant has no reminder authority.
         await admin.query("INSERT INTO operational.network_coordinator_scope(user_id,clinic_id) VALUES($1,$2)", [doctor.id, local]);
+        assert.equal((await request(doctor, "/reminders/overview")).status, 403, "coordinator is not an administrator");
         for (const path of [logPath, clinicPath]) assert.equal((await request(doctor, path)).status, 403);
         assert.equal((await request(doctor, clinicPath, "PUT", { enabled: true })).status, 403);
         await admin.query("INSERT INTO operational.clinic_managers(clinic_id,user_id) VALUES($1,$2)", [local, doctor.id]);
+        assert.equal((await request(doctor, "/reminders/overview")).status, 403, "delegated manager is not an administrator");
         assert.equal((await request(doctor, logPath)).status, 200);
         assert.deepEqual((await request(doctor, clinicPath)).data, { enabled: true, canManage: true });
         assert.deepEqual((await request(manager, clinicPath)).data, { enabled: true, canManage: true });

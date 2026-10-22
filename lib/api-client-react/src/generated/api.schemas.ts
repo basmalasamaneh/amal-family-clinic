@@ -246,6 +246,42 @@ export interface ReminderLogEntry {
   cancellationReason: string | null;
 }
 
+export type AdminReminderOverviewClinicsItem = {
+  /** @minimum 1 */
+  clinicId: number;
+  clinicName: string;
+  enabled: boolean;
+  /**
+     * All-history count of actual appointment-reminder notifications with pending status, including overdue rows.
+     * @minimum 0
+     */
+  scheduledCount: number;
+  /**
+     * All-history count of actual appointment-reminder notifications with simulated status; not external delivery.
+     * @minimum 0
+     */
+  sentCount: number;
+  /**
+     * All-history count of actual appointment-reminder notifications with cancelled status.
+     * @minimum 0
+     */
+  cancelledCount: number;
+  /**
+     * Earliest actual pending appointment-reminder scheduled_at at or after asOf, or null. Never a predicted or invented future time.
+     * @nullable
+     */
+  nextScheduledAt: string | null;
+};
+
+/**
+ * Read-only appointment-reminder aggregates across all history, not a time-window report. No patient, appointment, recipient, actor, message text or raw notification detail is disclosed.
+ */
+export interface AdminReminderOverview {
+  /** Database clock captured in the authenticated transaction; also the lower bound for nextScheduledAt. */
+  asOf: string;
+  clinics: AdminReminderOverviewClinicsItem[];
+}
+
 export interface ReminderLog {
   items: ReminderLogEntry[];
   /** @nullable */

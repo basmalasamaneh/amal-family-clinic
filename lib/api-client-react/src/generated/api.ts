@@ -31,6 +31,7 @@ import type {
   AdminDoctorPage,
   AdminDoctorUpdate,
   AdminPinInput,
+  AdminReminderOverview,
   AdminUser,
   AdminUserInput,
   AdminUserPage,
@@ -657,6 +658,80 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       > => {
       return useMutation(getDecideWaitlistOfferMutationOptions(options));
     }
+
+export const getGetAdminReminderOverviewUrl = () => {
+
+
+
+
+  return `/api/reminders/overview`
+}
+
+/**
+ * Read-only, private all-history aggregate of actual appointment reminder notifications (schedule_version IS NOT NULL), excluding waitlist and legacy notifications. pending maps to scheduledCount, simulated to sentCount and cancelled to cancelledCount. Empty clinics have zero counts. Uses freshly checked session, role and home clinic inside the existing locked appointments transaction. Doctors, including clinic managers and network coordinators, and front-desk are forbidden. No query parameters are accepted: scope overrides and unknown query keys are rejected. This grants no access to /reminders/log or preference toggles and never sends, seeds or mutates notifications.
+ */
+export const getAdminReminderOverview = async ( options?: Parameters<typeof customFetch>[1]): Promise<AdminReminderOverview> => {
+
+  return customFetch<AdminReminderOverview>(getGetAdminReminderOverviewUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetAdminReminderOverviewQueryKey = () => {
+    return [
+    `/api/reminders/overview`
+    ] as const;
+    }
+
+
+export const getGetAdminReminderOverviewQueryOptions = <TData = Awaited<ReturnType<typeof getAdminReminderOverview>>, TError = ErrorType<ApiFailure>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAdminReminderOverview>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetAdminReminderOverviewQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getAdminReminderOverview>>> = ({ signal }) => getAdminReminderOverview({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getAdminReminderOverview>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetAdminReminderOverviewQueryResult = NonNullable<Awaited<ReturnType<typeof getAdminReminderOverview>>>
+export type GetAdminReminderOverviewQueryError = ErrorType<ApiFailure>
+
+
+
+export function useGetAdminReminderOverview<TData = Awaited<ReturnType<typeof getAdminReminderOverview>>, TError = ErrorType<ApiFailure>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAdminReminderOverview>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetAdminReminderOverviewQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export const getListReminderLogUrl = (params: ListReminderLogParams,) => {
   const normalizedParams = new URLSearchParams();

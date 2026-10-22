@@ -1,9 +1,9 @@
 import { Router, type IRouter } from "express";
 import {
-  ListReminderLogResponse, GetReminderClinicPreferenceResponse, GetReminderPatientPreferenceResponse,
+  ListReminderLogResponse, GetReminderClinicPreferenceResponse, GetReminderPatientPreferenceResponse, GetAdminReminderOverviewResponse,
 } from "@workspace/api-zod";
 import { authenticate, csrf, requireRoles } from "../lib/auth";
-import { clinicPreference, listReminderLog, patientPreference, reminderId } from "../reminders/access";
+import { clinicPreference, getAdminReminderOverview, listReminderLog, patientPreference, reminderId } from "../reminders/access";
 import { fail } from "../lib/auth-errors";
 
 const router: IRouter = Router();
@@ -11,6 +11,9 @@ router.use("/reminders", authenticate, requireRoles("admin", "front-desk", "doct
   res.set("Cache-Control", "private, no-store"); next();
 });
 function checked<T>(schema: { parse: (v: unknown) => unknown }, value: T): T { schema.parse(value); return value; }
+router.get("/reminders/overview", requireRoles("admin"), async (req, res) => {
+  res.json(checked(GetAdminReminderOverviewResponse, await getAdminReminderOverview(req.auth!, req.query)));
+});
 router.get("/reminders/log", async (req, res) => {
   res.json(checked(ListReminderLogResponse, await listReminderLog(req.auth!, req.query)));
 });

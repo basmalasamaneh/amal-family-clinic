@@ -36,3 +36,14 @@ Do not interpret a failed post-save selector/session refresh as an uncertain cli
 **Why:** Clinic creation has no idempotent replay contract. Once the create response confirms persistence, offering creation again because a later read failed risks duplicates. A fresh listing also cannot prove an earlier in-flight write failed.
 
 **How to apply:** Keep confirmed persistence separate from refresh warnings. For transport-uncertain creation, reconcile stable returned IDs explicitly, never infer identity from a matching name, and disclose duplicate risk before any deliberate new attempt.
+
+Network-wide reminder reporting is aggregate-only; it does not grant access to
+patient message bodies or home-clinic reminder controls.
+
+**Why:** The user asked for meaningful scheduled-message information on the
+global administrator's page rather than an empty no-clinic screen. That request
+does not transfer other clinics' patient-message access or management authority.
+
+**How to apply:** Report actual clinic counts and next scheduled times. Keep
+message details and settings under their existing explicit clinic authority;
+never invent delivery outcomes to fill the overview.

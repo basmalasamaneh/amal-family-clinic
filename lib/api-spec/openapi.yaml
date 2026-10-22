@@ -171,6 +171,52 @@
           "cancellationReason": { "type": ["string", "null"] }
         }
       },
+      "AdminReminderOverview": {
+        "type": "object",
+        "additionalProperties": false,
+        "description": "Read-only appointment-reminder aggregates across all history, not a time-window report. No patient, appointment, recipient, actor, message text or raw notification detail is disclosed.",
+        "required": ["asOf", "clinics"],
+        "properties": {
+          "asOf": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Database clock captured in the authenticated transaction; also the lower bound for nextScheduledAt."
+          },
+          "clinics": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["clinicId", "clinicName", "enabled", "scheduledCount", "sentCount", "cancelledCount", "nextScheduledAt"],
+              "properties": {
+                "clinicId": { "type": "integer", "minimum": 1 },
+                "clinicName": { "type": "string" },
+                "enabled": { "type": "boolean" },
+                "scheduledCount": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "description": "All-history count of actual appointment-reminder notifications with pending status, including overdue rows."
+                },
+                "sentCount": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "description": "All-history count of actual appointment-reminder notifications with simulated status; not external delivery."
+                },
+                "cancelledCount": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "description": "All-history count of actual appointment-reminder notifications with cancelled status."
+                },
+                "nextScheduledAt": {
+                  "type": ["string", "null"],
+                  "format": "date-time",
+                  "description": "Earliest actual pending appointment-reminder scheduled_at at or after asOf, or null. Never a predicted or invented future time."
+                }
+              }
+            }
+          }
+        }
+      },
       "ReminderLog": {
         "type": "object", "additionalProperties": false, "required": ["items", "nextCursor"],
         "properties": {
@@ -8091,6 +8137,68 @@
         "parameters": [{"name": "id", "in": "path", "required": true, "schema": {"type": "integer", "minimum": 1, "maximum": 2147483647}}],
         "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/WaitlistDecisionInput"}, "example": {"clientOpId": "7eda6312-2b87-4f59-8731-55698a71cbda", "decision": "decline"}}}},
         "responses": {"200": {"description": "Authoritative offer outcome", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/WaitlistOffer"}, "example": {"id": 1, "entryId": 1, "opportunityId": 1, "patientId": 301, "patientName": "Synthetic patient", "doctorId": 201, "doctorName": "Synthetic doctor", "startsAt": "2026-10-26T10:00:00Z", "endsAt": "2026-10-26T10:15:00Z", "createdAt": "2026-10-21T10:00:00Z", "expiresAt": "2026-10-21T10:15:00Z", "status": "declined", "notificationStatus": "suppressed", "notificationReason": "clinic_disabled", "appointmentId": null}}}}}
+      }
+    },
+    "/reminders/overview": {
+      "get": {
+        "operationId": "getAdminReminderOverview",
+        "tags": ["Reminders"],
+        "security": [{ "sessionCookie": [] }],
+        "x-roles": ["admin"],
+        "x-implementation": "real",
+        "x-scope": "Current administrator with null home clinic sees all clinics; assigned administrator sees only the current home clinic.",
+        "description": "Read-only, private all-history aggregate of actual appointment reminder notifications (schedule_version IS NOT NULL), excluding waitlist and legacy notifications. pending maps to scheduledCount, simulated to sentCount and cancelled to cancelledCount. Empty clinics have zero counts. Uses freshly checked session, role and home clinic inside the existing locked appointments transaction. Doctors, including clinic managers and network coordinators, and front-desk are forbidden. No query parameters are accepted: scope overrides and unknown query keys are rejected. This grants no access to /reminders/log or preference toggles and never sends, seeds or mutates notifications.",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "All-history reminder totals for authorized clinics, ordered by clinicId.",
+            "headers": {
+              "Cache-Control": {
+                "description": "Private response; must never be stored.",
+                "schema": { "type": "string", "const": "private, no-store" }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/AdminReminderOverview" },
+                "example": {
+                  "asOf": "2026-06-01T10:00:00.000Z",
+                  "clinics": [
+                    { "clinicId": 1, "clinicName": "Amal Clinic", "enabled": true, "scheduledCount": 3, "sentCount": 8, "cancelledCount": 2, "nextScheduledAt": "2026-06-01T12:00:00.000Z" },
+                    { "clinicId": 2, "clinicName": "Community Clinic", "enabled": false, "scheduledCount": 0, "sentCount": 0, "cancelledCount": 0, "nextScheduledAt": null }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Unknown query parameter or attempted scope override.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ApiFailure" },
+                "example": { "code": "VALIDATION", "messageKey": "error.validation", "params": {} }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required or session no longer valid.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ApiFailure" },
+                "example": { "code": "UNAUTHORIZED", "messageKey": "error.unauthorized", "params": {} }
+              }
+            }
+          },
+          "403": {
+            "description": "Current administrator authority required; delegated doctors are not administrators.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ApiFailure" },
+                "example": { "code": "FORBIDDEN", "messageKey": "error.forbidden", "params": {} }
+              }
+            }
+          }
+        }
       }
     },
     "/reminders/log": {

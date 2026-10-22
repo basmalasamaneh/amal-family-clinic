@@ -16,6 +16,34 @@ const query = z.object({
 }).strict().refine(v => !v.from || !v.to || Date.parse(v.from) < Date.parse(v.to));
 const clinicInput = z.object({ enabled: z.boolean() }).strict();
 const patientInput = z.object({ optedOut: z.boolean() }).strict();
+const overviewQuery = z.object({}).strict();
+
+// This is an all-history aggregate, not access to the clinic-local message log.
+export async function getAdminReminderOverview(auth: Auth, input: unknown) {
+  overviewQuery.parse(input);
+  return transaction(auth, async (client, actor, now) => {
+    if (actor.role !== "admin") throw forbidden();
+    const { rows } = await client.query(
+      `SELECT c.clinic_id,c.clinic_name,c.reminders_enabled,
+         count(n.id) FILTER (WHERE n.status='pending') AS scheduled_count,
+         count(n.id) FILTER (WHERE n.status='simulated') AS sent_count,
+         count(n.id) FILTER (WHERE n.status='cancelled') AS cancelled_count,
+         min(n.scheduled_at) FILTER (WHERE n.status='pending' AND n.scheduled_at >= $2::timestamptz) AS next_scheduled_at
+       FROM operational.clinics c
+       LEFT JOIN operational.notifications n ON n.clinic_id=c.clinic_id AND n.schedule_version IS NOT NULL
+       WHERE ($1::integer IS NULL OR c.clinic_id=$1)
+       GROUP BY c.clinic_id,c.clinic_name,c.reminders_enabled
+       ORDER BY c.clinic_id`, [actor.clinicId, now]);
+    return {
+      asOf: now.toISOString(),
+      clinics: rows.map(r => ({
+        clinicId: r.clinic_id, clinicName: r.clinic_name, enabled: r.reminders_enabled,
+        scheduledCount: Number(r.scheduled_count), sentCount: Number(r.sent_count),
+        cancelledCount: Number(r.cancelled_count), nextScheduledAt: r.next_scheduled_at?.toISOString() ?? null,
+      })),
+    };
+  });
+}
 
 // Network-wide administration is not permission to inspect arbitrary reminder logs.
 // This feature deliberately requires the actor's own assigned clinic.
