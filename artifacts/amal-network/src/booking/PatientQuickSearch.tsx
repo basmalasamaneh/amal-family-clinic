@@ -8,18 +8,20 @@ import { classifyError, isAbort, type FailureKind } from './errors';
 import { createLatest } from './ops';
 import { normalizeForSearch } from './normalize';
 import '@/reception/i18n';
+import { completedEmpty } from './registration-flow';
 
 type State =
   | { kind: 'idle' }
   | { kind: 'loading' }
-  | { kind: 'ok'; q: string; items: PatientHit[]; more: boolean; cursor: string | null; page: 'idle' | 'loading' | 'error' }
+  | { kind: 'ok'; q: string; adapter: PatientSearchAdapter; clinicId: number; refreshKey: number; nonce: number; items: PatientHit[]; more: boolean; cursor: string | null; page: 'idle' | 'loading' | 'error' }
   | { kind: 'error'; failure: FailureKind };
 export const SEARCH_DEBOUNCE_MS = 300;
 
-export function PatientQuickSearch({ adapter, clinicId, onSelect, autoFocus, paginate, refreshKey = 0, selectedId }: {
+export function PatientQuickSearch({ adapter, clinicId, onSelect, autoFocus, paginate, refreshKey = 0, selectedId, onCreate, createDisabledReason }: {
   adapter: PatientSearchAdapter; clinicId: number; onSelect: (p: PatientHit) => void; autoFocus?: boolean;
   /** Show "load more" using the server's opaque cursor instead of only asking to refine. */
   paginate?: boolean; /** Bump to re-run the current query (e.g. after registration). */ refreshKey?: number; selectedId?: number | null;
+  onCreate?: (query: string) => void; createDisabledReason?: string;
 }) {
   const { t } = useTranslation();
   const { locale, digitPreference } = useAmalPreferences();
@@ -40,7 +42,7 @@ export function PatientQuickSearch({ adapter, clinicId, onSelect, autoFocus, pag
     const ctl = new AbortController();
     const timer = setTimeout(() => {
       adapter.search(query, clinicId, ctl.signal).then(
-        (r) => { if (latest.isCurrent(token)) { setState({ kind: 'ok', q: query, items: r.items, more: r.more, cursor: r.nextCursor ?? null, page: 'idle' }); setActive(0); } },
+        (r) => { if (latest.isCurrent(token)) { setState({ kind: 'ok', q: query, adapter, clinicId, refreshKey, nonce, items: r.items, more: r.more, cursor: r.nextCursor ?? null, page: 'idle' }); setActive(0); } },
         (e) => { if (!isAbort(e) && latest.isCurrent(token)) setState({ kind: 'error', failure: classifyError(e).kind }); },
       );
     }, SEARCH_DEBOUNCE_MS);
@@ -67,7 +69,8 @@ export function PatientQuickSearch({ adapter, clinicId, onSelect, autoFocus, pag
     );
   };
 
-  const items = state.kind === 'ok' && state.q === q.trim() ? state.items : [];
+  const current = state.kind === 'ok' && state.adapter === adapter && state.clinicId === clinicId && state.refreshKey === refreshKey && state.nonce === nonce;
+  const items = current && state.kind === 'ok' && state.q === q.trim() ? state.items : [];
   const dupNames = useMemo(() => {
     const c = new Map<string, number>();
     for (const p of items) { const k = normalizeForSearch(p.name); c.set(k, (c.get(k) ?? 0) + 1); }
@@ -96,7 +99,7 @@ export function PatientQuickSearch({ adapter, clinicId, onSelect, autoFocus, pag
           aria-activedescendant={items.length ? `${id}-o-${items[active]?.id}` : undefined}
           aria-describedby={id + '-hint'}
           placeholder={t('bk.search.placeholder')} value={q}
-          onChange={(e) => setQ(e.target.value.slice(0, 120))} onKeyDown={onKey}
+          onChange={(e) => { latest.invalidate(); setState({ kind: 'idle' }); setQ(e.target.value.slice(0, 120)); }} onKeyDown={onKey}
           data-testid="input-patient-search"
         />
       </div>
@@ -113,10 +116,13 @@ export function PatientQuickSearch({ adapter, clinicId, onSelect, autoFocus, pag
           </div>
         </div>
       )}
-      {state.kind === 'ok' && !state.items.length && (
+      {state.kind === 'ok' && completedEmpty(q, state, current) && (
         <div className="bk-msg bk-msg--muted" data-testid="status-patient-empty">
           <UserX size={20} aria-hidden="true" />
-          <div className="bk-msg__body"><p><strong>{t('bk.search.empty', { q: state.q })}</strong></p><p className="bk-hint">{t('bk.search.emptyHint')}</p></div>
+          <div className="bk-msg__body"><p><strong>{t('bk.search.empty', { q: state.q })}</strong></p><p className="bk-hint">{t('bk.search.emptyHint')}</p>
+            {onCreate && <><button type="button" className="bk-btn bk-btn--sm" data-testid="button-register-booking-patient" disabled={!!createDisabledReason} aria-describedby={createDisabledReason ? id + '-create-hint' : undefined} onClick={() => onCreate(q.trim())}>{t('rx.bookingRegister')}</button>
+              {createDisabledReason && <p id={id + '-create-hint'} className="bk-hint">{createDisabledReason}</p>}</>}
+          </div>
         </div>
       )}
       <ul id={listId} role="listbox" aria-label={t('bk.search.label')} className="bk-list" hidden={!items.length}>

@@ -10,7 +10,7 @@ import type { CalendarDoctor, SchedulingReadAdapter } from '@/calendar/adapter';
 import type { BookingContext } from '@/calendar/booking';
 import { formatLocalDate, formatTime, localDateOf, todayLocal } from '@/calendar/dates';
 import { formatExpiry } from './time';
-import { PatientQuickSearch } from './PatientQuickSearch';
+import { BookingPatientRegistration } from './BookingPatientRegistration';
 import { ConflictDialog } from './ConflictDialog';
 import { commitAllowed, summarize } from './conflicts';
 import { createAttemptKeeper, createLatest, newOpId, stableKey, type Attempt } from './ops';
@@ -68,6 +68,7 @@ export function BookingDrawer({ clinic, ctx, title, scheduling, patients, api, o
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const [stage, setStage] = useState<Stage>(0);
+  const [registrationOpen, setRegistrationOpen] = useState(false);
   const [patient, setPatient] = useState<PatientHit | null>(initialPatient && initialPatient.clinicId === clinic.id ? initialPatient : null);
   const [doctorId, setDoctorId] = useState<number | null>(ctx?.doctorId ?? null);
   const [date, setDate] = useState(initial.date);
@@ -329,11 +330,11 @@ export function BookingDrawer({ clinic, ctx, title, scheduling, patients, api, o
   };
 
   return (
-    <Dialog.Root open onOpenChange={(o) => { if (!o) close(); }}>
+    <Dialog.Root open onOpenChange={(o) => { if (!o && !registrationOpen) close(); }}>
       <Dialog.Portal>
         <Dialog.Overlay className="bk-overlay" />
         <Dialog.Content className="bk-drawer" onCloseAutoFocus={(e) => e.preventDefault()} data-testid="drawer-booking" data-source={source} aria-describedby="bk-stage-desc"
-          onInteractOutside={(e) => { if (submitting) e.preventDefault(); }} onEscapeKeyDown={(e) => { if (submitting) e.preventDefault(); }}>
+          onInteractOutside={(e) => { if (submitting || registrationOpen) e.preventDefault(); }} onEscapeKeyDown={(e) => { if (submitting || registrationOpen) e.preventDefault(); }}>
           <div className="bk-head">
             <div className="bk-head__txt">
               <p className="bk-eyebrow"><bdi>{clinic.name}</bdi> · {walkIn ? t('bk.srcWalkIn') : t('bk.srcPhone')}</p>
@@ -386,9 +387,13 @@ export function BookingDrawer({ clinic, ctx, title, scheduling, patients, api, o
                 {quick && <QuickSlots clinicId={clinic.id} clinicName={clinic.name} patient={patient} doctors={doctors.list} doctorsKind={doctors.kind} onDoctorsRetry={() => setDocNonce((n) => n + 1)}
                   availability={availability!} preferDoctorId={preferDoctorId} busy={submitting || !!auto} onBook={quickBook} onOther={() => setStage(1)} />}
               </div>
-            ) : <PatientQuickSearch adapter={readPatients} clinicId={clinic.id} autoFocus paginate onSelect={(p) => { setPatient(p); if (!quick) setStage(1); }} />)}
+            ) : <BookingPatientRegistration key={clinic.id} patients={readPatients} clinicId={clinic.id} fixture={!local} scheduling={scheduling} onOpenChange={setRegistrationOpen} onSelect={(p) => { setPatient(p); if (!quick) setStage(1); }} />)}
 
             {stage === 1 && <>
+              {patient && <div className="bk-chosen" data-testid="card-booking-slot-patient">
+                <UserRound size={20} aria-hidden="true" />
+                <span className="bk-opt__main"><span className="bk-hint">{t('bk.search.selected')}</span><bdi className="bk-opt__name" dir="auto">{patient.name}</bdi></span>
+              </div>}
               <div className="bk-field">
                 <label className="bk-label" htmlFor="bk-doctor">{t('bk.slot.doctor')}</label>
                 <select id="bk-doctor" className="bk-input" value={doctorId ?? ''} disabled={doctors.kind !== 'ok' || !doctors.list.length}
