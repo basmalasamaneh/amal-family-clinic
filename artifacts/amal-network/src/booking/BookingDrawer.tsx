@@ -404,7 +404,7 @@ export function BookingDrawer({ clinic, ctx, title, scheduling, patients, api, o
                 <div className="bk-field"><label className="bk-label" htmlFor="bk-date">{t('bk.slot.date')}</label>
                   <input id="bk-date" type="date" className="bk-input" value={date} onChange={(e) => { setExact(null); setDate(e.target.value); }} aria-invalid={!interval.ok && interval.error === 'invalid'} data-testid="input-booking-date" /></div>
                 <div className="bk-field"><label className="bk-label" htmlFor="bk-time">{t('bk.slot.time')}</label>
-                  <input id="bk-time" type="time" step={300} className="bk-input" value={time} onChange={(e) => { setExact(null); setTime(e.target.value); }} aria-invalid={!interval.ok && !!time} data-testid="input-booking-time" /></div>
+                  <input id="bk-time" type="time" dir="ltr" step={300} className="bk-input" value={time} onChange={(e) => { setExact(null); setTime(e.target.value); }} aria-invalid={!interval.ok && !!time} data-testid="input-booking-time" /></div>
                 <div className="bk-field"><label className="bk-label" htmlFor="bk-dur">{t('bk.slot.duration')}</label>
                   <select id="bk-dur" className="bk-input" value={duration} onChange={(e) => { setExact((x) => (x ? { startsAt: x.startsAt } : x)); setDuration(Number(e.target.value)); }} data-testid="select-booking-duration">
                     {durations.map((d) => <option key={d} value={d}>{t('bk.slot.minutes', { n: d })}</option>)}
@@ -425,7 +425,7 @@ export function BookingDrawer({ clinic, ctx, title, scheduling, patients, api, o
                 <dt>{t('bk.confirm.patient')}</dt><dd><bdi dir="auto">{patient.name}</bdi> <span className="bk-hint">{t('bk.search.id', { id: patient.id })}</span></dd>
                 <dt>{t('bk.confirm.clinic')}</dt><dd><bdi>{clinic.name}</bdi></dd>
                 <dt>{t('bk.confirm.doctor')}</dt><dd><bdi dir="auto">{doctorName}</bdi></dd>
-                <dt>{t('bk.confirm.when')}</dt><dd data-testid="text-review-when">{formatLocalDate(localDateOf(interval.startsAt), locale, dp)} · <bdi>{formatTime(interval.startsAt, locale, dp)}–{formatTime(interval.endsAt, locale, dp)}</bdi></dd>
+                <dt>{t('bk.confirm.when')}</dt><dd data-testid="text-review-when">{formatLocalDate(localDateOf(interval.startsAt), locale, dp)} · <bdi dir="ltr">{formatTime(interval.startsAt, locale, dp)}–{formatTime(interval.endsAt, locale, dp)}</bdi></dd>
                 <dt>{t('bk.confirm.source')}</dt><dd>{walkIn ? t('bk.srcWalkIn') : t('bk.srcPhone')}</dd>
                 {cleanReason && <><dt>{t('bk.confirm.reason')}</dt><dd><bdi dir="auto">{cleanReason}</bdi></dd></>}
               </dl>

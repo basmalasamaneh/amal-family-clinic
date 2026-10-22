@@ -184,7 +184,7 @@ function DayGrid({ clinicId, date, search, hours, doctors, appointments }: {
           <div className="cal-day__corner" aria-hidden="true" />
           {doctors.map((d) => <h2 key={d.id} className="cal-day__doc" data-testid={`column-doctor-${d.id}`}><bdi dir="auto">{d.name}</bdi></h2>)}
           <ol className="cal-day__times" aria-hidden="true">
-            {slots.map((m) => <li key={m}>{formatMinutes(m, digitPreference)}</li>)}
+            {slots.map((m) => <li key={m}><bdi dir="ltr">{formatMinutes(m, digitPreference)}</bdi></li>)}
           </ol>
           {doctors.map((d) => {
             const rowsOf = (appt: CalendarAppointment): [number, number] => {

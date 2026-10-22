@@ -38,6 +38,7 @@ export const TextField = forwardRef<HTMLInputElement, TextFieldProps>(function T
         ref={ref}
         id={inputId}
         className="amal-input"
+        dir={rest.type === 'email' || rest.type === 'tel' || rest.type === 'time' ? 'ltr' : undefined}
         required={required}
         aria-invalid={error ? true : undefined}
         aria-describedby={[hintId, errId].filter(Boolean).join(' ') || undefined}

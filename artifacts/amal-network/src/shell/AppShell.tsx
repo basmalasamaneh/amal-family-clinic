@@ -221,7 +221,7 @@ function NavLink({ route, location, variant }: { route: NavigationItem; location
 }
 
 function BottomNav({ items, location }: { items: NavigationItem[]; location: string }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [, navigate] = useLocation();
   const needsMore = items.length > BOTTOM_SLOTS + 1;
   const visible = needsMore ? items.slice(0, BOTTOM_SLOTS) : items;
@@ -234,7 +234,7 @@ function BottomNav({ items, location }: { items: NavigationItem[]; location: str
         {visible.map((r) => <li key={r.id}><NavLink route={r} location={location} variant="bottom" /></li>)}
         {needsMore && (
           <li>
-            <DropdownMenu.Root>
+            <DropdownMenu.Root dir={i18n.dir()}>
               <DropdownMenu.Trigger className={`shell-nav shell-nav--bottom${overflowActive ? ' is-active' : ''}`} aria-label={t('shell.nav.moreLabel')} data-testid="button-nav-more">
                 <MoreHorizontal size={20} aria-hidden="true" />
                 <span className="shell-nav__label" aria-hidden="true">{t('shell.nav.more')}</span>

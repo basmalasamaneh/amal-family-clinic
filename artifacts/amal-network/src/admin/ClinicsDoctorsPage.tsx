@@ -78,7 +78,7 @@ export function ClinicsDoctorsPage({ title, accountKey, onClinicsChanged }: { ti
               {clinics.data.items.map(c => (
                 <li key={c.id} className="adm-clinic" data-testid={`card-clinic-${c.id}`}>
                   <div className="adm-clinic__main">
-                    <p className="adm-clinic__name"><bdi data-testid={`text-clinic-name-${c.id}`}>{c.name}</bdi><span className="adm-sub adm-mono">#{c.id}</span></p>
+                    <p className="adm-clinic__name"><bdi data-testid={`text-clinic-name-${c.id}`}>{c.name}</bdi><bdi dir="ltr" className="adm-sub adm-mono">#{c.id}</bdi></p>
                     <p className="adm-sub"><bdi>{c.city}</bdi> · <bdi>{c.bookingMethod}</bdi></p>
                   </div>
                   <dl className="adm-clinic__facts">
@@ -118,10 +118,10 @@ export function ClinicsDoctorsPage({ title, accountKey, onClinicsChanged }: { ti
               <thead><tr><th>{t('adm.clinics.doctorName')}</th><th>{t('adm.clinics.specialty')}</th><th>{t('adm.users.clinic')}</th><th>{t('adm.clinics.email')}</th><th>{t('adm.clinics.login')}</th><th><span className="shell-sr">{t('adm.common.edit')}</span></th></tr></thead>
               <tbody>{doctors.data.items.map(d => (
                 <tr key={d.id} data-testid={`row-doctor-${d.id}`}>
-                  <td><bdi className="adm-strong">{d.name}</bdi><span className="adm-sub adm-mono">#{d.id}</span></td>
+                  <td><bdi className="adm-strong">{d.name}</bdi><bdi dir="ltr" className="adm-sub adm-mono">#{d.id}</bdi></td>
                   <td><bdi>{d.specialty}</bdi></td>
                   <td><bdi>{clinicLabel(clinicMap, d.clinicId, t)}</bdi></td>
-                  <td><bdi>{d.email || '—'}</bdi></td>
+                  <td><bdi dir="ltr">{d.email || '—'}</bdi></td>
                   <td data-testid={`status-doctor-login-${d.id}`}>{d.userId !== null ? t('adm.clinics.linked', { id: d.userId }) : t('adm.clinics.notLinked')}</td>
                   <td className="adm-rowact"><Button size="sm" variant="ghost" startIcon={<Pencil size={14} aria-hidden="true" />} disabled={!online} onClick={() => { flash.set(null); setDoctorDlg({ doctor: d, clinicId: d.clinicId }); }} data-testid={`button-edit-doctor-${d.id}`}>{t('adm.common.edit')}</Button></td>
                 </tr>))}

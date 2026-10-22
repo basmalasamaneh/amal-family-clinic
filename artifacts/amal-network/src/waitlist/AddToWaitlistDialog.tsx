@@ -127,9 +127,9 @@ export function AddToWaitlistDialog({ clinicId, patients, initialPatient, initia
               </div>
               <div className="wl-row">
                 <div className="bk-field"><label className="bk-label" htmlFor="wl-from">{t('form.from')}</label>
-                  <input id="wl-from" type="time" step={300} className="bk-input" value={windowStart} onChange={(e) => setStart(e.target.value)} aria-invalid={touched && (invalid === 'time' || invalid === 'order')} data-testid="input-waitlist-from" /></div>
+                  <input id="wl-from" type="time" dir="ltr" step={300} className="bk-input" value={windowStart} onChange={(e) => setStart(e.target.value)} aria-invalid={touched && (invalid === 'time' || invalid === 'order')} data-testid="input-waitlist-from" /></div>
                 <div className="bk-field"><label className="bk-label" htmlFor="wl-to">{t('form.to')}</label>
-                  <input id="wl-to" type="time" step={300} className="bk-input" value={windowEnd} onChange={(e) => setEnd(e.target.value)} aria-invalid={touched && (invalid === 'time' || invalid === 'order')} data-testid="input-waitlist-to" /></div>
+                  <input id="wl-to" type="time" dir="ltr" step={300} className="bk-input" value={windowEnd} onChange={(e) => setEnd(e.target.value)} aria-invalid={touched && (invalid === 'time' || invalid === 'order')} data-testid="input-waitlist-to" /></div>
               </div>
               <p className="bk-hint">{t('form.localNote')}</p>
               {(invalid === 'order' || (touched && invalid === 'time')) && <p className="bk-err" role="alert" data-testid="text-waitlist-window-error">{t(`form.err.${invalid}`)}</p>}

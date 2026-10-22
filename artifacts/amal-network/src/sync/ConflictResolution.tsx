@@ -224,7 +224,7 @@ export function ConflictResolution({ conflict, proposal, intent, clinicId, locke
                   <input className="cr__slot" type="date" value={destDate} onChange={(e) => setDestDate(e.target.value)} data-testid={`input-dest-date-${conflict.id}`} />
                 </label>
                 <label className="amal-field__label">{t('destTime')}
-                  <input className="cr__slot" type="time" step={300} value={destTime} onChange={(e) => setDestTime(e.target.value)} data-testid={`input-dest-time-${conflict.id}`} />
+                  <input className="cr__slot" type="time" dir="ltr" step={300} value={destTime} onChange={(e) => setDestTime(e.target.value)} data-testid={`input-dest-time-${conflict.id}`} />
                 </label>
                 {dest?.ok && dest.ambiguous && <p className="cr__why">{t('destAmbiguous')}</p>}
               </fieldset>

@@ -204,7 +204,7 @@ function PatientDetail({ patient, clinic, api, doctorNames, headingRef, onClear,
                 <li key={a.id} className="rx-up__item" data-testid={`row-upcoming-${a.id}`}>
                   <span className="rx-up__date"><strong>{formatLocalDate(d, locale, dp, 'd')}</strong><span>{formatLocalDate(d, locale, dp, 'MMM')}</span></span>
                   <span className="rx-up__main">
-                    <span className="rx-up__when">{formatLocalDate(d, locale, dp, 'EEEE')} · <bdi>{formatTime(a.startsAt, locale, dp)}–{formatTime(a.endsAt, locale, dp)}</bdi></span>
+                    <span className="rx-up__when">{formatLocalDate(d, locale, dp, 'EEEE')} · <bdi dir="ltr">{formatTime(a.startsAt, locale, dp)}–{formatTime(a.endsAt, locale, dp)}</bdi></span>
                     <span className="bk-hint"><bdi dir="auto">{doctorNames.get(a.doctorId) ?? t('rx.up.doctor', { id: a.doctorId })}</bdi> · <bdi>{clinic.name}</bdi></span>
                   </span>
                   <span className={`rx-tag rx-tag--${a.status}`}>{t(`rx.up.status.${a.status}`, { defaultValue: a.status })}</span>

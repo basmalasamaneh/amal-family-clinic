@@ -273,7 +273,7 @@ export function EditAppointmentDrawer({ target, clinicName, onClose, api = realE
                   <div className="bk-field"><label className="bk-label" htmlFor="ed-date">{t('bk.slot.date')}</label>
                     <input id="ed-date" type="date" className="bk-input" value={date} disabled={locked} aria-invalid={!interval.ok} aria-describedby={!interval.ok ? 'ed-interval-error' : undefined} onChange={(e) => { setExact(null); setDate(e.target.value); }} data-testid="input-edit-date" /></div>
                   <div className="bk-field"><label className="bk-label" htmlFor="ed-time">{t('bk.slot.time')}</label>
-                    <input id="ed-time" type="time" step={300} className="bk-input" value={time} disabled={locked} onChange={(e) => { setExact(null); setTime(e.target.value); }} aria-invalid={!interval.ok} aria-describedby={!interval.ok ? 'ed-interval-error' : undefined} data-testid="input-edit-time" /></div>
+                    <input id="ed-time" type="time" dir="ltr" step={300} className="bk-input" value={time} disabled={locked} onChange={(e) => { setExact(null); setTime(e.target.value); }} aria-invalid={!interval.ok} aria-describedby={!interval.ok ? 'ed-interval-error' : undefined} data-testid="input-edit-time" /></div>
                   <div className="bk-field"><label className="bk-label" htmlFor="ed-dur">{t('bk.slot.duration')}</label>
                     <select id="ed-dur" className="bk-input" value={duration} disabled={locked} onChange={(e) => { setExact((x) => (x ? { startsAt: x.startsAt } : x)); setDuration(Number(e.target.value)); }} data-testid="select-edit-duration">
                       {durations.map((d) => <option key={d} value={d}>{t('bk.slot.minutes', { n: d })}</option>)}

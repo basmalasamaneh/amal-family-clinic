@@ -81,7 +81,7 @@ export function AppointmentCard({ appt, doctor, showDoctor, compact }: { appt: C
       className={`cal-card cal-card--${status ?? 'unknown'}${compact ? ' cal-card--compact' : ''}`}
       data-testid={`card-appointment-${appt.id}`}
     >
-      <span className="cal-card__time"><bdi>{start}</bdi>–<bdi>{end}</bdi><span className="cal-card__dur">{Number.isFinite(mins) && mins > 0 ? t('calendar.card.minutes', { n: formatNum(mins, digitPreference) }) : ''}</span></span>
+      <span className="cal-card__time"><bdi dir="ltr">{start}–{end}</bdi><span className="cal-card__dur">{Number.isFinite(mins) && mins > 0 ? t('calendar.card.minutes', { n: formatNum(mins, digitPreference) }) : ''}</span></span>
       <bdi className={`cal-card__name${appt.patientName ? '' : ' is-missing'}`} dir="auto">{name}</bdi>
       {showDoctor && <bdi className="cal-card__doc" dir="auto">{doctorName}</bdi>}
       <span className="cal-card__badges">

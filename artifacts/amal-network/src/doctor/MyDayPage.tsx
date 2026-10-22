@@ -129,7 +129,7 @@ function DayRow({ it, digits, scope }: { it: DayItem; digits: 'latn' | 'arab'; s
   const open = () => { setSelection({ scope, id: p.id }); navigate(demoPath('/doctor/patient-card')); };
   return (
     <li className={`doc-row doc-row--${status}`} data-testid={`row-day-${it.id}`}>
-      <time className="doc-row__time" dateTime={it.startsAt} data-testid={`text-day-time-${it.id}`} aria-label={t('doc.day.at', { time })}>{time}</time>
+      <time className="doc-row__time" dateTime={it.startsAt} data-testid={`text-day-time-${it.id}`} aria-label={t('doc.day.at', { time })}><bdi dir="ltr">{time}</bdi></time>
       <div className="doc-row__body">
         <div className="doc-row__top">
           <span className="net-hit__av" aria-hidden="true"><UserRound size={20} /></span>

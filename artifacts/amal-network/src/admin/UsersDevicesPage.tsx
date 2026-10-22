@@ -89,7 +89,7 @@ function UsersPanel() {
             <thead><tr><th>{t('adm.users.email')}</th><th>{t('adm.users.role')}</th><th>{t('adm.users.clinic')}</th><th>{t('adm.users.status')}</th><th>{t('adm.users.lastLogin')}</th><th><span className="shell-sr">{t('adm.common.edit')}</span></th></tr></thead>
             <tbody>{list.data.items.map(u => (
               <tr key={u.id} data-testid={`row-user-${u.id}`} className={u.active ? '' : 'is-muted'}>
-                <td><bdi className="adm-strong">{u.email}</bdi><span className="adm-sub adm-mono">#{u.id}</span></td>
+                <td><bdi dir="ltr" className="adm-strong">{u.email}</bdi><bdi dir="ltr" className="adm-sub adm-mono">#{u.id}</bdi></td>
                 <td><span className={`adm-role adm-role--${u.role}`}>{t(`adm.users.roles.${u.role}`)}</span>{u.doctorId !== null && <span className="adm-sub">{t('adm.audit.targets.doctor', { id: u.doctorId })}</span>}</td>
                 <td><bdi>{clinicLabel(clinicMap, u.clinicId, t)}</bdi></td>
                 <td data-testid={`status-user-${u.id}`}>{u.active ? t('adm.users.active') : t('adm.users.inactive')}</td>

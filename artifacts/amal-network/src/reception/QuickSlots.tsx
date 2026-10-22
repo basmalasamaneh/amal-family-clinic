@@ -69,7 +69,7 @@ export function QuickSlots({ clinicId, clinicName, patient, doctors, doctorsKind
                   <button type="button" className="rx-quick__book" disabled={busy} onClick={() => onBook(slot, doctor.name)}
                     aria-label={t('rx.quick.aria', { patient: patient.name, doctor: doctor.name, clinic: clinicName, date, interval })}
                     data-testid={`button-quick-book-${doctor.id}`}>
-                    <span className="rx-quick__time"><Clock size={18} aria-hidden="true" /><bdi>{time}</bdi></span>
+                    <span className="rx-quick__time"><Clock size={18} aria-hidden="true" /><bdi dir="ltr">{time}</bdi></span>
                     <span className="rx-quick__main">
                       {doctor.id === preferDoctorId && <span className="rx-tag" data-testid={`badge-quick-preferred-${doctor.id}`}>{t('rx.quick.preferred')}</span>}
                       <strong>{t('rx.quick.book', { doctor: '\u2068' + doctor.name + '\u2069', time })}</strong>
