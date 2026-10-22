@@ -28,3 +28,17 @@ mtime_ms = 1792579275767
 storage_uri = "gcs://replit-rams-assets-reed/rams/assets/repl:bf3e32dc-54d0-4d6f-8c18-82dda6dba30b/a1bffb54-5897-470f-bea1-3ab17ac553f8/94b6a57a-3bb5-4dea-9d1e-aff0009fe328"
 storage_version_token = "1792579390629571"
 content_type = "text/html"
+
+[[outputs]]
+id = "85rX1wU1ho7ZmhA_54frl"
+uri = "file://generated-artifacts/clinic-guide/amal-clinic-roles-guide-ar.pdf"
+type = "pdf"
+title = "دليل صفحات عيادة أمل العائلية"
+description = "ملف PDF بالعربية من 3 صفحات يشرح وظائف صفحات الاستقبال والطبيب والأدمن والأدوات المشتركة."
+logical_id = "6be85c90-b278-40d2-bd1c-20319b2ad77e"
+content_hash = "sha256:98d6c91a8ac7cf6140213d672abd84f8837ca8a71ee494ce8eb90ab5fbbb28d8"
+size = 56543
+mtime_ms = 1792647094001
+storage_uri = "gcs://replit-rams-assets-reed/rams/assets/repl:bf3e32dc-54d0-4d6f-8c18-82dda6dba30b/6be85c90-b278-40d2-bd1c-20319b2ad77e/3cc691bf-7790-4307-992a-533b4ddc1a81"
+storage_version_token = "1792647108555344"
+content_type = "application/pdf"
