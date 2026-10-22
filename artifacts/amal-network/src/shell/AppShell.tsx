@@ -46,7 +46,18 @@ import { SyncQueuePanel } from '@/sync/SyncQueuePanel';
 import { isKnownRole, landingFor, resolve, routesFor, type Resolution, type ShellRoute } from './routes';
 
 const BOTTOM_SLOTS = 4;
-type NavigationItem = ShellRoute & { schedule?: boolean };
+type NavigationItem = ShellRoute & { schedule?: boolean; labelKey?: string; patientSearch?: boolean };
+const DOCTOR_NAV_GROUPS = [
+  { group: 'doctorClinical', ids: ['myDay', 'networkSearch'] },
+  { group: 'doctorRecords', ids: ['import', 'duplicates'] },
+  { group: 'doctorPrivacy', ids: ['adoption', 'privacy'] },
+];
+const DOCTOR_NAV_LABELS: Record<string, string> = {
+  networkSearch: 'findPatient', duplicates: 'reviewDuplicates', adoption: 'networkParticipation',
+};
+const navActive = (route: NavigationItem, location: string) => location === route.path
+  || !!route.schedule && ['/desk/today', '/desk/week'].includes(location)
+  || !!route.patientSearch && location === '/doctor/patient-card';
 
 interface Props { identity: ShellIdentity; fixture: boolean; onRefresh: (strict?: boolean) => Promise<void>; onLogout: () => Promise<void> }
 
@@ -65,8 +76,14 @@ function AppShellContent({ identity, fixture, onRefresh, onLogout }: Props) {
   // Expiry/unmount must also clear transient selections, not just explicit logout.
   useEffect(() => () => { clearNetworkSelection(); clearConsentSelection(); }, [identity.id, role]);
   const items = useMemo<NavigationItem[]>(() => routesFor(role)
-    .filter((r) => !r.navHidden && !(role === 'front-desk' && ['week', 'newBooking', 'daySheet'].includes(r.id)))
-    .map((r) => role === 'front-desk' && r.id === 'today' ? { ...r, schedule: true } : r), [role]);
+    .filter((r) => !r.navHidden && !(role === 'front-desk' && ['week', 'newBooking', 'daySheet'].includes(r.id))
+      && !(role === 'doctor' && r.id === 'patientCard'))
+    .map((r) => role === 'doctor' ? { ...r, labelKey: DOCTOR_NAV_LABELS[r.id], patientSearch: r.id === 'networkSearch' }
+      : role === 'front-desk' && r.id === 'today' ? { ...r, schedule: true } : r), [role]);
+  const navGroups = role === 'doctor'
+    ? DOCTOR_NAV_GROUPS.map((g) => ({ group: g.group, items: g.ids.flatMap((id) => items.filter((r) => r.id === id)) }))
+    : groupRoutes(items);
+  const orderedItems = role === 'doctor' ? navGroups.flatMap((g) => g.items) : items;
   const res = resolve(location, role);
 
   const clinics = identity.clinics;
@@ -80,7 +97,8 @@ function AppShellContent({ identity, fixture, onRefresh, onLogout }: Props) {
   const tour = useTour(identity.id, role);
   const [collapsed, setCollapsed] = useState(() => { try { return window.localStorage.getItem('amal.nav.collapsed') === '1'; } catch { return false; } });
   const toggleCollapsed = () => setCollapsed((c) => { try { window.localStorage.setItem('amal.nav.collapsed', c ? '0' : '1'); } catch { /* storage unavailable */ } return !c; });
-  const title = titleFor(res, t);
+  const title = role === 'doctor' && res.kind === 'page' && DOCTOR_NAV_LABELS[res.route.id]
+    ? t(`shell.nav.${DOCTOR_NAV_LABELS[res.route.id]}`) : titleFor(res, t);
   const [announce, setAnnounce] = useState('');
   const first = useRef(true);
   useEffect(() => {
@@ -91,7 +109,9 @@ function AppShellContent({ identity, fixture, onRefresh, onLogout }: Props) {
   }, [location, title, res.kind, t]);
 
   const crumbs = res.kind === 'page' && !res.isLanding
-    ? [{ label: t(`shell.groups.${groupOf(res.route.id)}`) }, { label: title }]
+    ? [{ label: t(`shell.groups.${role === 'doctor'
+      ? DOCTOR_NAV_GROUPS.find((g) => g.ids.includes(res.route.id === 'patientCard' ? 'networkSearch' : res.route.id))?.group ?? groupOf(res.route.id)
+      : groupOf(res.route.id)}`) }, { label: title }]
     : [{ label: title }];
 
   if (res.kind === 'landing') return <Redirect to={demoPath(res.to)} replace />;
@@ -112,7 +132,7 @@ function AppShellContent({ identity, fixture, onRefresh, onLogout }: Props) {
           </button>
         </div>
         <nav aria-label={t('shell.nav.label')}>
-          {groupRoutes(items).map((g) => (
+          {navGroups.map((g) => (
             <div key={g.group} className="shell-side__group" role="group" aria-labelledby={`nav-g-${g.group}`}>
               <p id={`nav-g-${g.group}`} className="shell-side__glabel">{t(`shell.groups.${g.group}`)}</p>
               <ul className="shell-side__list">
@@ -158,7 +178,7 @@ function AppShellContent({ identity, fixture, onRefresh, onLogout }: Props) {
         </main>
       </div>
 
-      {items.length > 0 && <BottomNav items={items} location={location} />}
+      {items.length > 0 && <BottomNav items={orderedItems} location={location} />}
       {tour.open && <TourOverlay key={tour.run} steps={tour.steps} onFinish={tour.finish} />}
     </div>
     </WalkInProvider>
@@ -182,8 +202,8 @@ function NavLink({ route, location, variant }: { route: NavigationItem; location
   // Today/Week keep the selected date and doctor filter (validated again by the calendar page).
   const calendarRoute = route.id === 'today' || route.id === 'week';
   const fromCalendar = location === '/desk/today' || location === '/desk/week';
-  const active = location === route.path || !!route.schedule && fromCalendar;
-  const label = t(`shell.nav.${route.schedule ? 'schedule' : route.id}`);
+  const active = navActive(route, location);
+  const label = t(`shell.nav.${route.labelKey ?? (route.schedule ? 'schedule' : route.id)}`);
   const destination = route.schedule && fromCalendar ? location : route.path;
   return (
     <Link
@@ -206,7 +226,7 @@ function BottomNav({ items, location }: { items: NavigationItem[]; location: str
   const needsMore = items.length > BOTTOM_SLOTS + 1;
   const visible = needsMore ? items.slice(0, BOTTOM_SLOTS) : items;
   const overflow = needsMore ? items.slice(BOTTOM_SLOTS) : [];
-  const overflowActive = overflow.some((r) => r.path === location);
+  const overflowActive = overflow.some((r) => navActive(r, location));
   const walkInOk = useWalkInAvailable();
   return (
     <nav className="shell-bottom" aria-label={t('shell.nav.label')} data-testid="nav-bottom" data-tour="nav-bottom">
@@ -227,11 +247,11 @@ function BottomNav({ items, location }: { items: NavigationItem[]; location: str
                     return (
                       <DropdownMenu.Item
                         key={r.id}
-                        className={`shell-menu__item${r.path === location ? ' is-active' : ''}`}
+                        className={`shell-menu__item${navActive(r, location) ? ' is-active' : ''}`}
                         onSelect={() => navigate(demoPath(r.path))}
                         data-testid={`menuitem-more-${r.id}`}
                       >
-                        <Icon size={18} aria-hidden="true" />{t(`shell.nav.${r.id}`)}
+                        <Icon size={18} aria-hidden="true" />{t(`shell.nav.${r.labelKey ?? r.id}`)}
                       </DropdownMenu.Item>
                     );
                   })}
