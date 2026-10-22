@@ -82,6 +82,7 @@
 .auth--login .login-heading .amal-logo { block-size: auto; inline-size: 228px; max-inline-size: 100%; }
 .auth--login .auth-title { font-size: var(--amal-text-2xl); }
 .auth--login .auth-lede { font-size: var(--amal-text-sm); line-height: 1.7; }
+.auth--login .auth-mode { display: flex; justify-content: center; }
 .auth--login .auth-form { gap: 18px; }
 .auth--login .auth-form > .amal-btn { min-block-size: 54px; font-weight: 700; }
 .auth--login .login-field { display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; }
