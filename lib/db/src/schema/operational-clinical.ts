@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { integer, text, date, jsonb, check, unique, foreignKey, index, uniqueIndex } from "drizzle-orm/pg-core";
+import { integer, text, date, jsonb, check, unique, foreignKey, index, uniqueIndex, primaryKey } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import {
@@ -48,10 +48,40 @@ export const operationalPatientVisitHistory = operational.table("patient_visit_h
   doctor_id: integer("doctor_id").notNull().references(() => operationalDoctors.doctor_id),
   visit_date: date("visit_date").notNull(),
   diagnosis_notes: text("diagnosis_notes").notNull(),
+  seen_at: instant("seen_at"),
+  created_at: instant("created_at"),
+  appointment_id: integer("appointment_id").references(() => operationalAppointments.appointment_id),
 }, (t) => [
   unique("visits_id_patient_unique").on(t.visit_id, t.patient_id),
   foreignKey({ name: "visits_doctor_clinic_fk", columns: [t.doctor_id, t.clinic_id], foreignColumns: [operationalDoctors.doctor_id, operationalDoctors.clinic_id] }),
   index("visits_patient_date_idx").on(t.patient_id, t.visit_date),
+]);
+
+export const operationalVisitAddenda = operational.table("visit_addenda", {
+  id: identity(),
+  visit_id: integer("visit_id").notNull().references(() => operationalPatientVisitHistory.visit_id),
+  doctor_id: integer("doctor_id").notNull(),
+  clinic_id: integer("clinic_id").notNull(),
+  note: text("note").notNull(),
+  created_at: instant("created_at").notNull().defaultNow(),
+}, (t) => [
+  foreignKey({ columns: [t.doctor_id, t.clinic_id], foreignColumns: [operationalDoctors.doctor_id, operationalDoctors.clinic_id] }),
+  check("visit_addenda_note_check", sql`length(btrim(${t.note}))>0 AND length(${t.note})<=10000`),
+  index("visit_addenda_visit_idx").on(t.visit_id, t.id),
+]);
+export const operationalClinicalWriteOperations = operational.table("clinical_write_operations", {
+  clinic_id: integer("clinic_id").notNull().references(() => operationalClinics.clinic_id),
+  client_op_id: text("client_op_id").notNull(),
+  actor_id: integer("actor_id").notNull().references(() => operationalUsers.id),
+  patient_id: integer("patient_id").notNull().references(() => operationalPatients.patient_id),
+  request_hash: text("request_hash").notNull(),
+  result: jsonb("result").notNull(),
+  created_at: instant("created_at").notNull().defaultNow(),
+}, (t) => [
+  primaryKey({ columns: [t.clinic_id, t.client_op_id] }),
+  check("clinical_write_operations_op_check", sql`length(${t.client_op_id}) BETWEEN 1 AND 200`),
+  check("clinical_write_operations_hash_check", sql`${t.request_hash} ~ '^[a-f0-9]{64}$'`),
+  check("clinical_write_operations_result_check", sql`jsonb_typeof(${t.result})='object'`),
 ]);
 
 export const operationalPatientConsents = operational.table("patient_consents", {

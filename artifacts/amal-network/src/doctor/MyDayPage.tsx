@@ -127,7 +127,7 @@ function DayRow({ it, digits, scope }: { it: DayItem; digits: 'latn' | 'arab'; s
   const status = statusKey(it.status);
   const time = formatScheduleTime(it.startsAt, digits);
   // Stable own-patient id kept in memory only; never in the URL.
-  const open = () => { setSelection({ scope, id: p.id }); navigate(demoPath('/doctor/patient-card')); };
+  const open = () => { setSelection({ scope, id: p.id, appointmentId: it.id }); navigate(demoPath('/doctor/patient-card')); };
   return (
     <li className={`doc-row doc-row--${status}`} data-testid={`row-day-${it.id}`}>
       <time className="doc-row__time" dateTime={it.startsAt} data-testid={`text-day-time-${it.id}`} aria-label={t('doc.day.at', { time })}><bdi dir="ltr">{time}</bdi></time>

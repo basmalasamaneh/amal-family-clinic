@@ -1,0 +1,16 @@
+.visit-composer-overlay { position: fixed; inset: 0; z-index: 1000; background: rgb(5 20 35 / 60%); }
+.visit-composer { position: fixed; inset-inline: 16px; inset-block-start: 50%; transform: translateY(-50%); z-index: 1001; inline-size: min(640px, calc(100% - 32px)); max-block-size: 90dvh; margin-inline: auto; padding: 24px; box-sizing: border-box; overflow-y: auto; background: var(--amal-surface); color: var(--amal-text); border: 1px solid var(--amal-border); border-radius: var(--amal-radius-card); box-shadow: var(--amal-shadow-card); text-align: start; }
+.visit-composer h2 { margin-block: 0 8px; font-size: var(--amal-text-xl); }
+.visit-composer > p { margin-block: 0 20px; color: var(--amal-muted); }
+.visit-composer :is(input, textarea) { box-sizing: border-box; min-inline-size: 0; }
+.visit-composer form { display: grid; gap: 18px; }
+.visit-composer label { display: grid; gap: 8px; font-weight: 700; }
+.visit-composer input, .visit-composer textarea { width: 100%; padding: 12px; border: 1px solid var(--amal-border); border-radius: var(--amal-radius-control); background: var(--amal-surface-2); color: var(--amal-text); font: inherit; }
+.visit-composer textarea { min-height: 180px; resize: vertical; font-weight: 400; }
+.visit-composer :is(input, textarea):focus-visible { outline: 3px solid var(--amal-primary); outline-offset: 2px; }
+.visit-composer__actions { display: flex; gap: 12px; flex-wrap: wrap; }
+.visit-composer__actions button { min-height: 48px; flex: 1; }
+.visit-authoring { margin-block: 16px; }
+.visit-addenda { list-style: none; padding-inline-start: 18px; margin-block: 16px; border-inline-start: 2px solid var(--amal-primary); }
+.visit-addenda li { padding-block: 10px; }
+.visit-addenda p { white-space: pre-wrap; overflow-wrap: anywhere; }

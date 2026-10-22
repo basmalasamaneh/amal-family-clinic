@@ -7,11 +7,15 @@
  */
 import type { AlertChip } from './alertChip';
 import type { NetworkVisitVisibility } from './networkVisitVisibility';
+import type { VisitAddendum } from './visitAddendum';
 
 /**
- * Basic omits complaint and keyAlerts entirely. Clinical includes existing authorized notes/alerts. UTC instant; legacy date-only visits use Asia/Hebron start-of-day, not a claimed known visit time.
+ * Basic omits complaint, keyAlerts, alerts, visitId, canAddendum and addenda entirely. Clinical includes authorized original notes and immutable addenda. canAddendum requires the requesting doctor to be the original author in the same clinic with an existing trusted own-patient relationship. UTC instant; legacy date-only visits use Asia/Hebron start-of-day, not a claimed known visit time.
  */
 export interface NetworkVisit {
+  visitId?: number;
+  canAddendum?: boolean;
+  addenda?: VisitAddendum[];
   /** @minimum 1 */
   clinicId: number;
   /** @minimum 1 */

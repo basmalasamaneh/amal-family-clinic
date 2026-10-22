@@ -9,7 +9,7 @@ export const resetConfirmation = "--confirm=RESET-OPERATIONAL-DEMO-DATA";
 export const deleteOrder = [
   "notifications", "import_rows", "import_batches", "sync_operations", "audit_log",
   "visit_alerts", "patient_consents", "patient_merge_candidates", "kpi_snapshots",
-  "appointments", "patient_visit_history", "devices", "users", "doctors", "patients", "clinics",
+  "patient_visit_history", "appointments", "devices", "users", "doctors", "patients", "clinics",
 ] as const;
 
 export async function clearOperational(client: pg.Client) {
@@ -24,6 +24,7 @@ export async function clearOperational(client: pg.Client) {
   // Keep the explicit reset compatible before or after the additive service
   // migrations; operational:test exercises this only in a rollback transaction.
   for (const table of [
+    "clinical_write_operations", "visit_addenda",
     "network_coordinator_scope", "developer_outages", "clinic_managers", "device_network_health",
     "auth_sessions", "auth_devices", "auth_pin_state", "auth_throttles",
     "import_reviews", "import_operations", "import_source_links",

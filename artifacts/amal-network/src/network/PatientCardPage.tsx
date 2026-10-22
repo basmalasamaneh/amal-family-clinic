@@ -16,6 +16,8 @@ import {
 import './i18n';
 import '@/doctor/i18n';
 import './network.css';
+import { VisitAuthoring } from './VisitAuthoring';
+import { disclosedAddenda, mayAppend } from './visit-authoring-model';
 
 type State =
   | { kind: 'none' }
@@ -29,6 +31,10 @@ type State =
  * protected content is cleared before revalidation and removed on denial, withdrawal or disappearance.
  */
 export function PatientCardPage({ clinic, title, scope }: { clinic: ShellClinic | null; title: string; scope: string }) {
+  return <PatientCardContent key={`${scope}:${clinic?.id}:${getSelection(scope)?.id}`} clinic={clinic} title={title} scope={scope} />;
+}
+
+function PatientCardContent({ clinic, title, scope }: { clinic: ShellClinic | null; title: string; scope: string }) {
   const { t } = useTranslation();
   const [state, setState] = useState<State>(() => (getSelection(scope) ? { kind: 'loading' } : { kind: 'none' }));
   const seq = useRef(0);
@@ -105,12 +111,15 @@ export function PatientCardPage({ clinic, title, scope }: { clinic: ShellClinic 
           action={state.why === 'error' ? <button type="button" className="amal-btn amal-btn--secondary" onClick={() => load()} data-testid="button-card-retry"><RotateCcw size={16} aria-hidden="true" />{t('net.search.retry')}</button> : undefined}
         />
       )}
-      {state.kind === 'ok' && <Card p={state.p} at={state.at} clinicId={clinic?.id ?? null} nameRef={nameRef} />}
+      {getSelection(scope) && <VisitAuthoring key={`${scope}:${getSelection(scope)!.id}`} patientId={getSelection(scope)!.id} scope={scope} clinicId={clinic?.id ?? null}
+        patient={state.kind === 'ok' ? state.p : null} denied={state.kind === 'gone' || state.kind === 'none' || (state.kind === 'fail' && state.why !== 'error')} refresh={load}>
+        {(append, ready) => state.kind === 'ok' && <Card p={state.p} at={state.at} clinicId={clinic?.id ?? null} nameRef={nameRef} append={append} ready={ready} />}
+      </VisitAuthoring>}
     </section>
   );
 }
 
-function Card({ p, at, clinicId, nameRef }: { p: NetworkPatient; at: Date; clinicId: number | null; nameRef: React.RefObject<HTMLHeadingElement | null> }) {
+function Card({ p, at, clinicId, nameRef, append, ready }: { p: NetworkPatient; at: Date; clinicId: number | null; nameRef: React.RefObject<HTMLHeadingElement | null>; append: (visit: NetworkVisit) => void; ready: boolean }) {
   const { t } = useTranslation();
   const { locale, digitPreference } = useAmalPreferences();
   const visits = orderVisits(p.visits);
@@ -140,7 +149,7 @@ function Card({ p, at, clinicId, nameRef }: { p: NetworkPatient; at: Date; clini
         <p className="net-hint">{t('net.card.timelineDesc')} {t('net.card.refreshed', { time: formatVisitTime(at.toISOString(), digitPreference) })}</p>
         {visits.length === 0 ? <p className="net-noflags" data-testid="status-no-visits">{t('net.card.noVisits')}</p> : (
           <ol className="net-tl">
-            {visits.map((v, i) => <Visit key={i} v={v} i={i} local={v.clinicId === clinicId} locale={locale} digits={digitPreference} at={at} />)}
+            {visits.map((v, i) => <Visit key={v.visitId ?? i} v={v} i={i} local={v.clinicId === clinicId} locale={locale} digits={digitPreference} at={at} append={append} ready={ready} />)}
           </ol>
         )}
       </section>
@@ -148,7 +157,7 @@ function Card({ p, at, clinicId, nameRef }: { p: NetworkPatient; at: Date; clini
   );
 }
 
-function Visit({ v, i, local, locale, digits, at }: { v: NetworkVisit; i: number; local: boolean; locale: 'ar' | 'en'; digits: 'latn' | 'arab'; at: Date }) {
+function Visit({ v, i, local, locale, digits, at, append, ready }: { v: NetworkVisit; i: number; local: boolean; locale: 'ar' | 'en'; digits: 'latn' | 'arab'; at: Date; append: (visit: NetworkVisit) => void; ready: boolean }) {
   const { t } = useTranslation();
   const note = visitNote(v);
   const alerts = visitAlerts(v);
@@ -174,6 +183,14 @@ function Visit({ v, i, local, locale, digits, at }: { v: NetworkVisit; i: number
                 <p dir="auto" data-testid={`text-visit-note-${i}`}>{note}</p>
               </div>
             )}
+            {disclosedAddenda(v).length > 0 && <ol className="visit-addenda" aria-label={t('visitAuthor.additional')}>
+              {disclosedAddenda(v).map(a => <li key={a.id} data-testid={`visit-addendum-${a.id}`}>
+                <h4 className="net-note__h">{t('visitAuthor.additional')} · <bdi>{a.doctorName}</bdi></h4>
+                <time dateTime={a.createdAt} className="net-hint">{formatVisitDay(a.createdAt, locale, digits)} · {formatVisitTime(a.createdAt, digits)}</time>
+                <p dir="auto">{a.note}</p>
+              </li>)}
+            </ol>}
+            {mayAppend(v) && <button type="button" disabled={!ready} className="amal-btn amal-btn--secondary" data-testid={`button-addendum-${v.visitId}`} onClick={() => append(v)}>{t('visitAuthor.append')}</button>}
             {alerts.length > 0
               ? <div className="net-flags" aria-label={t('net.card.flags')}>{alerts.map((a, j) => <KeyAlertChip key={j} alert={a} testId={`chip-alert-${i}-${j}`} />)}</div>
               : <NoAlerts testId={`status-no-alerts-${i}`} />}

@@ -17,6 +17,7 @@
 - [Uncertain scheduling writes](uncertain-scheduling-writes.md) — resolve unknown outcomes by exact idempotent replay, not a read-back that can race an in-flight commit.
 - [Booking test clocks](booking-test-clocks.md) — axe needs running browser timers; audit pending Undo separately from exact client deadline assertions.
 - [Clinical authority](clinical-authority.md) — clinic demographics do not imply doctor ownership; consent readers and writers need cross-instance ordering.
+- [Visit authoring scope](visit-authoring-boundary.md) — approved online-only notes with appended corrections; shared read access does not grant writing authority.
 - [Source-note extraction](alert-conservatism.md) — uncertain clause scope favors suppression, not inferred clinical claims.
 - [Assisted patient history](assisted-patient-history.md) — approved staff-assisted patient requests, not patient accounts or general reception audit access.
 - [Import and merge authority](import-merge-boundaries.md) — filenames cannot reset event identity; exact demographics cannot transfer consent or visibility rights.

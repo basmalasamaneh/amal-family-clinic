@@ -140,6 +140,7 @@ const knownReferences = new Set([
   "patient_merge_moves.source_id", "patient_merge_moves.target_id",
   // Waitlist identity/history must not be transferred to another patient.
   "waitlist_entries.patient_id", "waitlist_offers.patient_id",
+  "clinical_write_operations.patient_id",
 ]);
 async function referenceBlockers(client: PoolClient, ids: number[]) {
   const blockers: string[] = [];
@@ -152,6 +153,7 @@ async function referenceBlockers(client: PoolClient, ids: number[]) {
   // No consent grant, denial, withdrawal or guardian evidence is reattributed.
   const { rows: [blocked] } = await client.query(`SELECT
     EXISTS(SELECT 1 FROM operational.patient_consents WHERE patient_id=ANY($1)) AS consent,
+    EXISTS(SELECT 1 FROM operational.clinical_write_operations WHERE patient_id=ANY($1)) AS authored,
     (EXISTS(SELECT 1 FROM operational.import_rows WHERE suggested_patient_id=ANY($1) OR confirmed_patient_id=ANY($1))
       OR EXISTS(SELECT 1 FROM operational.import_rows r,unnest($1::integer[]) AS selected(patient_id)
         WHERE jsonb_path_exists(r.staging,'$.**.patientId ? (@ == $id)',jsonb_build_object('id',selected.patient_id)))) AS imported,
@@ -169,7 +171,7 @@ async function referenceBlockers(client: PoolClient, ids: number[]) {
     EXISTS(SELECT 1 FROM operational.appointment_holds WHERE patient_id=ANY($1) AND expires_at>clock_timestamp()) AS held,
     EXISTS(SELECT 1 FROM operational.patients WHERE merged_into_id=ANY($1)) AS alias`, [ids]);
   if (blocked.consent) blockers.push("MERGE_CONSENT");
-  if (blocked.imported || blocked.synced || blocked.held || blocked.alias) blockers.push("MERGE_UNSAFE");
+  if (blocked.imported || blocked.synced || blocked.held || blocked.alias || blocked.authored) blockers.push("MERGE_UNSAFE");
   const { rows: [waitlist] } = await client.query("SELECT to_regclass('operational.waitlist_entries') IS NOT NULL AS ready");
   if (waitlist.ready) {
     const { rowCount } = await client.query("SELECT 1 FROM operational.waitlist_entries WHERE patient_id=ANY($1::integer[]) LIMIT 1", [ids]);

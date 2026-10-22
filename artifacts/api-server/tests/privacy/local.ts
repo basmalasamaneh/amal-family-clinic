@@ -30,6 +30,7 @@ const specializedSuites = {
   admin: ["admin-users", "admin-directory", "network-health"],
   kpis: ["kpis-aggregates", "kpis-api"],
   auth: ["auth"],
+  clinical: ["clinical-authoring"],
 } as const;
 type SpecializedSuite = keyof typeof specializedSuites;
 const specializedCommands = Object.keys(specializedSuites).map(key => `audit:${key}`);
@@ -116,6 +117,7 @@ try {
     // Pending additive migration is installed ONLY in this newly owned database.
     await setup.query("BEGIN");
     await setup.query(readFileSync(join(root, "lib/db/migrations/0018_network_coordination.sql"), "utf8"));
+    await setup.query(readFileSync(join(root, "lib/db/migrations/0019_clinical_authoring.sql"), "utf8"));
     await setup.query("COMMIT");
     if (specializedAudit) {
       stage = "initialize approved isolated workbook baseline";

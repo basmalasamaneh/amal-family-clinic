@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { Router, type IRouter, type RequestHandler, type ErrorRequestHandler } from "express";
-import { authenticate, requireRoles } from "../lib/auth";
+import { authenticate, csrf, requireRoles } from "../lib/auth";
+import { createDoctorVisit, createVisitAddendum, visitAuthoringAccess } from "../doctor/authoring";
 import { auditDenied, idSchema } from "../consent/service";
 import { doctorAudit, doctorDay, doctorPatient, doctorPrivacy } from "../doctor/service";
 
@@ -12,6 +13,15 @@ const prepare: RequestHandler = (_req, res, next) => {
 };
 router.get("/doctor/day", prepare, authenticate, requireRoles("doctor"), async (req, res) => {
   res.json(await doctorDay(req.auth!, req.query));
+});
+router.get("/doctor/patients/:id/visit-authoring", prepare, authenticate, requireRoles("doctor"), async (req, res) => {
+  res.json(await visitAuthoringAccess(req.auth!, idSchema.parse(req.params.id)));
+});
+router.post("/doctor/patients/:id/visits", prepare, authenticate, requireRoles("doctor"), csrf, async (req, res) => {
+  res.status(201).json(await createDoctorVisit(req.auth!, idSchema.parse(req.params.id), req.body));
+});
+router.post("/doctor/patients/:id/visits/:visitId/addenda", prepare, authenticate, requireRoles("doctor"), csrf, async (req, res) => {
+  res.status(201).json(await createVisitAddendum(req.auth!, idSchema.parse(req.params.id), idSchema.parse(req.params.visitId), req.body));
 });
 router.get("/doctor/patients/:id", prepare, authenticate, requireRoles("doctor"), async (req, res) => {
   res.json(await doctorPatient(req.auth!, idSchema.parse(req.params.id), req.query));

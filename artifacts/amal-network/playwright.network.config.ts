@@ -3,7 +3,7 @@ import { existsSync } from 'node:fs';
 
 export default defineConfig({
   testDir: './tests',
-  testMatch: ['network-live.spec.ts', 'network.spec.ts'],
+  testMatch: ['network-live.spec.ts', 'network.spec.ts', 'visit-authoring.browser.spec.ts'],
   workers: 1, retries: 0, forbidOnly: true, timeout: 90_000,
   outputDir: '../../generated-artifacts/network/results',
   reporter: [['list'], ['json', { outputFile: '../../generated-artifacts/network/results.json' }]],

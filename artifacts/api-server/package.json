@@ -33,6 +33,8 @@
     "imports:test": "tsx --test --test-concurrency=1 tests/import*.test.ts",
     "merge:test": "tsx --test --test-concurrency=1 tests/merge*.test.ts",
     "consent:migrate": "tsx scripts/consent-migrate.ts",
+    "clinical:migrate": "tsx scripts/clinical-migrate.ts",
+    "clinical:test": "tsx --test --test-concurrency=1 tests/clinical-authoring.test.ts",
     "consent:test": "tsx --test tests/consent-policy.test.ts tests/consent-api.test.ts",
     "privacy:test": "tsx --test --test-concurrency=1 tests/privacy-api.test.ts tests/consent-policy.test.ts",
     "alerts:migrate": "tsx scripts/alerts-migrate.ts",

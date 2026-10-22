@@ -32,6 +32,35 @@
       }
     },
     "schemas": {
+      "VisitAuthoringAccess": {
+        "type": "object", "additionalProperties": false,
+        "required": ["canCreate", "clinicId", "doctorId"],
+        "properties": { "canCreate": {"type":"boolean"}, "clinicId":{"type":"integer"}, "doctorId":{"type":"integer"} }
+      },
+      "ClinicalVisitInput": {
+        "type":"object", "additionalProperties":false, "required":["clientOpId","seenAt","note"],
+        "properties":{
+          "clientOpId":{"type":"string","minLength":1,"maxLength":200},
+          "seenAt":{"type":"string","format":"date-time","description":"UTC instant, at most five minutes ahead of server time."},
+          "note":{"type":"string","minLength":1,"maxLength":10000,"pattern":"\\S"},
+          "appointmentId":{"type":"integer","minimum":1,"maximum":2147483647}
+        }
+      },
+      "VisitAddendumInput": {
+        "type":"object", "additionalProperties":false, "required":["clientOpId","note"],
+        "properties":{
+          "clientOpId":{"type":"string","minLength":1,"maxLength":200},
+          "note":{"type":"string","minLength":1,"maxLength":10000,"pattern":"\\S"}
+        }
+      },
+      "ClinicalVisitReceipt": {
+        "type":"object", "additionalProperties":false, "required":["visitId","createdAt"],
+        "properties":{"visitId":{"type":"integer"},"createdAt":{"type":"string","format":"date-time"}}
+      },
+      "VisitAddendum": {
+        "type":"object","additionalProperties":false,"required":["id","createdAt","doctorId","doctorName","note"],
+        "properties":{"id":{"type":"integer"},"createdAt":{"type":"string","format":"date-time"},"doctorId":{"type":"integer"},"doctorName":{"type":"string"},"note":{"type":"string"}}
+      },
       "CoordinationMetric": {
         "type": "object", "additionalProperties": false,
         "required": ["value", "sampleCount", "coverage"],
@@ -1788,6 +1817,9 @@
           "visibility"
         ],
         "properties": {
+          "visitId": {"type":"integer"},
+          "canAddendum": {"type":"boolean"},
+          "addenda": {"type":"array","items":{"$ref":"#/components/schemas/VisitAddendum"}},
           "clinicId": {
             "type": "integer",
             "minimum": 1
@@ -1830,7 +1862,7 @@
             }
           }
         },
-        "description": "Basic omits complaint and keyAlerts entirely. Clinical includes existing authorized notes/alerts. UTC instant; legacy date-only visits use Asia/Hebron start-of-day, not a claimed known visit time."
+        "description": "Basic omits complaint, keyAlerts, alerts, visitId, canAddendum and addenda entirely. Clinical includes authorized original notes and immutable addenda. canAddendum requires the requesting doctor to be the original author in the same clinic with an existing trusted own-patient relationship. UTC instant; legacy date-only visits use Asia/Hebron start-of-day, not a claimed known visit time."
       },
       "NetworkPatient": {
         "type": "object",
@@ -8090,6 +8122,32 @@
     }
   },
   "paths": {
+    "/doctor/patients/{patientId}/visit-authoring": {
+      "get": {
+        "operationId":"getVisitAuthoringAccess","tags":["doctor"],"x-roles":["doctor"],"x-implementation":"real",
+        "security":[{"sessionCookie":[]}],
+        "parameters":[{"name":"patientId","in":"path","required":true,"schema":{"type":"integer","minimum":1}}],
+        "responses":{"200":{"description":"Fresh own-doctor authority only; no clinical data.","content":{"application/json":{"schema":{"$ref":"#/components/schemas/VisitAuthoringAccess"},"example":{"canCreate":true,"clinicId":1,"doctorId":1}}}},"401":{"description":"Unauthorized"},"403":{"description":"Forbidden"}}
+      }
+    },
+    "/doctor/patients/{patientId}/visits": {
+      "post": {
+        "operationId":"createDoctorVisit","tags":["doctor"],"x-roles":["doctor"],"x-implementation":"real",
+        "security":[{"sessionCookie":[],"csrfToken":[]}],
+        "parameters":[{"name":"patientId","in":"path","required":true,"schema":{"type":"integer","minimum":1}}],
+        "requestBody":{"required":true,"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ClinicalVisitInput"},"example":{"clientOpId":"visit-unique-operation","seenAt":"2026-01-01T10:00:00.000Z","note":"Visit note recorded by the treating doctor."}}}},
+        "responses":{"201":{"description":"Durable receipt, also returned on exact replay.","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ClinicalVisitReceipt"},"example":{"visitId":1,"createdAt":"2026-01-01T10:01:00.000Z"}}}},"400":{"description":"Invalid input"},"401":{"description":"Unauthorized"},"403":{"description":"Forbidden"},"404":{"description":"Own relationship not found"},"409":{"description":"Operation payload conflict"}}
+      }
+    },
+    "/doctor/patients/{patientId}/visits/{visitId}/addenda": {
+      "post": {
+        "operationId":"createVisitAddendum","tags":["doctor"],"x-roles":["doctor"],"x-implementation":"real",
+        "security":[{"sessionCookie":[],"csrfToken":[]}],
+        "parameters":[{"name":"patientId","in":"path","required":true,"schema":{"type":"integer","minimum":1}},{"name":"visitId","in":"path","required":true,"schema":{"type":"integer","minimum":1}}],
+        "requestBody":{"required":true,"content":{"application/json":{"schema":{"$ref":"#/components/schemas/VisitAddendumInput"},"example":{"clientOpId":"addendum-unique-operation","note":"Correction appended without changing the original."}}}},
+        "responses":{"201":{"description":"Immutable appended correction receipt.","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ClinicalVisitReceipt"},"example":{"visitId":1,"createdAt":"2026-01-01T10:02:00.000Z"}}}},"400":{"description":"Invalid input"},"401":{"description":"Unauthorized"},"403":{"description":"Forbidden"},"404":{"description":"Own original visit not found"},"409":{"description":"Operation payload conflict"}}
+      }
+    },
     "/network/coordination/access": {
       "get": {
         "operationId": "getNetworkCoordinationAccess",

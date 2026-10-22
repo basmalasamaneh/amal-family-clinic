@@ -5,6 +5,60 @@
  * Amal Network Section 12. Authentication, appointments and clinic-local patient CRUD/search are implemented; other domain services remain contracts/mocks. UTC ISO instants, required date-only DOB, Asia/Hebron display. Local patient endpoints return demographics only to doctors/front-desk, never clinical history or admin patient access. Separate network services require consent and exclude Lite clinics. Lists use opaque cursor plus limit (1–100, default 25); null nextCursor ends pagination. Administration endpoints are implemented against operational tables, with account deactivation and transactional audit. Network health reports persisted receipt-time telemetry with explicit unknown queue coverage.
  * OpenAPI spec version: 0.2.0
  */
+export interface VisitAuthoringAccess {
+  canCreate: boolean;
+  clinicId: number;
+  doctorId: number;
+}
+
+export interface ClinicalVisitInput {
+  /**
+     * @minLength 1
+     * @maxLength 200
+     */
+  clientOpId: string;
+  /** UTC instant, at most five minutes ahead of server time. */
+  seenAt: string;
+  /**
+     * @minLength 1
+     * @maxLength 10000
+     * @pattern \S
+     */
+  note: string;
+  /**
+     * @minimum 1
+     * @maximum 2147483647
+     */
+  appointmentId?: number;
+}
+
+export interface VisitAddendumInput {
+  /**
+     * @minLength 1
+     * @maxLength 200
+     */
+  clientOpId: string;
+  /**
+     * @minLength 1
+     * @maxLength 10000
+     * @pattern \S
+     */
+  note: string;
+}
+
+export interface ClinicalVisitReceipt {
+  visitId: number;
+  createdAt: string;
+}
+
+export interface VisitAddendum {
+  id: number;
+  createdAt: string;
+  doctorId: number;
+  doctorName: string;
+  note: string;
+}
+
 export type CoordinationMetricCoverage = typeof CoordinationMetricCoverage[keyof typeof CoordinationMetricCoverage];
 
 
@@ -1141,9 +1195,12 @@ export const NetworkVisitVisibility = {
 } as const;
 
 /**
- * Basic omits complaint and keyAlerts entirely. Clinical includes existing authorized notes/alerts. UTC instant; legacy date-only visits use Asia/Hebron start-of-day, not a claimed known visit time.
+ * Basic omits complaint, keyAlerts, alerts, visitId, canAddendum and addenda entirely. Clinical includes authorized original notes and immutable addenda. canAddendum requires the requesting doctor to be the original author in the same clinic with an existing trusted own-patient relationship. UTC instant; legacy date-only visits use Asia/Hebron start-of-day, not a claimed known visit time.
  */
 export interface NetworkVisit {
+  visitId?: number;
+  canAddendum?: boolean;
+  addenda?: VisitAddendum[];
   /** @minimum 1 */
   clinicId: number;
   /** @minimum 1 */

@@ -8,6 +8,78 @@
 import * as zod from 'zod';
 
 
+
+
+
+export const GetVisitAuthoringAccessParams = zod.object({
+  "patientId": zod.coerce.number().int().min(1)
+}).strict()
+
+export const GetVisitAuthoringAccessResponse = zod.object({
+  "canCreate": zod.boolean(),
+  "clinicId": zod.number().int(),
+  "doctorId": zod.number().int()
+}).strict()
+
+
+
+
+
+export const CreateDoctorVisitParams = zod.object({
+  "patientId": zod.coerce.number().int().min(1)
+}).strict()
+
+export const createDoctorVisitBodyClientOpIdMax = 200;
+
+export const createDoctorVisitBodyNoteMax = 10000;
+
+
+export const createDoctorVisitBodyNoteRegExp = new RegExp('\\S');
+export const createDoctorVisitBodyAppointmentIdMax = 2147483647;
+
+
+
+export const CreateDoctorVisitBody = zod.object({
+  "clientOpId": zod.string().min(1).max(createDoctorVisitBodyClientOpIdMax),
+  "seenAt": zod.coerce.date().describe('UTC instant, at most five minutes ahead of server time.'),
+  "note": zod.string().min(1).max(createDoctorVisitBodyNoteMax).regex(createDoctorVisitBodyNoteRegExp),
+  "appointmentId": zod.number().int().min(1).max(createDoctorVisitBodyAppointmentIdMax).optional()
+}).strict()
+
+export const CreateDoctorVisitResponse = zod.object({
+  "visitId": zod.number().int(),
+  "createdAt": zod.coerce.date()
+}).strict()
+
+
+
+
+
+
+export const CreateVisitAddendumParams = zod.object({
+  "patientId": zod.coerce.number().int().min(1),
+  "visitId": zod.coerce.number().int().min(1)
+}).strict()
+
+export const createVisitAddendumBodyClientOpIdMax = 200;
+
+export const createVisitAddendumBodyNoteMax = 10000;
+
+
+export const createVisitAddendumBodyNoteRegExp = new RegExp('\\S');
+
+
+export const CreateVisitAddendumBody = zod.object({
+  "clientOpId": zod.string().min(1).max(createVisitAddendumBodyClientOpIdMax),
+  "note": zod.string().min(1).max(createVisitAddendumBodyNoteMax).regex(createVisitAddendumBodyNoteRegExp)
+}).strict()
+
+export const CreateVisitAddendumResponse = zod.object({
+  "visitId": zod.number().int(),
+  "createdAt": zod.coerce.date()
+}).strict()
+
+
 /**
  * Doctor-only fresh explicit operational scope capability. No query parameters. Does not grant clinical access.
  */
@@ -1616,6 +1688,15 @@ export const LookupNetworkResponse = zod.object({
   "identityVerified": zod.literal(false),
   "effectiveConsentLevel": zod.enum(['none', 'basic', 'clinical']).describe('Latest effective server consent; withdrawn or absent grants are none. Independent of local clinical authority and per-visit visibility. Returned only for already-permitted candidates.'),
   "visits": zod.array(zod.object({
+  "visitId": zod.number().int().optional(),
+  "canAddendum": zod.boolean().optional(),
+  "addenda": zod.array(zod.object({
+  "id": zod.number().int(),
+  "createdAt": zod.coerce.date(),
+  "doctorId": zod.number().int(),
+  "doctorName": zod.string(),
+  "note": zod.string()
+}).strict()).optional(),
   "clinicId": zod.number().int().min(1),
   "doctorId": zod.number().int().min(1),
   "clinicName": zod.string(),
@@ -1642,7 +1723,7 @@ export const LookupNetworkResponse = zod.object({
   "disclaimerKey": zod.string(),
   "crossClinicDisclaimerKey": zod.string().nullable()
 }).strict().describe('Unconfirmed source-note mention, not medical advice or a current medication list. Show original untranslated excerpt and disclaimers adjacent to every chip; never render legacy keyAlerts alone. Null rule/offset fields identify manual or legacy evidence.')).optional()
-}).strict().describe('Basic omits complaint and keyAlerts entirely. Clinical includes existing authorized notes/alerts. UTC instant; legacy date-only visits use Asia/Hebron start-of-day, not a claimed known visit time.')).max(lookupNetworkResponseItemsItemVisitsMax).describe('Newest 100 visible visits at most, ordered by visit date then internal visit ID descending; older visits are omitted without totals.')
+}).strict().describe('Basic omits complaint, keyAlerts, alerts, visitId, canAddendum and addenda entirely. Clinical includes authorized original notes and immutable addenda. canAddendum requires the requesting doctor to be the original author in the same clinic with an existing trusted own-patient relationship. UTC instant; legacy date-only visits use Asia/Hebron start-of-day, not a claimed known visit time.')).max(lookupNetworkResponseItemsItemVisitsMax).describe('Newest 100 visible visits at most, ordered by visit date then internal visit ID descending; older visits are omitted without totals.')
 }).strict().describe('Authorized patient projection, not verified identity. Network search candidates and exact-ID own patients share policy; same-name patients remain separate. Own patients may have no visits. No phone, DOB, hidden counts or hidden-source metadata.')),
   "nextCursor": zod.string().nullable()
 }).strict()
@@ -3304,6 +3385,15 @@ export const GetDoctorDayResponse = zod.object({
   "identityVerified": zod.literal(false),
   "effectiveConsentLevel": zod.enum(['none', 'basic', 'clinical']).describe('Latest effective server consent; withdrawn or absent grants are none. Independent of local clinical authority and per-visit visibility. Returned only for already-permitted candidates.'),
   "visits": zod.array(zod.object({
+  "visitId": zod.number().int().optional(),
+  "canAddendum": zod.boolean().optional(),
+  "addenda": zod.array(zod.object({
+  "id": zod.number().int(),
+  "createdAt": zod.coerce.date(),
+  "doctorId": zod.number().int(),
+  "doctorName": zod.string(),
+  "note": zod.string()
+}).strict()).optional(),
   "clinicId": zod.number().int().min(1),
   "doctorId": zod.number().int().min(1),
   "clinicName": zod.string(),
@@ -3330,7 +3420,7 @@ export const GetDoctorDayResponse = zod.object({
   "disclaimerKey": zod.string(),
   "crossClinicDisclaimerKey": zod.string().nullable()
 }).strict().describe('Unconfirmed source-note mention, not medical advice or a current medication list. Show original untranslated excerpt and disclaimers adjacent to every chip; never render legacy keyAlerts alone. Null rule/offset fields identify manual or legacy evidence.')).optional()
-}).strict().describe('Basic omits complaint and keyAlerts entirely. Clinical includes existing authorized notes/alerts. UTC instant; legacy date-only visits use Asia/Hebron start-of-day, not a claimed known visit time.')).max(getDoctorDayResponseItemsItemPatientVisitsMax).describe('Newest 100 visible visits at most, ordered by visit date then internal visit ID descending; older visits are omitted without totals.')
+}).strict().describe('Basic omits complaint, keyAlerts, alerts, visitId, canAddendum and addenda entirely. Clinical includes authorized original notes and immutable addenda. canAddendum requires the requesting doctor to be the original author in the same clinic with an existing trusted own-patient relationship. UTC instant; legacy date-only visits use Asia/Hebron start-of-day, not a claimed known visit time.')).max(getDoctorDayResponseItemsItemPatientVisitsMax).describe('Newest 100 visible visits at most, ordered by visit date then internal visit ID descending; older visits are omitted without totals.')
 }).strict().describe('Authorized patient projection, not verified identity. Network search candidates and exact-ID own patients share policy; same-name patients remain separate. Own patients may have no visits. No phone, DOB, hidden counts or hidden-source metadata.')
 }).strict()),
   "nextCursor": zod.string().nullable()
@@ -3366,6 +3456,15 @@ export const GetDoctorPatientResponse = zod.object({
   "identityVerified": zod.literal(false),
   "effectiveConsentLevel": zod.enum(['none', 'basic', 'clinical']).describe('Latest effective server consent; withdrawn or absent grants are none. Independent of local clinical authority and per-visit visibility. Returned only for already-permitted candidates.'),
   "visits": zod.array(zod.object({
+  "visitId": zod.number().int().optional(),
+  "canAddendum": zod.boolean().optional(),
+  "addenda": zod.array(zod.object({
+  "id": zod.number().int(),
+  "createdAt": zod.coerce.date(),
+  "doctorId": zod.number().int(),
+  "doctorName": zod.string(),
+  "note": zod.string()
+}).strict()).optional(),
   "clinicId": zod.number().int().min(1),
   "doctorId": zod.number().int().min(1),
   "clinicName": zod.string(),
@@ -3392,7 +3491,7 @@ export const GetDoctorPatientResponse = zod.object({
   "disclaimerKey": zod.string(),
   "crossClinicDisclaimerKey": zod.string().nullable()
 }).strict().describe('Unconfirmed source-note mention, not medical advice or a current medication list. Show original untranslated excerpt and disclaimers adjacent to every chip; never render legacy keyAlerts alone. Null rule/offset fields identify manual or legacy evidence.')).optional()
-}).strict().describe('Basic omits complaint and keyAlerts entirely. Clinical includes existing authorized notes/alerts. UTC instant; legacy date-only visits use Asia/Hebron start-of-day, not a claimed known visit time.')).max(getDoctorPatientResponseVisitsMax).describe('Newest 100 visible visits at most, ordered by visit date then internal visit ID descending; older visits are omitted without totals.')
+}).strict().describe('Basic omits complaint, keyAlerts, alerts, visitId, canAddendum and addenda entirely. Clinical includes authorized original notes and immutable addenda. canAddendum requires the requesting doctor to be the original author in the same clinic with an existing trusted own-patient relationship. UTC instant; legacy date-only visits use Asia/Hebron start-of-day, not a claimed known visit time.')).max(getDoctorPatientResponseVisitsMax).describe('Newest 100 visible visits at most, ordered by visit date then internal visit ID descending; older visits are omitted without totals.')
 }).strict().describe('Authorized patient projection, not verified identity. Network search candidates and exact-ID own patients share policy; same-name patients remain separate. Own patients may have no visits. No phone, DOB, hidden counts or hidden-source metadata.')
 
 

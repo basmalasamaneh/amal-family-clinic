@@ -215,6 +215,7 @@ export async function withdrawConsent(auth: Auth, consentId: number, body: unkno
 }
 
 interface LookupRow extends VisitSource {
+  recorded_seen_at: Date | null;
   visit_day: string;
   patient_id: number; patient_name: string; visit_id: number; source_mode: string;
   own_patient: boolean; consent_level: "none" | "basic" | "clinical"; consent_withdrawn_at: Date | null;
@@ -271,6 +272,14 @@ export async function projectNetworkPatients(
     )
     SELECT p.patient_id,p.patient_name,
       v.visit_id,v.clinic_id,v.doctor_id,v.diagnosis_notes,
+      v.seen_at AS recorded_seen_at,
+      (p.own_patient AND v.clinic_id=$1 AND v.doctor_id=$2) AS can_addendum,
+      COALESCE((SELECT jsonb_agg(jsonb_build_object(
+        'id',a.id,'createdAt',to_char(a.created_at AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'),
+        'doctorId',a.doctor_id,'doctorName',d.doctor_name,'note',a.note) ORDER BY a.id)
+        FROM operational.visit_addenda a JOIN operational.doctors d
+          ON d.doctor_id=a.doctor_id AND d.clinic_id=a.clinic_id
+        WHERE a.visit_id=v.visit_id),'[]'::jsonb) AS addenda,
       v.visit_date::text AS visit_day,
       v.clinic_name,v.source_mode,v.doctor_name,
       p.consent_level,p.consent_withdrawn_at,p.consent_visible,p.own_patient,
@@ -321,7 +330,7 @@ export async function projectNetworkPatients(
       // Legacy dates have no recorded time: use documented local start-of-day.
       // Already-UTC scheduling instants are never passed through this conversion.
       entry.patient.visits.push(projectVisit({
-        ...row, seen_at: fromZonedTime(`${row.visit_day}T00:00:00`, "Asia/Hebron"),
+        ...row, seen_at: row.recorded_seen_at ?? fromZonedTime(`${row.visit_day}T00:00:00`, "Asia/Hebron"),
       }, visibility));
       if (row.clinic_id !== auth.clinicId) entry.disclosures.push({ row, visibility });
     }

@@ -65,17 +65,25 @@ export interface VisitSource {
   seen_at: Date; diagnosis_notes: string; key_alerts: string[];
   alerts?: AlertSource[]; visit_id?: number; patient_id?: number; visit_day?: string;
   cross_clinic?: boolean;
+  can_addendum?: boolean;
+  addenda?: { id: number; createdAt: string; doctorId: number; doctorName: string; note: string }[];
 }
 export interface NetworkVisit {
   clinicId: number; doctorId: number; clinicName: string; doctorName: string;
   seenAt: string; visibility: "basic" | "clinical"; complaint?: string; keyAlerts?: string[];
   alerts?: AlertChip[];
+  visitId?: number;
+  canAddendum?: boolean;
+  addenda?: NonNullable<VisitSource["addenda"]>;
 }
 export function projectVisit(row: VisitSource, visibility: "basic" | "clinical"): NetworkVisit {
   return {
     clinicId: row.clinic_id, doctorId: row.doctor_id, clinicName: row.clinic_name, doctorName: row.doctor_name,
     seenAt: row.seen_at.toISOString(), visibility,
     ...(visibility === "clinical" ? { complaint: row.diagnosis_notes, keyAlerts: row.key_alerts } : {}),
+    ...(visibility === "clinical" && row.visit_id !== undefined ? {
+      visitId: row.visit_id, canAddendum: row.can_addendum ?? false, addenda: row.addenda ?? [],
+    } : {}),
     ...(visibility === "clinical" && row.alerts ? { alerts: row.alerts.map(a => ({
       kind: a.kind, labelKey: a.label, labelParams: a.label_params, label: renderAlert(a.label, a.label_params),
       ruleId: a.extractor_rule_id, dictionaryVersion: a.dictionary_version,

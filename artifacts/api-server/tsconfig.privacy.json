@@ -4,7 +4,7 @@
     "rootDir": ".",
     "tsBuildInfoFile": ".privacy.tsbuildinfo"
   },
-  "include": ["src", "tests/privacy/**/*.ts", "tests/privacy-api.test.ts", "tests/consent-api.test.ts", "tests/consent-policy.test.ts", "tests/deployment-health.test.ts"],
+  "include": ["src", "tests/privacy/**/*.ts", "tests/privacy-api.test.ts", "tests/consent-api.test.ts", "tests/consent-policy.test.ts", "tests/clinical-authoring.test.ts", "tests/deployment-health.test.ts"],
   "references": [
     { "path": "../../scripts" },
     { "path": "../../lib/db" },
