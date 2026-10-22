@@ -793,6 +793,7 @@
 }
 .shell-top__main {
   display: grid;
+  text-align: start;
   grid-template-columns: minmax(260px, 1.1fr) minmax(240px, 1fr) auto auto;
   grid-template-areas: "clinic search walkin utilities";
   align-items: center;
@@ -808,7 +809,8 @@
   gap: 4px;
 }
 .shell-top .shell-clinic__label { line-height: 1.4; }
-.shell-top .shell-clinic__name { line-height: 1.5; white-space: normal; }
+.shell-top .shell-clinic__name { line-height: 1.5; white-space: normal; align-self: flex-start; max-inline-size: 100%; }
+.shell-top .shell-search__field input { direction: inherit; text-align: start; }
 .shell-top .shell-clinic__select {
   inline-size: 100%;
   max-inline-size: none;
