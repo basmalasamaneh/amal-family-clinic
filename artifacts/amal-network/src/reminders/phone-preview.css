@@ -1,0 +1,16 @@
+/* A local demonstration, using the existing Amal light/dark palette. */
+.rem-phone-overlay { position: fixed; inset: 0; z-index: 80; background: color-mix(in srgb, var(--amal-text) 35%, transparent); }
+.rem-phone-dialog { position: fixed; inset-block-start: 50%; inset-inline-start: 50%; transform: translate(-50%, -50%); z-index: 81; inline-size: min(440px, calc(100vw - 24px)); max-block-size: calc(100dvh - 24px); overflow-y: auto; box-sizing: border-box; padding: 22px; border: 1px solid var(--amal-border); border-radius: 24px; background: var(--amal-surface); color: var(--amal-text); overflow-wrap: anywhere; }
+[dir="rtl"].rem-phone-dialog { transform: translate(50%, -50%); }
+.rem-phone-dialog h2 { margin-block: 0 8px; font-size: 20px; }
+.rem-phone-note { color: var(--amal-muted); font-size: var(--amal-text-sm); line-height: 1.7; }
+.rem-phone { margin-block: 18px; border: 5px solid var(--amal-border); border-radius: 30px; overflow: hidden; background: var(--amal-bg); }
+.rem-phone__header { display: flex; align-items: center; gap: 10px; padding: 18px; border-block-end: 1px solid var(--amal-border); background: var(--amal-surface); font-weight: 700; }
+.rem-phone__screen { min-block-size: 180px; padding: 18px; }
+.rem-phone__bubble { margin: 0; padding: 15px; border-radius: 18px 18px 4px 18px; background: var(--amal-primary-soft); color: var(--amal-primary-text); white-space: pre-wrap; animation: rem-phone-enter 240ms ease-out; }
+.rem-phone__pending { animation: rem-phone-pulse 650ms ease-in-out infinite alternate; color: var(--amal-muted); }
+.rem-phone-result { min-block-size: 48px; font-weight: 600; font-size: var(--amal-text-sm); }
+.rem-phone-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+@keyframes rem-phone-enter { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes rem-phone-pulse { from { opacity: .4; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .rem-phone__bubble, .rem-phone__pending { animation: none; } }

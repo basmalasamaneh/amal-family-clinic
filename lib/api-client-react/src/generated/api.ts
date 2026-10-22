@@ -137,6 +137,7 @@ import type {
   PullSyncParams,
   ReceptionContext,
   ReminderClinicPreference,
+  ReminderClinicPreferenceInput,
   ReminderLog,
   ReminderPatientPreference,
   ResolutionInput,
@@ -673,7 +674,7 @@ export const getListReminderLogUrl = (params: ListReminderLogParams,) => {
 }
 
 /**
- * Simulation only; own-clinic admin/front-desk metadata, without patient identifiers. Date filters select intended due instants.
+ * Simulation only; own-clinic administrator, front-desk or currently delegated home-clinic doctor metadata, without patient identifiers. Doctor role alone and network-coordinator scope grant no access. Cross-clinic access is forbidden. Date filters select intended due instants. Waitlist notification visibility remains front-desk only.
  */
 export const listReminderLog = async (params: ListReminderLogParams, options?: Parameters<typeof customFetch>[1]): Promise<ReminderLog> => {
 
@@ -746,6 +747,9 @@ export const getGetReminderClinicPreferenceUrl = (clinicId: number,) => {
   return `/api/reminders/clinics/${clinicId}`
 }
 
+/**
+ * Own-clinic administrator or front-desk, or doctor with a current clinic_managers grant for their current home clinic. Returns canManage for UI gating. Doctor role alone and network-coordinator scope grant no authority; other clinics are forbidden. Fresh user/session and delegation are checked transactionally.
+ */
 export const getReminderClinicPreference = async (clinicId: number, options?: Parameters<typeof customFetch>[1]): Promise<ReminderClinicPreference> => {
 
   return customFetch<ReminderClinicPreference>(getGetReminderClinicPreferenceUrl(clinicId),
@@ -817,8 +821,11 @@ export const getSetReminderClinicPreferenceUrl = (clinicId: number,) => {
   return `/api/reminders/clinics/${clinicId}`
 }
 
+/**
+ * Own-clinic administrator or currently delegated home-clinic doctor only; front-desk cannot toggle. No network-coordinator authority. Disabling cancels pending reminders; enabling never backfills or revives cancelled reminders. Simulator only; no actual SMS.
+ */
 export const setReminderClinicPreference = async (clinicId: number,
-    reminderClinicPreference: ReminderClinicPreference, options?: Parameters<typeof customFetch>[1]): Promise<ReminderClinicPreference> => {
+    reminderClinicPreferenceInput: ReminderClinicPreferenceInput, options?: Parameters<typeof customFetch>[1]): Promise<ReminderClinicPreference> => {
 
     const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
@@ -839,7 +846,7 @@ return customFetch<ReminderClinicPreference>(getSetReminderClinicPreferenceUrl(c
     ...options,
     method: 'PUT',
     headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
-    body: JSON.stringify(reminderClinicPreference)
+    body: JSON.stringify(reminderClinicPreferenceInput)
   }
 );}
 
@@ -877,9 +884,9 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type SetReminderClinicPreferenceMutationResult = NonNullable<Awaited<ReturnType<typeof setReminderClinicPreference>>>
-    export type SetReminderClinicPreferenceMutationBody = BodyType<ReminderClinicPreference>
+    export type SetReminderClinicPreferenceMutationBody = BodyType<ReminderClinicPreferenceInput>
     export type SetReminderClinicPreferenceMutationError = ErrorType<unknown>
-    export type SetReminderClinicPreferenceMutationVariables = {clinicId: number;data: BodyType<ReminderClinicPreference>}
+    export type SetReminderClinicPreferenceMutationVariables = {clinicId: number;data: BodyType<ReminderClinicPreferenceInput>}
 
     export const useSetReminderClinicPreference = <TError = ErrorType<unknown>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof setReminderClinicPreference>>, TError,SetReminderClinicPreferenceMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}

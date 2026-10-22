@@ -33,6 +33,7 @@ import { UsersDevicesPage } from '@/admin/UsersDevicesPage';
 import { ClinicsDoctorsPage } from '@/admin/ClinicsDoctorsPage';
 import { AuditPage } from '@/admin/AuditPage';
 import { MessagesPage } from '@/reminders/MessagesPage';
+import { useReminderAccess } from '@/reminders/use-reminder-access';
 import { WaitlistPage } from '@/waitlist/WaitlistPage';
 import { DeveloperToolsPage } from '@/admin/DeveloperToolsPage';
 import { clearSelection as clearNetworkSelection } from '@/network/model';
@@ -52,7 +53,7 @@ type NavigationItem = ShellRoute & { schedule?: boolean; labelKey?: string; pati
 const DOCTOR_NAV_GROUPS = [
   { group: 'doctorClinical', ids: ['myDay', 'networkSearch'] },
   { group: 'doctorRecords', ids: ['import', 'duplicates'] },
-  { group: 'doctorPrivacy', ids: ['adoption', 'coordination', 'privacy'] },
+  { group: 'doctorPrivacy', ids: ['adoption', 'coordination', 'messages', 'privacy'] },
 ];
 const DOCTOR_NAV_LABELS: Record<string, string> = {
   networkSearch: 'findPatient', duplicates: 'reviewDuplicates', adoption: 'networkParticipation',
@@ -77,18 +78,19 @@ function AppShellContent({ identity, fixture, onRefresh, onLogout }: Props) {
   const role = isKnownRole(identity.role) ? identity.role : null;
   const coordinationActive = location.replace(/\/+$/, '') === '/doctor/coordination';
   const coordination = useCoordination(identity, fixture, coordinationActive);
+  const reminders = useReminderAccess(identity, fixture);
   // Expiry/unmount must also clear transient selections, not just explicit logout.
   useEffect(() => () => { clearNetworkSelection(); clearConsentSelection(); }, [identity.id, role]);
-  const items = useMemo<NavigationItem[]>(() => routesFor(role, coordination.allowed)
+  const items = useMemo<NavigationItem[]>(() => routesFor(role, coordination.allowed, reminders.allowed)
     .filter((r) => !r.navHidden && !(role === 'front-desk' && ['week', 'newBooking', 'daySheet'].includes(r.id))
       && !(role === 'doctor' && r.id === 'patientCard'))
     .map((r) => role === 'doctor' ? { ...r, labelKey: DOCTOR_NAV_LABELS[r.id], patientSearch: r.id === 'networkSearch' }
-      : role === 'front-desk' && r.id === 'today' ? { ...r, schedule: true } : r), [role, coordination.allowed]);
+      : role === 'front-desk' && r.id === 'today' ? { ...r, schedule: true } : r), [role, coordination.allowed, reminders.allowed]);
   const navGroups = role === 'doctor'
     ? DOCTOR_NAV_GROUPS.map((g) => ({ group: g.group, items: g.ids.flatMap((id) => items.filter((r) => r.id === id)) }))
     : groupRoutes(items);
   const orderedItems = role === 'doctor' ? navGroups.flatMap((g) => g.items) : items;
-  const res = resolve(location, role, coordination.allowed);
+  const res = resolve(location, role, coordination.allowed, reminders.allowed);
 
   const clinics = identity.clinics;
   const [clinicId, setClinicId] = useState<number | null>(clinics[0]?.id ?? null);
@@ -178,7 +180,7 @@ function AppShellContent({ identity, fixture, onRefresh, onLogout }: Props) {
 
         <div className="shell-crumbs"><Breadcrumbs label={t('shell.crumbs')} items={[{ label: t('shell.crumbsHome'), render: (c: ReactNode, cls: string) => <Link href={demoPath('/')} className={cls} data-testid="link-crumb-home">{c}</Link> }, ...crumbs]} /></div>
         <main id="main" tabIndex={-1} className="shell-main" key={role === 'admin' ? 'admin' : clinicId ?? 'none'}>
-          {coordinationActive && role === 'doctor' ? <CoordinationPage view={coordination} /> : <PageContent identity={identity} res={res} title={title} clinic={clinic} clinics={clinics} fixture={fixture} landing={landingFor(role)} scope={`${identity.id}:${role ?? 'none'}:${role === 'admin' ? 'all' : clinic?.id ?? 'none'}`} onRefresh={onRefresh} />}
+          {coordinationActive && role === 'doctor' ? <CoordinationPage view={coordination} /> : <PageContent identity={identity} res={res} title={title} clinic={clinic} clinics={clinics} fixture={fixture} landing={landingFor(role)} scope={`${identity.id}:${role ?? 'none'}:${role === 'admin' ? 'all' : clinic?.id ?? 'none'}`} onRefresh={onRefresh} canManageReminders={reminders.allowed} />}
         </main>
       </div>
 
@@ -456,7 +458,7 @@ function HelpMenu({ onReplay, canReplay }: { onReplay: () => void; canReplay: bo
   );
 }
 
-function PageContent({ identity, res, title, clinic, clinics, fixture, landing, scope, onRefresh }: { identity: ShellIdentity; res: Resolution; title: string; clinic: ShellClinic | null; clinics: ShellClinic[]; fixture: boolean; landing: string | null; scope: string; onRefresh: (strict?: boolean) => Promise<void> }) {
+function PageContent({ identity, res, title, clinic, clinics, fixture, landing, scope, onRefresh, canManageReminders = false }: { identity: ShellIdentity; res: Resolution; title: string; clinic: ShellClinic | null; clinics: ShellClinic[]; fixture: boolean; landing: string | null; scope: string; onRefresh: (strict?: boolean) => Promise<void>; canManageReminders?: boolean }) {
   const { t } = useTranslation();
   const { locale, digitPreference } = useAmalPreferences();
   const [now] = useState(() => new Date().toISOString());
@@ -479,7 +481,7 @@ function PageContent({ identity, res, title, clinic, clinics, fixture, landing, 
   if (res.kind === 'page' && res.route.id === 'usersDevices') return <UsersDevicesPage key={scope} title={title} />;
   if (res.kind === 'page' && res.route.id === 'clinicsDoctors') return <ClinicsDoctorsPage key={scope} title={title} accountKey={scope.split(':').slice(0, -2).join(':')} onClinicsChanged={() => onRefresh(true)} />;
   if (res.kind === 'page' && res.route.id === 'waitlist') return <WaitlistPage key={scope} clinic={clinic} title={title} scope={scope} fixture={fixture} />;
-  if (res.kind === 'page' && res.route.id === 'messages') return <MessagesPage key={scope} identity={identity} clinic={clinic} title={title} />;
+  if (res.kind === 'page' && res.route.id === 'messages') return <MessagesPage key={scope} identity={identity} clinic={clinic} title={title} canManageReminders={canManageReminders} />;
   if (res.kind === 'page' && res.route.id === 'audit') return <AuditPage key={scope} title={title} />;
   if (res.kind === 'page' && res.route.id === 'developer') return <DeveloperToolsPage key={scope} title={title} />;
   if (res.kind === 'page' && res.route.id === 'newBooking') return <BookingHandoff clinic={clinic} fixture={fixture} title={title} />;

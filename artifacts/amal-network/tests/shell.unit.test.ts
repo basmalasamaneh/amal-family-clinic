@@ -9,7 +9,7 @@ test('every direct route is allowed only for its listed role', () => {
     assert.equal(resolve('/', role).kind, 'landing');
     assert.equal(landingFor(role), routesFor(role)[0].path);
     for (const route of SHELL_ROUTES) {
-      const expected = route.roles.includes(role) && route.id !== 'coordination' ? 'page' : 'forbidden';
+      const expected = route.roles.includes(role) && route.id !== 'coordination' && !(role === 'doctor' && route.id === 'messages') ? 'page' : 'forbidden';
       assert.equal(resolve(route.path, role).kind, expected);
       assert.equal(resolve(`${route.path}/`, role).kind, expected);
     }

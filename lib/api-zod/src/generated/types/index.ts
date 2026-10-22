@@ -348,6 +348,7 @@ export * from './pullSyncParams';
 export * from './receptionContext';
 export * from './receptionContextClinic';
 export * from './reminderClinicPreference';
+export * from './reminderClinicPreferenceInput';
 export * from './reminderLog';
 export * from './reminderLogEntry';
 export * from './reminderLogEntryStatus';

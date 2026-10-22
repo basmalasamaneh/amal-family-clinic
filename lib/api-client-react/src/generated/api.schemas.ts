@@ -211,6 +211,12 @@ export interface WaitlistDecisionInput {
 
 export interface ReminderClinicPreference {
   enabled: boolean;
+  /** True for own-clinic administrator or currently delegated home-clinic doctor; false for front-desk readers. */
+  canManage: boolean;
+}
+
+export interface ReminderClinicPreferenceInput {
+  enabled: boolean;
 }
 
 export interface ReminderPatientPreference {

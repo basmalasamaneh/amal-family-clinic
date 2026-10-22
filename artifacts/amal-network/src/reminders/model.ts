@@ -1,5 +1,19 @@
 import { fromZonedTime } from 'date-fns-tz';
 import type { ListReminderLogParams } from '@workspace/api-client-react';
+import type { ShellClinic, ShellIdentity } from '../shell/identity';
+
+/** Doctor/admin scope is the explicit home assignment, never the shell switcher. */
+export function messagesClinicFor(identity: ShellIdentity, selected: ShellClinic | null): ShellClinic | null {
+  if (identity.role === 'front-desk') return selected;
+  if (identity.role !== 'admin' && identity.role !== 'doctor') return null;
+  const id = identity.homeClinicId;
+  return id ? { id, name: identity.clinics.find((c) => c.id === id)?.name ?? '' } : null;
+}
+
+export const CAPABILITY_TTL = 60_000;
+export function freshReminderCapability(online: boolean, canManage: boolean | undefined, updatedAt: number, now: number): boolean {
+  return online && canManage === true && updatedAt > 0 && now - updatedAt < CAPABILITY_TTL;
+}
 
 export const LOG_PAGE_SIZE = 25;
 export const MAX_RANGE_DAYS = 92;

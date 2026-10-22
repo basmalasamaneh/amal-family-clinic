@@ -225,7 +225,7 @@ export const DecideWaitlistOfferResponse = zod.object({
 
 
 /**
- * Simulation only; own-clinic admin/front-desk metadata, without patient identifiers. Date filters select intended due instants.
+ * Simulation only; own-clinic administrator, front-desk or currently delegated home-clinic doctor metadata, without patient identifiers. Doctor role alone and network-coordinator scope grant no access. Cross-clinic access is forbidden. Date filters select intended due instants. Waitlist notification visibility remains front-desk only.
  */
 
 export const listReminderLogQueryLimitMax = 100;
@@ -257,6 +257,9 @@ export const ListReminderLogResponse = zod.object({
 }).strict()
 
 
+/**
+ * Own-clinic administrator or front-desk, or doctor with a current clinic_managers grant for their current home clinic. Returns canManage for UI gating. Doctor role alone and network-coordinator scope grant no authority; other clinics are forbidden. Fresh user/session and delegation are checked transactionally.
+ */
 
 
 
@@ -265,10 +268,14 @@ export const GetReminderClinicPreferenceParams = zod.object({
 }).strict()
 
 export const GetReminderClinicPreferenceResponse = zod.object({
-  "enabled": zod.boolean()
+  "enabled": zod.boolean(),
+  "canManage": zod.boolean().describe('True for own-clinic administrator or currently delegated home-clinic doctor; false for front-desk readers.')
 }).strict()
 
 
+/**
+ * Own-clinic administrator or currently delegated home-clinic doctor only; front-desk cannot toggle. No network-coordinator authority. Disabling cancels pending reminders; enabling never backfills or revives cancelled reminders. Simulator only; no actual SMS.
+ */
 
 
 
@@ -281,7 +288,8 @@ export const SetReminderClinicPreferenceBody = zod.object({
 }).strict()
 
 export const SetReminderClinicPreferenceResponse = zod.object({
-  "enabled": zod.boolean()
+  "enabled": zod.boolean(),
+  "canManage": zod.boolean().describe('True for own-clinic administrator or currently delegated home-clinic doctor; false for front-desk readers.')
 }).strict()
 
 

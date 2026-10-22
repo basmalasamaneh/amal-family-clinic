@@ -19,8 +19,16 @@ const patientInput = z.object({ optedOut: z.boolean() }).strict();
 
 // Network-wide administration is not permission to inspect arbitrary reminder logs.
 // This feature deliberately requires the actor's own assigned clinic.
-function ownClinic(actor: Auth, clinicId: number) {
-  if (!["admin", "front-desk"].includes(actor.role) || actor.clinicId !== clinicId) throw forbidden();
+async function ownClinic(client: PoolClient, actor: Auth, clinicId: number) {
+  if (actor.clinicId !== clinicId) throw forbidden();
+  if (actor.role === "admin") return true;
+  if (actor.role === "front-desk") return false;
+  if (actor.role === "doctor") {
+    const { rows } = await client.query(
+      "SELECT 1 FROM operational.clinic_managers WHERE clinic_id=$1 AND user_id=$2", [clinicId, actor.id]);
+    if (rows.length) return true;
+  }
+  throw forbidden();
 }
 async function localPatient(client: PoolClient, actor: Auth, patientId: number) {
   if (actor.role !== "front-desk" || actor.clinicId === null) throw forbidden();
@@ -37,7 +45,7 @@ async function auditPreference(client: PoolClient, actor: Auth, action: string, 
 export async function listReminderLog(auth: Auth, input: unknown) {
   const q = query.parse(input);
   return transaction(auth, async (client, actor) => {
-    ownClinic(actor, q.clinicId);
+    await ownClinic(client, actor, q.clinicId);
     const status = q.status === "scheduled" ? "pending" : q.status === "sent" ? "simulated" : q.status;
     const { rows } = await client.query(
       `SELECT id,status,text_ar,text_en,scheduled_at,sent_at,cancelled_at,cancellation_reason
@@ -56,13 +64,13 @@ export async function listReminderLog(auth: Auth, input: unknown) {
       cancellationReason: r.cancellation_reason,
     }));
     return { items, nextCursor: rows.length > q.limit ? items.at(-1)!.id : null };
-  });
+  }, { delegation: true });
 }
 export async function clinicPreference(auth: Auth, clinicId: number, input?: unknown) {
   const change = input === undefined ? undefined : clinicInput.parse(input);
   return transaction(auth, async (client, actor, now) => {
-    ownClinic(actor, clinicId);
-    if (change && actor.role !== "admin") throw forbidden();
+    const canManage = await ownClinic(client, actor, clinicId);
+    if (change && !canManage) throw forbidden();
     const { rows: [clinic] } = await client.query(
       "SELECT reminders_enabled FROM operational.clinics WHERE clinic_id=$1", [clinicId]);
     if (!clinic) throw fail(404, "NOT_FOUND", "notFound");
@@ -70,8 +78,8 @@ export async function clinicPreference(auth: Auth, clinicId: number, input?: unk
       await setClinicReminderPreference(client, clinicId, change.enabled, now);
       await auditPreference(client, actor, "reminder.clinic.preference");
     }
-    return { enabled: change?.enabled ?? clinic.reminders_enabled };
-  });
+    return { enabled: change?.enabled ?? clinic.reminders_enabled, canManage };
+  }, { delegation: true });
 }
 export async function patientPreference(auth: Auth, patientId: number, input?: unknown) {
   const change = input === undefined ? undefined : patientInput.parse(input);

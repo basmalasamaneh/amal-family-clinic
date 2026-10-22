@@ -144,6 +144,13 @@
         }
       },
       "ReminderClinicPreference": {
+        "type": "object", "additionalProperties": false, "required": ["enabled", "canManage"],
+        "properties": {
+          "enabled": { "type": "boolean" },
+          "canManage": { "type": "boolean", "description": "True for own-clinic administrator or currently delegated home-clinic doctor; false for front-desk readers." }
+        }
+      },
+      "ReminderClinicPreferenceInput": {
         "type": "object", "additionalProperties": false, "required": ["enabled"],
         "properties": { "enabled": { "type": "boolean" } }
       },
@@ -8089,7 +8096,8 @@
     "/reminders/log": {
       "get": {
         "operationId": "listReminderLog", "tags": ["Reminders"], "security": [{ "sessionCookie": [] }],
-        "description": "Simulation only; own-clinic admin/front-desk metadata, without patient identifiers. Date filters select intended due instants.",
+        "x-roles": ["admin", "front-desk", "doctor"], "x-scope": "own-clinic; doctors require current clinic_managers grant",
+        "description": "Simulation only; own-clinic administrator, front-desk or currently delegated home-clinic doctor metadata, without patient identifiers. Doctor role alone and network-coordinator scope grant no access. Cross-clinic access is forbidden. Date filters select intended due instants. Waitlist notification visibility remains front-desk only.",
         "parameters": [
           { "name": "clinicId", "in": "query", "required": true, "schema": { "type": "integer", "minimum": 1 } },
           { "name": "limit", "in": "query", "schema": { "type": "integer", "minimum": 1, "maximum": 100 } },
@@ -8105,22 +8113,28 @@
       "parameters": [{ "name": "clinicId", "in": "path", "required": true, "schema": { "type": "integer", "minimum": 1 } }],
       "get": {
         "operationId": "getReminderClinicPreference", "tags": ["Reminders"], "security": [{ "sessionCookie": [] }],
+        "x-roles": ["admin", "front-desk", "doctor"], "x-scope": "own-clinic; doctors require current clinic_managers grant",
+        "description": "Own-clinic administrator or front-desk, or doctor with a current clinic_managers grant for their current home clinic. Returns canManage for UI gating. Doctor role alone and network-coordinator scope grant no authority; other clinics are forbidden. Fresh user/session and delegation are checked transactionally.",
         "responses": { "200": { "description": "Own clinic preference; default off", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ReminderClinicPreference" } } } } }
       },
       "put": {
         "operationId": "setReminderClinicPreference", "tags": ["Reminders"], "security": [{ "sessionCookie": [], "csrfToken": [] }],
-        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ReminderClinicPreference" } } } },
-        "responses": { "200": { "description": "Admin-only preference; enabling never backfills", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ReminderClinicPreference" } } } } }
+        "x-roles": ["admin", "doctor"], "x-scope": "own-clinic; doctors require current clinic_managers grant",
+        "description": "Own-clinic administrator or currently delegated home-clinic doctor only; front-desk cannot toggle. No network-coordinator authority. Disabling cancels pending reminders; enabling never backfills or revives cancelled reminders. Simulator only; no actual SMS.",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ReminderClinicPreferenceInput" } } } },
+        "responses": { "200": { "description": "Own-clinic managed preference", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ReminderClinicPreference" } } } } }
       }
     },
     "/reminders/patients/{patientId}": {
       "parameters": [{ "name": "patientId", "in": "path", "required": true, "schema": { "type": "integer", "minimum": 1 } }],
       "get": {
         "operationId": "getReminderPatientPreference", "tags": ["Reminders"], "security": [{ "sessionCookie": [] }],
+        "x-roles": ["front-desk"], "x-scope": "trusted local patient relationship; no doctor or manager authority",
         "responses": { "200": { "description": "Front-desk local patient preference, patient-wide and independent of consent", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ReminderPatientPreference" } } } } }
       },
       "put": {
         "operationId": "setReminderPatientPreference", "tags": ["Reminders"], "security": [{ "sessionCookie": [], "csrfToken": [] }],
+        "x-roles": ["front-desk"], "x-scope": "trusted local patient relationship; no doctor or manager authority",
         "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ReminderPatientPreference" } } } },
         "responses": { "200": { "description": "Updated preference, without cross-clinic counts", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ReminderPatientPreference" } } } } }
       }

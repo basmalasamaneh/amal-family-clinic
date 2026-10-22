@@ -86,11 +86,14 @@ export async function currentAuth(client: Pick<PoolClient, "query">, auth: Auth)
     (auth.device && auth.device.clinicId !== user.clinic_id)) throw forbidden();
   return { ...auth, role: roles[user.role as keyof typeof roles], clinicId: user.clinic_id, doctorId: user.doctor_id };
 }
-export async function transaction<T>(auth: Auth, work: (client: PoolClient, actor: Auth, now: Date) => Promise<T>): Promise<T> {
+export async function transaction<T>(auth: Auth, work: (client: PoolClient, actor: Auth, now: Date) => Promise<T>, options: { delegation?: boolean } = {}): Promise<T> {
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
     await client.query("SELECT pg_advisory_xact_lock_shared(761930)");
+    // Delegation/lifecycle writers take 160005 before 761910. Acquire authority
+    // at transaction entry, never from a callback already holding scheduling.
+    if (options.delegation) await client.query("SELECT pg_advisory_xact_lock_shared(160005)");
     // All previews and appointment/hold mutations share this lock, including cross-clinic patient checks.
     await client.query("SELECT pg_advisory_xact_lock(761910)");
     const actor = await currentAuth(client, auth);

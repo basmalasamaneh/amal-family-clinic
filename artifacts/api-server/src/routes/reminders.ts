@@ -7,7 +7,7 @@ import { clinicPreference, listReminderLog, patientPreference, reminderId } from
 import { fail } from "../lib/auth-errors";
 
 const router: IRouter = Router();
-router.use("/reminders", authenticate, requireRoles("admin", "front-desk"), (_req, res, next) => {
+router.use("/reminders", authenticate, requireRoles("admin", "front-desk", "doctor"), (_req, res, next) => {
   res.set("Cache-Control", "private, no-store"); next();
 });
 function checked<T>(schema: { parse: (v: unknown) => unknown }, value: T): T { schema.parse(value); return value; }
@@ -17,7 +17,7 @@ router.get("/reminders/log", async (req, res) => {
 router.get("/reminders/clinics/:clinicId", async (req, res) => {
   res.json(checked(GetReminderClinicPreferenceResponse, await clinicPreference(req.auth!, reminderId.parse(req.params.clinicId))));
 });
-router.put("/reminders/clinics/:clinicId", csrf, requireRoles("admin"), async (req, res) => {
+router.put("/reminders/clinics/:clinicId", csrf, requireRoles("admin", "doctor"), async (req, res) => {
   if (req.body === undefined) throw fail(400, "VALIDATION", "validation");
   res.json(checked(GetReminderClinicPreferenceResponse, await clinicPreference(req.auth!, reminderId.parse(req.params.clinicId), req.body)));
 });

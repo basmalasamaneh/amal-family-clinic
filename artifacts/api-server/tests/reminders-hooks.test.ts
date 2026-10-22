@@ -10,6 +10,9 @@ import { withIsolatedAuthDatabase } from "./helpers/auth-isolated";
 test("real booking hooks, move replay/back, failures and explicitly ordered mutation/dispatch races", { timeout: 120000 }, async t => {
   await withIsolatedAuthDatabase(async (admin) => {
     await admin.query(readFileSync(new URL("../../../lib/db/migrations/0016_reminders.sql", import.meta.url), "utf8"));
+    // This is the private disposable clone. Source reminder backlog must not
+    // consume a bounded dispatcher batch ahead of these synthetic fixtures.
+    await admin.query("DELETE FROM operational.notifications WHERE schedule_version IS NOT NULL");
     const { createAppointment, updateAppointment, transaction } = await import("../src/appointments/service");
     const { setClinicReminderPreference, setPatientReminderOptOut } = await import("../src/reminders/lifecycle");
     const { dispatchDueReminders } = await import("../src/reminders/dispatcher");

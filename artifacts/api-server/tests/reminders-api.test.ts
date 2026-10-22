@@ -2,12 +2,13 @@ import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { once } from "node:events";
 import { test } from "node:test";
+import type { Auth } from "../src/lib/auth";
 import { withIsolatedAuthDatabase } from "./helpers/auth-isolated";
 
 // The existing operational database is read only: the helper clones it into a
 // private disposable cluster before importing app/db. No bootstrap or migration.
 test("reminders API: own-clinic access, independent preferences and private simulated log", { timeout: 180_000 }, async t => {
-  await withIsolatedAuthDatabase(async admin => {
+  await withIsolatedAuthDatabase(async (admin, pool) => {
     const requiredColumns: Record<string, string[]> = {
       clinics: ["reminders_enabled"],
       patients: ["reminder_opt_out"],
@@ -151,6 +152,87 @@ test("reminders API: own-clinic access, independent preferences and private simu
         assert.equal((await request(manager, clinicPath, "PUT", { enabled: true }, false)).status, 403);
         assert.equal((await request(desk, patientPath, "PUT", { optedOut: false }, false)).status, 403);
       });
+      await t.test("delegated home-clinic doctor manages reminders, never patients or other clinics", async () => {
+        // A network coordinator without a manager grant has no reminder authority.
+        await admin.query("INSERT INTO operational.network_coordinator_scope(user_id,clinic_id) VALUES($1,$2)", [doctor.id, local]);
+        for (const path of [logPath, clinicPath]) assert.equal((await request(doctor, path)).status, 403);
+        assert.equal((await request(doctor, clinicPath, "PUT", { enabled: true })).status, 403);
+        await admin.query("INSERT INTO operational.clinic_managers(clinic_id,user_id) VALUES($1,$2)", [local, doctor.id]);
+        assert.equal((await request(doctor, logPath)).status, 200);
+        assert.deepEqual((await request(doctor, clinicPath)).data, { enabled: true, canManage: true });
+        assert.deepEqual((await request(manager, clinicPath)).data, { enabled: true, canManage: true });
+        assert.deepEqual((await request(desk, clinicPath)).data, { enabled: true, canManage: false });
+        assert.equal((await request(doctor, clinicPath, "PUT", { enabled: true }, false)).status, 403);
+        for (const path of [patientPath, `/reminders/patients/${foreign}`]) {
+          assert.equal((await request(doctor, path)).status, 403);
+          assert.equal((await request(doctor, path, "PUT", { optedOut: true })).status, 403);
+        }
+        assert.equal((await request(doctor, `/reminders/log?clinicId=${remote}`)).status, 403);
+        assert.equal((await request(doctor, `/reminders/clinics/${remote}`)).status, 403);
+        assert.equal((await request(doctor, `/reminders/clinics/${remote}`, "PUT", { enabled: false })).status, 403);
+        // Delegated writes preserve the same cancellation/no-resurrection semantics.
+        const p = await patient(local), appt = await appointment(local, doctorId, p);
+        const pending = await notification(local, p, appt);
+        assert.deepEqual((await request(doctor, clinicPath, "PUT", { enabled: false })).data,
+          { enabled: false, canManage: true });
+        assert.equal((await admin.query("SELECT cancellation_reason FROM operational.notifications WHERE id=$1", [pending])).rows[0].cancellation_reason, "clinic_disabled");
+        assert.deepEqual((await request(doctor, clinicPath, "PUT", { enabled: true })).data,
+          { enabled: true, canManage: true });
+        assert.equal((await admin.query("SELECT status FROM operational.notifications WHERE id=$1", [pending])).rows[0].status, "cancelled");
+      });
+      await t.test("fresh authority rejects disabled users, revoked/idle sessions and changed home clinic", async () => {
+        const { clinicPreference, listReminderLog } = await import("../src/reminders/access");
+        const stale: Auth = { id: doctor.id, email: "unused@reminders.test", role: "doctor", clinicId: local, doctorId,
+          locale: "en", theme: "light", sessionDigest: digest(doctor.session), csrfToken: doctor.csrf,
+          device: null, expiresAt: new Date(Date.now() + 3600000), absoluteExpiresAt: null, pinVerifiedAt: null };
+        const denied = async () => {
+          for (const work of [
+            () => clinicPreference(stale, local),
+            () => clinicPreference(stale, local, { enabled: false }),
+            () => listReminderLog(stale, { clinicId: local }),
+          ]) await assert.rejects(work, (error: { status?: number }) => error.status === 403);
+        };
+        await admin.query("UPDATE operational.users SET disabled_at=now() WHERE id=$1", [doctor.id]);
+        await denied();
+        await admin.query("UPDATE operational.users SET disabled_at=NULL WHERE id=$1", [doctor.id]);
+        await admin.query("UPDATE operational.auth_sessions SET revoked_at=now() WHERE token_digest=$1", [stale.sessionDigest]);
+        await denied();
+        await admin.query("UPDATE operational.auth_sessions SET revoked_at=NULL,last_seen_at=now()-interval '31 minutes' WHERE token_digest=$1", [stale.sessionDigest]);
+        await denied();
+        await admin.query("UPDATE operational.auth_sessions SET last_seen_at=now() WHERE token_digest=$1", [stale.sessionDigest]);
+        // Use an administrator's stale cached clinic to check current-user scope
+        // without violating the doctor's reciprocal home-clinic constraints.
+        const moved = await actor("administrator", local);
+        const oldAdmin: Auth = { ...stale, id: moved.id, role: "admin", doctorId: null,
+          sessionDigest: digest(moved.session), csrfToken: moved.csrf };
+        await admin.query("UPDATE operational.users SET clinic_id=$2 WHERE id=$1", [moved.id, remote]);
+        await assert.rejects(() => clinicPreference(oldAdmin, local), (error: { status?: number }) => error.status === 403);
+        assert.equal((await clinicPreference(stale, local)).canManage, true);
+      });
+      await t.test("last manager grant revocation serializes before waiting log/read/write authority", async () => {
+        await admin.query("BEGIN");
+        try {
+          // The database delegation trigger obtains 160005 then 761910.
+          await admin.query("DELETE FROM operational.clinic_managers WHERE clinic_id=$1 AND user_id=$2", [local, doctor.id]);
+          const requests = [
+            request(doctor, logPath), request(doctor, clinicPath),
+            request(doctor, clinicPath, "PUT", { enabled: false }),
+          ];
+          const deadline = Date.now() + 5000;
+          let waiting = 0;
+          while (Date.now() < deadline) {
+            waiting = Number((await pool.query(`SELECT count(*) FROM pg_locks
+              WHERE locktype='advisory' AND objid=160005 AND NOT granted`)).rows[0].count);
+            if (waiting >= 3) break;
+            await new Promise(resolve => setTimeout(resolve, 10));
+          }
+          assert.equal(waiting, 3, "all reminder operations wait on authority before scheduling, with no lock inversion");
+          await admin.query("COMMIT");
+          for (const response of await Promise.all(requests)) assert.equal(response.status, 403);
+          assert.equal((await request(doctor, clinicPath)).status, 403, "coordinator scope cannot replace the last revoked grant");
+          assert.equal((await request(manager, clinicPath)).data.enabled, true, "rejected stale writes do not toggle");
+        } finally { await admin.query("ROLLBACK"); }
+      });
       await t.test("strict query/body validation rejects forged context, arbitrary fields and invalid bounds", async () => {
         for (const suffix of [
           "&patientId=1", "&doctorId=1", "&unknown=x", `&clinicId=${remote}`,
@@ -226,14 +308,14 @@ test("reminders API: own-clinic access, independent preferences and private simu
         const original = await state();
         const disabled = await request(manager, clinicPath, "PUT", { enabled: false });
         assert.equal(disabled.status, 200, JSON.stringify(disabled.data));
-        assert.deepEqual(disabled.data, { enabled: false });
+        assert.deepEqual(disabled.data, { enabled: false, canManage: true });
         const changed = await state();
         assert.equal(changed[0].status, "cancelled");
         assert(changed[0].cancelled_at);
         assert.equal(changed[0].cancellation_reason, "clinic_disabled");
         assert.deepEqual(changed.slice(1), original.slice(1), "sent and remote reminders are untouched");
-        assert.deepEqual((await request(desk, clinicPath)).data, { enabled: false });
-        assert.deepEqual((await request(manager, clinicPath, "PUT", { enabled: true })).data, { enabled: true });
+        assert.deepEqual((await request(desk, clinicPath)).data, { enabled: false, canManage: false });
+        assert.deepEqual((await request(manager, clinicPath, "PUT", { enabled: true })).data, { enabled: true, canManage: true });
         assert.deepEqual(await state(), changed, "enabling a clinic never revives old notifications");
       });
       await t.test("bounded log is clinic-local, minimal, privacy-headered and filterable with half-open time bounds", async () => {
@@ -310,7 +392,9 @@ test("reminders API: own-clinic access, independent preferences and private simu
         for (const status of ["pending", "simulated", "delivered"]) {
           assert.equal(ListReminderLogResponse.safeParse({ items: [{ ...item, status }], nextCursor: null }).success, false);
         }
-        assert.equal(GetReminderClinicPreferenceResponse.safeParse({ enabled: true, clinicId: local }).success, false);
+        assert(GetReminderClinicPreferenceResponse.safeParse({ enabled: true, canManage: true }).success);
+        assert.equal(GetReminderClinicPreferenceResponse.safeParse({ enabled: true }).success, false);
+        assert.equal(GetReminderClinicPreferenceResponse.safeParse({ enabled: true, canManage: true, clinicId: local }).success, false);
         assert.equal(GetReminderPatientPreferenceResponse.safeParse({ optedOut: true, patientId: own }).success, false);
       });
       await t.test("notification persistence enforces reminder identity and terminal-state shape", async () => {

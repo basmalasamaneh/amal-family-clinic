@@ -1,12 +1,22 @@
 /** Reminder (P1-13) strings under namespace "rem". Arabic and English stay key-for-key identical. */
 export const remEn = {
+  phone: {
+    open: 'Preview on phone', title: 'Phone preview · demo only', header: 'Fictional demo phone',
+    notice: 'A local preview of this log entry, separate from dispatcher simulation events. No phone or WhatsApp connection. Log statuses and current-page counts stay unchanged.',
+    ready: 'Try the local animation to see this message in a conversation.',
+    animating: 'Playing local simulation…', send: 'Simulate send', close: 'Close preview',
+    result: 'Simulated, not sent to a phone', local: 'Browser-only demo · no delivery or receipt',
+  },
   eyebrow: 'Appointment reminders',
   lede: 'Every reminder this clinic would have sent, with both language versions. One row is one simulated delivery.',
   sim: {
-    title: 'Simulation only',
+    title: 'SIMULATION ONLY',
+    provider: 'Demo only. No phone, SMS or WhatsApp provider is connected.',
     body: 'No SMS, WhatsApp or other message is ever sent to a patient. "Sent" means the simulator recorded a delivery.',
   },
   scope: 'Clinic: {{name}}',
+  channel: 'Channel: local simulator · No external delivery',
+  summary: { label: 'Current page counts, not clinic totals', total: 'All reminders · current page', page: 'this page' },
   clinicStatus: { on: 'Reminders on for this clinic', off: 'Reminders off for this clinic (default). No new reminders are scheduled.', unavailable: 'Clinic reminder setting unavailable' },
   scopeUnknown: 'Your assigned clinic',
   noClinic: { title: 'No clinic assigned', body: 'Messages are only shown for the clinic your account belongs to. Ask an administrator to assign one.' },
@@ -57,13 +67,23 @@ export const remEn = {
 };
 
 export const remAr: typeof remEn = {
+  phone: {
+    open: 'معاينة على الهاتف', title: 'معاينة الهاتف · عرض تجريبي فقط', header: 'هاتف تجريبي خيالي',
+    notice: 'معاينة محلية لهذه الرسالة، منفصلة عن أحداث محاكاة مُجدول التذكيرات. لا اتصال بهاتف أو واتساب. لا تتغير حالات السجل أو أعداد الصفحة الحالية.',
+    ready: 'جرّب الحركة المحلية لعرض الرسالة في محادثة.',
+    animating: 'جارٍ تشغيل المحاكاة المحلية…', send: 'تجربة الإرسال', close: 'إغلاق المعاينة',
+    result: 'تمت المحاكاة — لم تُرسل للهاتف', local: 'عرض داخل المتصفح فقط · لا إرسال ولا إيصال استلام',
+  },
   eyebrow: 'تذكيرات المواعيد',
   lede: 'كل تذكير كانت العيادة سترسله، بنسختيه العربية والإنجليزية. كل صف يمثل عملية إرسال محاكاة واحدة.',
   sim: {
     title: 'محاكاة فقط',
+    provider: 'عرض تجريبي فقط. لا يوجد اتصال بهاتف أو مزوّد رسائل نصية أو واتساب.',
     body: 'لا تُرسل أي رسالة نصية أو واتساب أو غيرها إلى أي مريض. «أُرسلت» تعني أن المحاكي سجّل عملية تسليم.',
   },
   scope: 'العيادة: {{name}}',
+  channel: 'القناة: محاكي محلي · لا يوجد إرسال خارجي',
+  summary: { label: 'أعداد الصفحة الحالية وليست إجمالي العيادة', total: 'كل التذكيرات · الصفحة الحالية', page: 'هذه الصفحة' },
   clinicStatus: { on: 'التذكيرات مفعّلة لهذه العيادة', off: 'التذكيرات متوقفة لهذه العيادة (الافتراضي). لا تُجدول تذكيرات جديدة.', unavailable: 'إعداد تذكيرات العيادة غير متاح' },
   scopeUnknown: 'عيادتك المعيّنة',
   noClinic: { title: 'لا توجد عيادة معيّنة', body: 'تُعرض الرسائل لعيادة حسابك فقط. اطلب من المسؤول تعيين عيادة.' },

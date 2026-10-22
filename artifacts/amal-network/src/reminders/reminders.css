@@ -1,5 +1,15 @@
 /* P1-13 reminders. Logical properties only; amal-ui tokens adapt to light/dark. */
 .rem-page { max-inline-size: 1040px; display: flex; flex-direction: column; gap: 16px; }
+.rem-summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-block: 20px; }
+.rem-summary > div { padding: 20px; border: 1px solid var(--amal-border); border-radius: var(--amal-radius-card); background: var(--amal-surface); }
+.rem-summary dt { color: var(--amal-muted); font-size: var(--amal-text-sm); }
+.rem-summary dd { margin: 8px 0 0; font-size: 32px; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--amal-primary-text); }
+.rem-summary > div:first-child { background: var(--amal-primary-soft); }
+.rem-channel { display: flex; align-items: center; gap: 8px; color: var(--amal-muted); margin: 0; font-size: var(--amal-text-sm); }
+.rem-badge { gap: 6px; }
+.rem-filters .rem-field { gap: 8px; }
+.rem-sim .rem-provider { margin-block-start: 8px; font-weight: 600; }
+@media (max-width: 767px) { .rem-summary { grid-template-columns: 1fr; } .rem-summary > div { display: flex; align-items: center; justify-content: space-between; } .rem-summary dd { margin: 0; } }
 .rem-page .shell-page__title { margin-block-end: 0; }
 .rem-lede { margin: 0; max-inline-size: 64ch; color: var(--amal-muted); }
 .rem-sim { position: sticky; inset-block-start: 72px; z-index: 5; display: flex; gap: 12px; align-items: flex-start; padding-block: 12px; padding-inline: 16px; border-radius: var(--amal-radius-card); background: var(--amal-status-sync-bg); color: var(--amal-status-sync-fg); border: 1px solid var(--amal-status-sync-border); border-inline-start-width: 5px; }
