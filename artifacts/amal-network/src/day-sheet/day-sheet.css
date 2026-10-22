@@ -31,6 +31,12 @@
 .ds-cov--partial, .ds-cov--missing { border: 2px solid var(--amal-danger-strong); background: color-mix(in srgb, var(--amal-danger-strong) 8%, var(--amal-surface)); }
 .ds-cov--partial svg, .ds-cov--missing svg { color: var(--amal-danger-strong); flex: none; }
 .ds-summary { margin: 0; font-size: var(--amal-text-sm); color: var(--amal-muted); font-variant-numeric: tabular-nums; }
+@media screen {
+  .ds-sheet { box-shadow: var(--amal-shadow-card); }
+  .ds-stamps { padding: 12px; border-radius: var(--amal-radius-control); background: var(--amal-surface-2); gap: 6px; }
+  .ds-table tbody tr:nth-child(even):not(.is-provisional) { background: var(--amal-surface-2); }
+  .ds-table th { background: var(--amal-surface-2); }
+}
 .ds-empty { margin: 0; padding-block: 28px; text-align: center; border: 2px dashed var(--amal-border); border-radius: var(--amal-radius-card); font-weight: 600; }
 .ds-table { inline-size: 100%; border-collapse: collapse; font-size: var(--amal-text-sm); }
 .ds-table th { text-align: start; padding-block: 8px; padding-inline: 10px; font-size: var(--amal-text-xs); color: var(--amal-muted); border-block-end: 1px solid var(--amal-border); font-weight: 700; }

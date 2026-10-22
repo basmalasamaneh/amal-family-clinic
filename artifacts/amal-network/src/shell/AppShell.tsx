@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Link, Redirect, useLocation, useSearch } from 'wouter';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import * as Dialog from '@radix-ui/react-dialog';
-import { DoorOpen, BookOpenText, CircleHelp, PlayCircle, ShieldCheck, FlaskConical, LogOut, MoreHorizontal, RotateCw, Search, X, ShieldX, UserX, FileQuestion } from 'lucide-react';
+import { DoorOpen, BookOpenText, CircleHelp, PlayCircle, ShieldCheck, FlaskConical, LogOut, MoreHorizontal, RotateCw, Search, X, ShieldX, UserX, UserRound, FileQuestion } from 'lucide-react';
 import { ConnectionStatus } from './ConnectionStatus';
 import { DaySheet } from '@/day-sheet/DaySheet';
 import './offline-messages';
@@ -353,7 +353,7 @@ function UserMenu({ identity, fixture, onLogout }: { identity: ShellIdentity; fi
             <div className="account-dialog__identity">
               <dt>{t('shell.user.identity')}</dt><dd data-testid="text-user-name"><bdi>{identity.name}</bdi></dd>
             </div>
-              <div><dt>{t('shell.user.role')}</dt><dd data-testid="text-user-role">{roleLabel}</dd></div>
+              <div><dt>{t('shell.user.role')}</dt><dd data-testid="text-user-role"><UserRound size={16} aria-hidden="true" />{roleLabel}</dd></div>
               <div><dt>{t('shell.user.clinics')}</dt>
                 <dd className="account-dialog__clinics" data-testid="text-user-clinics">{identity.clinics.length ? identity.clinics.map((c) => <bdi key={c.id} className="shell-chip">{c.name}</bdi>) : t('shell.user.noClinics')}</dd>
               </div>

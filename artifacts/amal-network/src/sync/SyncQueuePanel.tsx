@@ -124,7 +124,7 @@ export function SyncQueuePanel({ clinic, title, scope }: { clinic: ShellClinic |
                   <span className="sync-row__who">{p.patient.name} · {p.doctor.name}</span>
                   <time className="sync-row__when" dateTime={p.input.startsAt}>{fmt(p.input.startsAt)}</time>
                 </span>
-                <span className="sync-chip" data-s={s} data-testid={`status-booking-${p.operationId}`}>{t(`status.${s}`)}</span>
+                <span className="sync-chip" data-s={s} data-testid={`status-booking-${p.operationId}`}><RefreshCcw size={14} aria-hidden="true" />{t(`status.${s}`)}</span>
               </li>
             ))}
           </ol>

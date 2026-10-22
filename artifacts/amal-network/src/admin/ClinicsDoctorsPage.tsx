@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Building2, Pencil, Plus, Stethoscope } from 'lucide-react';
+import { Building2, Pencil, Plus, Stethoscope, UserRound } from 'lucide-react';
 import { Button, TextField } from '@workspace/amal-ui';
 import {
   getListAdminClinicsQueryKey, getListAdminDoctorsQueryKey, useCreateDoctor, useListAdminClinics, useListAdminDoctors, useUpdateClinic, useUpdateDoctor,
@@ -82,7 +82,7 @@ export function ClinicsDoctorsPage({ title, accountKey, onClinicsChanged }: { ti
                     <p className="adm-sub"><bdi>{c.city}</bdi> · <bdi>{c.bookingMethod}</bdi></p>
                   </div>
                   <dl className="adm-clinic__facts">
-                    <div><dt>{t('adm.clinics.mode')}</dt><dd><span className={`adm-pill adm-pill--${c.mode}`}>{t(`adm.wizard.${c.mode}`)}</span></dd></div>
+                    <div><dt>{t('adm.clinics.mode')}</dt><dd><span className={`adm-pill adm-pill--${c.mode}`}><Building2 size={14} aria-hidden="true" />{t(`adm.wizard.${c.mode}`)}</span></dd></div>
                     <div><dt>{t('adm.clinics.slot')}</dt><dd>{t('adm.clinics.slotMin', { n: c.slotMinutes })}</dd></div>
                     <div><dt>{t('adm.clinics.days')}</dt><dd>{[...c.workingDays].sort().map(n => t(`adm.days.${n}`)).join(' ')}</dd></div>
                     <div><dt>{t('adm.clinics.hours')}</dt><dd className="adm-mono" dir="ltr">{c.openTime}–{c.closeTime}</dd></div>
@@ -122,7 +122,7 @@ export function ClinicsDoctorsPage({ title, accountKey, onClinicsChanged }: { ti
                   <td><bdi>{d.specialty}</bdi></td>
                   <td><bdi>{clinicLabel(clinicMap, d.clinicId, t)}</bdi></td>
                   <td><bdi dir="ltr">{d.email || '—'}</bdi></td>
-                  <td data-testid={`status-doctor-login-${d.id}`}>{d.userId !== null ? t('adm.clinics.linked', { id: d.userId }) : t('adm.clinics.notLinked')}</td>
+                  <td data-testid={`status-doctor-login-${d.id}`}><span className="adm-state-chip adm-state-chip--neutral"><UserRound size={14} aria-hidden="true" />{d.userId !== null ? t('adm.clinics.linked', { id: d.userId }) : t('adm.clinics.notLinked')}</span></td>
                   <td className="adm-rowact"><Button size="sm" variant="ghost" startIcon={<Pencil size={14} aria-hidden="true" />} disabled={!online} onClick={() => { flash.set(null); setDoctorDlg({ doctor: d, clinicId: d.clinicId }); }} data-testid={`button-edit-doctor-${d.id}`}>{t('adm.common.edit')}</Button></td>
                 </tr>))}
               </tbody>

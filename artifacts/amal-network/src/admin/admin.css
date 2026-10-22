@@ -53,6 +53,10 @@
 .adm-pill { display: inline-flex; align-items: center; min-block-size: 26px; padding-inline: 10px; border-radius: 999px; font-size: var(--amal-text-xs); font-weight: 700; white-space: nowrap; }
 .adm-pill--full { background: var(--amal-primary-soft); color: var(--amal-primary-text); }
 .adm-pill--lite { background: var(--amal-surface-2); color: var(--amal-text); border: 1px dashed var(--amal-border); }
+.adm-pill { gap: 6px; }
+.adm-pill > svg, .adm-state-chip > svg { flex: none; }
+.adm-state-chip { display: inline-flex; align-items: center; gap: 6px; max-inline-size: 100%; padding-block: 3px; padding-inline: 10px; border: 1px solid var(--amal-border); border-radius: var(--amal-radius-control); background: var(--amal-primary-soft); color: var(--amal-primary-text); font-size: var(--amal-text-xs); font-weight: 600; overflow-wrap: anywhere; }
+.adm-table tr.is-muted .adm-state-chip, .adm-state-chip--neutral { background: var(--amal-surface-2); color: var(--amal-muted); }
 .adm-devs summary { display: flex; align-items: center; gap: 6px; min-block-size: 44px; cursor: pointer; font-weight: 600; color: var(--amal-primary-text); list-style: none; }
 .adm-devs summary::-webkit-details-marker { display: none; }
 .adm-devs[open] summary svg { transform: rotate(180deg); }
@@ -62,6 +66,10 @@
 /* lists, tables, filters */
 .adm-panel, .adm-section { display: flex; flex-direction: column; gap: 14px; }
 .adm-section + .adm-section { padding-block-start: 20px; border-block-start: 1px solid var(--amal-border); }
+.adm-section__head { padding-block-end: 12px; }
+.adm-hcard__dl > div { min-inline-size: 0; padding: 10px; background: var(--amal-surface-2); border-radius: var(--amal-radius-control); }
+.adm-hcard__dl dd { overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+.adm-role { gap: 6px; align-items: center; }
 .adm-section__head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px; }
 .adm-filters { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px; }
 .adm-filters .amal-field { min-inline-size: 160px; flex: 0 1 220px; }

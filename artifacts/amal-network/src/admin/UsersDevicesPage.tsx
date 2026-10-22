@@ -1,6 +1,6 @@
 import { useMemo, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
-import { KeyRound, MonitorSmartphone, Pencil, Plus, Power, ShieldOff, UserCheck } from 'lucide-react';
+import { KeyRound, MonitorSmartphone, Pencil, Plus, Power, ShieldOff, UserCheck, UserRound } from 'lucide-react';
 import { Button, Segmented, TextField } from '@workspace/amal-ui';
 import {
   createAdminUser, getListAdminDevicesQueryKey, getListAdminUsersQueryKey, resetAdminUserPin, updateAdminUser,
@@ -90,9 +90,9 @@ function UsersPanel() {
             <tbody>{list.data.items.map(u => (
               <tr key={u.id} data-testid={`row-user-${u.id}`} className={u.active ? '' : 'is-muted'}>
                 <td><bdi dir="ltr" className="adm-strong">{u.email}</bdi><bdi dir="ltr" className="adm-sub adm-mono">#{u.id}</bdi></td>
-                <td><span className={`adm-role adm-role--${u.role}`}>{t(`adm.users.roles.${u.role}`)}</span>{u.doctorId !== null && <span className="adm-sub">{t('adm.audit.targets.doctor', { id: u.doctorId })}</span>}</td>
+                <td><span className={`adm-role adm-role--${u.role}`}><UserRound size={14} aria-hidden="true" />{t(`adm.users.roles.${u.role}`)}</span>{u.doctorId !== null && <span className="adm-sub">{t('adm.audit.targets.doctor', { id: u.doctorId })}</span>}</td>
                 <td><bdi>{clinicLabel(clinicMap, u.clinicId, t)}</bdi></td>
-                <td data-testid={`status-user-${u.id}`}>{u.active ? t('adm.users.active') : t('adm.users.inactive')}</td>
+                <td data-testid={`status-user-${u.id}`}><span className="adm-state-chip"><Power size={14} aria-hidden="true" />{u.active ? t('adm.users.active') : t('adm.users.inactive')}</span></td>
                 <td>{fmt(u.lastLogin, t('adm.common.never'))}</td>
                 <td className="adm-rowact">
                   <Button size="sm" variant="ghost" startIcon={<Pencil size={14} aria-hidden="true" />} disabled={!online} onClick={() => { flash.set(null); setEditing(u); }} data-testid={`button-edit-user-${u.id}`}>{t('adm.common.edit')}</Button>
@@ -335,7 +335,7 @@ function DevicesPanel() {
                 <td><span className="adm-mono adm-strong">{d.label}</span><span className="adm-sub adm-mono">#{d.id}</span></td>
                 <td><bdi>{clinicLabel(clinicMap, d.clinicId, t)}</bdi></td>
                 <td>{fmt(d.registeredAt)}</td>
-                <td data-testid={`status-device-${d.id}`}>{d.revokedAt ? t('adm.devices.revokedStatus', { time: fmt(d.revokedAt) }) : t('adm.devices.activeStatus')}</td>
+                <td data-testid={`status-device-${d.id}`}><span className="adm-state-chip"><MonitorSmartphone size={14} aria-hidden="true" />{d.revokedAt ? t('adm.devices.revokedStatus', { time: fmt(d.revokedAt) }) : t('adm.devices.activeStatus')}</span></td>
                 <td className="adm-rowact">{!d.revokedAt && <Button size="sm" variant="ghost" className="adm-danger-text" startIcon={<ShieldOff size={14} aria-hidden="true" />} disabled={!online} onClick={() => { flash.set(null); setRevoking(d); }} data-testid={`button-revoke-device-${d.id}`}>{t('adm.devices.revoke')}</Button>}</td>
               </tr>))}
             </tbody>

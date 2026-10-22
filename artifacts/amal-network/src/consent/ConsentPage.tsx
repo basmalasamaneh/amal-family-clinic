@@ -284,7 +284,7 @@ function ConsentWorkspace({ clinic, patientId, title, api, scope }: { clinic: Sh
 
           <div className="cs-col">
             <form className="cs-card cs-form" onSubmit={startRecord} noValidate aria-labelledby="cs-form-h" data-testid="form-consent">
-              <h3 id="cs-form-h" className="rx-h3">{t('cs.form.title')}</h3>
+              <h3 id="cs-form-h" className="rx-h3"><KeyRound size={20} aria-hidden="true" />{t('cs.form.title')}</h3>
               <p className="bk-hint">{t('cs.form.lede')}</p>
               {errors.length > 0 && <p className="cs-err" role="alert" data-testid="text-consent-errors">{t('cs.form.summary', { count: errors.length })}</p>}
               {age === 'unknown' && <p className="bk-msg bk-msg--warn" data-testid="status-age-unknown"><AlertTriangle size={18} aria-hidden="true" />{t('cs.form.unknownAge')}</p>}

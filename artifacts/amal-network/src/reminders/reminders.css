@@ -9,6 +9,8 @@
 .rem-scope { margin: 0; display: inline-flex; align-items: center; gap: 6px; align-self: flex-start; padding-block: 6px; padding-inline: 12px; border-radius: 999px; background: var(--amal-surface-2); font-size: var(--amal-text-sm); font-weight: 600; }
 .rem-card { background: var(--amal-surface); border: 1px solid var(--amal-border); border-radius: var(--amal-radius-card); padding: 16px; }
 .rem-h2 { margin: 0 0 6px; font-size: var(--amal-text-lg, var(--amal-text-md)); color: var(--amal-navy); }
+.rem-card > .rem-h2 { padding-block-end: 12px; margin-block-end: 14px; border-block-end: 1px solid var(--amal-border); }
+.rem-toggle__state { padding-block-start: 8px; }
 .rem-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .rem-toggle { display: flex; flex-wrap: wrap; gap: 16px; align-items: center; justify-content: space-between; }
 .rem-toggle__main { flex: 1 1 320px; min-inline-size: 0; }

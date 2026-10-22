@@ -1,3 +1,10 @@
+.im-panel { box-shadow: var(--amal-shadow-card); }
+.im-panel > .im-h2 { padding-block-end: 12px; border-block-end: 1px solid var(--amal-border); }
+.im-dl dt, .im-dl dd { padding-block: 6px; border-block-end: 1px solid var(--amal-border); }
+.im-dl dt:last-of-type, .im-dl dd:last-of-type { border-block-end: 0; }
+.im-impact { border: 1px solid var(--amal-border); }
+.im-verdict { background: var(--amal-surface); box-shadow: var(--amal-shadow-card); }
+.im-pair { line-height: 1.65; }
 /* P2-07 import wizard + duplicates. Logical properties only; colours from amal-ui tokens. */
 .im { max-inline-size: 1180px; display: flex; flex-direction: column; gap: 20px; }
 .im-sr { position: absolute; inline-size: 1px; block-size: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }

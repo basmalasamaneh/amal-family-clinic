@@ -167,7 +167,7 @@ export function ConflictResolution({ conflict, proposal, intent, clinicId, locke
       <header className="cr__head">
         <AlertTriangle size={18} aria-hidden="true" />
         <h3 className="cr__title" id={headingId}>{proposal ? proposal.patient.name : t('local')}</h3>
-        <span className="sync-chip" data-s={resolved ? 'acknowledged' : 'conflict'}>{resolved ? t('resolvedBadge') : t('status.conflict')}</span>
+        <span className="sync-chip" data-s={resolved ? 'acknowledged' : 'conflict'}><ArrowLeftRight size={14} aria-hidden="true" />{resolved ? t('resolvedBadge') : t('status.conflict')}</span>
       </header>
 
       <div className="cr__compare">

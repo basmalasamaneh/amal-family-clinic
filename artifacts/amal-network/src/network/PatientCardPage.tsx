@@ -121,8 +121,8 @@ function Card({ p, at, clinicId, nameRef }: { p: NetworkPatient; at: Date; clini
         <div className="net-id__txt">
           <h2 ref={nameRef} tabIndex={-1} className="net-id__name" data-testid="text-patient-name"><bdi dir="auto">{p.name}</bdi></h2>
           <p className="net-hit__meta">
-            <span className="net-tag" data-testid="text-patient-record">{t('net.result.record', { id: p.id })}</span>
-            <span className="net-tag net-tag--warn">{t('net.result.unverified')}</span>
+            <span className="net-tag" data-testid="text-patient-record"><IdCard size={14} aria-hidden="true" />{t('net.result.record', { id: p.id })}</span>
+            <span className="net-tag net-tag--warn"><ShieldAlert size={14} aria-hidden="true" />{t('net.result.unverified')}</span>
           </p>
         </div>
         <div className="net-id__consent">

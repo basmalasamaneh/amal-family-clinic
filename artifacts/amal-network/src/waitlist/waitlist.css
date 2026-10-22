@@ -12,6 +12,9 @@
 .wl-card { display: flex; flex-direction: column; gap: 10px; padding-block: 16px; padding-inline: 18px; border: 1px solid var(--amal-border); border-radius: var(--amal-radius-card); background: var(--amal-surface); }
 .wl-card--active { border-inline-start: 4px solid var(--amal-primary); }
 .wl-card--closed { background: var(--amal-surface-2); }
+.wl-card__top { padding-block-end: 10px; border-block-end: 1px solid var(--amal-border); }
+.wl-section__h { padding-block-end: 8px; }
+.wl-count { line-height: 1.8; }
 .wl-card__top { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; }
 .wl-card__name { font-weight: 700; font-size: var(--amal-text-md); color: var(--amal-text); }
 .wl-card__when { font-weight: 700; color: var(--amal-navy); font-variant-numeric: tabular-nums; }

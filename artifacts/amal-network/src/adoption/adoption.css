@@ -1,3 +1,6 @@
+.adopt-status > div, .adopt-modes > div { min-inline-size: 0; padding: 16px; background: var(--amal-surface-2); border: 1px solid var(--amal-border); border-radius: var(--amal-radius-control); }
+.adopt-result > h3, .adopt-choice > h3 { padding-block-end: 12px; border-block-end: 1px solid var(--amal-border); }
+.adopt-meta dt, .adopt-meta dd { padding-block: 6px; }
 .adopt-lead { max-inline-size: 60ch; color: hsl(var(--muted-foreground)); margin-block-start: .5rem; }
 .adopt-pledge {
   border: 2px solid hsl(var(--primary)); border-radius: var(--radius, 12px); padding: 1.25rem 1.5rem; margin-block: 1.25rem;
@@ -12,7 +15,7 @@
 .adopt-status dd, .adopt-modes dd { margin: .2rem 0 0; font-weight: 600; }
 .adopt-modes dd { font-weight: 400; }
 .adopt-modes dt { font-size: 1rem; font-weight: 700; color: hsl(var(--foreground)); }
-.adopt-badge { display: inline-block; padding: .15rem .65rem; border-radius: 999px; background: hsl(var(--muted)); }
+.adopt-badge { display: inline-flex; align-items: center; gap: 6px; padding: .15rem .65rem; border-radius: 999px; background: hsl(var(--muted)); }
 .adopt-badge--full { background: hsl(var(--primary)); color: hsl(var(--primary-foreground)); }
 .adopt-results { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 1rem; margin-block: 1rem; }
 .adopt-result { border: 1px solid hsl(var(--border)); border-radius: var(--radius, 12px); padding: 1rem 1.25rem; display: grid; gap: 1rem; }

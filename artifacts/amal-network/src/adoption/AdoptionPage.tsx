@@ -167,7 +167,7 @@ function StatusView({ a }: { a: ClinicAdoption }) {
   const since = a.membershipStatus === 'left' ? a.leftAt : a.state === 'full' ? a.fullStartedAt : a.state === 'lite' ? a.liteStartedAt : a.trialStartedAt;
   return (
     <dl className="adopt-status">
-      <div><dt>{t('adoption.status.state')}</dt><dd><span className={`adopt-badge adopt-badge--${a.state}`} data-testid="text-adoption-state">{t(`adoption.status.${a.state}`)}</span></dd></div>
+      <div><dt>{t('adoption.status.state')}</dt><dd><span className={`adopt-badge adopt-badge--${a.state}`} data-testid="text-adoption-state"><Handshake size={14} aria-hidden="true" />{t(`adoption.status.${a.state}`)}</span></dd></div>
       <div><dt>{t('adoption.status.membership')}</dt><dd data-testid="text-adoption-membership">{t(`adoption.status.${a.membershipStatus}`)}</dd></div>
       <div><dt>{t('adoption.status.since')}</dt><dd>{since ? <bdi>{formatInstant(since, locale, digitPreference)}</bdi> : t('adoption.status.unknownSince')}</dd></div>
       <div><dt>{t('adoption.modes.heading')}</dt><dd>{a.capabilities.networkSharing ? t('adoption.status.sharingOn') : t('adoption.status.sharingOff')}</dd></div>

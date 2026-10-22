@@ -62,6 +62,10 @@ textarea.bk-input { padding-block: 10px; min-block-size: 88px; resize: vertical;
 .bk-chosen { display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: var(--amal-radius-card); background: var(--amal-primary-soft); border: 1px solid var(--amal-primary); }
 .bk-review { display: grid; grid-template-columns: auto minmax(0,1fr); gap: 10px 18px; margin: 0; padding: 16px; border-radius: var(--amal-radius-card); background: var(--amal-surface); border: 1px solid var(--amal-border); }
 .bk-review dt { color: var(--amal-muted); font-size: var(--amal-text-sm); }
+.bk-review dt, .bk-review dd { padding-block: 6px; border-block-end: 1px solid var(--amal-border); }
+.bk-review dt:last-of-type, .bk-review dd:last-of-type { border-block-end: 0; }
+.bk-stage-title { padding-block-end: 12px; border-block-end: 1px solid var(--amal-border); }
+.bk-chosen { box-shadow: var(--amal-shadow-card); }
 .bk-review dd { margin: 0; font-weight: 700; }
 .bk-hold { display: flex; align-items: center; gap: 12px; }
 .bk-hold__ring { flex: none; inline-size: 44px; block-size: 44px; border-radius: 50%; display: grid; place-items: center; border: 3px solid var(--amal-primary); font-weight: 700; font-variant-numeric: tabular-nums; color: var(--amal-primary-text); }

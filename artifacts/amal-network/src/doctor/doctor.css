@@ -33,6 +33,11 @@
 .doc-statement p { margin: 0; font-weight: 700; font-size: var(--amal-text-md); text-align: start; }
 .doc-panel { display: flex; flex-direction: column; gap: 10px; padding: 18px; background: var(--amal-surface); border: 1px solid var(--amal-border); border-radius: var(--amal-radius-card); }
 .doc-panel .net-h2 { display: flex; align-items: center; gap: 8px; }
+.doc-panel > .net-h2 { padding-block-end: 12px; border-block-end: 1px solid var(--amal-border); }
+.doc-mode > div { min-inline-size: 0; padding: 16px; background: var(--amal-surface-2); border-radius: var(--amal-radius-control); border: 1px solid var(--amal-border); }
+.doc-row__body { padding-block: 4px; }
+.doc-row__time { line-height: 1.6; }
+.doc-audit__row { box-shadow: var(--amal-shadow-card); }
 .doc-mode { margin: 0; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; }
 .doc-mode dt { font-size: var(--amal-text-sm); color: var(--amal-muted); font-weight: 600; margin-block-end: 6px; }
 .doc-mode dd { margin: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }

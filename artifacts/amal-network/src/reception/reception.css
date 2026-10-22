@@ -8,6 +8,11 @@ button.shell-walkin { border: 0; font: inherit; font-size: var(--amal-text-recep
 .rx-panel { display: flex; flex-direction: column; gap: 14px; padding: 20px; border-radius: var(--amal-radius-card); background: var(--amal-surface); border: 1px solid var(--amal-border); }
 .rx-dossier { position: sticky; inset-block-start: 16px; border-block-start: 4px solid var(--amal-primary); }
 .rx-h2 { margin: 0; font-size: var(--amal-text-xl); color: var(--amal-navy); outline: none; }
+.rx-panel > .rx-h2 { padding-block-end: 12px; border-block-end: 1px solid var(--amal-border); }
+.rx-id { padding-block-end: 16px; border-block-end: 1px solid var(--amal-border); }
+.rx-dl > div { border: 1px solid var(--amal-border); }
+.rx-dl dd { line-height: 1.7; overflow-wrap: anywhere; }
+.rx-up__item { background: var(--amal-surface-2); }
 .rx-h3 { margin: 0; display: flex; align-items: center; gap: 8px; font-size: var(--amal-text-lg); color: var(--amal-navy); }
 .rx-empty { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; padding-block: 28px; }
 .rx-empty__mark { inline-size: 64px; block-size: 64px; display: grid; place-items: center; border-radius: 18px; background: var(--amal-primary-soft); color: var(--amal-primary-text); }

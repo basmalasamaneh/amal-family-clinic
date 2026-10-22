@@ -1,4 +1,38 @@
 .auth-mode { border: 0; padding: 0; margin: 0; min-inline-size: 0; }
+/* Shared work surfaces: presentation only; calendar geometry is intentionally excluded. */
+.shell-main :is(.rx-panel, .net-card, .doc-panel, .adm-hcard, .im-panel, .cs-card, .rem-card, .wl-card, .adopt-result, .adopt-choice, .sync-list, .cr) {
+  box-shadow: var(--amal-shadow-card);
+}
+.shell-main :is(.rx-h2, .net-h2, .im-h2, .rem-h2, .kpi-card__title, .wl-section__h, .sync-h) {
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.shell-main :is(.rx-dl, .doc-mode, .im-dl, .cr__dl, .adopt-meta) dd {
+  min-inline-size: 0;
+  overflow-wrap: anywhere;
+}
+:is(.adm-role, .sync-chip, .adopt-badge, .rx-tag, .net-tag) {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+:is(.adm-role, .sync-chip, .adopt-badge, .rx-tag, .net-tag) > svg {
+  flex: none;
+  inline-size: 14px;
+  block-size: 14px;
+}
+.account-dialog [data-testid='text-user-role'] { display: flex; align-items: center; gap: 8px; }
+.shell-dialog .help-item { padding-block: 16px; border-block-end: 1px solid var(--amal-border); }
+.data-item, .data-choice { box-shadow: var(--amal-shadow-card); }
+.data-body { line-height: 1.8; }
+.data-notes { padding-block-start: 16px; border-block-start: 1px solid var(--amal-border); }
+.shell-main .shell-dl { gap: 12px 24px; }
+@media screen {
+  .shell-main :is(.adm-table, .kpi-table, .im-table) tbody tr:nth-child(even) {
+    background: var(--amal-surface-2);
+  }
+  .shell-main :is(.adm-table, .kpi-table, .im-table) :is(th, td) { line-height: 1.7; }
+}
 .auth-main { box-sizing: border-box; }
 
 /* Account only: a compact identity card and clearly labelled preference rows. */

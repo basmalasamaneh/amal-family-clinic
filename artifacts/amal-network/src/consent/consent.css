@@ -1,3 +1,7 @@
+.cs-card { box-shadow: var(--amal-shadow-card); }
+.cs-card > .rx-h3 { padding-block-end: 12px; border-block-end: 1px solid var(--amal-border); }
+.cs-rung { min-inline-size: 0; line-height: 1.65; }
+.cs-rung > svg { flex-shrink: 0; }
 /* Consent ledger. Logical properties only; tokens from amal-ui so light/dark follow automatically. */
 .cs-back { align-self: flex-start; display: inline-flex; align-items: center; gap: 6px; min-block-size: 44px; color: var(--amal-primary-text); font-weight: 600; text-decoration: none; }
 .cs-back { min-block-size: var(--amal-space-target); box-sizing: border-box; }

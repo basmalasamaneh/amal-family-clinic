@@ -60,7 +60,7 @@ function ClinicCard({ c, generatedAt, timeout, stale }: { c: NetworkClinicHealth
     <li className={`adm-hcard adm-hcard--${c.connectivity}`} data-testid={`card-health-${c.clinicId}`}>
       <div className="adm-hcard__top">
         <h2 className="adm-hcard__name" data-testid={`text-health-name-${c.clinicId}`}><bdi>{c.clinicName}</bdi></h2>
-        <span className={`adm-pill adm-pill--${c.networkMode}`} data-testid={`text-health-mode-${c.clinicId}`}>{t(`adm.health.${c.networkMode}`)}</span>
+        <span className={`adm-pill adm-pill--${c.networkMode}`} data-testid={`text-health-mode-${c.clinicId}`}><Radio size={14} aria-hidden="true" />{t(`adm.health.${c.networkMode}`)}</span>
       </div>
       <p className={`adm-conn adm-conn--${c.connectivity}`} data-testid={`status-health-conn-${c.clinicId}`}>
         {c.connectivity === 'online' ? <Radio size={18} aria-hidden="true" /> : <CircleOff size={18} aria-hidden="true" />}

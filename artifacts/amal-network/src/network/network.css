@@ -5,6 +5,9 @@
 .net-eyebrow { margin: 0; color: var(--amal-muted); font-size: var(--amal-text-sm); font-weight: 700; letter-spacing: .02em; }
 .net-h1 { margin: 0; font-size: var(--amal-text-3xl); color: var(--amal-navy); outline: none; line-height: 1.15; }
 .net-h2 { margin: 0; font-size: var(--amal-text-xl); color: var(--amal-navy); }
+.net-head { padding-block-end: 16px; border-block-end: 1px solid var(--amal-border); }
+.net-card__flags { padding-block-start: 12px; border-block-start: 1px solid var(--amal-border); }
+.net-timeline__head { padding-block-end: 12px; border-block-end: 1px solid var(--amal-border); }
 .net-privacy, .net-identity { margin-block: 6px 0; margin-inline: 0; display: inline-flex; align-self: flex-start; align-items: center; gap: 8px; padding-block: 4px; padding-inline: 12px; border-radius: 999px; background: var(--amal-surface-2); color: var(--amal-muted); font-size: var(--amal-text-sm); font-weight: 600; }
 .net-identity { border-radius: var(--amal-radius-control); background: var(--amal-status-sync-bg); color: var(--amal-status-sync-fg); }
 .net-hint { margin: 0; color: var(--amal-muted); font-size: var(--amal-text-sm); }

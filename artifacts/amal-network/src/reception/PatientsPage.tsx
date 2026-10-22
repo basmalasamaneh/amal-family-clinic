@@ -207,7 +207,7 @@ function PatientDetail({ patient, clinic, api, doctorNames, headingRef, onClear,
                     <span className="rx-up__when">{formatLocalDate(d, locale, dp, 'EEEE')} · <bdi dir="ltr">{formatTime(a.startsAt, locale, dp)}–{formatTime(a.endsAt, locale, dp)}</bdi></span>
                     <span className="bk-hint"><bdi dir="auto">{doctorNames.get(a.doctorId) ?? t('rx.up.doctor', { id: a.doctorId })}</bdi> · <bdi>{clinic.name}</bdi></span>
                   </span>
-                  <span className={`rx-tag rx-tag--${a.status}`}>{t(`rx.up.status.${a.status}`, { defaultValue: a.status })}</span>
+                  <span className={`rx-tag rx-tag--${a.status}`}><CalendarDays size={14} aria-hidden="true" />{t(`rx.up.status.${a.status}`, { defaultValue: a.status })}</span>
                   <Link href={demoPath(`/desk/today?date=${d}&doctor=${a.doctorId}`)} className="bk-btn bk-btn--sm" aria-label={`${t('rx.up.open')}: ${formatLocalDate(d, locale, dp)}`} data-testid={`link-upcoming-${a.id}`}><CalendarDays size={16} aria-hidden="true" />{t('rx.up.open')}</Link>
                 </li>);
             })}

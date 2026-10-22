@@ -33,6 +33,11 @@
 
 .sync-chip { display: inline-flex; align-items: center; gap: 6px; min-block-size: 28px; padding-inline: 10px; border-radius: 999px; font-size: var(--amal-text-xs); font-weight: 700; border: 1px solid var(--amal-border); background: var(--amal-surface-2); color: var(--amal-text); white-space: nowrap; }
 .sync-chip::before { content: ''; inline-size: 8px; block-size: 8px; border-radius: 50%; background: currentColor; opacity: .7; }
+.sync-chip:has(> svg)::before { content: none; }
+.sync-count__n { padding-block: 4px; font-size: var(--amal-text-3xl); }
+.sync-row:nth-child(even) { background: var(--amal-surface-2); }
+.cr__dl dt, .cr__dl dd { padding-block: 6px; border-block-end: 1px solid var(--amal-border); }
+.cr__dl dt:last-of-type, .cr__dl dd:last-of-type { border-block-end: 0; }
 .sync-chip[data-s='acknowledged'] { background: var(--amal-primary-soft); color: var(--amal-primary-text); border-color: transparent; }
 .sync-chip[data-s='syncing'], .sync-chip[data-s='retry'] { background: var(--amal-status-sync-bg); color: var(--amal-status-sync-fg); border-color: var(--amal-status-sync-border); }
 .sync-chip[data-s='conflict'], .sync-chip[data-s='rejected'] { color: var(--amal-danger-strong); border-color: var(--amal-danger-strong); background: color-mix(in srgb, var(--amal-danger-strong) 8%, var(--amal-surface)); }

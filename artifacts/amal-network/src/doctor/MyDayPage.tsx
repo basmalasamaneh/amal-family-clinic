@@ -134,7 +134,7 @@ function DayRow({ it, digits, scope }: { it: DayItem; digits: 'latn' | 'arab'; s
         <div className="doc-row__top">
           <span className="net-hit__av" aria-hidden="true"><UserRound size={20} /></span>
           <h2 className="doc-row__name" data-testid={`text-day-name-${it.id}`}><bdi dir="auto">{p.name}</bdi></h2>
-          <span className={`net-tag doc-status doc-status--${status}`} data-testid={`status-day-${it.id}`}>{t(`doc.day.status.${status}`)}</span>
+          <span className={`net-tag doc-status doc-status--${status}`} data-testid={`status-day-${it.id}`}><Clock size={14} aria-hidden="true" />{t(`doc.day.status.${status}`)}</span>
           <ConsentBadge level={effectiveConsent(p)} testId={`badge-day-consent-${it.id}`} />
         </div>
         {shown.length > 0
