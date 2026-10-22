@@ -74,6 +74,8 @@ export interface CalendarWindow {
   endUtc: string;
 }
 export interface CacheMetadata extends Scope {
+  /** Optional for pre-hours snapshots; null is an explicitly missing configuration. */
+  clinicHours?: import('../calendar/adapter').ClinicHours | null;
   refreshedAt: string;
   /** Authoritative source coverage, not a claim inferred from record counts. */
   coverageStartUtc: string;
@@ -82,6 +84,7 @@ export interface CacheMetadata extends Scope {
   windowEndUtc: string;
 }
 export interface AuthorizedSnapshot extends Scope {
+  clinicHours?: import('../calendar/adapter').ClinicHours | null;
   doctors: readonly DoctorProjection[];
   patients: readonly PatientProjection[];
   appointments: readonly AppointmentProjection[];

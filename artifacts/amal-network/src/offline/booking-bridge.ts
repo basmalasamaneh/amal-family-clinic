@@ -1,12 +1,13 @@
 import {
-  getSyncState, listAppointments, listDoctors, listPatients,
+  getSyncState, listAppointments, listClinics, listDoctors, listPatients,
   type Appointment, type AppointmentInput, type SyncOutcome, type PatientInput,
 } from '@workspace/api-client-react';
 import { localCache } from './index';
 import { appointmentWindow } from './calendar';
 import type { BookingProposal, CachedSnapshot, Result, ScopeTicket } from './types';
 import type { CalendarAppointment, SchedulingReadAdapter } from '../calendar/adapter';
-import { showCalendarProposal } from '../calendar/local-schedule';
+import { readCachedClinicHours, showCalendarProposal } from '../calendar/local-schedule';
+import { fromSchedulingSettings } from '../calendar/hours';
 import type { PatientSearchAdapter, PatientHit } from '../booking/patients';
 import { matchesPatient } from '../booking/normalize';
 import { reportUnauthorized } from '../auth/session-events';
@@ -63,13 +64,17 @@ export async function prepareBookingCache(): Promise<void> {
     // Server durations are bounded to 1440 minutes. Include starts in the prior
     // 24h so a booking crossing midnight cannot disappear from conflict checks.
     const overlapFrom = new Date(Date.parse(window.startUtc) - 86_400_000).toISOString();
-    const [doctors, patients, appointments] = await Promise.all([
+     const [doctors, patients, appointments, clinics] = await Promise.all([
       pages(cursor => listDoctors({ clinicId: ticket.clinicId, limit: 100, ...(cursor ? { cursor } : {}) })),
       pages(cursor => listPatients({ limit: 100, ...(cursor ? { cursor } : {}) })),
       pages(cursor => listAppointments({ clinicId: ticket.clinicId, from: overlapFrom, to: window.endUtc, limit: 100, ...(cursor ? { cursor } : {}) })),
+       pages(cursor => listClinics({ limit: 100, ...(cursor ? { cursor } : {}) })),
     ]);
+     const clinic = clinics.find(c => c.id === ticket.clinicId);
+     if (!clinic) throw new LocalBookingError('unauthorized');
     value(await localCache.replaceSnapshot(ticket, {
       userId: ticket.userId, clinicId: ticket.clinicId,
+       clinicHours: fromSchedulingSettings(clinic.scheduling),
       doctors: doctors.filter(d => d.clinicId === ticket.clinicId),
       patients: patients.filter(p => p.clinicId === ticket.clinicId),
       appointments: appointments.filter(a => a.clinicId === ticket.clinicId && Date.parse(a.endsAt) > Date.parse(window.startUtc)),
@@ -179,5 +184,7 @@ export const cachedSchedulingAdapter: SchedulingReadAdapter = {
     return snapshot.doctors;
   },
   listAppointments: getLocalCalendar,
-  async clinicHours() { return null; },
+  async clinicHours(clinicId) {
+    return readCachedClinicHours(localCache, await readyScope(), clinicId);
+  },
 };

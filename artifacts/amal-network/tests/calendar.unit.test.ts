@@ -99,7 +99,6 @@ test('mock adapter is explicit, deterministic and clinic-scoped', async () => {
   await assert.rejects(createMockSchedulingAdapter('error', { latency: () => 0 }).listAppointments({ clinicId: 1, ...r }));
   assert.equal(await createMockSchedulingAdapter('no-hours', { latency: () => 0 }).clinicHours(1), null);
   assert.deepEqual(await createMockSchedulingAdapter('no-doctors', { latency: () => 0 }).listDoctors(1), []);
-  assert.equal(await realSchedulingAdapter.clinicHours(1), null);
 });
 
 test('booking context keeps the selected local date; slot date wins', () => {

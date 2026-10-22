@@ -5,7 +5,7 @@ import { coversCalendarRange, mergeLocalCalendar } from './local-schedule';
 
 export type Load<T> = { state: 'loading' } | { state: 'error'; error: unknown } | { state: 'ready'; data: T };
 export interface Schedule {
-  doctors: CalendarDoctor[]; appointments: CalendarAppointment[]; hours: ClinicHours | null;
+  doctors: CalendarDoctor[]; appointments: CalendarAppointment[]; hours: ClinicHours | null | undefined;
   localCache?: { metadata: CacheMetadata | null; refreshFailed: boolean; incomplete: boolean };
 }
 

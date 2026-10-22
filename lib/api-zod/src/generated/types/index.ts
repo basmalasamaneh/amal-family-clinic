@@ -356,6 +356,7 @@ export * from './reminderLogEntry';
 export * from './reminderLogEntryStatus';
 export * from './reminderPatientPreference';
 export * from './resolutionInput';
+export * from './schedulingSettings';
 export * from './syncAppliedOutcome';
 export * from './syncAppliedOutcomeStatus';
 export * from './syncAppointmentPayload';

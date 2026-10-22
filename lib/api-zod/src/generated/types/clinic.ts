@@ -7,9 +7,11 @@
  */
 import type { ClinicAdoption } from './clinicAdoption';
 import type { ClinicMode } from './clinicMode';
+import type { SchedulingSettings } from './schedulingSettings';
 
 export interface Clinic {
   adoption?: ClinicAdoption;
+  scheduling?: SchedulingSettings | null;
   /** @minimum 1 */
   id: number;
   name: string;

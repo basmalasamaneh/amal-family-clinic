@@ -772,6 +772,15 @@ export const listClinicsResponseItemsItemAdoptionLeftByMax = 2147483647;
 
 export const listClinicsResponseItemsItemAdoptionAllowedTransitionsMax = 2;
 
+export const listClinicsResponseItemsItemSchedulingOpenTimeRegExp = new RegExp('^([01][0-9]|2[0-3]):[0-5][0-9](:[0-5][0-9])?$');
+export const listClinicsResponseItemsItemSchedulingCloseTimeRegExp = new RegExp('^([01][0-9]|2[0-3]):[0-5][0-9](:[0-5][0-9])?$');
+export const listClinicsResponseItemsItemSchedulingWorkingDaysItemMin = 0;
+export const listClinicsResponseItemsItemSchedulingWorkingDaysItemMax = 6;
+
+export const listClinicsResponseItemsItemSchedulingWorkingDaysMax = 7;
+
+export const listClinicsResponseItemsItemSchedulingSlotMinutesMax = 1440;
+
 
 
 
@@ -796,6 +805,12 @@ export const ListClinicsResponse = zod.object({
 }).strict(),
   "allowedTransitions": zod.array(zod.enum(['lite', 'full'])).max(listClinicsResponseItemsItemAdoptionAllowedTransitionsMax)
 }).strict().optional().describe('Persisted adoption lifecycle, separate from operational network mode. Trial and left clinics are local-only. Leaving retains local booking and clinic data; a left clinic cannot rejoin through adoption transitions. Capabilities are caller-specific; only an explicitly assigned, active doctor-manager may mutate or export.'),
+  "scheduling": zod.object({
+  "openTime": zod.string().regex(listClinicsResponseItemsItemSchedulingOpenTimeRegExp),
+  "closeTime": zod.string().regex(listClinicsResponseItemsItemSchedulingCloseTimeRegExp),
+  "workingDays": zod.array(zod.number().int().min(listClinicsResponseItemsItemSchedulingWorkingDaysItemMin).max(listClinicsResponseItemsItemSchedulingWorkingDaysItemMax)).max(listClinicsResponseItemsItemSchedulingWorkingDaysMax).describe('Sunday=0. Empty means explicitly closed all week.'),
+  "slotMinutes": zod.number().int().min(1).max(listClinicsResponseItemsItemSchedulingSlotMinutesMax)
+}).strict().nullish().describe('Read-only local scheduling configuration for the authorized clinic. Null means not configured; omitted means unavailable on older reads.'),
   "id": zod.number().int().min(1),
   "name": zod.string(),
   "mode": zod.enum(['network', 'lite']),
@@ -917,6 +932,15 @@ export const getClinicResponseAdoptionLeftByMax = 2147483647;
 
 export const getClinicResponseAdoptionAllowedTransitionsMax = 2;
 
+export const getClinicResponseSchedulingOpenTimeRegExp = new RegExp('^([01][0-9]|2[0-3]):[0-5][0-9](:[0-5][0-9])?$');
+export const getClinicResponseSchedulingCloseTimeRegExp = new RegExp('^([01][0-9]|2[0-3]):[0-5][0-9](:[0-5][0-9])?$');
+export const getClinicResponseSchedulingWorkingDaysItemMin = 0;
+export const getClinicResponseSchedulingWorkingDaysItemMax = 6;
+
+export const getClinicResponseSchedulingWorkingDaysMax = 7;
+
+export const getClinicResponseSchedulingSlotMinutesMax = 1440;
+
 
 
 
@@ -940,6 +964,12 @@ export const GetClinicResponse = zod.object({
 }).strict(),
   "allowedTransitions": zod.array(zod.enum(['lite', 'full'])).max(getClinicResponseAdoptionAllowedTransitionsMax)
 }).strict().optional().describe('Persisted adoption lifecycle, separate from operational network mode. Trial and left clinics are local-only. Leaving retains local booking and clinic data; a left clinic cannot rejoin through adoption transitions. Capabilities are caller-specific; only an explicitly assigned, active doctor-manager may mutate or export.'),
+  "scheduling": zod.object({
+  "openTime": zod.string().regex(getClinicResponseSchedulingOpenTimeRegExp),
+  "closeTime": zod.string().regex(getClinicResponseSchedulingCloseTimeRegExp),
+  "workingDays": zod.array(zod.number().int().min(getClinicResponseSchedulingWorkingDaysItemMin).max(getClinicResponseSchedulingWorkingDaysItemMax)).max(getClinicResponseSchedulingWorkingDaysMax).describe('Sunday=0. Empty means explicitly closed all week.'),
+  "slotMinutes": zod.number().int().min(1).max(getClinicResponseSchedulingSlotMinutesMax)
+}).strict().nullish().describe('Read-only local scheduling configuration for the authorized clinic. Null means not configured; omitted means unavailable on older reads.'),
   "id": zod.number().int().min(1),
   "name": zod.string(),
   "mode": zod.enum(['network', 'lite']),

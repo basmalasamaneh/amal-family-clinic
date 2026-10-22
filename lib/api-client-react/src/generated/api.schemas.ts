@@ -462,6 +462,29 @@ export interface ApiFailure {
   params: ApiFailureParams;
 }
 
+/**
+ * Read-only local scheduling configuration for the authorized clinic. Null means not configured; omitted means unavailable on older reads.
+ * @nullable
+ */
+export type SchedulingSettings = {
+  /** @pattern ^([01][0-9]|2[0-3]):[0-5][0-9](:[0-5][0-9])?$ */
+  openTime: string;
+  /** @pattern ^([01][0-9]|2[0-3]):[0-5][0-9](:[0-5][0-9])?$ */
+  closeTime: string;
+  /**
+     * Sunday=0. Empty means explicitly closed all week.
+     * @maxItems 7
+     * @items.minimum 0
+     * @items.maximum 6
+     */
+  workingDays: number[];
+  /**
+     * @minimum 1
+     * @maximum 1440
+     */
+  slotMinutes: number;
+} | null;
+
 export type ClinicMode = typeof ClinicMode[keyof typeof ClinicMode];
 
 
@@ -540,6 +563,7 @@ export interface ClinicAdoption {
 
 export interface Clinic {
   adoption?: ClinicAdoption;
+  scheduling?: SchedulingSettings | null;
   /** @minimum 1 */
   id: number;
   name: string;

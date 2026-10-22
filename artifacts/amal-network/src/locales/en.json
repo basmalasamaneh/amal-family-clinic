@@ -640,6 +640,8 @@
       "noDoctorsDesc": "Ask an administrator to assign doctors to this clinic.",
       "noAppointments": "No appointments on this date.",
       "noHours": "Clinic hours are not configured, so open slots are not shown. Use New booking instead.",
+      "hoursUnavailable": "Clinic hours are unavailable in this cache. Open slots are not shown.",
+      "closed": "The clinic is closed on this day. Existing appointments are still shown.",
       "noClinic": "No clinic selected",
       "noClinicDesc": "Choose an authorized clinic to see its calendar."
     },

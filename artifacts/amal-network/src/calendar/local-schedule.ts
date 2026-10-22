@@ -1,5 +1,16 @@
 import type { CalendarAppointment } from './adapter';
 import type { BookingProposal } from '../offline/types';
+import type { LocalCacheController } from '../offline/controller';
+import type { ScopeTicket } from '../offline/types';
+
+/** The calendar hours read is strictly local and uses the same authorization ticket as other cache reads. */
+export async function readCachedClinicHours(cache: LocalCacheController, ticket: ScopeTicket, clinicId: number) {
+  if (ticket.clinicId !== clinicId) throw new Error('unauthorized');
+  const result = await cache.readSnapshot(ticket);
+  if (!result.ok) throw new Error(result.error);
+  if (!result.value.metadata) throw new Error('identity-not-cached');
+  return result.value.metadata.clinicHours;
+}
 
 /** Failed proposals remain in the durable sync queue, not on appointment calendars. */
 export function showCalendarProposal(proposal: Pick<BookingProposal, 'canonical' | 'outcome'>): boolean {

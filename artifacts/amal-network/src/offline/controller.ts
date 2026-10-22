@@ -5,7 +5,7 @@ import { acknowledgeBooking, bookingInput, BookingFailure, persistBooking, valid
 import type { AppointmentInput, SyncOutcome, SyncConflict, SyncResolutionResult } from '@workspace/api-client-react';
 import { applyPage, reconcile, saveIntent, finishIntent, readState } from './sync-store';
 import { persistRegistration, registrationFor } from './registration';
-import { InvalidProjection, projectOperation, projectSnapshot, requireValid, utcInstant, validId, validText } from './projections';
+import { InvalidProjection, projectClinicHours, projectOperation, projectSnapshot, requireValid, utcInstant, validId, validText } from './projections';
 import type {
   AuthorizedContext, AuthorizedSnapshot, CacheErrorCode, CacheMetadata, CachedSnapshot,
   LocalOperation, OutboxRecord, OutboxStatus, OutboxUpdate, Result, Scope, ScopeTicket, StorageStatus,
@@ -321,6 +321,7 @@ export class LocalCacheController {
       await this.db.patients.bulkPut(projection.patients);
       await this.db.metadata.put({
         ...scope, refreshedAt: this.now().toISOString(),
+        clinicHours: projection.clinicHours,
         coverageStartUtc: projection.coverageStartUtc, coverageEndUtc: projection.coverageEndUtc,
         windowStartUtc: window.startUtc, windowEndUtc: window.endUtc,
       });
@@ -338,8 +339,10 @@ export class LocalCacheController {
       ]);
       let metadata: CacheMetadata | null = null;
       if (stored) {
+        requireValid(stored.userId === scope.userId && stored.clinicId === scope.clinicId);
         metadata = {
           ...scope, refreshedAt: utcInstant(stored.refreshedAt),
+          clinicHours: projectClinicHours(stored.clinicHours),
           coverageStartUtc: utcInstant(stored.coverageStartUtc), coverageEndUtc: utcInstant(stored.coverageEndUtc),
           windowStartUtc: window.startUtc, windowEndUtc: window.endUtc,
         };

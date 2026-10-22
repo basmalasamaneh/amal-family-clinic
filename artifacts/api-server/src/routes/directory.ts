@@ -39,6 +39,9 @@ router.get("/clinics", authenticate, requireRoles("doctor", "front-desk"), async
     [clinicId, afterId, req.auth!.id]);
   const result = { items: rows.map(row => ({ id: row.clinic_id, name: row.clinic_name,
     mode: row.network_mode === "full" ? "network" : "lite", timezone: row.timezone,
+    scheduling: row.open_time == null || row.close_time == null || row.working_days == null || row.slot_minutes == null
+      ? null : { openTime: row.open_time, closeTime: row.close_time,
+        workingDays: row.working_days, slotMinutes: row.slot_minutes },
     adoption: adoption(row,req.auth!.role==="doctor" && row.can_manage) })), nextCursor: null };
   ListClinicsResponse.parse(result);
   res.json(result);

@@ -13,6 +13,7 @@ import { setWalkInPageContext } from '@/reception/walkin-bus';
 import { useSchedule } from './use-schedule';
 import { WalkInHandoff } from '@/reception/WalkInHandoff';
 import { visibleOnSchedule } from './visibility';
+import { dayGridHours } from './hours';
 
 /** Keeps explicit dev demo params (calendarDemo) on calendar links; shellDemo is added by demoPath. */
 export function calHref(path: string, search: string): string {
@@ -148,23 +149,24 @@ function useMemoToday(): [string] {
 }
 
 function DayGrid({ clinicId, date, search, hours, doctors, appointments }: {
-  clinicId: number; date: string; search: string; hours: ClinicHours | null; doctors: CalendarDoctor[]; appointments: CalendarAppointment[];
+  clinicId: number; date: string; search: string; hours: ClinicHours | null | undefined; doctors: CalendarDoctor[]; appointments: CalendarAppointment[];
 }) {
   const { t } = useTranslation();
   const { digitPreference } = useAmalPreferences();
-  const step = hours?.slotMinutes ?? 30;
   const dayAppts = appointments.filter((a) => localDateOf(a.startsAt) === date);
-  const mins = dayAppts.flatMap((a) => [localMinutesOf(a.startsAt), localDateOf(a.endsAt) === date ? localMinutesOf(a.endsAt) : 24 * 60]);
-  const open = hours ? hours.open : mins.length ? Math.floor(Math.min(...mins) / 60) * 60 : 0;
-  const close = hours ? hours.close : mins.length ? Math.ceil(Math.max(...mins) / 60) * 60 : 0;
-  const slots: number[] = [];
-  for (let m = open; m < close; m += step) slots.push(m);
+  const { step, open, close, slots, available, closed } = dayGridHours(date, hours, dayAppts);
   const rowOf = (m: number) => Math.min(Math.max(Math.floor((m - open) / step), 0), slots.length - 1) + 1;
 
   return (
     <div className="cal-day-wrap">
-      {!hours && (
+      {hours === null && (
         <p className="cal-note" role="note" data-testid="status-no-hours"><Clock3 size={18} aria-hidden="true" />{t('calendar.state.noHours')}</p>
+      )}
+      {hours === undefined && (
+        <p className="cal-note" role="note" data-testid="status-hours-unavailable"><Clock3 size={18} aria-hidden="true" />{t('calendar.state.hoursUnavailable')}</p>
+      )}
+      {closed && (
+        <p className="cal-note cal-note--soft" role="status" data-testid="status-clinic-closed"><Clock3 size={18} aria-hidden="true" />{t('calendar.state.closed')}</p>
       )}
       {dayAppts.length === 0 && (
         <p className="cal-note cal-note--soft" role="status" data-testid="state-no-appointments">{t('calendar.state.noAppointments')}</p>
@@ -203,7 +205,7 @@ function DayGrid({ clinicId, date, search, hours, doctors, appointments }: {
             });
             return (
               <ul key={d.id} className="cal-day__col" aria-label={d.name} style={{ '--cal-lanes': lanes } as CSSProperties}>
-                {hours && slots.filter((m) => !busy.has(m)).map((m) => (
+                {available.filter((m) => !busy.has(m)).map((m) => (
                   <li key={`s${m}`} style={{ gridRow: rowOf(m), gridColumn: '1 / -1' }}>
                     <Link
                       href={calHref(bookingQuery({ clinicId, doctorId: d.id, source: 'phone', localDate: date, startsAt: localToUtc(date, m), endsAt: localToUtc(date, m + step) }), search)}

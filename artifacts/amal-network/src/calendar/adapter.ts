@@ -1,5 +1,6 @@
-import { listAppointments, listDoctors, type Appointment, type Doctor } from '@workspace/api-client-react';
+import { listAppointments, listClinics, listDoctors, type Appointment, type Doctor } from '@workspace/api-client-react';
 import { addLocalDays, localDateOf, localToUtc } from './dates';
+import { fromSchedulingSettings } from './hours';
 
 export interface CalendarDoctor { id: number; clinicId: number; name: string }
 export type Lifecycle = 'booked' | 'double_booked' | 'completed' | 'no_show' | 'cancelled' | 'unknown';
@@ -18,7 +19,7 @@ export interface CalendarAppointment {
   version?: number;
 }
 /** Local working hours in minutes from local midnight. null = not configured. */
-export interface ClinicHours { open: number; close: number; slotMinutes: number }
+export interface ClinicHours { open: number; close: number; slotMinutes: number; workingDays: number[] }
 export interface AppointmentQuery { clinicId: number; from: string; to: string; doctorId?: number }
 
 export interface SchedulingReadAdapter {
@@ -26,7 +27,7 @@ export interface SchedulingReadAdapter {
   scenario?: MockScenario;
   listDoctors(clinicId: number, signal?: AbortSignal): Promise<CalendarDoctor[]>;
   listAppointments(q: AppointmentQuery, signal?: AbortSignal): Promise<CalendarAppointment[]>;
-  clinicHours(clinicId: number, signal?: AbortSignal): Promise<ClinicHours | null>;
+  clinicHours(clinicId: number, signal?: AbortSignal): Promise<ClinicHours | null | undefined>;
 }
 
 const LIFECYCLES: readonly Lifecycle[] = ['booked', 'double_booked', 'completed', 'no_show', 'cancelled'];
@@ -70,8 +71,12 @@ export const realSchedulingAdapter: SchedulingReadAdapter = {
     const items = await paged((cursor) => listAppointments({ clinicId: q.clinicId, from: q.from, to: q.to, ...(q.doctorId ? { doctorId: q.doctorId } : {}), limit: 100, ...(cursor ? { cursor } : {}) }, { signal }));
     return items.filter((a) => a.clinicId === q.clinicId && (!q.doctorId || a.doctorId === q.doctorId)).map(fromApiAppointment);
   },
-  // No clinic hours/settings contract exists yet: report "not configured" so no availability is invented.
-  async clinicHours() { return null; },
+  async clinicHours(clinicId, signal) {
+    const clinics = await paged((cursor) => listClinics({ limit: 100, ...(cursor ? { cursor } : {}) }, { signal }));
+    const clinic = clinics.find(c => c.id === clinicId);
+    if (!clinic) throw new Error('Clinic scheduling scope unavailable');
+    return fromSchedulingSettings(clinic.scheduling);
+  },
 };
 
 // ---------------- Explicit mock mode ----------------
@@ -137,7 +142,7 @@ export function createMockSchedulingAdapter(scenario: MockScenario, opts: { late
     },
     async clinicHours(_clinicId, signal) {
       await delay(signal);
-      return scenario === 'no-hours' ? null : { open: 8 * 60, close: 16 * 60, slotMinutes: 30 };
+      return scenario === 'no-hours' ? null : { open: 8 * 60, close: 16 * 60, slotMinutes: 30, workingDays: [0, 1, 2, 3, 4, 5, 6] };
     },
   };
 }

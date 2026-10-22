@@ -2,10 +2,17 @@ import type {
   AppointmentProjection, AuthorizedSnapshot, CachedAppointment, CachedDoctor, CachedPatient,
   LocalOperation, Scope,
 } from './types';
+import { validClinicHours } from '../calendar/hours';
+import type { ClinicHours } from '../calendar/adapter';
 
 export class InvalidProjection extends Error {}
 export function requireValid(condition: unknown): asserts condition {
   if (!condition) throw new InvalidProjection();
+}
+export function projectClinicHours(hours: ClinicHours | null | undefined): ClinicHours | null | undefined {
+  if (hours == null) return hours;
+  requireValid(validClinicHours(hours));
+  return { open: hours.open, close: hours.close, slotMinutes: hours.slotMinutes, workingDays: [...hours.workingDays] };
 }
 export const validId = (value: unknown): value is number => typeof value === 'number' && Number.isSafeInteger(value) && value > 0;
 export const validText = (value: unknown): value is string => typeof value === 'string' && value.length > 0 && value.length <= 512;
@@ -32,7 +39,7 @@ function interval(startsAt: unknown, endsAt: unknown) {
 /** Explicit allowlists: never spread a server object into IndexedDB. */
 export function projectSnapshot(input: AuthorizedSnapshot, scope: Scope): {
   doctors: CachedDoctor[]; patients: CachedPatient[]; appointments: CachedAppointment[];
-  coverageStartUtc: string; coverageEndUtc: string;
+  coverageStartUtc: string; coverageEndUtc: string; clinicHours?: ClinicHours | null;
 } {
   requireValid(input && input.userId === scope.userId && input.clinicId === scope.clinicId);
   requireValid(Array.isArray(input.doctors) && Array.isArray(input.patients) && Array.isArray(input.appointments));
@@ -68,7 +75,7 @@ export function projectSnapshot(input: AuthorizedSnapshot, scope: Scope): {
   const coverageStartUtc = utcInstant(input.coverage?.startUtc);
   const coverageEndUtc = utcInstant(input.coverage?.endUtc);
   requireValid(coverageEndUtc > coverageStartUtc);
-  return { doctors, patients, appointments, coverageStartUtc, coverageEndUtc };
+  return { doctors, patients, appointments, coverageStartUtc, coverageEndUtc, clinicHours: projectClinicHours(input.clinicHours) };
 }
 
 export function projectOperation(input: LocalOperation): LocalOperation {
