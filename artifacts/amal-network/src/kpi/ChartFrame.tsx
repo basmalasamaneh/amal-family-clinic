@@ -21,7 +21,7 @@ export function ChartFrame({ id, title, icon, summary, caption, head, rows, chil
       <button type="button" className="kpi-toggle" aria-expanded={open} aria-controls={tid} onClick={() => setOpen((o) => !o)} data-testid={`button-table-${id}`}>
         <Table2 size={16} aria-hidden="true" />{open ? t('kpi.table.hide') : t('kpi.table.show')}
       </button>
-      <div id={tid} hidden={!open} className="kpi-table-wrap">
+      <div id={tid} hidden={!open} className="kpi-table-wrap" role="region" tabIndex={0} aria-label={caption}>
         {open && (
           <table className="kpi-table" data-testid={`table-${id}`}>
             <caption>{caption}</caption>

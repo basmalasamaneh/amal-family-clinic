@@ -3,6 +3,17 @@ name: Test browser environment
 description: NixOS browser dependency boundary and screenshot portability.
 ---
 
+Mocked visual checks must satisfy application bootstrap requests as well as the
+page's data requests.
+
+**Why:** Legacy admin fixtures intercepted all unknown APIs with 503, preventing
+the demo-context bootstrap from ever reaching the shell. A selector timeout was
+therefore not evidence of a layout regression.
+
+**How to apply:** Inspect failed request paths before changing UI or test
+assertions. Supply an explicit disabled demo context for isolated visual checks,
+without changing real demo state or production transport behavior.
+
 Native browser zoom screenshots need a virtual display large enough to contain
 the whole browser window. DevTools full-page captures may omit composited text;
 use actual foreground-window captures before diagnosing apparent clipping.

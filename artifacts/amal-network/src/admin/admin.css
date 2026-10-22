@@ -70,9 +70,10 @@
 .adm-filters--audit { padding: 16px; background: var(--amal-surface); border: 1px solid var(--amal-border); border-radius: var(--amal-radius-card); }
 .adm-filters--audit .adm-summary { flex-basis: 100%; }
 .adm-select { min-block-size: 44px; }
-.adm-table-wrap { overflow-x: auto; border: 1px solid var(--amal-border); border-radius: var(--amal-radius-card); background: var(--amal-surface); }
-.adm-table { inline-size: 100%; border-collapse: collapse; font-size: var(--amal-text-sm); }
-.adm-table th { text-align: start; padding-block: 10px; padding-inline: 14px; font-size: var(--amal-text-xs); font-weight: 700; color: var(--amal-muted); background: var(--amal-surface-2); border-block-end: 1px solid var(--amal-border); white-space: nowrap; }
+.adm-table-wrap { min-inline-size: 0; max-inline-size: 100%; max-block-size: min(65dvh, 38rem); overflow: auto; isolation: isolate; scroll-padding-block: 4rem 1rem; border: 1px solid var(--amal-border); border-radius: var(--amal-radius-card); background: var(--amal-surface); }
+.adm-table { inline-size: 100%; border-collapse: separate; border-spacing: 0; font-size: var(--amal-text-sm); font-variant-numeric: tabular-nums; line-height: 1.65; }
+.adm-table th { text-align: start; padding-block: 12px; padding-inline: 14px; font-size: var(--amal-text-xs); font-weight: 700; color: var(--amal-muted); background: var(--amal-surface-2); border-block-end: 1px solid var(--amal-border); white-space: nowrap; }
+.adm-table thead th { position: sticky; inset-block-start: 0; z-index: 2; }
 .adm-table td { padding-block: 10px; padding-inline: 14px; border-block-end: 1px solid var(--amal-border); vertical-align: middle; }
 .adm-table tr:last-child td { border-block-end: 0; }
 .adm-table tbody tr:hover { background: color-mix(in srgb, var(--amal-primary-soft) 45%, transparent); }
@@ -170,3 +171,22 @@
 .adm-empty .amal-btn, .adm-empty-wrap .amal-btn { min-block-size: 44px; }
 /* P2-11: scrollable table regions are keyboard-reachable named regions with visible focus. */
 .adm-table-wrap:focus-visible { outline: 3px solid var(--amal-focus-ring); outline-offset: 2px; }
+
+/* Presentation refinements: retain semantic status rails and shared theme colors. */
+.adm { inline-size: 100%; min-inline-size: 0; font-family: var(--amal-font-sans); }
+.adm-panel, .adm-section, .adm-clinic, .adm-hcard { min-inline-size: 0; }
+.adm-hcard__name, .adm-clinic__name, .adm-clinic__facts dd { overflow-wrap: anywhere; }
+.adm-hcard__top { flex-wrap: wrap; }
+.adm-hcard__dl { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; border-block-start-style: solid; padding-block-start: 16px; }
+.adm-hcard__dl > div { min-inline-size: 0; }
+.adm-hcard__dl dd { line-height: 1.5; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+.adm-hcard__dl .adm-num { font-family: var(--amal-font-sans); font-size: 1.75rem; font-weight: 700; line-height: 1.3; }
+.adm-filters .amal-field { min-inline-size: min(160px, 100%); }
+.adm-table td { overflow-wrap: anywhere; }
+.adm-table .adm-rowact { overflow-wrap: normal; }
+@media (max-width: 767px) {
+  .adm-health-grid, .adm-clinic__facts, .adm-hcard__dl { grid-template-columns: minmax(0, 1fr); }
+  .adm-hcard { padding-block: 18px; padding-inline: 20px; }
+  .adm-head__actions { inline-size: 100%; }
+  .adm-filters__btns { flex-wrap: wrap; }
+}

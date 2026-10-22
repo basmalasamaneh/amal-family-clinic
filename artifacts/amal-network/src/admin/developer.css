@@ -16,3 +16,15 @@
 .dev-confirm-input { inline-size: 100%; min-block-size: 44px; font-family: ui-monospace, Menlo, monospace; }
 .dev-card :focus-visible, .adm-dialog :focus-visible { outline: 3px solid var(--amal-focus-ring); outline-offset: 2px; }
 .dev-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+
+/* Keep diagnostic content contained without weakening warning semantics. */
+.dev-card, .dev-row, .dev-row > .amal-field { min-inline-size: 0; }
+.dev-card__title, .dev-card__desc, .dev-warn { overflow-wrap: anywhere; }
+.dev-card__desc { line-height: 1.7; }
+.dev-gen { flex-wrap: wrap; max-inline-size: 100%; font-variant-numeric: tabular-nums; }
+.dev-gen__dot { flex: none; }
+.dev-state { flex-wrap: wrap; padding-block: 8px; }
+@media (max-width: 767px) {
+  .dev-card { padding-block: 18px; padding-inline: 16px; }
+  .dev-row > .amal-field { flex-basis: 100%; max-inline-size: none; }
+}
